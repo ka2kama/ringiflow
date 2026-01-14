@@ -149,7 +149,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Format check
         run: just fmt-check-rust
@@ -198,7 +198,7 @@ jobs:
         run: npm install -g elm elm-format elm-test
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Format check
         run: just fmt-check-elm
