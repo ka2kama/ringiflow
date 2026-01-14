@@ -207,6 +207,30 @@ Dependabot の PR で CI が失敗する場合:
 1. Dependabot は secrets にアクセスできない（セキュリティ上の制限）
 2. `pull_request_target` イベントを使うか、必要な secrets を `dependabot/secrets` に設定
 
+### 複数 PR がコンフリクトする
+
+同じファイルを変更する複数の Dependabot PR は、1 つマージすると他がコンフリクト状態になる。
+例: GitHub Actions の複数アクションを更新する PR が同時に作成された場合（すべて `ci.yml` を変更）
+
+**対処法:**
+
+1. **リベースを依頼**: PR のコメントに `@dependabot rebase` と投稿すると、Dependabot が自動でリベースする
+2. **auto-merge を活用**: ブランチ保護で CI 必須にしていれば、リベース後に auto-merge が動作する
+3. **一括更新**: 複数 PR を無視し、新規ブランチで手動で一括更新する
+
+**一括更新の手順:**
+
+```bash
+# 新規ブランチで依存を更新
+git checkout -b chore/update-dependencies
+# 各ファイルを編集して依存バージョンを更新
+# ロックファイルを更新
+pnpm install        # npm 系
+cargo update        # Rust
+# コミット・PR 作成後、古い Dependabot PR をクローズ
+gh pr close <PR番号> --comment "PR #XX で一括更新のためクローズ"
+```
+
 ## 関連リソース
 
 - [Dependabot 公式ドキュメント](https://docs.github.com/en/code-security/dependabot)
@@ -220,3 +244,4 @@ Dependabot の PR で CI が失敗する場合:
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-15 | 初版作成 |
+| 2026-01-15 | 複数PRコンフリクト対応を追加 |
