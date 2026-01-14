@@ -50,7 +50,7 @@ jobs:
       elm: ${{ steps.filter.outputs.elm }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # paths-filter が差分を比較するために履歴が必要。
           # shallow clone（デフォルト: fetch-depth: 1）だと比較対象のコミットが
@@ -121,7 +121,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
@@ -136,7 +136,7 @@ jobs:
           components: rustfmt
 
       - name: Cache Cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/
@@ -149,7 +149,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Format check
         run: just fmt-check-rust
@@ -176,10 +176,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
 
@@ -198,7 +198,7 @@ jobs:
         run: npm install -g elm elm-format elm-test
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v3
 
       - name: Format check
         run: just fmt-check-elm
@@ -211,7 +211,7 @@ jobs:
         working-directory: apps/web
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-dist
           path: apps/web/dist/
