@@ -1,0 +1,18 @@
+# 依存関係
+node_modules/
+elm-stuff/
+
+# ビルド出力
+dist/
+
+# 環境変数
+.env
+.env.local
+
+# エディタ
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

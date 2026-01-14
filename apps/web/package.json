@@ -1,0 +1,22 @@
+{
+  "name": "ringiflow-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "elm-test",
+    "fmt": "elm-format --yes src/",
+    "format:check": "elm-format --validate src/",
+    "lint": "elm-format --validate src/"
+  },
+  "devDependencies": {
+    "vite": "^6.0.7",
+    "vite-plugin-elm": "^3.0.1"
+  },
+  "volta": {
+    "node": "22.16.0"
+  }
+}

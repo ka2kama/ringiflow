@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "language": "japanese",
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1"
+  },
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Read(**)",
+      "Read(**/.env.template)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo doc:*)",
+      "Bash(cargo run:*)",
+      "Bash(elm make:*)",
+      "Bash(elm-format:*)",
+      "Bash(elm-test:*)",
+      "Bash(elm-review:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(terraform fmt:*)",
+      "Bash(terraform validate:*)",
+      "Bash(terraform plan:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker-compose:*)",
+      "Bash(psql:*)",
+      "Bash(redis-cli:*)",
+      "Bash(aws sts get-caller-identity)",
+      "Bash(ls:*)",
+      "Bash(pwd)",
+      "Bash(which:*)",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)",
+      "Bash(elm --version)",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(terraform --version)"
+    ],
+    "ask": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git stash:*)",
+      "Bash(terraform apply:*)",
+      "Bash(terraform destroy:*)",
+      "Bash(docker build:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ci:*)",
+      "Bash(cargo install:*)",
+      "Edit(/infra/**)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.local)",
+      "Read(.env.production)",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.production)",
+      "Read(./secrets/**)",
+      "Read(**/*credentials*)",
+      "Read(**/*secret*)",
+      "Read(~/.aws/credentials)",
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Bash(chmod 777:*)",
+      "Bash(curl | sh)",
+      "Bash(curl | bash)",
+      "Bash(wget -O - | sh)",
+      "Bash(eval:*)",
+      "Bash(aws iam:*)",
+      "Bash(aws sts assume-role:*)",
+      "Bash(terraform destroy -auto-approve:*)"
+    ],
+    "additionalDirectories": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file_path=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); if [[ \"$file_path\" == *.rs ]]; then cargo fmt --quiet -- \"$file_path\" 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "excludedCommands": [
+      "git",
+      "cargo",
+      "elm",
+      "npm",
+      "node",
+      "terraform",
+      "docker",
+      "docker-compose",
+      "psql",
+      "redis-cli"
+    ]
+  },
+  "attribution": {
+    "commit": "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+  },
+  "cleanupPeriodDays": 30,
+  "respectGitignore": true
+}
