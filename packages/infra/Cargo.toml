@@ -1,0 +1,17 @@
+[package]
+name = "ringiflow-infra"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ringiflow-domain.workspace = true
+ringiflow-shared.workspace = true
+sqlx.workspace = true
+redis.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+pretty_assertions.workspace = true
