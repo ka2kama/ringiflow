@@ -1,0 +1,253 @@
+# RingiFlow CI ワークフロー
+#
+# 設計判断の詳細は ADR-004 を参照: docs/04_ADR/004_CI並列化と変更検出.md
+#
+# 概要:
+# - dorny/paths-filter で変更ファイルを検出
+# - Rust/Elm ジョブを条件付きで並列実行
+# - ci-success でブランチ保護用のステータスを統合
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ==========================================================================
+  # 変更検出（dorny/paths-filter）
+  # ==========================================================================
+  #
+  # 目的:
+  #   変更されたファイルを検出し、必要なジョブのみを実行する。
+  #   Monorepo で Rust/Elm を分離し、無関係なチェックをスキップして CI 時間を短縮。
+  #
+  # なぜ on.push.paths ではなく paths-filter を使うか:
+  #   - on.push.paths はワークフロー全体のトリガー制御のみ
+  #   - paths-filter はジョブ単位の条件分岐が可能
+  #   - 単一ワークフローで複数コンポーネントを管理でき、ブランチ保護設定がシンプル
+  #
+  # 動作:
+  #   - PR: ベースブランチ（通常 main）との差分を比較
+  #   - push: github.event.before（前回のコミット）との差分を比較
+  #
+  # 出力:
+  #   - outputs.rust: 'true' or 'false'（文字列）
+  #   - outputs.elm: 'true' or 'false'（文字列）
+  #   後続ジョブの if 条件で参照: if: needs.changes.outputs.rust == 'true'
+  #
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      elm: ${{ steps.filter.outputs.elm }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # paths-filter が差分を比較するために履歴が必要。
+          # shallow clone（デフォルト: fetch-depth: 1）だと比較対象のコミットが
+          # 取得できず、全ファイルが変更扱いになる場合がある。
+          # fetch-depth: 0 で全履歴を取得し、正確な差分比較を保証する。
+          fetch-depth: 0
+
+      - name: Filter paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # filters: 変更検出パターンの定義
+          #
+          # 構文:
+          #   フィルタ名:
+          #     - 'glob パターン'
+          #
+          # glob パターン:
+          #   - '*': 任意の文字列（ディレクトリ区切りを除く）
+          #   - '**': 任意のディレクトリ階層
+          #   - 例: 'apps/api/**' は apps/api 配下の全ファイルにマッチ
+          #
+          # 複数パターン:
+          #   OR 条件で評価。いずれかにマッチすれば true。
+          #
+          filters: |
+            rust:
+              - 'apps/api/**'
+              - 'packages/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+            elm:
+              - 'apps/web/**'
+          #
+          # rust フィルタの対象:
+          #   - apps/api/**: API サーバーのソースコード
+          #   - packages/**: 共有 Rust クレート（domain, infra, shared）
+          #   - Cargo.toml: ワークスペース設定、依存定義
+          #   - Cargo.lock: 依存バージョンの固定
+          #   - rust-toolchain.toml: Rust バージョン指定
+          #
+          # elm フィルタの対象:
+          #   - apps/web/**: Elm ソース、package.json、pnpm-lock.yaml、Vite 設定
+          #
+          # 意図的に除外しているもの:
+          #   - .github/workflows/ci.yml: CI 設定の変更は手動確認が妥当
+          #   - justfile: 通常は他のソースと一緒に変更される
+          #   - docs/**: ドキュメントはビルドに影響しない
+          #   - CLAUDE.md, README.md: 設定ファイルはビルド不要
+
+  # ==========================================================================
+  # Rust チェック
+  # ==========================================================================
+  # Rust 関連ファイルが変更された場合のみ実行。
+  # フォーマット（nightly）、リント（clippy）、テスト、リリースビルドを実行。
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      # CI では DB 接続なしでビルドするため、SQLx オフラインモードを使用
+      SQLX_OFFLINE: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+          components: clippy
+
+      # rustfmt の unstable 機能（imports_granularity 等）を使用するため nightly が必要
+      - name: Setup Rust toolchain (nightly)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Format check
+        run: just fmt-check-rust
+
+      - name: Lint
+        run: just lint-rust
+
+      - name: Test
+        run: just test-rust
+
+      - name: Build
+        run: cargo build --release
+
+  # ==========================================================================
+  # Elm チェック
+  # ==========================================================================
+  # Elm 関連ファイル（apps/web/**）が変更された場合のみ実行。
+  # フォーマット、テスト、本番ビルドを実行し、成果物をアップロード。
+  elm:
+    name: Elm
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.elm == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install npm dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/web
+
+      # elm, elm-format, elm-test はグローバルインストールが必要
+      # （pnpm の node_modules/.bin にあっても just から参照できないため）
+      - name: Install Elm tools
+        run: npm install -g elm elm-format elm-test
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Format check
+        run: just fmt-check-elm
+
+      - name: Test
+        run: just test-elm
+
+      - name: Build
+        run: pnpm run build
+        working-directory: apps/web
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist/
+          retention-days: 7
+
+  # ==========================================================================
+  # ブランチ保護用ステータス統合
+  # ==========================================================================
+  # 条件付きジョブは skipped になることがあり、ブランチ保護の設定によっては
+  # 失敗扱いになる。このジョブで全結果を統合し、単一のステータスを提供する。
+  #
+  # if: always() により、依存ジョブが skipped でもこのジョブは実行される。
+  # failure 以外（success, skipped）は成功扱いとする。
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [changes, rust, elm]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.changes.result }}" == "failure" ]]; then
+            echo "Changes detection failed"
+            exit 1
+          fi
+
+          # Rust: skipped（変更なし）または success なら OK
+          if [[ "${{ needs.rust.result }}" == "failure" ]]; then
+            echo "Rust checks failed"
+            exit 1
+          fi
+
+          # Elm: skipped（変更なし）または success なら OK
+          if [[ "${{ needs.elm.result }}" == "failure" ]]; then
+            echo "Elm checks failed"
+            exit 1
+          fi
+
+          echo "All checks passed!"

@@ -1,0 +1,68 @@
+# RingiFlow ローカル開発環境
+#
+# 起動: docker compose up -d
+# 停止: docker compose down
+# 削除（データ含む）: docker compose down -v
+#
+# PostgreSQL は Aurora PostgreSQL 17 互換
+# Redis は ElastiCache Redis 7 互換
+
+services:
+  # PostgreSQL データベース
+  # 本番環境: Aurora PostgreSQL Serverless v2
+  postgres:
+    image: postgres:17-alpine
+    container_name: ringiflow-postgres
+    environment:
+      POSTGRES_USER: ringiflow
+      POSTGRES_PASSWORD: ringiflow
+      POSTGRES_DB: ringiflow_dev
+      # タイムゾーン設定（本番環境と統一）
+      TZ: Asia/Tokyo
+      PGTZ: Asia/Tokyo
+    ports:
+      - "5432:5432"
+    volumes:
+      # データ永続化
+      - postgres_data:/var/lib/postgresql/data
+      # 初期化スクリプト
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ringiflow -d ringiflow_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Redis キャッシュ/セッションストア
+  # 本番環境: ElastiCache Redis
+  # 用途:
+  #   - セッション管理（HTTPOnly Cookie のバックエンド）
+  #   - CSRF トークン
+  #   - キャッシュ（Read Model）
+  #   - レート制限
+  #   - WebSocket Pub/Sub
+  redis:
+    image: redis:7-alpine
+    container_name: ringiflow-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      # データ永続化
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+# 名前付きボリューム
+volumes:
+  postgres_data:
+    name: ringiflow-postgres-data
+  redis_data:
+    name: ringiflow-redis-data
