@@ -6,10 +6,10 @@
 
 ### 設計方針
 
-- **RESTful**: リソース指向の URL 設計
-- **JSON**: リクエスト/レスポンスは JSON 形式
-- **BFF パターン**: ブラウザは BFF とのみ通信
-- **エラーレスポンス**: RFC 7807 Problem Details 形式
+- RESTful: リソース指向の URL 設計
+- JSON: リクエスト/レスポンスは JSON 形式
+- BFF パターン: ブラウザは BFF とのみ通信
+- エラーレスポンス: RFC 7807 Problem Details 形式
 
 ### エンドポイント構成
 
@@ -38,6 +38,10 @@ graph LR
 
 ## 共通仕様
 
+API 設計の一般的なパターンは技術ノートを参照。
+
+→ [RESTful API 設計](../05_技術ノート/REST_API設計.md)
+
 ### ベース URL
 
 | 環境 | URL |
@@ -46,78 +50,12 @@ graph LR
 | 開発 | `https://dev.ringiflow.example.com` |
 | 本番 | `https://app.ringiflow.example.com` |
 
-### リクエストヘッダー
+### 本プロジェクトでの方針
 
-| ヘッダー | 必須 | 説明 |
-|---------|------|------|
-| Content-Type | ○（POST/PUT/PATCH） | `application/json` |
-| X-CSRF-Token | ○（状態変更） | CSRF トークン |
-| X-Request-ID | - | リクエスト追跡用（自動生成） |
-
-### レスポンスヘッダー
-
-| ヘッダー | 説明 |
-|---------|------|
-| X-Request-ID | リクエスト追跡用 ID |
-| X-RateLimit-Limit | レート制限上限 |
-| X-RateLimit-Remaining | 残りリクエスト数 |
-| X-RateLimit-Reset | リセット時刻（Unix タイムスタンプ） |
-
-### 成功レスポンス
-
-```json
-// 単一リソース
-{
-  "data": { ... }
-}
-
-// リスト
-{
-  "data": [ ... ],
-  "pagination": {
-    "page": 1,
-    "per_page": 20,
-    "total_pages": 5,
-    "total_count": 100
-  }
-}
-```
-
-### エラーレスポンス（RFC 7807）
-
-```json
-{
-  "type": "https://ringiflow.example.com/errors/validation-error",
-  "title": "Validation Error",
-  "status": 400,
-  "detail": "リクエストの検証に失敗しました",
-  "instance": "/api/v1/workflows",
-  "correlation_id": "550e8400-e29b-41d4-a716-446655440000",
-  "errors": [
-    {
-      "field": "title",
-      "code": "required",
-      "message": "タイトルは必須です"
-    }
-  ]
-}
-```
-
-### HTTP ステータスコード
-
-| コード | 説明 | 使用場面 |
-|--------|------|---------|
-| 200 | OK | 取得・更新成功 |
-| 201 | Created | 作成成功 |
-| 204 | No Content | 削除成功 |
-| 400 | Bad Request | バリデーションエラー |
-| 401 | Unauthorized | 未認証 |
-| 403 | Forbidden | 権限不足 |
-| 404 | Not Found | リソースなし |
-| 409 | Conflict | 競合（楽観ロック失敗等） |
-| 422 | Unprocessable Entity | ビジネスルール違反 |
-| 429 | Too Many Requests | レート制限超過 |
-| 500 | Internal Server Error | サーバーエラー |
+- レスポンス形式: `{ "data": ... }` でラップ
+- エラー形式: RFC 7807 準拠
+- ページネーション: `page` / `per_page` パラメータ
+- 認証: Cookie ベースのセッション + CSRF トークン
 
 ---
 
