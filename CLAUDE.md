@@ -211,6 +211,32 @@ AIはコードを書くだけでなく、オーナーの理解促進を支援す
 
 → [`.claude/rules/docs.md`](.claude/rules/docs.md)（`docs/**/*.md` 編集時に自動適用）
 
+## データストア追加時の必須対応
+
+新しいデータストア（テーブル、DynamoDB テーブル、S3 バケット、Redis キーパターン等）を追加する場合、テナント退会時のデータ削除を考慮した設計が必須である。
+
+→ [`.claude/rules/data-store.md`](.claude/rules/data-store.md)（マイグレーション・インフラ編集時に自動適用）
+
+### 必須チェック項目
+
+1. **tenant_id による削除が可能か**
+   - PostgreSQL: `tenant_id` カラム + `ON DELETE CASCADE/SET NULL`
+   - DynamoDB: パーティションキーに `tenant_id`
+   - S3: パス先頭に `{tenant_id}/`
+   - Redis: キーに `{tenant_id}` を含む
+
+2. **削除レジストリに登録したか**
+   - 削除ハンドラ（`TenantDeleter` 実装）を追加
+   - `DeletionRegistry::new()` に登録
+   - テストの期待リストを更新
+
+3. **設計書を更新したか**
+   - `docs/02_設計書/07_テナント退会時データ削除設計.md` の削除対象一覧に追記
+
+**これらを忘れると、テナント退会時にデータが残存するリスクがある。**
+
+詳細: [07_テナント退会時データ削除設計.md](docs/02_設計書/07_テナント退会時データ削除設計.md)
+
 ## ツール設定
 
 | ツール | 設定ファイル |
