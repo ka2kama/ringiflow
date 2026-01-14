@@ -600,10 +600,10 @@ Settings > GitHub Apps
 ```
 
 よく使われる App:
-- **Dependabot**: 依存関係更新（組み込み）
-- **Codecov**: コードカバレッジ
-- **SonarCloud**: 静的解析
-- **Renovate**: 依存関係更新（Dependabot の代替）
+- Dependabot: 依存関係更新（組み込み）
+- Codecov: コードカバレッジ
+- SonarCloud: 静的解析
+- Renovate: 依存関係更新（Dependabot の代替）
 
 ### 8.3 Deploy keys
 

@@ -87,8 +87,8 @@ GitHub リポジトリの Settings > Branches で設定する。
 
 ### main ブランチの保護
 
-1. **Branch name pattern**: `main`
-2. **Protect matching branches**:
+1. Branch name pattern: `main`
+2. Protect matching branches:
    - ✅ Require a pull request before merging
      - ✅ Require approvals: 1（個人開発なら 0）
    - ✅ Require status checks to pass before merging

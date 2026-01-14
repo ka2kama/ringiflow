@@ -6,10 +6,10 @@
 
 ### 設計方針
 
-- **RESTful**: リソース指向の URL 設計
-- **JSON**: リクエスト/レスポンスは JSON 形式
-- **BFF パターン**: ブラウザは BFF とのみ通信
-- **エラーレスポンス**: RFC 7807 Problem Details 形式
+- RESTful: リソース指向の URL 設計
+- JSON: リクエスト/レスポンスは JSON 形式
+- BFF パターン: ブラウザは BFF とのみ通信
+- エラーレスポンス: RFC 7807 Problem Details 形式
 
 ### エンドポイント構成
 
