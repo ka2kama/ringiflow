@@ -13,8 +13,8 @@ INSERT INTO tenants (id, name, subdomain, plan, status) VALUES
     ('00000000-0000-0000-0000-000000000001', 'Development Tenant', 'dev', 'enterprise', 'active');
 
 -- 開発用ユーザーの作成
--- パスワード: password
--- ハッシュは argon2id を使用（実際のハッシュは実装時に生成）
+-- TODO: 初回起動時に `just seed-passwords` でパスワードを設定する必要あり
+-- 現在のハッシュはプレースホルダー（ログイン不可）
 INSERT INTO users (id, tenant_id, email, name, password_hash, status) VALUES
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
      'admin@example.com', '管理者', '$argon2id$v=19$m=19456,t=2,p=1$placeholder$placeholder', 'active'),

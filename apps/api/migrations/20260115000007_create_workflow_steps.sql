@@ -10,7 +10,7 @@ CREATE TABLE workflow_steps (
     step_name VARCHAR(255) NOT NULL,
     step_type VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    assigned_to UUID REFERENCES users(id),
+    assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
     decision VARCHAR(50),
     comment TEXT,
     due_date TIMESTAMPTZ,
