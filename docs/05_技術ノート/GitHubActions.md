@@ -71,8 +71,94 @@ CI が「action not allowed」エラーで失敗した場合:
 
 ---
 
+## dorny/paths-filter
+
+Monorepo で変更されたファイルを検出し、必要なジョブのみを実行するためのアクション。
+
+### on.push.paths との違い
+
+| 観点 | `on.push.paths` | `dorny/paths-filter` |
+|------|-----------------|---------------------|
+| 制御単位 | ワークフロー全体 | ジョブ単位 |
+| 複数パターン | 別ワークフローが必要 | 単一ワークフローで管理 |
+| ブランチ保護 | 複数ステータスの管理が煩雑 | 単一ステータスで管理可能 |
+
+### 動作原理
+
+| イベント | 比較対象 |
+|---------|---------|
+| pull_request | ベースブランチ（通常 main）との差分 |
+| push | `github.event.before`（前回のコミット）との差分 |
+
+### 基本的な使い方
+
+```yaml
+jobs:
+  changes:
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'apps/api/**'
+              - 'packages/**'
+
+  rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+```
+
+### filters 構文
+
+```yaml
+filters: |
+  フィルタ名:
+    - 'glob パターン'
+```
+
+**glob パターン:**
+
+| パターン | 意味 |
+|---------|------|
+| `*` | 任意の文字列（ディレクトリ区切りを除く） |
+| `**` | 任意のディレクトリ階層 |
+| `apps/api/**` | apps/api 配下の全ファイル |
+| `*.rs` | 拡張子 .rs のファイル |
+
+複数パターンは OR 条件で評価される。いずれかにマッチすれば true。
+
+### outputs の型に注意
+
+outputs は **文字列** `'true'` / `'false'` で返される。
+後続ジョブの条件では文字列として比較する:
+
+```yaml
+# 正しい
+if: needs.changes.outputs.rust == 'true'
+
+# 間違い（boolean として評価されない）
+if: needs.changes.outputs.rust
+```
+
+### fetch-depth: 0 が必要
+
+paths-filter が正しく差分を比較するには、比較対象のコミット履歴が必要。
+`actions/checkout` のデフォルト（shallow clone）だと、全ファイルが変更扱いになる場合がある。
+
+```yaml
+- uses: actions/checkout@v6
+  with:
+    fetch-depth: 0  # 全履歴を取得
+```
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-15 | 初版作成（アクション許可設定） |
+| 2026-01-15 | paths-filter セクションを追加 |

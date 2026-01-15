@@ -1,4 +1,4 @@
-# The Elm Architecture (TEA)
+# The Elm Architecture / TEA（エルムアーキテクチャ）
 
 ## 概要
 
