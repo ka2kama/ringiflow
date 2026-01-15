@@ -61,8 +61,8 @@ setup-db:
 # Docker で依存サービス（PostgreSQL, Redis）を起動
 dev-deps:
     docker compose -f infra/docker/docker-compose.yml up -d
-    @echo "PostgreSQL: localhost:5432"
-    @echo "Redis: localhost:6379"
+    @echo "PostgreSQL: localhost:${POSTGRES_PORT:-15432}"
+    @echo "Redis: localhost:${REDIS_PORT:-16379}"
 
 # バックエンド開発サーバーを起動
 dev-api:

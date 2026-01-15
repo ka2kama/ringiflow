@@ -46,7 +46,7 @@ API 設計の一般的なパターンは技術ノートを参照。
 
 | 環境 | URL |
 |------|-----|
-| ローカル | `http://localhost:3000` |
+| ローカル | `http://localhost:13000` |
 | 開発 | `https://dev.ringiflow.example.com` |
 | 本番 | `https://app.ringiflow.example.com` |
 
