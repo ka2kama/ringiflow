@@ -7,7 +7,6 @@ GitHub Actions を使用した CI（継続的インテグレーション）パ�
 
 ## 前提条件
 
-- `05_Docker環境構築.md` が完了していること
 - GitHub リポジトリへのプッシュ権限があること
 - `.github/workflows/` ディレクトリが存在すること
 
@@ -22,7 +21,7 @@ ls -la .github/workflows/
 ## 概要
 
 GitHub Actions で Rust / Elm の CI を構築する。
-設計の詳細は [ADR-004: CI 並列化と変更検出](../04_ADR/004_CI並列化と変更検出.md) を参照。
+設計の詳細は [ADR-004: CI 並列化と変更検出](../../04_ADR/004_CI並列化と変更検出.md) を参照。
 
 → 参照:
 - [`/.github/workflows/ci.yml`](/.github/workflows/ci.yml)
@@ -239,7 +238,7 @@ jobs:
 
 ## 次のステップ
 
-CI/CD 構築が完了したら、`07_Terraform基盤構築.md` に進む。
+CI/CD 構築が完了したら、[`02_Terraform基盤構築.md`](02_Terraform基盤構築.md) に進む。
 
 ---
 

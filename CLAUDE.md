@@ -100,7 +100,7 @@ AIエージェントは単にコードを書くだけでなく、オーナーの
 |-------------|--------|------|
 | 何を作るか（WHAT） | [`docs/01_要件定義書/`](docs/01_要件定義書/) | [`00_はじめに.md`](docs/01_要件定義書/00_はじめに.md) |
 | どう作るか（HOW） | [`docs/02_設計書/`](docs/02_設計書/) | [`00_実装ロードマップ.md`](docs/02_設計書/00_実装ロードマップ.md) |
-| どう操作するか（HOW TO） | [`docs/03_手順書/`](docs/03_手順書/) | [`00_Phase0_概要.md`](docs/03_手順書/00_Phase0_概要.md) |
+| どう操作するか（HOW TO） | [`docs/03_手順書/`](docs/03_手順書/) | [`00_はじめに.md`](docs/03_手順書/00_はじめに.md) |
 | なぜその決定か（WHY） | [`docs/04_ADR/`](docs/04_ADR/) | [`README.md`](docs/04_ADR/README.md) |
 | 技術の知識（WHAT/HOW） | [`docs/05_技術ノート/`](docs/05_技術ノート/) | [`README.md`](docs/05_技術ノート/README.md) |
 | セッション記録 | [`prompts/runs/`](prompts/runs/) | [`README.md`](prompts/runs/README.md) |

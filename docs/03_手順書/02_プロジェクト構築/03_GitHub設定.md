@@ -8,7 +8,7 @@ GitHub リポジトリの設定をセキュリティ・開発フローの両面�
 ## 前提条件
 
 - GitHub リポジトリへの Admin 権限があること
-- `06_CICD構築.md` が完了していること（CI ワークフローが動作すること）
+- CI ワークフローが動作すること
 
 ---
 
@@ -757,7 +757,7 @@ groups:
 Claude Code Action は PR オープン時に自動レビューを実行する GitHub Action。
 CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューが行われる。
 
-→ 設計判断: [ADR-011](../04_ADR/011_Claude_Code_Action導入.md)
+→ 設計判断: [ADR-011](../../04_ADR/011_Claude_Code_Action導入.md)
 
 ### 10.1 前提条件
 
