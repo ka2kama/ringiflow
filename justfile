@@ -1,5 +1,8 @@
 # RingiFlow 開発タスク
 
+# .env ファイルを自動読み込み
+set dotenv-load := true
+
 # デフォルト: レシピ一覧を表示
 default:
     @just --list
@@ -61,8 +64,8 @@ setup-db:
 # Docker で依存サービス（PostgreSQL, Redis）を起動
 dev-deps:
     docker compose -f infra/docker/docker-compose.yml up -d
-    @echo "PostgreSQL: localhost:${POSTGRES_PORT:-15432}"
-    @echo "Redis: localhost:${REDIS_PORT:-16379}"
+    @echo "PostgreSQL: localhost:${POSTGRES_PORT}"
+    @echo "Redis: localhost:${REDIS_PORT}"
 
 # バックエンド開発サーバーを起動
 dev-api:
