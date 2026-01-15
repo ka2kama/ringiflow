@@ -752,8 +752,111 @@ groups:
 
 ---
 
+## 10. Claude Code Action 設定
+
+Claude Code Action は PR オープン時に自動レビューを実行する GitHub Action。
+CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューが行われる。
+
+→ 設計判断: [ADR-011](../04_ADR/011_Claude_Code_Action導入.md)
+
+### 10.1 前提条件
+
+- Anthropic API キーを取得済みであること（https://console.anthropic.com/）
+- リポジトリへの Admin 権限があること
+
+### 10.2 GitHub App のインストール
+
+**方法 A: Claude Code CLI から（推奨）**
+
+```bash
+claude
+# Claude Code 起動後
+/install-github-app
+```
+
+**方法 B: 直接インストール**
+
+1. https://github.com/apps/claude にアクセス
+2. 「Install」をクリック
+3. 対象リポジトリを選択（`ka2kama/ringiflow`）
+4. 「Install」で完了
+
+### 10.3 API キーの設定
+
+```
+Settings > Secrets and variables > Actions > New repository secret
+```
+
+| 項目 | 値 |
+|------|-----|
+| Name | `ANTHROPIC_API_KEY` |
+| Secret | Anthropic Console から取得した API キー |
+
+**注意:** API キーは絶対にコードにハードコードしない。
+
+### 10.4 動作確認
+
+1. 新しいブランチを作成し、何らかの変更をコミット
+2. PR を作成
+3. GitHub Actions の「Claude Code Review」ワークフローが実行されることを確認
+4. PR にレビューコメントが投稿されることを確認
+
+### 10.5 使い方
+
+| 機能 | 説明 |
+|------|------|
+| 自動レビュー | PR オープン/更新時に自動実行 |
+| 対話的レビュー | PR コメントで `@claude` とメンションして質問 |
+
+**対話的レビューの例:**
+
+```
+@claude このコードのセキュリティ上の問題点を教えてください
+```
+
+```
+@claude テナント削除時のデータ削除は考慮されていますか？
+```
+
+### 10.6 コスト管理
+
+Claude Code Action は Anthropic API を使用するため、API 利用料が発生する。
+
+**コスト削減のポイント:**
+
+- ワークフローで `--max-turns` を設定済み（自動レビュー: 5、対話: 10）
+- 不要なワークフロー実行を避ける（ドラフト PR ではスキップ等、必要に応じて設定追加）
+
+**利用状況の確認:**
+
+https://console.anthropic.com/usage
+
+### 10.7 トラブルシューティング
+
+**ワークフローが実行されない**
+
+1. GitHub App がインストールされているか確認
+   - `Settings > GitHub Apps > Installed GitHub Apps`
+2. `ANTHROPIC_API_KEY` が設定されているか確認
+   - `Settings > Secrets and variables > Actions`
+
+**レビューコメントが投稿されない**
+
+1. ワークフローのログを確認
+   - `Actions > Claude Code Review > 該当の実行`
+2. API キーが有効か確認
+   - Anthropic Console でキーのステータスを確認
+
+**API エラーが発生する**
+
+1. API キーの残高・制限を確認
+2. キーが正しく設定されているか再確認（コピペミス等）
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-01-15 | Claude Code Action 設定手順を追加 | - |
 | 2026-01-14 | 初版作成 | - |
