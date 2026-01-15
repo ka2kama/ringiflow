@@ -1,4 +1,4 @@
-# Elm Ports（JavaScript 連携）
+# Elm（エルム）Ports（JavaScript 連携）
 
 ## 概要
 
