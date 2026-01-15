@@ -761,7 +761,6 @@ CLAUDE.md に記載されたプロジェクト理念と品質基準に基づい�
 
 ### 10.1 前提条件
 
-- Anthropic API キーを取得済みであること（https://console.anthropic.com/）
 - リポジトリへの Admin 権限があること
 
 ### 10.2 GitHub App のインストール
@@ -781,27 +780,51 @@ claude
 3. 対象リポジトリを選択（`ka2kama/ringiflow`）
 4. 「Install」で完了
 
-### 10.3 API キーの設定
+### 10.3 認証の設定
 
 ```
 Settings > Secrets and variables > Actions > New repository secret
 ```
 
+**方法 A: OAuth トークン（サブスクリプション利用）**
+
+| 項目 | 値 |
+|------|-----|
+| Name | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Secret | Claude Code CLI で `/install-github-app` 実行時に取得したトークン |
+
+Claude Pro/Max サブスクリプションの利用枠を消費する。
+
+**方法 B: API キー（API 課金）**
+
 | 項目 | 値 |
 |------|-----|
 | Name | `ANTHROPIC_API_KEY` |
-| Secret | Anthropic Console から取得した API キー |
+| Secret | https://console.anthropic.com/ から取得した API キー |
 
-**注意:** API キーは絶対にコードにハードコードしない。
+API 利用料が発生する。利用状況は https://console.anthropic.com/usage で確認。
 
-### 10.4 動作確認
+### 10.4 Ruleset への Status Check 追加
+
+```
+Settings > Rules > Rulesets > main-protection（編集）
+```
+
+「Require status checks to pass」セクションで以下を追加:
+
+| Status Check | 説明 |
+|--------------|------|
+| `CI Success` | CI ワークフローのジョブ |
+| `Auto Review` | Claude Code Review ワークフローのジョブ |
+
+### 10.5 動作確認
 
 1. 新しいブランチを作成し、何らかの変更をコミット
 2. PR を作成
 3. GitHub Actions の「Claude Code Review」ワークフローが実行されることを確認
 4. PR にレビューコメントが投稿されることを確認
 
-### 10.5 使い方
+### 10.6 使い方
 
 | 機能 | 説明 |
 |------|------|
@@ -818,39 +841,40 @@ Settings > Secrets and variables > Actions > New repository secret
 @claude テナント削除時のデータ削除は考慮されていますか？
 ```
 
-### 10.6 コスト管理
+### 10.7 利用制限
 
-Claude Code Action は Anthropic API を使用するため、API 利用料が発生する。
+| 認証方式 | 課金 |
+|---------|------|
+| OAuth トークン | Claude Pro/Max サブスクリプションの利用枠を消費 |
+| API キー | Anthropic API 利用料が発生 |
 
-**コスト削減のポイント:**
+**制限のポイント:**
 
 - ワークフローで `--max-turns` を設定済み（自動レビュー: 5、対話: 10）
 - 不要なワークフロー実行を避ける（ドラフト PR ではスキップ等、必要に応じて設定追加）
 
-**利用状況の確認:**
-
-https://console.anthropic.com/usage
-
-### 10.7 トラブルシューティング
+### 10.8 トラブルシューティング
 
 **ワークフローが実行されない**
 
 1. GitHub App がインストールされているか確認
    - `Settings > GitHub Apps > Installed GitHub Apps`
-2. `ANTHROPIC_API_KEY` が設定されているか確認
+2. 認証情報が設定されているか確認
    - `Settings > Secrets and variables > Actions`
+   - `CLAUDE_CODE_OAUTH_TOKEN` または `ANTHROPIC_API_KEY`
 
 **レビューコメントが投稿されない**
 
 1. ワークフローのログを確認
    - `Actions > Claude Code Review > 該当の実行`
-2. API キーが有効か確認
-   - Anthropic Console でキーのステータスを確認
+2. 認証情報が有効か確認
+   - OAuth: Claude Code CLI で `/install-github-app` を再実行してトークンを再取得
+   - API キー: https://console.anthropic.com/ でキーのステータスを確認
 
-**API エラーが発生する**
+**認証エラーが発生する**
 
-1. API キーの残高・制限を確認
-2. キーが正しく設定されているか再確認（コピペミス等）
+1. Secret が正しく設定されているか再確認（コピペミス等）
+2. GitHub App がリポジトリにインストールされているか確認
 
 ---
 
@@ -858,5 +882,6 @@ https://console.anthropic.com/usage
 
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-01-15 | Claude Code Action: OAuth トークン方式に変更、Ruleset 設定追加 | - |
 | 2026-01-15 | Claude Code Action 設定手順を追加 | - |
 | 2026-01-14 | 初版作成 | - |

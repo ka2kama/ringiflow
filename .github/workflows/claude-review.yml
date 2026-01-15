@@ -26,6 +26,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
 jobs:
   # PRオープン/更新時の自動レビュー
   auto-review:
@@ -42,7 +48,7 @@ jobs:
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             このPRをレビューしてください。
             CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューを行ってください。
@@ -66,6 +72,6 @@ jobs:
       - name: Run Claude Code
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # コスト制御: 最大10ターンに制限
           claude_args: "--max-turns 10"

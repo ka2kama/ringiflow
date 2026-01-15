@@ -298,9 +298,19 @@ secrets・`.env`の取り扱い、破壊的コマンドの回避、危険なgit�
 
 ## Git 操作ルール
 
-### PR マージ
+### コミット前
 
-PR をマージする際は `--auto` フラグを使用し、CI が通ってから自動マージする。
+```bash
+just check-all
+```
+
+### Force Push
+
+```bash
+git push --force-with-lease --force-if-includes
+```
+
+### PR マージ
 
 ```bash
 gh pr merge --squash --delete-branch --auto
