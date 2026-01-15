@@ -41,6 +41,9 @@
 //! ```
 
 pub mod error;
+pub mod role;
 pub mod tenant;
+pub mod user;
+pub mod workflow;
 
 pub use error::DomainError;

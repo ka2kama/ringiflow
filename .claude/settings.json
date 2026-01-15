@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | jq -r '.command // empty' 2>/dev/null | grep -q 'git commit'; then echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'; fi"
+            "command": "if echo \"$TOOL_INPUT\" | jq -r '.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'; fi"
           }
         ]
       }

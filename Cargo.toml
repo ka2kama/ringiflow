@@ -48,6 +48,7 @@ dotenvy = "0.15"
 # テスト
 tokio-test = "0.4"
 pretty_assertions = "1.4"
+rstest = "0.23"
 
 # 内部クレート
 ringiflow-domain = { path = "packages/domain" }

@@ -31,7 +31,10 @@ docker compose -f infra/docker/docker-compose.yml up -d
 
 ## 現在のステータス
 
-Phase 0（基盤構築中）
+Phase 1（MVP 開発中）
+
+- **Phase 0**: ✅ 完了（開発基盤構築）
+- **Phase 1**: 🚧 開発中（最小限の動作するワークフローシステム）
 
 詳細は [docs/02_設計書/00_実装ロードマップ.md](docs/02_設計書/00_実装ロードマップ.md) を参照。
 

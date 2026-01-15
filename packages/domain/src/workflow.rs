@@ -1,0 +1,863 @@
+//! # ワークフロー
+//!
+//! ワークフロー定義、インスタンス、ステップを管理する。
+//!
+//! ## 概念モデル
+//!
+//! - **WorkflowDefinition**: ワークフローのテンプレート（再利用可能）
+//! - **WorkflowInstance**: 定義から生成された実行中の案件
+//! - **WorkflowStep**: インスタンス内の各承認ステップ
+//!
+//! ## 使用例
+//!
+//! ```rust
+//! use ringiflow_domain::workflow::{
+//!     WorkflowDefinition, WorkflowDefinitionId, WorkflowDefinitionStatus
+//! };
+//! use ringiflow_domain::{tenant::TenantId, user::UserId};
+//! use serde_json::json;
+//!
+//! // ワークフロー定義の作成
+//! let definition = WorkflowDefinition::new(
+//!     TenantId::new(),
+//!     "汎用申請".to_string(),
+//!     Some("シンプルな1段階承認".to_string()),
+//!     json!({"steps": []}),
+//!     UserId::new(),
+//! );
+//! assert_eq!(definition.status(), WorkflowDefinitionStatus::Draft);
+//! ```
+
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
+use uuid::Uuid;
+
+use crate::{DomainError, tenant::TenantId, user::UserId};
+
+// =========================================================================
+// Workflow Definition（ワークフロー定義）
+// =========================================================================
+
+/// ワークフロー定義 ID
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct WorkflowDefinitionId(Uuid);
+
+impl WorkflowDefinitionId {
+   pub fn new() -> Self {
+      Self(Uuid::now_v7())
+   }
+
+   pub fn from_uuid(uuid: Uuid) -> Self {
+      Self(uuid)
+   }
+
+   pub fn as_uuid(&self) -> &Uuid {
+      &self.0
+   }
+}
+
+impl Default for WorkflowDefinitionId {
+   fn default() -> Self {
+      Self::new()
+   }
+}
+
+impl std::fmt::Display for WorkflowDefinitionId {
+   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.0)
+   }
+}
+
+/// ワークフロー定義ステータス
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WorkflowDefinitionStatus {
+   /// 下書き（編集中）
+   Draft,
+   /// 公開済み（利用可能）
+   Published,
+   /// アーカイブ済み（非表示）
+   Archived,
+}
+
+impl WorkflowDefinitionStatus {
+   pub fn as_str(&self) -> &'static str {
+      match self {
+         Self::Draft => "draft",
+         Self::Published => "published",
+         Self::Archived => "archived",
+      }
+   }
+}
+
+impl std::str::FromStr for WorkflowDefinitionStatus {
+   type Err = DomainError;
+
+   fn from_str(s: &str) -> Result<Self, Self::Err> {
+      match s {
+         "draft" => Ok(Self::Draft),
+         "published" => Ok(Self::Published),
+         "archived" => Ok(Self::Archived),
+         _ => Err(DomainError::Validation(format!(
+            "不正なワークフロー定義ステータス: {}",
+            s
+         ))),
+      }
+   }
+}
+
+/// ワークフロー定義エンティティ
+///
+/// 再利用可能なワークフローのテンプレート。
+/// JSON 形式の定義を保持し、バージョン管理に対応。
+#[derive(Debug, Clone)]
+pub struct WorkflowDefinition {
+   id:          WorkflowDefinitionId,
+   tenant_id:   TenantId,
+   name:        String,
+   description: Option<String>,
+   version:     i32,
+   definition:  JsonValue,
+   status:      WorkflowDefinitionStatus,
+   created_by:  UserId,
+   created_at:  DateTime<Utc>,
+   updated_at:  DateTime<Utc>,
+}
+
+impl WorkflowDefinition {
+   /// 新しいワークフロー定義を作成する
+   pub fn new(
+      tenant_id: TenantId,
+      name: String,
+      description: Option<String>,
+      definition: JsonValue,
+      created_by: UserId,
+   ) -> Self {
+      let now = Utc::now();
+      Self {
+         id: WorkflowDefinitionId::new(),
+         tenant_id,
+         name,
+         description,
+         version: 1,
+         definition,
+         status: WorkflowDefinitionStatus::Draft,
+         created_by,
+         created_at: now,
+         updated_at: now,
+      }
+   }
+
+   /// 既存のデータから復元する
+   #[allow(clippy::too_many_arguments)]
+   pub fn from_db(
+      id: WorkflowDefinitionId,
+      tenant_id: TenantId,
+      name: String,
+      description: Option<String>,
+      version: i32,
+      definition: JsonValue,
+      status: WorkflowDefinitionStatus,
+      created_by: UserId,
+      created_at: DateTime<Utc>,
+      updated_at: DateTime<Utc>,
+   ) -> Self {
+      Self {
+         id,
+         tenant_id,
+         name,
+         description,
+         version,
+         definition,
+         status,
+         created_by,
+         created_at,
+         updated_at,
+      }
+   }
+
+   // Getter メソッド
+
+   pub fn id(&self) -> &WorkflowDefinitionId {
+      &self.id
+   }
+
+   pub fn tenant_id(&self) -> &TenantId {
+      &self.tenant_id
+   }
+
+   pub fn name(&self) -> &str {
+      &self.name
+   }
+
+   pub fn description(&self) -> Option<&str> {
+      self.description.as_deref()
+   }
+
+   pub fn version(&self) -> i32 {
+      self.version
+   }
+
+   pub fn definition(&self) -> &JsonValue {
+      &self.definition
+   }
+
+   pub fn status(&self) -> WorkflowDefinitionStatus {
+      self.status
+   }
+
+   pub fn created_by(&self) -> &UserId {
+      &self.created_by
+   }
+
+   pub fn created_at(&self) -> DateTime<Utc> {
+      self.created_at
+   }
+
+   pub fn updated_at(&self) -> DateTime<Utc> {
+      self.updated_at
+   }
+
+   // ビジネスロジックメソッド
+
+   /// 定義が公開可能かチェックする
+   pub fn can_publish(&self) -> Result<(), DomainError> {
+      if self.status == WorkflowDefinitionStatus::Published {
+         return Err(DomainError::Validation("既に公開済みです".to_string()));
+      }
+      Ok(())
+   }
+
+   /// 定義を公開した新しいインスタンスを返す
+   pub fn published(self) -> Result<Self, DomainError> {
+      self.can_publish()?;
+      Ok(Self {
+         status: WorkflowDefinitionStatus::Published,
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
+   /// 定義をアーカイブした新しいインスタンスを返す
+   pub fn archived(self) -> Self {
+      Self {
+         status: WorkflowDefinitionStatus::Archived,
+         updated_at: Utc::now(),
+         ..self
+      }
+   }
+}
+
+// =========================================================================
+// Workflow Instance（ワークフローインスタンス）
+// =========================================================================
+
+/// ワークフローインスタンス ID
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct WorkflowInstanceId(Uuid);
+
+impl WorkflowInstanceId {
+   pub fn new() -> Self {
+      Self(Uuid::now_v7())
+   }
+
+   pub fn from_uuid(uuid: Uuid) -> Self {
+      Self(uuid)
+   }
+
+   pub fn as_uuid(&self) -> &Uuid {
+      &self.0
+   }
+}
+
+impl Default for WorkflowInstanceId {
+   fn default() -> Self {
+      Self::new()
+   }
+}
+
+impl std::fmt::Display for WorkflowInstanceId {
+   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.0)
+   }
+}
+
+/// ワークフローインスタンスステータス
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WorkflowInstanceStatus {
+   /// 下書き
+   Draft,
+   /// 承認待ち
+   Pending,
+   /// 処理中
+   InProgress,
+   /// 承認完了
+   Approved,
+   /// 却下
+   Rejected,
+   /// 取り消し
+   Cancelled,
+}
+
+impl WorkflowInstanceStatus {
+   pub fn as_str(&self) -> &'static str {
+      match self {
+         Self::Draft => "draft",
+         Self::Pending => "pending",
+         Self::InProgress => "in_progress",
+         Self::Approved => "approved",
+         Self::Rejected => "rejected",
+         Self::Cancelled => "cancelled",
+      }
+   }
+}
+
+impl std::str::FromStr for WorkflowInstanceStatus {
+   type Err = DomainError;
+
+   fn from_str(s: &str) -> Result<Self, Self::Err> {
+      match s {
+         "draft" => Ok(Self::Draft),
+         "pending" => Ok(Self::Pending),
+         "in_progress" => Ok(Self::InProgress),
+         "approved" => Ok(Self::Approved),
+         "rejected" => Ok(Self::Rejected),
+         "cancelled" => Ok(Self::Cancelled),
+         _ => Err(DomainError::Validation(format!(
+            "不正なワークフローインスタンスステータス: {}",
+            s
+         ))),
+      }
+   }
+}
+
+/// ワークフローインスタンスエンティティ
+///
+/// 定義から生成された実行中の申請案件。
+/// フォームデータと進捗状態を保持する。
+#[derive(Debug, Clone)]
+pub struct WorkflowInstance {
+   id: WorkflowInstanceId,
+   tenant_id: TenantId,
+   definition_id: WorkflowDefinitionId,
+   definition_version: i32,
+   title: String,
+   form_data: JsonValue,
+   status: WorkflowInstanceStatus,
+   current_step_id: Option<String>,
+   initiated_by: UserId,
+   submitted_at: Option<DateTime<Utc>>,
+   completed_at: Option<DateTime<Utc>>,
+   created_at: DateTime<Utc>,
+   updated_at: DateTime<Utc>,
+}
+
+impl WorkflowInstance {
+   /// 新しいワークフローインスタンスを作成する
+   pub fn new(
+      tenant_id: TenantId,
+      definition_id: WorkflowDefinitionId,
+      definition_version: i32,
+      title: String,
+      form_data: JsonValue,
+      initiated_by: UserId,
+   ) -> Self {
+      let now = Utc::now();
+      Self {
+         id: WorkflowInstanceId::new(),
+         tenant_id,
+         definition_id,
+         definition_version,
+         title,
+         form_data,
+         status: WorkflowInstanceStatus::Draft,
+         current_step_id: None,
+         initiated_by,
+         submitted_at: None,
+         completed_at: None,
+         created_at: now,
+         updated_at: now,
+      }
+   }
+
+   /// 既存のデータから復元する
+   #[allow(clippy::too_many_arguments)]
+   pub fn from_db(
+      id: WorkflowInstanceId,
+      tenant_id: TenantId,
+      definition_id: WorkflowDefinitionId,
+      definition_version: i32,
+      title: String,
+      form_data: JsonValue,
+      status: WorkflowInstanceStatus,
+      current_step_id: Option<String>,
+      initiated_by: UserId,
+      submitted_at: Option<DateTime<Utc>>,
+      completed_at: Option<DateTime<Utc>>,
+      created_at: DateTime<Utc>,
+      updated_at: DateTime<Utc>,
+   ) -> Self {
+      Self {
+         id,
+         tenant_id,
+         definition_id,
+         definition_version,
+         title,
+         form_data,
+         status,
+         current_step_id,
+         initiated_by,
+         submitted_at,
+         completed_at,
+         created_at,
+         updated_at,
+      }
+   }
+
+   // Getter メソッド
+
+   pub fn id(&self) -> &WorkflowInstanceId {
+      &self.id
+   }
+
+   pub fn tenant_id(&self) -> &TenantId {
+      &self.tenant_id
+   }
+
+   pub fn definition_id(&self) -> &WorkflowDefinitionId {
+      &self.definition_id
+   }
+
+   pub fn definition_version(&self) -> i32 {
+      self.definition_version
+   }
+
+   pub fn title(&self) -> &str {
+      &self.title
+   }
+
+   pub fn form_data(&self) -> &JsonValue {
+      &self.form_data
+   }
+
+   pub fn status(&self) -> WorkflowInstanceStatus {
+      self.status
+   }
+
+   pub fn current_step_id(&self) -> Option<&str> {
+      self.current_step_id.as_deref()
+   }
+
+   pub fn initiated_by(&self) -> &UserId {
+      &self.initiated_by
+   }
+
+   pub fn submitted_at(&self) -> Option<DateTime<Utc>> {
+      self.submitted_at
+   }
+
+   pub fn completed_at(&self) -> Option<DateTime<Utc>> {
+      self.completed_at
+   }
+
+   pub fn created_at(&self) -> DateTime<Utc> {
+      self.created_at
+   }
+
+   pub fn updated_at(&self) -> DateTime<Utc> {
+      self.updated_at
+   }
+
+   // ビジネスロジックメソッド
+
+   /// インスタンスが編集可能かチェックする
+   pub fn can_edit(&self) -> Result<(), DomainError> {
+      if self.status != WorkflowInstanceStatus::Draft {
+         return Err(DomainError::Validation(
+            "下書き状態でのみ編集可能です".to_string(),
+         ));
+      }
+      Ok(())
+   }
+
+   /// インスタンスを申請した新しいインスタンスを返す
+   pub fn submitted(self) -> Result<Self, DomainError> {
+      if self.status != WorkflowInstanceStatus::Draft {
+         return Err(DomainError::Validation(
+            "下書き状態でのみ申請可能です".to_string(),
+         ));
+      }
+
+      Ok(Self {
+         status: WorkflowInstanceStatus::Pending,
+         submitted_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
+   /// インスタンスを承認完了にした新しいインスタンスを返す
+   pub fn approved(self) -> Self {
+      Self {
+         status: WorkflowInstanceStatus::Approved,
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      }
+   }
+
+   /// インスタンスを却下した新しいインスタンスを返す
+   pub fn rejected(self) -> Self {
+      Self {
+         status: WorkflowInstanceStatus::Rejected,
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      }
+   }
+
+   /// インスタンスを取り消した新しいインスタンスを返す
+   pub fn cancelled(self) -> Result<Self, DomainError> {
+      if matches!(
+         self.status,
+         WorkflowInstanceStatus::Approved
+            | WorkflowInstanceStatus::Rejected
+            | WorkflowInstanceStatus::Cancelled
+      ) {
+         return Err(DomainError::Validation(
+            "完了済みのワークフローは取り消せません".to_string(),
+         ));
+      }
+
+      Ok(Self {
+         status: WorkflowInstanceStatus::Cancelled,
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
+   /// 現在のステップを更新した新しいインスタンスを返す
+   pub fn with_current_step(self, step_id: String) -> Self {
+      Self {
+         current_step_id: Some(step_id),
+         status: WorkflowInstanceStatus::InProgress,
+         updated_at: Utc::now(),
+         ..self
+      }
+   }
+}
+
+// =========================================================================
+// Workflow Step（ワークフローステップ）
+// =========================================================================
+
+/// ワークフローステップ ID
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct WorkflowStepId(Uuid);
+
+impl WorkflowStepId {
+   pub fn new() -> Self {
+      Self(Uuid::now_v7())
+   }
+
+   pub fn from_uuid(uuid: Uuid) -> Self {
+      Self(uuid)
+   }
+
+   pub fn as_uuid(&self) -> &Uuid {
+      &self.0
+   }
+}
+
+impl Default for WorkflowStepId {
+   fn default() -> Self {
+      Self::new()
+   }
+}
+
+impl std::fmt::Display for WorkflowStepId {
+   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.0)
+   }
+}
+
+/// ワークフローステップステータス
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WorkflowStepStatus {
+   /// 待機中
+   Pending,
+   /// アクティブ（処理中）
+   Active,
+   /// 完了
+   Completed,
+   /// スキップ
+   Skipped,
+}
+
+impl WorkflowStepStatus {
+   pub fn as_str(&self) -> &'static str {
+      match self {
+         Self::Pending => "pending",
+         Self::Active => "active",
+         Self::Completed => "completed",
+         Self::Skipped => "skipped",
+      }
+   }
+}
+
+impl std::str::FromStr for WorkflowStepStatus {
+   type Err = DomainError;
+
+   fn from_str(s: &str) -> Result<Self, Self::Err> {
+      match s {
+         "pending" => Ok(Self::Pending),
+         "active" => Ok(Self::Active),
+         "completed" => Ok(Self::Completed),
+         "skipped" => Ok(Self::Skipped),
+         _ => Err(DomainError::Validation(format!(
+            "不正なワークフローステップステータス: {}",
+            s
+         ))),
+      }
+   }
+}
+
+/// ワークフローステップの判断
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum StepDecision {
+   /// 承認
+   Approved,
+   /// 却下
+   Rejected,
+   /// 修正依頼
+   RequestChanges,
+}
+
+impl StepDecision {
+   pub fn as_str(&self) -> &'static str {
+      match self {
+         Self::Approved => "approved",
+         Self::Rejected => "rejected",
+         Self::RequestChanges => "request_changes",
+      }
+   }
+}
+
+impl std::str::FromStr for StepDecision {
+   type Err = DomainError;
+
+   fn from_str(s: &str) -> Result<Self, Self::Err> {
+      match s {
+         "approved" => Ok(Self::Approved),
+         "rejected" => Ok(Self::Rejected),
+         "request_changes" => Ok(Self::RequestChanges),
+         _ => Err(DomainError::Validation(format!(
+            "不正なステップ判断: {}",
+            s
+         ))),
+      }
+   }
+}
+
+/// ワークフローステップエンティティ
+///
+/// ワークフローインスタンス内の個々の承認タスク。
+/// 担当者への割り当てと判断結果を保持する。
+#[derive(Debug, Clone)]
+pub struct WorkflowStep {
+   id:           WorkflowStepId,
+   instance_id:  WorkflowInstanceId,
+   step_id:      String,
+   step_name:    String,
+   step_type:    String,
+   status:       WorkflowStepStatus,
+   assigned_to:  Option<UserId>,
+   decision:     Option<StepDecision>,
+   comment:      Option<String>,
+   due_date:     Option<DateTime<Utc>>,
+   started_at:   Option<DateTime<Utc>>,
+   completed_at: Option<DateTime<Utc>>,
+   created_at:   DateTime<Utc>,
+   updated_at:   DateTime<Utc>,
+}
+
+impl WorkflowStep {
+   /// 新しいワークフローステップを作成する
+   pub fn new(
+      instance_id: WorkflowInstanceId,
+      step_id: String,
+      step_name: String,
+      step_type: String,
+      assigned_to: Option<UserId>,
+   ) -> Self {
+      let now = Utc::now();
+      Self {
+         id: WorkflowStepId::new(),
+         instance_id,
+         step_id,
+         step_name,
+         step_type,
+         status: WorkflowStepStatus::Pending,
+         assigned_to,
+         decision: None,
+         comment: None,
+         due_date: None,
+         started_at: None,
+         completed_at: None,
+         created_at: now,
+         updated_at: now,
+      }
+   }
+
+   /// 既存のデータから復元する
+   #[allow(clippy::too_many_arguments)]
+   pub fn from_db(
+      id: WorkflowStepId,
+      instance_id: WorkflowInstanceId,
+      step_id: String,
+      step_name: String,
+      step_type: String,
+      status: WorkflowStepStatus,
+      assigned_to: Option<UserId>,
+      decision: Option<StepDecision>,
+      comment: Option<String>,
+      due_date: Option<DateTime<Utc>>,
+      started_at: Option<DateTime<Utc>>,
+      completed_at: Option<DateTime<Utc>>,
+      created_at: DateTime<Utc>,
+      updated_at: DateTime<Utc>,
+   ) -> Self {
+      Self {
+         id,
+         instance_id,
+         step_id,
+         step_name,
+         step_type,
+         status,
+         assigned_to,
+         decision,
+         comment,
+         due_date,
+         started_at,
+         completed_at,
+         created_at,
+         updated_at,
+      }
+   }
+
+   // Getter メソッド
+
+   pub fn id(&self) -> &WorkflowStepId {
+      &self.id
+   }
+
+   pub fn instance_id(&self) -> &WorkflowInstanceId {
+      &self.instance_id
+   }
+
+   pub fn step_id(&self) -> &str {
+      &self.step_id
+   }
+
+   pub fn step_name(&self) -> &str {
+      &self.step_name
+   }
+
+   pub fn step_type(&self) -> &str {
+      &self.step_type
+   }
+
+   pub fn status(&self) -> WorkflowStepStatus {
+      self.status
+   }
+
+   pub fn assigned_to(&self) -> Option<&UserId> {
+      self.assigned_to.as_ref()
+   }
+
+   pub fn decision(&self) -> Option<StepDecision> {
+      self.decision
+   }
+
+   pub fn comment(&self) -> Option<&str> {
+      self.comment.as_deref()
+   }
+
+   pub fn due_date(&self) -> Option<DateTime<Utc>> {
+      self.due_date
+   }
+
+   pub fn started_at(&self) -> Option<DateTime<Utc>> {
+      self.started_at
+   }
+
+   pub fn completed_at(&self) -> Option<DateTime<Utc>> {
+      self.completed_at
+   }
+
+   pub fn created_at(&self) -> DateTime<Utc> {
+      self.created_at
+   }
+
+   pub fn updated_at(&self) -> DateTime<Utc> {
+      self.updated_at
+   }
+
+   // ビジネスロジックメソッド
+
+   /// ステップをアクティブにした新しいインスタンスを返す
+   pub fn activated(self) -> Self {
+      Self {
+         status: WorkflowStepStatus::Active,
+         started_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      }
+   }
+
+   /// ステップを完了した新しいインスタンスを返す
+   pub fn completed(
+      self,
+      decision: StepDecision,
+      comment: Option<String>,
+   ) -> Result<Self, DomainError> {
+      if self.status != WorkflowStepStatus::Active {
+         return Err(DomainError::Validation(
+            "アクティブ状態でのみ完了できます".to_string(),
+         ));
+      }
+
+      Ok(Self {
+         status: WorkflowStepStatus::Completed,
+         decision: Some(decision),
+         comment,
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
+   /// ステップをスキップした新しいインスタンスを返す
+   pub fn skipped(self) -> Self {
+      Self {
+         status: WorkflowStepStatus::Skipped,
+         updated_at: Utc::now(),
+         ..self
+      }
+   }
+
+   /// ステップが期限切れかチェックする
+   pub fn is_overdue(&self) -> bool {
+      if let Some(due) = self.due_date
+         && self.completed_at.is_none()
+      {
+         return Utc::now() > due;
+      }
+      false
+   }
+}
