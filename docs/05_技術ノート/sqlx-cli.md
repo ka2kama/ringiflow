@@ -57,7 +57,7 @@ sqlx --version
 
 ```bash
 # .env ファイルに設定
-DATABASE_URL=postgres://user:password@localhost:5432/ringiflow
+DATABASE_URL=postgres://user:password@localhost:15432/ringiflow
 ```
 
 ### 2. マイグレーションの作成

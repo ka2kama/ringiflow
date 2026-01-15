@@ -62,7 +62,7 @@ pub struct HealthResponse {
 /// # 使用例
 ///
 /// ```text
-/// $ curl http://localhost:3000/health
+/// $ curl http://localhost:13000/health
 /// {"status":"healthy","version":"0.1.0"}
 /// ```
 ///

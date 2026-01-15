@@ -16,11 +16,11 @@
 //! | 変数名 | 必須 | デフォルト | 説明 |
 //! |--------|------|------------|------|
 //! | `BFF_HOST` | No | `0.0.0.0` | BFF サーバーのバインドアドレス |
-//! | `BFF_PORT` | No | `3000` | BFF サーバーのポート番号 |
+//! | `BFF_PORT` | No | `13000` | BFF サーバーのポート番号 |
 //! | `CORE_API_HOST` | No | `0.0.0.0` | Core API サーバーのバインドアドレス |
-//! | `CORE_API_PORT` | No | `3001` | Core API サーバーのポート番号 |
+//! | `CORE_API_PORT` | No | `13001` | Core API サーバーのポート番号 |
 //! | `DATABASE_URL` | **Yes** | - | PostgreSQL 接続 URL |
-//! | `REDIS_URL` | No | `redis://localhost:6379` | Redis 接続 URL |
+//! | `REDIS_URL` | No | `redis://localhost:16379` | Redis 接続 URL |
 //! | `ENVIRONMENT` | No | `development` | 実行環境（development/staging/production） |
 //!
 //! ## 使用例
@@ -65,7 +65,7 @@ pub struct DatabaseConfig {
 /// Redis キャッシュサーバーへの接続に必要な情報を保持する。
 #[derive(Debug, Clone)]
 pub struct RedisConfig {
-   /// 接続 URL（例: `redis://localhost:6379`）
+   /// 接続 URL（例: `redis://localhost:16379`）
    pub url: String,
 }
 
@@ -126,15 +126,15 @@ impl AppConfig {
          server:      ServerConfig {
             host: env::var("BFF_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             port: env::var("BFF_PORT")
-               .unwrap_or_else(|_| "3000".to_string())
+               .unwrap_or_else(|_| "13000".to_string())
                .parse()
-               .unwrap_or(3000),
+               .unwrap_or(13000),
          },
          database:    DatabaseConfig {
             url: env::var("DATABASE_URL")?,
          },
          redis:       RedisConfig {
-            url: env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+            url: env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:16379".to_string()),
          },
          environment: env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
       })

@@ -79,7 +79,7 @@ just setup
 # BFF を起動した状態で
 just dev-api &
 sleep 3
-curl -s http://localhost:3000/health | jq .
+curl -s http://localhost:13000/health | jq .
 # 出力例:
 # {
 #   "status": "healthy",
@@ -110,8 +110,8 @@ sudo usermod -aG docker $USER
 ### ポート競合
 
 ```bash
-# ポート 5432 が使用中の場合
-lsof -i :5432
+# ポート 15432 が使用中の場合
+lsof -i :15432
 # 競合するプロセスを停止するか、docker-compose.yml のポートを変更
 ```
 

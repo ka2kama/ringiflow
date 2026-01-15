@@ -11,11 +11,11 @@ export default defineConfig({
   plugins: [elmPlugin()],
 
   server: {
-    port: 5173,
+    port: parseInt(process.env.VITE_PORT || "15173"),
     // 開発環境で CORS を回避するため Rust バックエンドにプロキシ
     proxy: {
       "/api": {
-        target: "http://localhost:3000",
+        target: `http://localhost:${process.env.BFF_PORT || "13000"}`,
         changeOrigin: true,
       },
     },

@@ -30,7 +30,7 @@ import elmPlugin from "vite-plugin-elm";
 export default defineConfig({
   plugins: [elmPlugin()],
   server: {
-    port: 5173,
+    port: 15173,
   },
   build: {
     outDir: "dist",
@@ -74,15 +74,15 @@ elmPlugin({
 
 ## 開発サーバーのプロキシ設定
 
-開発環境では、フロントエンド（5173）とバックエンド（3000）が別ポートで動作する。
+開発環境では、フロントエンド（15173）とバックエンド（13000）が別ポートで動作する。
 CORS の問題を回避するため、Vite のプロキシ機能を使用する。
 
 ### リクエストフロー
 
 ```
-ブラウザ → localhost:5173/api/users
+ブラウザ → localhost:15173/api/users
         → Vite プロキシ
-        → localhost:3000/api/users
+        → localhost:13000/api/users
         → バックエンド
 ```
 
@@ -92,7 +92,7 @@ CORS の問題を回避するため、Vite のプロキシ機能を使用する�
 server: {
   proxy: {
     "/api": {
-      target: "http://localhost:3000",
+      target: "http://localhost:13000",
       changeOrigin: true,
     },
   },
