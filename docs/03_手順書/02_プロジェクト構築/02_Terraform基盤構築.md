@@ -7,7 +7,6 @@ AWS インフラストラクチャをコードで管理するための Terraform
 
 ## 前提条件
 
-- `06_CICD構築.md` が完了していること
 - Terraform 1.10+ がインストール済みであること
 - AWS CLI が設定済みであること（開発用 AWS アカウント）
 
@@ -289,9 +288,7 @@ terraform force-unlock LOCK_ID
 
 ## 次のステップ
 
-Terraform 基盤構築が完了したら、Phase 0 のすべての作業が完了。
-
-`00_Phase0_概要.md` の完了条件を確認し、Phase 1（MVP 実装）に進む。
+Terraform 基盤構築が完了したら、[`03_GitHub設定.md`](03_GitHub設定.md) に進む。
 
 ---
 

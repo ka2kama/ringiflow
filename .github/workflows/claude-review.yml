@@ -1,0 +1,71 @@
+# Claude Code Action PRレビューワークフロー
+#
+# 設計判断: [ADR-011](../../docs/04_ADR/011_Claude_Code_Action導入.md)
+#
+# 機能:
+# - PRオープン/更新時の自動レビュー
+# - @claude メンションによる対話的レビュー
+
+name: Claude Code Review
+
+on:
+  # PRオープン/更新時に自動レビュー
+  pull_request:
+    types: [opened, synchronize]
+
+  # コメントで @claude メンションに応答
+  issue_comment:
+    types: [created]
+
+  # PRレビューコメントにも応答
+  pull_request_review_comment:
+    types: [created]
+
+# 同時実行制御: 同一PRでの重複実行を防止
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  # PRオープン/更新時の自動レビュー
+  auto-review:
+    name: Auto Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            このPRをレビューしてください。
+            CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューを行ってください。
+          # コスト制御: 最大5ターンに制限
+          claude_args: "--max-turns 5"
+
+  # @claude メンションへの応答
+  interactive-review:
+    name: Interactive Review
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
+      contains(github.event.comment.body, '@claude')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # コスト制御: 最大10ターンに制限
+          claude_args: "--max-turns 10"
