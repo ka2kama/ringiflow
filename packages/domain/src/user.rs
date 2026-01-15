@@ -98,7 +98,14 @@ impl Email {
          ));
       }
 
-      if !value.contains('@') {
+      // 基本的な構造検証: local@domain の形式であること
+      let Some((local, domain)) = value.split_once('@') else {
+         return Err(DomainError::Validation(
+            "メールアドレスの形式が不正です".to_string(),
+         ));
+      };
+
+      if local.is_empty() || domain.is_empty() {
          return Err(DomainError::Validation(
             "メールアドレスの形式が不正です".to_string(),
          ));
@@ -375,6 +382,9 @@ mod tests {
    #[rstest]
    #[case("", "空文字列")]
    #[case("no-at-sign", "@記号なし")]
+   #[case("@", "@のみ")]
+   #[case("@example.com", "ローカル部分が空")]
+   #[case("user@", "ドメイン部分が空")]
    #[case(&format!("{}@example.com", "a".repeat(256)), "255文字超過")]
    fn test_メールアドレスは不正な形式を拒否する(
       #[case] input: &str,
