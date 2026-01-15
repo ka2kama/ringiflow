@@ -14,12 +14,12 @@ INSERT INTO tenants (id, name, subdomain, plan, status) VALUES
 
 -- 開発用ユーザーの作成
 -- TODO: 初回起動時に `just seed-passwords` でパスワードを設定する必要あり
--- 現在のハッシュはプレースホルダー（ログイン不可）
+-- セキュリティ: 以下のハッシュは無効なダミー値（ログイン不可を保証）
 INSERT INTO users (id, tenant_id, email, name, password_hash, status) VALUES
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
-     'admin@example.com', '管理者', '$argon2id$v=19$m=19456,t=2,p=1$placeholder$placeholder', 'active'),
+     'admin@example.com', '管理者', '$INVALID_HASH_PLEASE_SET_PASSWORD$', 'active'),
     ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001',
-     'user@example.com', '一般ユーザー', '$argon2id$v=19$m=19456,t=2,p=1$placeholder$placeholder', 'active');
+     'user@example.com', '一般ユーザー', '$INVALID_HASH_PLEASE_SET_PASSWORD$', 'active');
 
 -- ロール割り当て
 INSERT INTO user_roles (user_id, role_id) VALUES
