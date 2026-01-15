@@ -265,3 +265,17 @@ AIはコードを書くだけでなく、オーナーの理解促進を支援す
 | Junie | [`.junie/guidelines.md`](.junie/guidelines.md) |
 
 secrets・`.env`の取り扱い、破壊的コマンドの回避、危険なgit操作時の確認については各設定ファイルを参照。
+
+## Git 操作ルール
+
+### PR マージ
+
+PR をマージする際は `--auto` フラグを使用し、CI が通ってから自動マージする。
+
+```bash
+gh pr merge --squash --delete-branch --auto
+```
+
+**禁止事項:**
+- `--admin` フラグで CI をバイパスしない
+- CI が失敗している状態で強制マージしない
