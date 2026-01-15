@@ -123,6 +123,31 @@ prompt: |
   - 安易な unwrap/expect がないか
 ```
 
+## 既知の制限
+
+### ワークフローファイル変更時の OAuth 検証エラー
+
+**現象**: ワークフローファイル（`.github/workflows/*.yml`）自体を変更する PR では、Auto Review が以下のエラーで失敗する。
+
+```
+Workflow validation failed. The workflow file must exist and have identical content
+to the version on the repository's default branch.
+```
+
+**原因**: Claude Code Action の OAuth 認証は、PR のワークフローファイルが main ブランチと同一であることを検証する。ワークフローを変更する PR では、この検証が通らない。
+
+**対処法**:
+
+1. **Auto Review を Required check から一時的に除外**
+   - Ruleset から Auto Review を削除
+   - マージ後に元に戻す
+
+2. **手動レビューで対応**
+   - ワークフロー変更は手動でレビュー
+   - Auto Review は通常の PR でのみ使用
+
+**注意**: この制限は Claude Code Action の仕様であり、回避策はない。ワークフロー変更 PR では Auto Review を期待しないこと。
+
 ## トリガーイベントの設定
 
 ```yaml
