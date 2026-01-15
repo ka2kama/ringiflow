@@ -6,6 +6,9 @@
 #
 # PostgreSQL は Aurora PostgreSQL 17 互換
 # Redis は ElastiCache Redis 7 互換
+#
+# ポート番号は .env ファイルで設定（他プロジェクトとの競合回避）
+# 起動前に just setup-env で .env ファイルを作成すること
 
 services:
   # PostgreSQL データベース
@@ -21,7 +24,7 @@ services:
       TZ: Asia/Tokyo
       PGTZ: Asia/Tokyo
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       # データ永続化
       - postgres_data:/var/lib/postgresql/data
@@ -48,7 +51,7 @@ services:
     container_name: ringiflow-redis
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       # データ永続化
       - redis_data:/data

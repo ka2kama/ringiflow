@@ -1,4 +1,4 @@
-# Dependabot
+# Dependabot（ディペンダボット）
 
 ## 概要
 

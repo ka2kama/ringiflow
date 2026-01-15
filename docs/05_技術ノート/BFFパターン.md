@@ -1,4 +1,4 @@
-# BFF (Backend for Frontend) パターン
+# BFF（Backend for Frontend）パターン
 
 ## 概要
 
