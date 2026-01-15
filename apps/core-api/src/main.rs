@@ -73,42 +73,42 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 /// 将来的にはデータベース接続やリポジトリの初期化もここで行う。
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // .env ファイルを読み込む（存在する場合）
-    dotenvy::dotenv().ok();
+   // .env ファイルを読み込む（存在する場合）
+   dotenvy::dotenv().ok();
 
-    // トレーシング初期化
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,ringiflow=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+   // トレーシング初期化
+   tracing_subscriber::registry()
+      .with(
+         tracing_subscriber::EnvFilter::try_from_default_env()
+            .unwrap_or_else(|_| "info,ringiflow=debug".into()),
+      )
+      .with(tracing_subscriber::fmt::layer())
+      .init();
 
-    // 設定読み込み
-    let config = CoreApiConfig::from_env().expect("設定の読み込みに失敗しました");
+   // 設定読み込み
+   let config = CoreApiConfig::from_env().expect("設定の読み込みに失敗しました");
 
-    tracing::info!(
-        "Core API サーバーを起動します: {}:{}",
-        config.host,
-        config.port
-    );
+   tracing::info!(
+      "Core API サーバーを起動します: {}:{}",
+      config.host,
+      config.port
+   );
 
-    // ルーター構築
-    // 将来的にはワークフロー、タスク、ドキュメント関連のルートを追加
-    let app = Router::new()
-        .route("/health", get(health_check))
-        .layer(TraceLayer::new_for_http());
+   // ルーター構築
+   // 将来的にはワークフロー、タスク、ドキュメント関連のルートを追加
+   let app = Router::new()
+      .route("/health", get(health_check))
+      .layer(TraceLayer::new_for_http());
 
-    // サーバー起動
-    let addr: SocketAddr = format!("{}:{}", config.host, config.port)
-        .parse()
-        .expect("アドレスのパースに失敗しました");
+   // サーバー起動
+   let addr: SocketAddr = format!("{}:{}", config.host, config.port)
+      .parse()
+      .expect("アドレスのパースに失敗しました");
 
-    let listener = TcpListener::bind(addr).await?;
-    tracing::info!("Core API サーバーが起動しました: {}", addr);
+   let listener = TcpListener::bind(addr).await?;
+   tracing::info!("Core API サーバーが起動しました: {}", addr);
 
-    axum::serve(listener, app).await?;
+   axum::serve(listener, app).await?;
 
-    Ok(())
+   Ok(())
 }
