@@ -3,7 +3,7 @@
 # 設計判断: [ADR-011](../../docs/04_ADR/011_Claude_Code_Action導入.md)
 #
 # 機能:
-# - PRオープン/更新時の自動レビュー
+# - PRオープン/更新時の自動レビュー（進捗トラッキング付き）
 # - @claude メンションによる対話的レビュー
 
 name: Claude Code Review
@@ -11,7 +11,7 @@ name: Claude Code Review
 on:
   # PRオープン/更新時に自動レビュー
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, ready_for_review, reopened]
 
   # コメントで @claude メンションに応答
   issue_comment:
@@ -50,9 +50,59 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 進捗トラッキング: レビュー状況をコメントで可視化
+          track_progress: true
           prompt: |
-            このPRをレビューしてください。
-            CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューを行ってください。
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            ## 基本方針
+
+            CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューしてください。
+            特に以下の2つの理念を意識すること:
+            - 理念1: 学習効果の最大化
+            - 理念2: 品質の追求
+
+            ## レビュー観点（CLAUDE.md を補完）
+
+            ### 必須チェック
+
+            1. **バグ・正確性**: 実行時エラー、ロジックミス、エッジケースの見落とし
+            2. **セキュリティ**: 脆弱性、認証/認可の問題、機密データの露出
+            3. **パフォーマンス**: 明らかなボトルネック、N+1クエリ、メモリリーク
+            4. **型システムの活用**: Rust/Elmの強みを活かしているか
+            5. **テスト**: 新機能・バグ修正に対応するテストがあるか
+            6. **設計**: 責務の混在、依存関係の方向違反、過度な複雑さ
+
+            ### 学習機会の提供
+
+            設計判断を伴う重要な箇所では、学習のため簡潔に解説する:
+            - なぜその実装が良い/悪いのか
+            - 代替案があればトレードオフとともに提示
+
+            すべての箇所に解説は不要。学びになるポイントのみ。
+
+            ### 指摘しないこと
+
+            - コードスタイルの好み（フォーマッタが担う領域）
+            - 既存コードとの些細な不整合（このPRの責務外）
+            - 明確な理由のない「こうした方がより良い」
+
+            ## フィードバック方法
+
+            - **コード固有の問題**: `mcp__github_inline_comment__create_inline_comment` でインラインコメント
+            - **全体的なフィードバック**: `gh pr comment` でPRコメント
+
+            ## 承認判断
+
+            | 重大度 | 基準 | アクション |
+            |--------|------|-----------|
+            | Critical/High | マージ前に必ず修正が必要 | `gh pr review --request-changes` |
+            | Medium/Low | 改善推奨だがマージ可能 | `gh pr review --approve` + コメント |
+            | None | 問題なし | `gh pr review --approve` |
+
+            学習のための解説コメントは承認判断に影響しない。
+            問題がなければ、躊躇なく承認してください。
           # 許可ツール:
           #   読み取り: gh pr view/list/diff/checks, git log/diff/show/status
           #   書き込み: gh pr comment/review, インラインコメント
