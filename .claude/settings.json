@@ -92,6 +92,17 @@
     "additionalDirectories": []
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | jq -r '.command // empty' 2>/dev/null | grep -q 'git commit'; then echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'; fi"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
@@ -99,16 +110,6 @@
           {
             "type": "command",
             "command": "file_path=$(jq -r '.tool_input.file_path // empty' 2>/dev/null); if [[ \"$file_path\" == *.rs ]]; then cargo fmt --quiet -- \"$file_path\" 2>/dev/null || true; fi"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'"
           }
         ]
       }
