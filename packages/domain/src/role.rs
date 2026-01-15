@@ -118,9 +118,9 @@ impl Permission {
          return true;
       }
 
-      // resource:* 形式のチェック
+      // resource:* 形式のチェック（other もコロンを含む場合のみマッチ）
       if let Some(resource) = self.0.strip_suffix(":*")
-         && let Some(other_resource) = other.0.split(':').next()
+         && let Some((other_resource, _)) = other.0.split_once(':')
       {
          return resource == other_resource;
       }
@@ -402,6 +402,7 @@ mod tests {
    #[case("*", "task:read", true, "全権限")]
    #[case("workflow:*", "workflow:read", true, "リソース単位")]
    #[case("workflow:*", "task:read", false, "リソース単位")]
+   #[case("workflow:*", "workflow", false, "コロンなし権限は包含しない")]
    #[case("workflow:read", "workflow:read", true, "完全一致")]
    #[case("workflow:read", "task:read", false, "完全一致")]
    fn test_権限の包含判定(

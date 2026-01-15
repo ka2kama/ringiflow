@@ -307,8 +307,7 @@ impl User {
 
    /// ユーザーがログイン可能か判定する
    ///
-   /// アクティブステータスで、パスワードハッシュが設定されているか、
-   /// SSO ユーザー（password_hash が None）の場合に true を返す。
+   /// アクティブステータスの場合に true を返す。
    pub fn can_login(&self) -> bool {
       self.is_active()
    }
