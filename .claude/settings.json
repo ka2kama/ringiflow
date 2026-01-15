@@ -102,6 +102,16 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'"
+          }
+        ]
+      }
     ]
   },
   "sandbox": {
