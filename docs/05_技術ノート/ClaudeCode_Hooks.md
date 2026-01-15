@@ -24,6 +24,17 @@ Claude Code のフック機能。特定のイベント発生時にカスタム�
 ```json
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | jq -r '.command' | grep -q 'git commit'; then echo 'コミット前の確認'; fi"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
@@ -31,16 +42,6 @@ Claude Code のフック機能。特定のイベント発生時にカスタム�
           {
             "type": "command",
             "command": "cargo fmt --quiet -- \"$file_path\""
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'セッション終了'"
           }
         ]
       }
