@@ -13,14 +13,17 @@
 //!
 //! ## 環境変数一覧
 //!
+//! ポート番号は `.env` ファイルで設定する（`just setup-env` で作成）。
+//! コード内にデフォルト値を持たないことで、設定の一元管理を実現している。
+//!
 //! | 変数名 | 必須 | デフォルト | 説明 |
 //! |--------|------|------------|------|
 //! | `BFF_HOST` | No | `0.0.0.0` | BFF サーバーのバインドアドレス |
-//! | `BFF_PORT` | No | `13000` | BFF サーバーのポート番号 |
+//! | `BFF_PORT` | **Yes** | - | BFF サーバーのポート番号 |
 //! | `CORE_API_HOST` | No | `0.0.0.0` | Core API サーバーのバインドアドレス |
-//! | `CORE_API_PORT` | No | `13001` | Core API サーバーのポート番号 |
+//! | `CORE_API_PORT` | **Yes** | - | Core API サーバーのポート番号 |
 //! | `DATABASE_URL` | **Yes** | - | PostgreSQL 接続 URL |
-//! | `REDIS_URL` | No | `redis://localhost:16379` | Redis 接続 URL |
+//! | `REDIS_URL` | **Yes** | - | Redis 接続 URL |
 //! | `ENVIRONMENT` | No | `development` | 実行環境（development/staging/production） |
 //!
 //! ## 使用例
@@ -126,15 +129,16 @@ impl AppConfig {
          server:      ServerConfig {
             host: env::var("BFF_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             port: env::var("BFF_PORT")
-               .unwrap_or_else(|_| "13000".to_string())
+               .expect("BFF_PORT が設定されていません（just setup-env を実行してください）")
                .parse()
-               .unwrap_or(13000),
+               .expect("BFF_PORT は有効なポート番号である必要があります"),
          },
          database:    DatabaseConfig {
             url: env::var("DATABASE_URL")?,
          },
          redis:       RedisConfig {
-            url: env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:16379".to_string()),
+            url: env::var("REDIS_URL")
+               .expect("REDIS_URL が設定されていません（just setup-env を実行してください）"),
          },
          environment: env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string()),
       })
