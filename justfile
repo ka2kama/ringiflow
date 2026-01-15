@@ -15,8 +15,9 @@ default:
 setup: check-tools setup-env setup-deps dev-deps setup-db
     @echo ""
     @echo "✓ セットアップ完了"
-    @echo "  - just dev-api  : バックエンド起動"
-    @echo "  - just dev-web  : フロントエンド起動"
+    @echo "  - just dev-bff      : BFF 起動"
+    @echo "  - just dev-core-api : Core API 起動"
+    @echo "  - just dev-web      : フロントエンド起動"
 
 # 開発ツールのインストール確認
 check-tools:
@@ -35,10 +36,8 @@ setup-env:
     @echo "環境変数ファイルを確認中..."
     @test -f .env || (cp .env.template .env && echo "  作成: .env")
     @test -f .env && echo "  確認: .env"
-    @test -f apps/api/.env || (cp apps/api/.env.template apps/api/.env && echo "  作成: apps/api/.env")
-    @test -f apps/api/.env && echo "  確認: apps/api/.env"
-    @test -f apps/web/.env || (cp apps/web/.env.template apps/web/.env && echo "  作成: apps/web/.env")
-    @test -f apps/web/.env && echo "  確認: apps/web/.env"
+    @test -f apps/web/.env || (cp apps/web/.env.template apps/web/.env 2>/dev/null && echo "  作成: apps/web/.env") || true
+    @test -f apps/web/.env && echo "  確認: apps/web/.env" || true
     @echo "✓ 環境変数ファイル準備完了"
 
 # 依存関係をインストール
@@ -54,8 +53,8 @@ setup-deps:
 setup-db:
     @echo "データベースをセットアップ中..."
     @sleep 3
-    @cd apps/api && sqlx migrate run
-    @echo "✓ マイグレーション完了"
+    @cd apps/core-api && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
+    @echo "✓ データベースセットアップ完了"
 
 # =============================================================================
 # 開発サーバー
@@ -67,9 +66,13 @@ dev-deps:
     @echo "PostgreSQL: localhost:${POSTGRES_PORT}"
     @echo "Redis: localhost:${REDIS_PORT}"
 
-# バックエンド開発サーバーを起動
-dev-api:
-    cd apps/api && cargo run --bin bff
+# BFF 開発サーバーを起動（ポート: $BFF_PORT）
+dev-bff:
+    cargo run -p ringiflow-bff
+
+# Core API 開発サーバーを起動（ポート: $CORE_API_PORT）
+dev-core-api:
+    cargo run -p ringiflow-core-api
 
 # フロントエンド開発サーバーを起動
 dev-web:
@@ -149,5 +152,5 @@ check-all: fmt-check lint test
 # ビルド成果物とコンテナを削除
 clean:
     docker compose -f infra/docker/docker-compose.yml down -v
-    cd apps/api && cargo clean
+    cargo clean
     cd apps/web && rm -rf node_modules elm-stuff dist
