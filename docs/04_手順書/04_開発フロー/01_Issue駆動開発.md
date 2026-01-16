@@ -201,6 +201,30 @@ Red → Green → Refactor を繰り返す
 git commit -m "UserRepository: find_by_email を実装 #34"
 ```
 
+#### Issue の進捗更新
+
+**Phase やタスクが完了したら、Issue のチェックボックスを都度更新する。**
+
+```bash
+# Issue の本文を更新（チェックボックスを [x] に変更）
+gh issue edit 34 --body "$(cat <<'EOF'
+## 実装計画
+
+### Phase 1: UserRepository ✅
+
+**テストリスト:**
+- [x] メールアドレスでユーザーを取得できる
+- [x] 存在しないメールアドレスの場合 None を返す
+...
+EOF
+)"
+```
+
+**なぜ都度更新が重要か:**
+- 進捗が可視化され、チームメンバーや将来の自分が状況を把握できる
+- 完了した作業と残りの作業が明確になる
+- Project Board の進捗と Issue の詳細が一致する
+
 ### 6. Ready for Review
 
 実装が完了したら、Draft PR を Ready for Review に変更する。
@@ -316,6 +340,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-17 | Issue の進捗更新ルールを追加 |
 | 2026-01-17 | Draft PR 運用を導入（ADR-013） |
 | 2026-01-17 | ブランチ作成を設計の前に移動（設計成果物をコミットするため） |
 | 2026-01-17 | 設計フェーズを追加、TDD 開発フローへのリンクを追加、コミット粒度を追加、レビュー確認ステップを追加 |
