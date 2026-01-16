@@ -115,9 +115,12 @@ jobs:
   interactive-review:
     name: Interactive Review
     runs-on: ubuntu-latest
+    # Claude bot 自身のコメントは除外（cancel-in-progress による自己キャンセル防止）
     if: >
       (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-      contains(github.event.comment.body, '@claude')
+      contains(github.event.comment.body, '@claude') &&
+      github.event.comment.user.login != 'claude[bot]' &&
+      github.event.comment.user.login != 'github-actions[bot]'
 
     steps:
       - name: Checkout
