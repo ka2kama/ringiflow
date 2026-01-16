@@ -22,8 +22,9 @@ on:
     types: [created]
 
 # 同時実行制御: 同一PRでの重複実行を防止
+# イベントタイプも含めることで、auto-review と interactive-review が互いをキャンセルしない
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 permissions:
