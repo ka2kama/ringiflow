@@ -36,24 +36,24 @@ setup-env:
     @echo "環境変数ファイルを確認中..."
     @test -f .env || (cp .env.template .env && echo "  作成: .env")
     @test -f .env && echo "  確認: .env"
-    @test -f apps/web/.env || (cp apps/web/.env.template apps/web/.env 2>/dev/null && echo "  作成: apps/web/.env") || true
-    @test -f apps/web/.env && echo "  確認: apps/web/.env" || true
+    @test -f backend/.env || (cp backend/.env.template backend/.env && echo "  作成: backend/.env")
+    @test -f backend/.env && echo "  確認: backend/.env"
     @echo "✓ 環境変数ファイル準備完了"
 
 # 依存関係をインストール
 setup-deps:
     @echo "依存関係をインストール中..."
     @echo "  Rust..."
-    @cargo build
+    @cd backend && cargo build
     @echo "  Elm/Vite..."
-    @cd apps/web && pnpm install
+    @cd frontend && pnpm install
     @echo "✓ 依存関係インストール完了"
 
 # データベースをセットアップ
 setup-db:
     @echo "データベースをセットアップ中..."
     @sleep 3
-    @cd apps/core-api && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
+    @cd backend/apps/core-api && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
     @echo "✓ データベースセットアップ完了"
 
 # =============================================================================
@@ -68,15 +68,15 @@ dev-deps:
 
 # BFF 開発サーバーを起動（ポート: $BFF_PORT）
 dev-bff:
-    cargo run -p ringiflow-bff
+    cd backend && cargo run -p ringiflow-bff
 
 # Core API 開発サーバーを起動（ポート: $CORE_API_PORT）
 dev-core-api:
-    cargo run -p ringiflow-core-api
+    cd backend && cargo run -p ringiflow-core-api
 
 # フロントエンド開発サーバーを起動
 dev-web:
-    cd apps/web && pnpm run dev
+    cd frontend && pnpm run dev
 
 # =============================================================================
 # フォーマット
@@ -87,11 +87,11 @@ fmt: fmt-rust fmt-elm
 
 # Rust フォーマット
 fmt-rust:
-    cargo +nightly fmt --all
+    cd backend && cargo +nightly fmt --all
 
 # Elm フォーマット
 fmt-elm:
-    cd apps/web && pnpm run fmt
+    cd frontend && pnpm run fmt
 
 # =============================================================================
 # フォーマットチェック
@@ -102,11 +102,11 @@ fmt-check: fmt-check-rust fmt-check-elm
 
 # Rust フォーマットチェック
 fmt-check-rust:
-    cargo +nightly fmt --all -- --check
+    cd backend && cargo +nightly fmt --all -- --check
 
 # Elm フォーマットチェック
 fmt-check-elm:
-    cd apps/web && pnpm run format:check
+    cd frontend && pnpm run format:check
 
 # =============================================================================
 # リント
@@ -117,11 +117,11 @@ lint: lint-rust lint-elm
 
 # Rust リント（clippy）
 lint-rust:
-    cargo clippy --all-targets --all-features -- -D warnings
+    cd backend && cargo clippy --all-targets --all-features -- -D warnings
 
 # Elm リント（elm-format チェック）
 lint-elm:
-    cd apps/web && pnpm run format:check
+    cd frontend && pnpm run format:check
 
 # =============================================================================
 # テスト
@@ -132,11 +132,11 @@ test: test-rust test-elm
 
 # Rust テスト
 test-rust:
-    cargo test --all-features
+    cd backend && cargo test --all-features
 
 # Elm テスト
 test-elm:
-    cd apps/web && pnpm run test
+    cd frontend && pnpm run test
 
 # =============================================================================
 # 全チェック
@@ -152,5 +152,5 @@ check-all: fmt-check lint test
 # ビルド成果物とコンテナを削除
 clean:
     docker compose -f infra/docker/docker-compose.yml down -v
-    cargo clean
-    cd apps/web && rm -rf node_modules elm-stuff dist
+    cd backend && cargo clean
+    cd frontend && rm -rf node_modules elm-stuff dist

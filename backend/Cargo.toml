@@ -3,9 +3,9 @@ resolver = "2"
 members = [
     "apps/bff",
     "apps/core-api",
-    "packages/domain",
-    "packages/infra",
-    "packages/shared",
+    "crates/domain",
+    "crates/infra",
+    "crates/shared",
 ]
 
 [workspace.package]
@@ -51,9 +51,9 @@ pretty_assertions = "1.4"
 rstest = "0.23"
 
 # 内部クレート
-ringiflow-domain = { path = "packages/domain" }
-ringiflow-infra = { path = "packages/infra" }
-ringiflow-shared = { path = "packages/shared" }
+ringiflow-domain = { path = "crates/domain" }
+ringiflow-infra = { path = "crates/infra" }
+ringiflow-shared = { path = "crates/shared" }
 
 [profile.release]
 overflow-checks = true
