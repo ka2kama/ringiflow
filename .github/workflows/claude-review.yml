@@ -35,11 +35,11 @@ permissions:
   id-token: write
 
 jobs:
-  # PRオープン/更新時の自動レビュー
+  # PRオープン/更新時の自動レビュー（Draft PR は除外）
   auto-review:
     name: Auto Review
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
 
     steps:
       - name: Checkout

@@ -20,12 +20,13 @@
 ```mermaid
 flowchart LR
     A["Issue 作成"] --> B["ブランチ作成"]
-    B --> C["設計"]
-    C --> D["実装（TDD）"]
-    D --> E["PR 作成"]
-    E --> F["レビュー確認"]
-    F --> G["マージ"]
-    G --> H["Issue 自動クローズ"]
+    B --> C["Draft PR 作成"]
+    C --> D["設計"]
+    D --> E["実装（TDD）"]
+    E --> F["Ready for Review"]
+    F --> G["レビュー確認"]
+    G --> H["マージ"]
+    H --> I["Issue 自動クローズ"]
 ```
 
 ### 1. Issue を確認または作成
@@ -54,7 +55,27 @@ git checkout -b feature/34-user-auth
 - `feature/{issue番号}-{機能名}` — 新機能
 - `fix/{issue番号}-{バグ名}` — バグ修正
 
-### 3. 設計
+### 3. Draft PR を作成
+
+ブランチ作成後、すぐに Draft PR を作成する。
+
+```bash
+# 空コミットで Draft PR を作成
+git commit --allow-empty -m "WIP: ログイン機能を実装 #34"
+git push -u origin HEAD
+gh pr create --draft --title "ログイン機能を実装" --body "Closes #34"
+```
+
+**Draft PR の目的:**
+- 作業中であることを可視化
+- PR Description に設計メモや検討事項を記録
+- 必要に応じて `@claude` メンションで相談
+
+**注意:** Draft PR では自動レビューは実行されない。Ready for Review に変更した時点でレビューが走る。
+
+採用理由: [ADR-013: Draft PR 運用の導入](../../05_ADR/013_Draft_PR運用の導入.md)
+
+### 4. 設計
 
 **実装前に必ず設計フェーズを経る。** コードを書く前に「何を作るか」「どう作るか」を明確にする。
 
@@ -65,7 +86,7 @@ flowchart TB
     C --> D["Issue 更新"]
 ```
 
-#### 3.1 基本設計確認
+#### 4.1 基本設計確認
 
 既存の基本設計書（`docs/02_基本設計書/`）を確認し、アーキテクチャ上の位置づけを把握する。
 
@@ -75,7 +96,7 @@ flowchart TB
 
 基本設計の変更が必要な場合は、設計書を先に更新する。
 
-#### 3.2 詳細設計作成
+#### 4.2 詳細設計作成
 
 機能の詳細設計を `docs/03_詳細設計書/` に作成する。
 
@@ -93,7 +114,7 @@ OpenAPI 仕様書（`openapi/openapi.yaml`）を更新する。OpenAPI が Singl
 - リクエスト/レスポンススキーマを定義
 - エラーレスポンスを定義
 
-#### 3.3 実装計画作成
+#### 4.3 実装計画作成
 
 Issue 本文に実装計画を追記する。
 
@@ -126,7 +147,7 @@ TDD（Red → Green → Refactor）で MVP を積み上げる。
 
 **参考例:** [Issue #34: ユーザー認証](https://github.com/ka2kama/ringiflow/issues/34)
 
-#### 3.4 設計成果物のコミット
+#### 4.4 設計成果物のコミット
 
 設計フェーズで作成・更新したドキュメントをコミットする。
 
@@ -146,7 +167,7 @@ git commit -m "ログイン機能の詳細設計を追加 #34"
 - 既存パターンの踏襲（設計済み機能の追加実装）
 - ドキュメント修正
 
-### 4. 実装（TDD）
+### 5. 実装（TDD）
 
 TDD（テスト駆動開発）で実装を進める。詳細は [TDD 開発フロー](./02_TDD開発フロー.md) を参照。
 
@@ -180,20 +201,17 @@ Red → Green → Refactor を繰り返す
 git commit -m "UserRepository: find_by_email を実装 #34"
 ```
 
-### 5. PR を作成
+### 6. Ready for Review
+
+実装が完了したら、Draft PR を Ready for Review に変更する。
 
 ```bash
-gh pr create --title "ログイン機能を実装" --body "Closes #34"
+gh pr ready
 ```
 
-`Closes #34` を含めると、PR マージ時に Issue が自動的にクローズされる。
+これにより Claude Code Action の自動レビューが実行される。
 
-キーワード:
-- `Closes #N` — Issue をクローズ
-- `Fixes #N` — Issue をクローズ（バグ修正向け）
-- `Relates to #N` — 関連付けのみ（クローズしない）
-
-### 6. レビュー確認
+### 7. レビュー確認
 
 Claude Code Action による自動レビューが実行される。
 
@@ -203,7 +221,7 @@ Claude Code Action による自動レビューが実行される。
 
 レビュー方針: [CLAUDE.md の PRレビュー](../../../CLAUDE.md#prレビュー)
 
-### 7. マージ
+### 8. マージ
 
 レビュー確認後、手動でマージする。
 
@@ -298,6 +316,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-17 | Draft PR 運用を導入（ADR-013） |
 | 2026-01-17 | ブランチ作成を設計の前に移動（設計成果物をコミットするため） |
 | 2026-01-17 | 設計フェーズを追加、TDD 開発フローへのリンクを追加、コミット粒度を追加、レビュー確認ステップを追加 |
 | 2026-01-16 | 初版作成 |
