@@ -94,34 +94,20 @@ fmt-elm:
     cd frontend && pnpm run fmt
 
 # =============================================================================
-# フォーマットチェック
-# =============================================================================
-
-# 全体フォーマットチェック
-fmt-check: fmt-check-rust fmt-check-elm
-
-# Rust フォーマットチェック
-fmt-check-rust:
-    cd backend && cargo +nightly fmt --all -- --check
-
-# Elm フォーマットチェック
-fmt-check-elm:
-    cd frontend && pnpm run format:check
-
-# =============================================================================
-# リント
+# リント（フォーマットチェック含む）
 # =============================================================================
 
 # 全体リント
 lint: lint-rust lint-elm
 
-# Rust リント（clippy）
+# Rust リント（rustfmt + clippy）
 lint-rust:
+    cd backend && cargo +nightly fmt --all -- --check
     cd backend && cargo clippy --all-targets --all-features -- -D warnings
 
-# Elm リント（elm-format チェック）
+# Elm リント（elm-format + elm-review）
 lint-elm:
-    cd frontend && pnpm run format:check
+    cd frontend && pnpm run lint
 
 # =============================================================================
 # テスト
@@ -142,8 +128,8 @@ test-elm:
 # 全チェック
 # =============================================================================
 
-# プッシュ前の全チェック（フォーマット、リント、テスト）
-check-all: fmt-check lint test
+# プッシュ前の全チェック（リント、テスト）
+check-all: lint test
 
 # =============================================================================
 # クリーンアップ

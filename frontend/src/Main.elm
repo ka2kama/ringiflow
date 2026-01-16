@@ -12,7 +12,6 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Json.Decode as Decode
 import Route exposing (Route)
 import Url exposing (Url)
 
@@ -45,15 +44,6 @@ type alias Flags =
     { apiBaseUrl : String
     , timestamp : Int
     }
-
-
-{-| Flags のデコーダー（将来の検証強化用に定義）
--}
-flagsDecoder : Decode.Decoder Flags
-flagsDecoder =
-    Decode.map2 Flags
-        (Decode.field "apiBaseUrl" Decode.string)
-        (Decode.field "timestamp" Decode.int)
 
 
 

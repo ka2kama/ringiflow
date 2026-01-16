@@ -134,7 +134,6 @@
   "attribution": {
     "commit": "Co-Authored-By: Claude Code <noreply@anthropic.com>"
   },
-  "plansDirectory": "prompts/plans",
   "cleanupPeriodDays": 30,
   "respectGitignore": true
 }
