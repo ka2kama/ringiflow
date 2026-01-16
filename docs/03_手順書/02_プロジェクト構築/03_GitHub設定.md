@@ -92,6 +92,67 @@ GitHub は従来の Branch protection rules に加え、より柔軟な Rulesets
 
 ### 2.2 main ブランチ保護（Ruleset）
 
+JSON パラメータの詳細は [技術ノート: GitHub Ruleset](../../05_技術ノート/GitHub_Ruleset.md) を参照。
+
+**方法 A: CLI（推奨）**
+
+```bash
+# Ruleset の作成
+gh api repos/{owner}/{repo}/rulesets -X POST --input - << 'EOF'
+{
+  "name": "main-protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": ["refs/heads/main"]
+    }
+  },
+  "rules": [
+    {"type": "deletion"},
+    {"type": "required_signatures"},
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 1,
+        "dismiss_stale_reviews_on_push": true,
+        "required_reviewers": [],
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": true,
+        "allowed_merge_methods": ["squash"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {"context": "CI Success", "integration_id": 15368},
+          {"context": "Auto Review", "integration_id": 15368}
+        ]
+      }
+    },
+    {"type": "non_fast_forward"}
+  ],
+  "bypass_actors": []
+}
+EOF
+
+# Ruleset の確認
+gh api repos/{owner}/{repo}/rulesets --jq '.[].name'
+
+# Ruleset の詳細確認
+gh api repos/{owner}/{repo}/rulesets/{ruleset_id}
+
+# Ruleset の更新
+gh api repos/{owner}/{repo}/rulesets/{ruleset_id} -X PUT --input ruleset.json
+```
+
+**方法 B: UI**
+
 ```
 Settings > Rules > Rulesets > New ruleset > New branch ruleset
 ```
@@ -393,7 +454,8 @@ PR が作成されると、変更ファイルに応じて自動でレビュワ�
 * @owner
 
 # ディレクトリ単位
-/apps/api/ @backend-team
+/apps/bff/ @backend-team
+/apps/core-api/ @backend-team
 /apps/web/ @frontend-team
 /infra/ @infra-team
 /docs/ @docs-team
@@ -416,7 +478,8 @@ PR が作成されると、変更ファイルに応じて自動でレビュワ�
 * @ka2kama
 
 # バックエンド（Rust）
-/apps/api/ @ka2kama
+/apps/bff/ @ka2kama
+/apps/core-api/ @ka2kama
 /packages/ @ka2kama
 *.rs @ka2kama
 
@@ -805,6 +868,61 @@ Claude Pro/Max サブスクリプションの利用枠を消費する。
 API 利用料が発生する。利用状況は https://console.anthropic.com/usage で確認。
 
 ### 10.4 Ruleset への Status Check 追加
+
+JSON パラメータの詳細は [技術ノート: GitHub Ruleset](../../05_技術ノート/GitHub_Ruleset.md) を参照。
+
+**方法 A: CLI（推奨）**
+
+```bash
+# 既存の Ruleset ID を取得
+gh api repos/{owner}/{repo}/rulesets --jq '.[] | select(.name == "main-protection") | .id'
+
+# Ruleset を更新して Auto Review を追加
+gh api repos/{owner}/{repo}/rulesets/{ruleset_id} -X PUT --input - << 'EOF'
+{
+  "name": "main-protection",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": ["refs/heads/main"]
+    }
+  },
+  "rules": [
+    {"type": "deletion"},
+    {"type": "required_signatures"},
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 1,
+        "dismiss_stale_reviews_on_push": true,
+        "required_reviewers": [],
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": true,
+        "allowed_merge_methods": ["squash"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {"context": "CI Success", "integration_id": 15368},
+          {"context": "Auto Review", "integration_id": 15368}
+        ]
+      }
+    },
+    {"type": "non_fast_forward"}
+  ],
+  "bypass_actors": []
+}
+EOF
+```
+
+**方法 B: UI**
 
 ```
 Settings > Rules > Rulesets > main-protection（編集）

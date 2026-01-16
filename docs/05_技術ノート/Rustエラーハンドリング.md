@@ -241,7 +241,7 @@ impl From<DomainError> for ApiError {
 
 ## プロジェクトでの使用
 
-`apps/api/src/error.rs` で `ApiError` と `IntoResponse` を実装している。
+`apps/bff/src/error.rs` および `apps/core-api/src/error.rs` で `ApiError` と `IntoResponse` を実装している。
 
 ## 関連リソース
 

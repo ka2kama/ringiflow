@@ -165,10 +165,10 @@ struct WorkflowResponse {
 
 ## プロジェクトでの使用
 
-| バイナリ | ポート | 役割 |
+| クレート | ポート | 役割 |
 |---------|--------|------|
-| `apps/api/src/bin/bff.rs` | 3000 | BFF |
-| `apps/api/src/bin/core_api.rs` | 3001 | Core API |
+| `apps/bff` | 13000 | BFF |
+| `apps/core-api` | 13001 | Core API |
 
 ## 関連リソース
 
