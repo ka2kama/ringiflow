@@ -1,6 +1,6 @@
 ---
 paths:
-  - "apps/api/migrations/**/*.sql"
+  - "apps/core-api/migrations/**/*.sql"
   - "infra/dynamodb/**/*.tf"
   - "infra/s3/**/*.tf"
   - "**/redis/**/*.rs"
@@ -11,7 +11,7 @@ paths:
 # データストア変更時のルール
 
 このルールは以下のファイルを編集する際に適用される:
-- `apps/api/migrations/**` - PostgreSQL マイグレーション
+- `apps/core-api/migrations/**` - PostgreSQL マイグレーション
 - `infra/dynamodb/**` - DynamoDB テーブル定義
 - `infra/s3/**` - S3 バケット定義
 - `**/redis/**` - Redis 関連コード
@@ -34,14 +34,14 @@ paths:
 新しいデータストアを追加したら、以下のファイルを更新:
 
 1. **削除ハンドラの実装**
-   - `apps/api/src/domain/tenant/deletion/` に新しい Deleter を追加
+   - `apps/core-api/src/domain/tenant/deletion/` に新しい Deleter を追加
    - `TenantDeleter` トレイトを実装
 
 2. **レジストリへの登録**
-   - `apps/api/src/domain/tenant/deletion/registry.rs` の `DeletionRegistry::new()` に追加
+   - `apps/core-api/src/domain/tenant/deletion/registry.rs` の `DeletionRegistry::new()` に追加
 
 3. **テストの更新**
-   - `apps/api/tests/tenant_deletion_test.rs` の期待リストに追加
+   - `apps/core-api/tests/tenant_deletion_test.rs` の期待リストに追加
    - 統合テストで削除→検証のフローを確認
 
 ### 3. 設計書の更新

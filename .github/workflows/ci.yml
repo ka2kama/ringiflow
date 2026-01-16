@@ -36,7 +36,8 @@ jobs:
         with:
           filters: |
             rust:
-              - 'apps/api/**'
+              - 'apps/bff/**'
+              - 'apps/core-api/**'
               - 'packages/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
