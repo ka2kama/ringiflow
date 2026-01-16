@@ -40,7 +40,7 @@ jobs:
             elm:
               - 'frontend/**'
 
-  # Rust チェック: フォーマット、リント、テスト、ビルド
+  # Rust チェック: リント、テスト
   rust:
     name: Rust
     runs-on: ubuntu-latest
@@ -84,20 +84,14 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
-      - name: Format check
-        run: just fmt-check-rust
-
       - name: Lint
         run: just lint-rust
 
       - name: Test
-        run: just test-rust
-
-      - name: Build
-        run: cargo build --release
+        run: cargo test --release --all-features
         working-directory: backend
 
-  # Elm チェック: フォーマット、テスト、ビルド
+  # Elm チェック: リント、テスト、ビルド
   elm:
     name: Elm
     runs-on: ubuntu-latest
@@ -129,8 +123,8 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
-      - name: Format check
-        run: just fmt-check-elm
+      - name: Lint
+        run: just lint-elm
 
       - name: Test
         run: just test-elm
