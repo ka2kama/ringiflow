@@ -533,7 +533,7 @@ TTL: 1分
 ### ファイル構成
 
 ```
-apps/core-api/migrations/
+backend/migrations/
 ├── 20250112000001_create_tenants.sql
 ├── 20250112000002_create_users.sql
 ├── 20250112000003_create_roles.sql

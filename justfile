@@ -53,7 +53,7 @@ setup-deps:
 setup-db:
     @echo "データベースをセットアップ中..."
     @sleep 3
-    @cd backend/apps/core-api && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
+    @cd backend && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
     @echo "✓ データベースセットアップ完了"
 
 # =============================================================================

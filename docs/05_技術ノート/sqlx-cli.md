@@ -51,6 +51,50 @@ sqlx --version
 | `sqlx prepare` | クエリキャッシュを生成（`.sqlx/` ディレクトリ） |
 | `sqlx prepare --check` | キャッシュが最新か検証（CI 用） |
 
+## マイグレーションの仕組み
+
+### 冪等性（Idempotency）
+
+`sqlx migrate run` は冪等な操作であり、何度実行しても安全。
+
+仕組み:
+
+1. 初回実行時、SQLx は `_sqlx_migrations` テーブルを作成
+2. マイグレーション適用時、このテーブルに記録を追加
+3. 再実行時、既に記録があるマイグレーションはスキップ
+
+```
+初回実行:     001_create_users → 適用、記録
+2回目実行:    001_create_users → スキップ（記録済み）
+新規追加後:   001_create_users → スキップ、002_add_column → 適用、記録
+```
+
+### _sqlx_migrations テーブル
+
+```sql
+-- SQLx が自動作成するテーブル
+SELECT * FROM _sqlx_migrations;
+
+--  version |      description       |    installed_on     | success | checksum | execution_time
+-- ---------+------------------------+---------------------+---------+----------+----------------
+--        1 | create_users_table     | 2026-01-14 12:00:00 | t       | \x...    | 32123456
+```
+
+| カラム | 説明 |
+|--------|------|
+| `version` | マイグレーション番号（タイムスタンプ） |
+| `description` | マイグレーション名 |
+| `installed_on` | 適用日時 |
+| `success` | 成功したか |
+| `checksum` | ファイルのハッシュ値 |
+| `execution_time` | 実行時間（ナノ秒） |
+
+### 注意点
+
+- 適用済みマイグレーションは編集しない — checksum が変わるとエラーになる
+- 本番では revert を慎重に — データが失われる可能性がある
+- マイグレーションの順序は変えない — version 順に実行される
+
 ## 使い方
 
 ### 1. 環境変数の設定
@@ -63,9 +107,7 @@ DATABASE_URL=postgres://user:password@localhost:15432/ringiflow
 ### 2. マイグレーションの作成
 
 ```bash
-cd apps/core-api
-
-# マイグレーションファイルを作成
+# migrations/ ディレクトリがある場所で実行
 sqlx migrate add create_users_table
 
 # 生成されるファイル:
@@ -133,25 +175,6 @@ sqlx migrate add -r create_users_table
 #   20260114120000_create_users_table.down.sql
 ```
 
-## プロジェクトでの使用
-
-### ディレクトリ構成
-
-```
-apps/core-api/
-├── migrations/           # マイグレーションファイル
-│   └── *.sql
-├── .sqlx/                # オフラインキャッシュ（git 管理）
-│   └── query-*.json
-└── .env                  # DATABASE_URL
-```
-
-### justfile タスク
-
-```bash
-just setup-db    # sqlx migrate run を実行
-```
-
 ## トラブルシューティング
 
 ### "database does not exist"
@@ -168,11 +191,7 @@ sqlx database create
 
 ### "migrations directory not found"
 
-```bash
-# migrations ディレクトリがあるディレクトリで実行
-cd apps/core-api
-sqlx migrate run
-```
+`migrations/` ディレクトリが存在するディレクトリで `sqlx migrate` コマンドを実行する必要がある。
 
 ## 関連リソース
 
@@ -187,3 +206,4 @@ sqlx migrate run
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-14 | 初版作成 |
+| 2026-01-16 | マイグレーションの仕組み（冪等性）セクションを追加、プロジェクト固有の記述を削除 |
