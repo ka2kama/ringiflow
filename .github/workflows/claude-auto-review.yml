@@ -1,30 +1,19 @@
-# Claude Code Action PRレビューワークフロー
+# Claude Code Action 自動レビュー
+#
+# PRオープン/更新時に自動でコードレビューを実行する。
+# Draft PR は除外。
 #
 # 設計判断: [ADR-011](../../docs/05_ADR/011_Claude_Code_Action導入.md)
-#
-# 機能:
-# - PRオープン/更新時の自動レビュー（進捗トラッキング付き）
-# - @claude メンションによる対話的レビュー
 
-name: Claude Code Review
+name: Claude Auto Review
 
 on:
-  # PRオープン/更新時に自動レビュー
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
 
-  # コメントで @claude メンションに応答
-  issue_comment:
-    types: [created]
-
-  # PRレビューコメントにも応答
-  pull_request_review_comment:
-    types: [created]
-
 # 同時実行制御: 同一PRでの重複実行を防止
-# イベントタイプも含めることで、auto-review と interactive-review が互いをキャンセルしない
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
@@ -35,11 +24,10 @@ permissions:
   id-token: write
 
 jobs:
-  # PRオープン/更新時の自動レビュー（Draft PR は除外）
   auto-review:
     name: Auto Review
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false
 
     steps:
       - name: Checkout
@@ -51,7 +39,6 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # 進捗トラッキング: レビュー状況をコメントで可視化
           track_progress: true
           prompt: |
             REPO: ${{ github.repository }}
@@ -104,37 +91,6 @@ jobs:
 
             学習のための解説コメントは承認判断に影響しない。
             問題がなければ、躊躇なく承認してください。
-          # 許可ツール:
-          #   読み取り: gh pr view/list/diff/checks, git log/diff/show/status
-          #   書き込み: gh pr comment/review, インラインコメント
-          claude_args: |
-            --max-turns 40
-            --allowedTools "Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git status:*),mcp__github_inline_comment__create_inline_comment"
-
-  # @claude メンションへの応答
-  interactive-review:
-    name: Interactive Review
-    runs-on: ubuntu-latest
-    # Claude bot 自身のコメントは除外（cancel-in-progress による自己キャンセル防止）
-    if: >
-      (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
-      contains(github.event.comment.body, '@claude') &&
-      github.event.comment.user.login != 'claude[bot]' &&
-      github.event.comment.user.login != 'github-actions[bot]'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # 許可ツール:
-          #   読み取り: gh pr view/list/diff/checks, git log/diff/show/status
-          #   書き込み: gh pr comment/review, インラインコメント
           claude_args: |
             --max-turns 40
             --allowedTools "Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git status:*),mcp__github_inline_comment__create_inline_comment"
