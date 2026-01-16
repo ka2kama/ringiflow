@@ -14,7 +14,8 @@ Rust のモノレポ構成において、Cargo Workspace を使用してクレ�
 [workspace]
 resolver = "2"
 members = [
-    "apps/api",
+    "apps/bff",
+    "apps/core-api",
     "packages/domain",
     "packages/infra",
     "packages/shared",
@@ -61,7 +62,8 @@ serde = { workspace = true }
 ```mermaid
 graph TB
     subgraph "apps/"
-        API["apps/api<br/>HTTP サーバー"]
+        BFF["apps/bff<br/>BFF サービス"]
+        CoreAPI["apps/core-api<br/>Core API"]
     end
 
     subgraph "packages/"
@@ -70,9 +72,12 @@ graph TB
         Shared["packages/shared<br/>共有"]
     end
 
-    API --> Domain
-    API --> Infra
-    API --> Shared
+    BFF -->|HTTP| CoreAPI
+    BFF --> Shared
+
+    CoreAPI --> Domain
+    CoreAPI --> Infra
+    CoreAPI --> Shared
 
     Infra --> Domain
     Infra --> Shared
@@ -158,10 +163,10 @@ impl UserRepository for PostgresUserRepository {
 }
 ```
 
-### 3. API 層で注入
+### 3. Core API 層で注入
 
 ```rust
-// apps/api/src/main.rs
+// apps/core-api/src/main.rs
 
 use ringiflow_domain::repositories::UserRepository;
 use ringiflow_infra::database::PostgresUserRepository;
@@ -185,7 +190,7 @@ async fn main() {
 
 ```mermaid
 flowchart TB
-    Apps["apps (api)<br/>最も外側"]
+    Apps["apps (bff, core-api)<br/>最も外側"]
     Infra["packages/infra<br/>インフラ層"]
     Domain["packages/domain<br/>ドメイン層"]
     Shared["packages/shared<br/>最も内側"]
@@ -202,7 +207,8 @@ flowchart TB
 | `shared` | 共通ユーティリティ | なし |
 | `domain` | ビジネスロジック、trait 定義 | `shared` のみ |
 | `infra` | trait の実装、外部連携 | `domain`, `shared` |
-| `api` | HTTP ハンドラ、DI | 全クレート |
+| `bff` | BFF サービス | `shared` のみ |
+| `core-api` | Core API、HTTP ハンドラ、DI | 全クレート |
 
 ## メリット
 
@@ -241,7 +247,8 @@ PostgreSQL → DynamoDB に変更しても、ドメイン層は影響を受け�
 
 | クレート | 場所 |
 |---------|------|
-| api | `apps/api/` |
+| bff | `apps/bff/` |
+| core-api | `apps/core-api/` |
 | domain | `packages/domain/` |
 | infra | `packages/infra/` |
 | shared | `packages/shared/` |

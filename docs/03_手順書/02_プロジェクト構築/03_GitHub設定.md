@@ -454,7 +454,8 @@ PR が作成されると、変更ファイルに応じて自動でレビュワ�
 * @owner
 
 # ディレクトリ単位
-/apps/api/ @backend-team
+/apps/bff/ @backend-team
+/apps/core-api/ @backend-team
 /apps/web/ @frontend-team
 /infra/ @infra-team
 /docs/ @docs-team
@@ -477,7 +478,8 @@ PR が作成されると、変更ファイルに応じて自動でレビュワ�
 * @ka2kama
 
 # バックエンド（Rust）
-/apps/api/ @ka2kama
+/apps/bff/ @ka2kama
+/apps/core-api/ @ka2kama
 /packages/ @ka2kama
 *.rs @ka2kama
 

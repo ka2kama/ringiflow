@@ -63,7 +63,7 @@ DATABASE_URL=postgres://user:password@localhost:15432/ringiflow
 ### 2. マイグレーションの作成
 
 ```bash
-cd apps/api
+cd apps/core-api
 
 # マイグレーションファイルを作成
 sqlx migrate add create_users_table
@@ -138,7 +138,7 @@ sqlx migrate add -r create_users_table
 ### ディレクトリ構成
 
 ```
-apps/api/
+apps/core-api/
 ├── migrations/           # マイグレーションファイル
 │   └── *.sql
 ├── .sqlx/                # オフラインキャッシュ（git 管理）
@@ -170,7 +170,7 @@ sqlx database create
 
 ```bash
 # migrations ディレクトリがあるディレクトリで実行
-cd apps/api
+cd apps/core-api
 sqlx migrate run
 ```
 
