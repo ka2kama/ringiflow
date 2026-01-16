@@ -149,6 +149,26 @@ fn test_ユーザー操作() {
 
 ## コーディング規約
 
+### モジュール構造
+
+`mod.rs` は使用しない。Rust 2018 以降のディレクトリ構造を採用する。
+
+```
+# Good: 新しいスタイル
+src/
+├── lib.rs
+├── repository.rs          # pub mod user_repository;
+└── repository/
+    └── user_repository.rs
+
+# Bad: 古いスタイル（mod.rs）
+src/
+├── lib.rs
+└── repository/
+    ├── mod.rs             # ← 使わない
+    └── user_repository.rs
+```
+
 ### 構造体とメソッド
 
 ```rust
