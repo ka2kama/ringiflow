@@ -143,12 +143,16 @@ lint-shell:
 # テスト
 # =============================================================================
 
-# 全テスト
+# 全テスト（単体テストのみ）
 test: test-rust test-elm
 
-# Rust テスト
+# Rust 単体テスト
 test-rust:
-    cd backend && cargo test --all-features
+    cd backend && cargo test --all-features --lib --bins
+
+# Rust 統合テスト（DB 接続が必要）
+test-rust-integration:
+    cd backend && cargo test --all-features --test '*'
 
 # Elm テスト
 test-elm:

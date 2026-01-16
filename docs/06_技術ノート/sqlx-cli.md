@@ -145,10 +145,80 @@ CI など DB がない環境では、事前生成したキャッシュを使う�
 
 ```bash
 # 開発時: キャッシュを生成
-sqlx prepare
+cargo sqlx prepare --workspace
 
 # CI: キャッシュを使ってビルド
 SQLX_OFFLINE=true cargo build
+```
+
+## オフラインモード詳細
+
+### 仕組み
+
+`sqlx::query!` マクロはコンパイル時に以下を行う：
+
+1. **通常モード**: DB に接続し、SQL の構文・型を検証
+2. **オフラインモード（`SQLX_OFFLINE=true`）**: `.sqlx/` ディレクトリのキャッシュを参照
+
+```
+開発環境                               CI 環境
+┌──────────────────┐                  ┌──────────────────┐
+│ cargo build      │                  │ cargo build      │
+│     ↓            │                  │     ↓            │
+│ sqlx::query!     │                  │ sqlx::query!     │
+│     ↓            │                  │     ↓            │
+│ DB に接続して検証 │                  │ .sqlx/ を参照    │
+└──────────────────┘                  └──────────────────┘
+```
+
+### キャッシュファイル
+
+`cargo sqlx prepare` で生成される `.sqlx/` ディレクトリの内容：
+
+```
+.sqlx/
+├── query-{hash1}.json   # クエリ1のメタデータ
+├── query-{hash2}.json   # クエリ2のメタデータ
+└── ...
+```
+
+各 JSON ファイルには以下が含まれる：
+- SQL クエリ文字列
+- 引数の型情報
+- 戻り値のカラム情報
+
+### 必須運用ルール
+
+**SQL クエリを追加・変更したら必ず `cargo sqlx prepare` を実行する。**
+
+```bash
+# DB を起動した状態で
+just setup-db
+
+# キャッシュを再生成（テストコード含む）
+cd backend && cargo sqlx prepare --workspace -- --all-targets
+
+# コミットに含める
+git add backend/.sqlx/
+git commit -m "SQLx オフラインキャッシュを更新"
+```
+
+**重要:** `--all-targets` オプションを忘れると、テストコード内の `sqlx::query!` がキャッシュされず、CI でテストビルドが失敗する。
+
+### よくあるミス
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| CI で `SQLX_OFFLINE=true but there is no cached data` | 新しいクエリのキャッシュがない | `cargo sqlx prepare` を実行 |
+| CI でのみビルドが失敗する | `.sqlx/` をコミットし忘れ | キャッシュをコミットに含める |
+| キャッシュ生成時にエラー | DB が起動していない | `just setup-db` で DB を起動 |
+
+### CI での設定
+
+```yaml
+# .github/workflows/ci.yml
+env:
+  SQLX_OFFLINE: true  # オフラインモードを有効化
 ```
 
 ## マイグレーションファイルの規約
@@ -207,3 +277,4 @@ sqlx database create
 |------|---------|
 | 2026-01-14 | 初版作成 |
 | 2026-01-16 | マイグレーションの仕組み（冪等性）セクションを追加、プロジェクト固有の記述を削除 |
+| 2026-01-17 | オフラインモード詳細セクションを追加 |
