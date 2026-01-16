@@ -1,6 +1,6 @@
 ---
 paths:
-  - "apps/core-api/migrations/**/*.sql"
+  - "backend/migrations/**/*.sql"
   - "infra/dynamodb/**/*.tf"
   - "infra/s3/**/*.tf"
   - "**/redis/**/*.rs"
@@ -11,7 +11,7 @@ paths:
 # データストア変更時のルール
 
 このルールは以下のファイルを編集する際に適用される:
-- `apps/core-api/migrations/**` - PostgreSQL マイグレーション
+- `backend/migrations/**` - PostgreSQL マイグレーション
 - `infra/dynamodb/**` - DynamoDB テーブル定義
 - `infra/s3/**` - S3 バケット定義
 - `**/redis/**` - Redis 関連コード
