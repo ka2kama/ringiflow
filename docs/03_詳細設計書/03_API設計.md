@@ -34,6 +34,12 @@ graph LR
     API --> Internal
 ```
 
+### OpenAPI 仕様書
+
+機械可読な API 仕様は OpenAPI 形式で管理している。
+
+→ [OpenAPI 仕様書](../../openapi/openapi.yaml)
+
 ---
 
 ## 共通仕様
@@ -756,4 +762,5 @@ sequenceDiagram
 
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-01-17 | OpenAPI 仕様書への参照を追加 | - |
 | 2026-01-12 | 初版作成（MVP 範囲） | - |
