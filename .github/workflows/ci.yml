@@ -1,7 +1,7 @@
 # RingiFlow CI ワークフロー
 #
-# 設計判断: [ADR-004](../../docs/04_ADR/004_CI並列化と変更検出.md)
-# 技術詳細: [GitHub Actions](../../docs/05_技術ノート/GitHubActions.md)
+# 設計判断: [ADR-004](../../docs/05_ADR/004_CI並列化と変更検出.md)
+# 技術詳細: [GitHub Actions](../../docs/06_技術ノート/GitHubActions.md)
 
 name: CI
 
