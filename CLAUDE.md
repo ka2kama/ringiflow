@@ -342,6 +342,34 @@ PRを出してからマージするまでの標準フロー:
 
 secrets・`.env`の取り扱い、破壊的コマンドの回避、危険なgit操作時の確認については各設定ファイルを参照。
 
+## Issue 駆動開発
+
+このプロジェクトでは GitHub Projects + Issue 駆動で開発を進める。
+
+→ [手順書: Issue 駆動開発](docs/03_手順書/04_開発フロー/01_Issue駆動開発.md)
+
+### 基本フロー
+
+1. Issue を確認または作成する
+2. Issue 番号を含むブランチを作成する（例: `feature/34-user-auth`）
+3. 実装する
+4. PR を作成し、`Closes #34` で Issue と紐づける
+5. マージすると Issue が自動クローズされる
+
+### AI エージェントへの指示
+
+- 新しい機能を実装する前に、対応する Issue が存在するか確認すること
+- Issue が存在しない場合は、ユーザーに確認するか、新しい Issue を作成すること
+- ブランチ名には Issue 番号を含めること（例: `feature/34-user-auth`）
+- PR 作成時は `Closes #N` で Issue と紐づけること
+- 小さな修正（typo、フォーマットなど）は Issue なしで進めてよい
+
+### リソース
+
+- [Project Board](https://github.com/users/ka2kama/projects/1)
+- [Milestones](https://github.com/ka2kama/ringiflow/milestones)
+- [Issues](https://github.com/ka2kama/ringiflow/issues)
+
 ## Git 操作ルール
 
 ### ブランチ戦略
