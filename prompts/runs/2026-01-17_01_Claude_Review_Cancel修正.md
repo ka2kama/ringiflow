@@ -29,31 +29,44 @@ concurrency:
   cancel-in-progress: true
 ```
 
-Claude bot のコメントも `issue_comment` イベントをトリガーするため、同じ concurrency グループに属し、前の実行をキャンセルしていた。
+問題点:
+1. Bot のコメントもジョブ条件でスキップされるが、ワークフロー自体は開始される
+2. ワークフローが開始されると concurrency グループに影響を与える
+3. 結果として、Bot のコメントによる新しい run が前の run をキャンセル
 
-### 解決策
+### 解決策（2段階）
 
-interactive-review ジョブの条件に bot ユーザーの除外を追加:
+**第1段階（PR #47）:** ジョブ条件に Bot 除外を追加
+- 効果なし（ワークフローは開始されるため）
 
-```yaml
-if: >
-  (github.event_name == 'issue_comment' || ...) &&
-  contains(github.event.comment.body, '@claude') &&
-  github.event.comment.user.login != 'claude[bot]' &&
-  github.event.comment.user.login != 'github-actions[bot]'
-```
+**第2段階:** ワークフローを分割
+
+auto-review と interactive-review を別ファイルに分離:
+
+| ファイル | 目的 | トリガー |
+|---------|------|---------|
+| `claude-auto-review.yml` | 自動レビュー | `pull_request` |
+| `claude-interactive.yml` | 対話的レビュー | `issue_comment`, `pull_request_review_comment` |
+
+これにより:
+- 異なるワークフロー名 = 異なる concurrency グループ
+- Bot のコメントが auto-review をキャンセルすることはない
+- interactive-review は `comment.id` を含む concurrency グループで自己キャンセルを防止
 
 ## 成果物
 
 | 種類 | ファイル |
 |------|---------|
-| 修正 | `.github/workflows/claude-review.yml` |
+| 削除 | `.github/workflows/claude-review.yml` |
+| 新規 | `.github/workflows/claude-auto-review.yml` |
+| 新規 | `.github/workflows/claude-interactive.yml` |
 
 ## 学んだこと
 
-- GitHub Actions の `cancel-in-progress` は同じ concurrency グループの実行をすべてキャンセルする
-- Bot が投稿するコメントも `issue_comment` イベントをトリガーする
-- Bot による無限ループや自己キャンセルを防ぐには、コメント作成者のチェックが必要
+- GitHub Actions の concurrency はワークフローレベルで適用される
+- ジョブ条件でスキップされても、ワークフロー自体は開始され concurrency に影響する
+- 異なるイベントタイプを扱うワークフローは分割した方が管理しやすい
+- `cancel-in-progress: false` + コメント ID を concurrency に含めることで、各コメントを独立して処理可能
 
 ## 次のステップ
 
