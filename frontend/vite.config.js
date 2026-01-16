@@ -1,8 +1,8 @@
 /**
  * Vite 設定
  *
- * ポート番号は .env ファイルで設定（just setup-env で作成）
- * 技術詳細: [Vite](../../docs/05_技術ノート/Vite.md)
+ * ポート番号はルートの .env ファイルで設定（justfile の dotenv-load で読み込み）
+ * 技術詳細: [Vite](../docs/05_技術ノート/Vite.md)
  */
 
 import { defineConfig } from "vite";

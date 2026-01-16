@@ -36,14 +36,9 @@ jobs:
         with:
           filters: |
             rust:
-              - 'apps/bff/**'
-              - 'apps/core-api/**'
-              - 'packages/**'
-              - 'Cargo.toml'
-              - 'Cargo.lock'
-              - 'rust-toolchain.toml'
+              - 'backend/**'
             elm:
-              - 'apps/web/**'
+              - 'frontend/**'
 
   # Rust チェック: フォーマット、リント、テスト、ビルド
   rust:
@@ -81,7 +76,7 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/
+            backend/target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -100,6 +95,7 @@ jobs:
 
       - name: Build
         run: cargo build --release
+        working-directory: backend
 
   # Elm チェック: フォーマット、テスト、ビルド
   elm:
@@ -124,7 +120,7 @@ jobs:
 
       - name: Install npm dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: apps/web
+        working-directory: frontend
 
       # just から参照するためグローバルインストールが必要
       - name: Install Elm tools
@@ -141,13 +137,13 @@ jobs:
 
       - name: Build
         run: pnpm run build
-        working-directory: apps/web
+        working-directory: frontend
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
         with:
           name: web-dist
-          path: apps/web/dist/
+          path: frontend/dist/
           retention-days: 7
 
   # ブランチ保護用ステータス統合: skipped を成功扱いにし、単一ステータスを提供
