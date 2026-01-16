@@ -1,0 +1,513 @@
+openapi: 3.1.0
+info:
+  title: RingiFlow API
+  description: |
+    RingiFlow ワークフロー管理システムの API 仕様書。
+
+    ## 認証
+
+    - ブラウザからのアクセスは Cookie ベースのセッション認証を使用
+    - 状態変更リクエスト（POST/PUT/PATCH/DELETE）には CSRF トークンが必要
+
+    ## エラーレスポンス
+
+    エラーは RFC 7807 Problem Details 形式で返却される。
+  version: 0.1.0
+  contact:
+    name: RingiFlow Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:13000
+    description: ローカル開発環境（BFF）
+  - url: https://dev.ringiflow.example.com
+    description: 開発環境
+  - url: https://app.ringiflow.example.com
+    description: 本番環境
+
+tags:
+  - name: auth
+    description: 認証 API
+  - name: workflows
+    description: ワークフロー API
+  - name: tasks
+    description: タスク API
+  - name: users
+    description: ユーザー API
+  - name: dashboard
+    description: ダッシュボード API
+  - name: health
+    description: ヘルスチェック API
+
+paths:
+  # ============================================================
+  # 認証 API
+  # ============================================================
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: ログイン
+      description: |
+        メール/パスワードでログインし、セッションを確立する。
+
+        成功時は `Set-Cookie` ヘッダーでセッション Cookie が設定される。
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: password123
+      responses:
+        '200':
+          description: ログイン成功
+          headers:
+            Set-Cookie:
+              description: セッション Cookie
+              schema:
+                type: string
+                example: session_id=xxx; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: 認証失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/authentication-failed
+                title: Authentication Failed
+                status: 401
+                detail: メールアドレスまたはパスワードが正しくありません
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: ログアウト
+      description: |
+        セッションを無効化してログアウトする。
+
+        `Set-Cookie` ヘッダーでセッション Cookie が削除される。
+      operationId: logout
+      security:
+        - sessionAuth: []
+      responses:
+        '204':
+          description: ログアウト成功
+          headers:
+            Set-Cookie:
+              description: セッション Cookie 削除
+              schema:
+                type: string
+                example: session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags:
+        - auth
+      summary: 現在のユーザー情報取得
+      description: 現在ログイン中のユーザー情報と権限を取得する。
+      operationId: getCurrentUser
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/csrf:
+    get:
+      tags:
+        - auth
+      summary: CSRF トークン取得
+      description: |
+        CSRF トークンを取得する。
+
+        状態変更リクエスト（POST/PUT/PATCH/DELETE）には
+        `X-CSRF-Token` ヘッダーにこのトークンを付与する必要がある。
+      operationId: getCsrfToken
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # ヘルスチェック API
+  # ============================================================
+  /health:
+    get:
+      tags:
+        - health
+      summary: ヘルスチェック
+      description: サーバーの稼働状態を確認する。
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /health/ready:
+    get:
+      tags:
+        - health
+      summary: レディネスチェック
+      description: 依存サービス（DB、Redis、Core API）を含めた稼働状態を確認する。
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: 準備完了
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: 一部サービスが利用不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_id
+      description: HTTPOnly セッション Cookie
+
+  schemas:
+    # ============================================================
+    # 認証関連
+    # ============================================================
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          maxLength: 255
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: パスワード
+          minLength: 8
+          maxLength: 128
+          example: password123
+
+    LoginResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - user
+          properties:
+            user:
+              $ref: '#/components/schemas/UserSummary'
+
+    CurrentUserResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/CurrentUser'
+
+    CurrentUser:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - tenant_id
+        - tenant_name
+        - roles
+        - permissions
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザー ID
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+        name:
+          type: string
+          description: 表示名
+        tenant_id:
+          type: string
+          format: uuid
+          description: テナント ID
+        tenant_name:
+          type: string
+          description: テナント名
+        roles:
+          type: array
+          items:
+            type: string
+          description: ロール一覧
+          example: ["user"]
+        permissions:
+          type: array
+          items:
+            type: string
+          description: 権限一覧
+          example: ["workflow:read", "workflow:create", "task:read", "task:update"]
+
+    UserSummary:
+      type: object
+      required:
+        - id
+        - email
+        - name
+        - tenant_id
+        - roles
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザー ID
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+        name:
+          type: string
+          description: 表示名
+        tenant_id:
+          type: string
+          format: uuid
+          description: テナント ID
+        roles:
+          type: array
+          items:
+            type: string
+          description: ロール一覧
+          example: ["user"]
+
+    CsrfTokenResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+              description: CSRF トークン
+              example: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+    # ============================================================
+    # ヘルスチェック関連
+    # ============================================================
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+          description: ステータス
+        version:
+          type: string
+          description: アプリケーションバージョン
+          example: "0.1.0"
+        timestamp:
+          type: string
+          format: date-time
+          description: タイムスタンプ
+
+    ReadinessResponse:
+      type: object
+      required:
+        - status
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [ready, degraded]
+          description: 全体ステータス
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [ok, error]
+            redis:
+              type: string
+              enum: [ok, error]
+            core_api:
+              type: string
+              enum: [ok, error]
+
+    # ============================================================
+    # エラー関連
+    # ============================================================
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: エラー種別を識別する URI
+          example: https://ringiflow.example.com/errors/authentication-failed
+        title:
+          type: string
+          description: エラーの簡潔なタイトル
+          example: Authentication Failed
+        status:
+          type: integer
+          description: HTTP ステータスコード
+          example: 401
+        detail:
+          type: string
+          description: エラーの詳細説明
+          example: メールアドレスまたはパスワードが正しくありません
+        instance:
+          type: string
+          format: uri
+          description: エラーが発生したリクエストパス
+        correlation_id:
+          type: string
+          format: uuid
+          description: リクエスト追跡用 ID
+
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                required:
+                  - field
+                  - message
+                properties:
+                  field:
+                    type: string
+                    description: エラーが発生したフィールド名
+                  code:
+                    type: string
+                    description: エラーコード
+                  message:
+                    type: string
+                    description: エラーメッセージ
+
+    # ============================================================
+    # 共通
+    # ============================================================
+    Pagination:
+      type: object
+      required:
+        - page
+        - per_page
+        - total_pages
+        - total_count
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: 現在のページ番号
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: 1ページあたりの件数
+        total_pages:
+          type: integer
+          minimum: 0
+          description: 総ページ数
+        total_count:
+          type: integer
+          minimum: 0
+          description: 総件数
+
+  responses:
+    Unauthorized:
+      description: 認証が必要
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://ringiflow.example.com/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: 認証が必要です
+
+    Forbidden:
+      description: 権限不足
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://ringiflow.example.com/errors/forbidden
+            title: Forbidden
+            status: 403
+            detail: この操作を行う権限がありません
+
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://ringiflow.example.com/errors/not-found
+            title: Not Found
+            status: 404
+            detail: リソースが見つかりません
