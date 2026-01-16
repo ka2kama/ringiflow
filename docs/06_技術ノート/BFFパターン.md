@@ -103,20 +103,52 @@ BFF は HTTPOnly Cookie + Redis でセッションを管理する。
 |------|-----|------|
 | HttpOnly | true | JavaScript からのアクセス禁止（XSS 対策） |
 | Secure | true | HTTPS のみで送信 |
-| SameSite | Lax | CSRF 対策 |
+| SameSite | Lax | CSRF 対策（後述） |
 | Path | / | 全パスで有効 |
+
+### SameSite 属性の選択
+
+| 値 | 動作 | ユースケース |
+|----|------|-------------|
+| Strict | クロスサイトリクエストで一切 Cookie を送らない | 最も安全だが、外部リンクからのアクセスでログアウト状態になる |
+| Lax | トップレベルナビゲーション（リンククリック）の GET のみ Cookie を送る | 実用性と安全性のバランス |
+| None | 常に Cookie を送る（Secure 必須） | サードパーティ Cookie が必要な場合のみ |
+
+**本プロジェクトでは `Lax` を採用:**
+
+- CSRF 対策は CSRF トークンで担保しているため、Strict の制約は不要
+- 外部サイトからのリンクや、将来の SSO リダイレクト後もセッションが維持される
+- POST/PUT/DELETE は SameSite=Lax でもクロスサイトから Cookie が送られないため、CSRF の主要な攻撃を防げる
 
 ## CSRF 防御
 
-BFF は Double Submit Cookie パターンで CSRF を防御する。
+BFF はサーバサイドトークン方式で CSRF を防御する。
 
 ```
 1. ブラウザ → BFF: GET /auth/csrf
-2. BFF → Redis: CSRF トークン生成・保存
+2. BFF → Redis: CSRF トークン生成・保存（セッションに紐付け）
 3. BFF → ブラウザ: { "token": "xxx" }
 4. ブラウザ → BFF: POST /api/... (X-CSRF-Token: xxx)
-5. BFF: トークン検証
+5. BFF → Redis: トークン検証（セッションの値と照合）
 ```
+
+### Double Submit Cookie との違い
+
+| 方式 | トークン保存場所 | 検証方法 |
+|------|----------------|---------|
+| Double Submit Cookie | Cookie（別の Cookie） | Cookie とヘッダーの値を比較 |
+| サーバサイドトークン（本方式） | Redis | Redis の値とヘッダーを比較 |
+
+**サーバサイドトークン方式のメリット:**
+
+- トークンが Cookie に露出しない
+- サブドメイン攻撃に強い（Cookie を共有するサブドメインからの攻撃を防げる）
+
+**デメリット:**
+
+- Redis への依存が増える（セッション + CSRF トークン）
+
+エンタープライズ SaaS として安全性を優先し、サーバサイドトークン方式を採用。
 
 ## アグリゲーション
 
@@ -181,4 +213,5 @@ struct WorkflowResponse {
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-17 | SameSite 属性の選択理由、CSRF 防御方式の詳細を追記 |
 | 2026-01-14 | 初版作成 |
