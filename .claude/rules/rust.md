@@ -285,6 +285,10 @@ Rust コードを実装する際:
 3. テストを必ず書く（最低でも正常系・異常系）
 4. セキュリティリスクを考慮する（SQL インジェクション、認可等）
 5. ビルドとテストを実行して動作を確認する
+6. 依存関係を追加する際は、最新の stable バージョンを使用する
+   - `cargo add <crate>` で追加（自動的に最新バージョンが使われる）
+   - または `cargo search <crate>` / crates.io で確認して手動追加
+   - workspace の `[workspace.dependencies]` に追加
 
 **禁止事項:**
 - `unwrap()` / `expect()` の無思慮な使用
