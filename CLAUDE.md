@@ -508,6 +508,12 @@ git push --force-with-lease --force-if-includes
 gh pr merge --squash --delete-branch --auto
 ```
 
+**マージ後のローカルブランチ削除:**
+
+```bash
+just clean-branches
+```
+
 **禁止事項:**
 - `--admin` フラグで CI をバイパスしない
 - CI が失敗している状態で強制マージしない

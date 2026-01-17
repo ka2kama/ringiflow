@@ -157,3 +157,10 @@ clean:
     docker compose -f infra/docker/docker-compose.yml down -v
     cd backend && cargo clean
     cd frontend && rm -rf node_modules elm-stuff dist
+
+# マージ済みローカルブランチを削除
+clean-branches:
+    git switch main
+    git pull
+    git fetch --prune
+    git branch --merged main | grep -v main | xargs -r git branch -d
