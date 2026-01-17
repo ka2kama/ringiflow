@@ -30,7 +30,7 @@ Claude Code のフック機能。特定のイベント発生時にカスタム�
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | jq -r '.command' | grep -q 'git commit'; then echo 'コミット前の確認'; fi"
+            "command": "input=$(cat); if echo \"$input\" | jq -r '.tool_input.command' | grep -q 'git commit'; then echo 'コミット前の確認'; fi"
           }
         ]
       }
@@ -41,7 +41,7 @@ Claude Code のフック機能。特定のイベント発生時にカスタム�
         "hooks": [
           {
             "type": "command",
-            "command": "cargo fmt --quiet -- \"$file_path\""
+            "command": "./.claude/hooks/post-write-format.sh"
           }
         ]
       }
@@ -99,47 +99,106 @@ PreToolUse / PostToolUse で特定のツールにのみフックを適用する�
 
 正規表現パターンでツール名をマッチさせる。
 
-## 環境変数
+## 入力データの取得
 
-フック内で利用できる環境変数:
+hook コマンドは stdin から JSON 形式でツール情報を受け取る。
 
-| 変数 | 内容 |
-|------|------|
-| `$TOOL_INPUT` | ツールに渡された入力（JSON 形式） |
-| `$TOOL_OUTPUT` | ツールの出力（PostToolUse のみ） |
+### JSON 構造
 
-### $TOOL_INPUT の例
+```json
+{
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/path/to/file.rs",
+    "old_string": "...",
+    "new_string": "..."
+  }
+}
+```
+
+| フィールド | 内容 |
+|-----------|------|
+| `tool_name` | ツール名 |
+| `tool_input` | ツールに渡された入力 |
+
+### tool_input の例
 
 **Write ツールの場合:**
 ```json
 {
-  "file_path": "/path/to/file.rs",
-  "content": "fn main() { ... }"
+  "tool_input": {
+    "file_path": "/path/to/file.rs",
+    "content": "fn main() { ... }"
+  }
 }
 ```
 
 **Bash ツールの場合:**
 ```json
 {
-  "command": "git commit -m \"message\""
+  "tool_input": {
+    "command": "git commit -m \"message\""
+  }
 }
 ```
 
-### jq でのパース例
+### jq でのパース
+
+stdin から読み取って jq でパースする。
 
 ```bash
+# stdin を変数に読み込む
+input=$(cat)
+
 # file_path を取得
-file_path=$(echo "$TOOL_INPUT" | jq -r '.file_path // empty')
+file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
 
 # command を取得
-command=$(echo "$TOOL_INPUT" | jq -r '.command // empty')
+command=$(echo "$input" | jq -r '.tool_input.command // empty')
 ```
 
-## プロジェクト設定例
+パスは `.tool_input.file_path` のように `.tool_input.*` 形式でアクセスする。
 
-### Rust/Elm ファイルの自動フォーマット（PostToolUse）
+## 外部スクリプト化
 
-`.rs` / `.elm` ファイルを Write/Edit した後に自動でフォーマットする。
+hook が複雑になる場合は外部スクリプトに分離することを推奨する。
+
+### メリット
+
+- 可読性向上
+- デバッグ容易
+- ログ出力可能
+- シェル機能をフル活用可能
+
+### スクリプト例
+
+`.claude/hooks/post-write-format.sh`:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+LOG_FILE="/tmp/claude/post-write-format.log"
+mkdir -p /tmp/claude
+
+# stdin から file_path を抽出
+file_path=$(cat | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
+[[ -z "$file_path" ]] && exit 0
+
+case "$file_path" in
+    *.rs)
+        just fmt-rust "$file_path" >> "$LOG_FILE" 2>&1 \
+            && echo "[$(date '+%H:%M:%S')] fmt-rust: $file_path" >> "$LOG_FILE"
+        ;;
+    *.elm)
+        just fmt-elm "$file_path" >> "$LOG_FILE" 2>&1 \
+            && echo "[$(date '+%H:%M:%S')] fmt-elm: $file_path" >> "$LOG_FILE"
+        ;;
+esac
+exit 0
+```
+
+settings.json での参照:
 
 ```json
 {
@@ -149,7 +208,7 @@ command=$(echo "$TOOL_INPUT" | jq -r '.command // empty')
       "hooks": [
         {
           "type": "command",
-          "command": "file_path=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // empty' 2>/dev/null); if [[ \"$file_path\" == *.rs ]]; then just fmt-rust \"$file_path\" 2>/dev/null || true; elif [[ \"$file_path\" == *.elm ]]; then just fmt-elm \"$file_path\" 2>/dev/null || true; fi"
+          "command": "./.claude/hooks/post-write-format.sh"
         }
       ]
     }
@@ -157,14 +216,47 @@ command=$(echo "$TOOL_INPUT" | jq -r '.command // empty')
 }
 ```
 
-**コマンドの解説:**
-1. `echo "$TOOL_INPUT" | jq -r '.file_path // empty'` - JSON から `file_path` を取得
-2. `2>/dev/null` - jq のエラーを抑制
-3. `[[ "$file_path" == *.rs ]]` - `.rs` ファイルなら `just fmt-rust`
-4. `[[ "$file_path" == *.elm ]]` - `.elm` ファイルなら `just fmt-elm`
-5. `|| true` - フォーマット失敗時もエラーにしない
+## プロジェクト設定例
 
-**ポイント:** フォーマット設定を justfile に集約することで、手動実行時と hook 実行時で同じ設定が使われる。
+### Rust/Elm ファイルの自動フォーマット（PostToolUse）
+
+`.rs` / `.elm` ファイルを Write/Edit した後に自動でフォーマットする。
+
+外部スクリプト（推奨）:
+
+```json
+{
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "./.claude/hooks/post-write-format.sh"
+        }
+      ]
+    }
+  ]
+}
+```
+
+インライン（簡易版）:
+
+```json
+{
+  "PostToolUse": [
+    {
+      "matcher": "Write|Edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "input=$(cat); file_path=$(echo \"$input\" | jq -r '.tool_input.file_path // empty' 2>/dev/null); if [[ \"$file_path\" == *.rs ]]; then just fmt-rust \"$file_path\" 2>/dev/null || true; elif [[ \"$file_path\" == *.elm ]]; then just fmt-elm \"$file_path\" 2>/dev/null || true; fi"
+        }
+      ]
+    }
+  ]
+}
+```
 
 ### コミット前の lint 実行（PreToolUse）
 
@@ -178,7 +270,7 @@ command=$(echo "$TOOL_INPUT" | jq -r '.command // empty')
       "hooks": [
         {
           "type": "command",
-          "command": "if echo \"$TOOL_INPUT\" | jq -r '.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; fi"
+          "command": "input=$(cat); if echo \"$input\" | jq -r '.tool_input.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; fi"
         }
       ]
     }
@@ -187,10 +279,11 @@ command=$(echo "$TOOL_INPUT" | jq -r '.command // empty')
 ```
 
 **コマンドの解説:**
-1. `jq -r '.command // empty'` - Bash ツールの `command` を取得
-2. `grep -q 'git commit'` - `git commit` が含まれているか確認
-3. `./.claude/hooks/pre-commit-check.sh` - 外部スクリプトを実行
-4. `|| exit 1` - スクリプトが失敗したら hook を失敗させる
+1. `input=$(cat)` - stdin から JSON を読み込む
+2. `jq -r '.tool_input.command // empty'` - Bash ツールの `command` を取得
+3. `grep -q 'git commit'` - `git commit` が含まれているか確認
+4. `./.claude/hooks/pre-commit-check.sh` - 外部スクリプトを実行
+5. `|| exit 1` - スクリプトが失敗したら hook を失敗させる
 
 ## 注意点
 
@@ -199,3 +292,26 @@ command=$(echo "$TOOL_INPUT" | jq -r '.command // empty')
 - SessionEnd は `/exit` や `Ctrl+D` での正常終了時に発火する
 - PostToolUse の hook はツール実行後に同期的に実行される
 - hook が失敗しても（`|| true` がなければ）ツール実行自体は成功扱いになる
+- hook の stdout は通常表示されない（verbose モードでのみ表示）
+
+## デバッグ方法
+
+### ログファイル出力
+
+hook 内でログファイルに出力することで動作を確認できる。
+
+```bash
+LOG_FILE="/tmp/claude/hook-debug.log"
+mkdir -p /tmp/claude
+echo "[$(date)] Hook executed" >> "$LOG_FILE"
+```
+
+### 確認方法
+
+```bash
+cat /tmp/claude/hook-debug.log
+```
+
+### verbose モード
+
+`Ctrl+O` で verbose モードを有効にすると、hook の stdout が表示される。

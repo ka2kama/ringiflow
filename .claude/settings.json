@@ -98,7 +98,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$TOOL_INPUT\" | jq -r '.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'; fi"
+            "command": "input=$(cat); if echo \"$input\" | jq -r '.tool_input.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'; fi"
           }
         ]
       }
@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "file_path=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // empty' 2>/dev/null); if [[ \"$file_path\" == *.rs ]]; then just fmt-rust \"$file_path\" 2>/dev/null || true; elif [[ \"$file_path\" == *.elm ]]; then just fmt-elm \"$file_path\" 2>/dev/null || true; fi"
+            "command": "./.claude/hooks/post-write-format.sh"
           }
         ]
       }
@@ -128,7 +128,8 @@
       "docker",
       "docker-compose",
       "psql",
-      "redis-cli"
+      "redis-cli",
+      "just"
     ]
   },
   "attribution": {
