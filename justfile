@@ -85,13 +85,23 @@ dev-web:
 # 全体フォーマット
 fmt: fmt-rust fmt-elm
 
-# Rust フォーマット
-fmt-rust:
-    cd backend && cargo +nightly fmt --all
+# Rust フォーマット（引数なし=全ファイル、引数あり=指定ファイル）
+fmt-rust *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        cd backend && cargo +nightly fmt --all
+    else
+        rustfmt +nightly --edition 2024 --quiet {{files}}
+    fi
 
-# Elm フォーマット
-fmt-elm:
-    cd frontend && pnpm run fmt
+# Elm フォーマット（引数なし=全ファイル、引数あり=指定ファイル）
+fmt-elm *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        cd frontend && pnpm run fmt
+    else
+        elm-format --yes {{files}}
+    fi
 
 # =============================================================================
 # リント（フォーマットチェック含む）
