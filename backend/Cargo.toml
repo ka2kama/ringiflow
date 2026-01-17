@@ -56,6 +56,9 @@ dotenvy = "0.15"
 # パスワード検証
 argon2 = "0.5"
 
+# 暗号
+subtle = "2.6"
+
 # テスト
 tokio-test = "0.4"
 pretty_assertions = "1.4"

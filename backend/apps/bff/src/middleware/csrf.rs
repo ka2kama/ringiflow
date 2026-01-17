@@ -16,6 +16,7 @@ use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::SessionManager;
 use serde::Serialize;
+use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 /// CSRF 検証用のヘッダー名
@@ -118,13 +119,18 @@ where
    };
 
    // Redis から CSRF トークンを取得して検証
+   // タイミング攻撃対策として定数時間比較を使用
    match state
       .session_manager
       .get_csrf_token(&tenant_id, &session_id)
       .await
    {
       Ok(Some(stored_token)) => {
-         if stored_token != provided_token {
+         let is_valid: bool = stored_token
+            .as_bytes()
+            .ct_eq(provided_token.as_bytes())
+            .into();
+         if !is_valid {
             return csrf_error_response("CSRF トークンが無効です");
          }
       }

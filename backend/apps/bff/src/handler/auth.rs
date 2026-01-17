@@ -128,7 +128,8 @@ impl From<UserWithPermissionsResponse> for MeResponseData {
          email:       res.user.email,
          name:        res.user.name,
          tenant_id:   res.user.tenant_id,
-         tenant_name: "Development Tenant".to_string(), // TODO: Core API から取得
+         // TODO(#34): Core API にテナント情報取得エンドポイントを追加して取得
+         tenant_name: "Development Tenant".to_string(),
          roles:       res.roles,
          permissions: res.permissions,
       }
@@ -439,14 +440,24 @@ fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
 
 /// セッション Cookie を構築する
 fn build_session_cookie(session_id: &str) -> axum_extra::extract::cookie::Cookie<'static> {
-   axum_extra::extract::cookie::Cookie::build((SESSION_COOKIE_NAME, session_id.to_string()))
-      .path("/")
-      .max_age(time::Duration::seconds(SESSION_MAX_AGE))
-      .http_only(true)
-      .same_site(axum_extra::extract::cookie::SameSite::Lax)
-      // TODO: 本番環境では Secure を有効にする
-      // .secure(true)
-      .build()
+   use axum_extra::extract::cookie::SameSite;
+
+   // 本番環境では Secure フラグを有効にする
+   // ENV=production の場合に HTTPS 必須となる
+   let is_production = std::env::var("ENV").unwrap_or_default() == "production";
+
+   let mut builder =
+      axum_extra::extract::cookie::Cookie::build((SESSION_COOKIE_NAME, session_id.to_string()))
+         .path("/")
+         .max_age(time::Duration::seconds(SESSION_MAX_AGE))
+         .http_only(true)
+         .same_site(SameSite::Lax);
+
+   if is_production {
+      builder = builder.secure(true);
+   }
+
+   builder.build()
 }
 
 /// Cookie をクリアするための Cookie を構築する
