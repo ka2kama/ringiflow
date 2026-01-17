@@ -49,15 +49,21 @@
 //! BFF_PORT=3000 REDIS_URL=redis://... cargo run -p ringiflow-bff --release
 //! ```
 
+pub mod client;
 mod config;
 mod error;
-mod handler;
+pub mod handler;
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use axum::{Router, routing::get};
+use axum::{
+   Router,
+   routing::{get, post},
+};
+use client::CoreApiClientImpl;
 use config::BffConfig;
-use handler::health_check;
+use handler::{AuthState, health_check, login, logout, me};
+use ringiflow_infra::RedisSessionManager;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -93,10 +99,34 @@ async fn main() -> anyhow::Result<()> {
 
    tracing::info!("BFF サーバーを起動します: {}:{}", config.host, config.port);
 
+   // 依存関係の初期化
+   let session_manager = RedisSessionManager::new(&config.redis_url)
+      .await
+      .expect("Redis への接続に失敗しました");
+   let core_api_client = CoreApiClientImpl::new(&config.core_api_url);
+
+   let auth_state = Arc::new(AuthState {
+      core_api_client,
+      session_manager,
+   });
+
    // ルーター構築
    // TraceLayer により、すべての HTTP リクエストがトレーシングされる
    let app = Router::new()
       .route("/health", get(health_check))
+      .route(
+         "/auth/login",
+         post(login::<CoreApiClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/auth/logout",
+         post(logout::<CoreApiClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/auth/me",
+         get(me::<CoreApiClientImpl, RedisSessionManager>),
+      )
+      .with_state(auth_state)
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動

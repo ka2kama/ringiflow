@@ -5,14 +5,16 @@
 //! ## 設計方針
 //!
 //! - 各ハンドラはサブモジュールに配置
-//! - 親モジュール（この `mod.rs`）で re-export し、フラットな API を提供
+//! - 親モジュールで re-export し、フラットな API を提供
 //! - ハンドラは薄く保ち、ビジネスロジックは Core API に委譲
 //!
-//! ## 今後追加予定のハンドラ
+//! ## ハンドラ一覧
 //!
+//! - `health`: ヘルスチェック
 //! - `auth`: 認証関連（ログイン、ログアウト）
-//! - `proxy`: Core API へのプロキシ
 
+pub mod auth;
 pub mod health;
 
+pub use auth::{AuthState, login, logout, me};
 pub use health::health_check;
