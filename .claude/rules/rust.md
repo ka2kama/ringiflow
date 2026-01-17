@@ -12,10 +12,10 @@ paths:
 
 ### 型システムの活用
 
-- **Newtype パターン**: ID 型は UUID をラップし、型安全性を確保（例: `UserId(Uuid)`）
-- **不正な状態を表現不可能に**: 型で制約を表現し、コンパイル時に検証
-- **Result 型の徹底**: エラーは `Result` で明示的に扱う。`unwrap()`/`expect()` の濫用を避ける
-  - `unwrap()` は **プログラムのバグを示す場合のみ** 使用可能（例: 静的な文字列のパース）
+- Newtype パターン: ID 型は UUID をラップし、型安全性を確保（例: `UserId(Uuid)`）
+- 不正な状態を表現不可能に: 型で制約を表現し、コンパイル時に検証
+- Result 型の徹底: エラーは `Result` で明示的に扱う。`unwrap()`/`expect()` の濫用を避ける
+  - `unwrap()` はプログラムのバグを示す場合のみ使用可能（例: 静的な文字列のパース）
   - それ以外は `?` 演算子または `match` で適切にハンドリング
 
 ### エラーハンドリング
@@ -44,9 +44,9 @@ pub fn validate_email(email: &str) -> Email {
 
 ### コードの明確さ
 
-- **意図が伝わる命名**: 略語を避け、明確な名前を付ける
-- **コメントは「なぜ」を書く**: 「何を」はコードで表現し、コメントは設計判断や理由を記述
-- **過度な抽象化を避ける**: 3回繰り返すまでは重複を許容（Rule of Three）
+- 意図が伝わる命名: 略語を避け、明確な名前を付ける
+- コメントは「なぜ」を書く: 「何を」はコードで表現し、コメントは設計判断や理由を記述
+- 過度な抽象化を避ける: 3回繰り返すまでは重複を許容（Rule of Three）
 
 ## テスト要件
 
@@ -285,12 +285,25 @@ Rust コードを実装する際:
 3. テストを必ず書く（最低でも正常系・異常系）
 4. セキュリティリスクを考慮する（SQL インジェクション、認可等）
 5. ビルドとテストを実行して動作を確認する
-6. 依存関係を追加する際は、最新の stable バージョンを使用する
-   - `cargo add <crate>` で追加（自動的に最新バージョンが使われる）
-   - または `cargo search <crate>` / crates.io で確認して手動追加
-   - workspace の `[workspace.dependencies]` に追加
+6. 依存関係を追加する際は workspace.dependencies で統一管理する
+   - 手順:
+     1. workspace の `Cargo.toml` の `[workspace.dependencies]` に追加
+     2. 使用するクレートの `Cargo.toml` で `<crate>.workspace = true` と参照
+   - バージョンの確認方法:
+     - `cargo search <crate>` で最新のstableバージョンを確認
+     - または crates.io で確認
+   - `cargo add --package <pkg> <crate>` は直接依存を追加するため使用しない
+7. SQL クエリを追加・変更したら SQLx オフラインキャッシュを更新する
+   ```bash
+   just setup-db  # DB を起動
+   cd backend && cargo sqlx prepare --workspace -- --all-targets
+   git add backend/.sqlx/
+   ```
+   - `--all-targets`: テストコード内のクエリもキャッシュに含める
+   - CI 環境では `SQLX_OFFLINE=true` でビルドするため、キャッシュがないとビルドが失敗する
+   - 詳細: [sqlx-cli 技術ノート](../../docs/06_技術ノート/sqlx-cli.md#オフラインモード詳細)
 
-**禁止事項:**
+禁止事項:
 - `unwrap()` / `expect()` の無思慮な使用
 - public フィールドによる不変条件の破壊
 - テストのないビジネスロジック
