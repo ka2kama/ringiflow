@@ -51,7 +51,9 @@
 
 pub mod db;
 pub mod error;
+pub mod password;
 pub mod redis;
 pub mod repository;
 
 pub use error::InfraError;
+pub use password::{Argon2PasswordChecker, PasswordChecker};

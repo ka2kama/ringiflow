@@ -14,8 +14,7 @@ INSERT INTO tenants (id, name, subdomain, plan, status) VALUES
     ('00000000-0000-0000-0000-000000000001', 'Development Tenant', 'dev', 'enterprise', 'active');
 
 -- 開発用ユーザーの作成
--- TODO: 初回起動時に `just seed-passwords` でパスワードを設定する必要あり
--- セキュリティ: 以下のハッシュは無効なダミー値（ログイン不可を保証）
+-- パスワードハッシュは 20260115000009_update_seed_password_hash.sql で設定される
 INSERT INTO users (id, tenant_id, email, name, password_hash, status) VALUES
     ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
      'admin@example.com', '管理者', '$INVALID_HASH_PLEASE_SET_PASSWORD$', 'active'),
@@ -59,5 +58,5 @@ INSERT INTO workflow_definitions (id, tenant_id, name, description, version, def
 -- コメント
 COMMENT ON TABLE roles IS 'システムロール: system_admin, tenant_admin, user が定義されている';
 COMMENT ON TABLE tenants IS '開発用テナント (subdomain=dev) が定義されている';
-COMMENT ON TABLE users IS '開発用ユーザー admin@example.com, user@example.com (パスワード: password) が定義されている';
+COMMENT ON TABLE users IS '開発用ユーザー admin@example.com, user@example.com (パスワード: password123) が定義されている';
 COMMENT ON TABLE workflow_definitions IS 'MVP用の汎用申請ワークフローが定義されている';

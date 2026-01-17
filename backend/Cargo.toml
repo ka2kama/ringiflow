@@ -48,6 +48,9 @@ uuid = { version = "1", features = ["v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 
+# パスワード検証
+argon2 = "0.5"
+
 # テスト
 tokio-test = "0.4"
 pretty_assertions = "1.4"
