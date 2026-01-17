@@ -449,6 +449,41 @@ git checkout -b fix/バグ名
 - main ブランチで直接作業・コミットしない
 - 後から feature ブランチを作成して main を巻き戻す運用をしない
 
+### コミットメッセージ
+
+Issue と紐づくコミットは、先頭に Issue 番号を含める:
+
+```
+#<Issue番号> <変更内容>
+```
+
+例:
+```bash
+git commit -m "#34 UserRepository: find_by_email を実装"
+git commit -m "#34 ログイン機能の詳細設計を追加"
+```
+
+自動付与: ブランチ名が `feature/34-xxx` や `fix/34-xxx` の形式の場合、lefthook により Issue 番号が自動で先頭に追加される。手動で書く必要はない。
+
+Issue と紐づかないコミット（ドキュメント修正、リファクタリングなど）:
+
+```bash
+git commit -m "README.md のタイポを修正"
+```
+
+### PR タイトル
+
+Issue と紐づく PR は、先頭に Issue 番号を含める:
+
+```
+#<Issue番号> <機能名・変更内容>
+```
+
+例:
+```bash
+gh pr create --title "#34 ログイン機能を実装" --body "Closes #34"
+```
+
 ### コミット前
 
 ```bash
