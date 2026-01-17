@@ -23,6 +23,7 @@ jobs:
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
       elm: ${{ steps.filter.outputs.elm }}
+      shell: ${{ steps.filter.outputs.shell }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -39,6 +40,8 @@ jobs:
               - 'backend/**'
             elm:
               - 'frontend/**'
+            shell:
+              - '**/*.sh'
 
   # Rust チェック: リント、テスト
   rust:
@@ -116,9 +119,9 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: frontend
 
-      # just から参照するためグローバルインストールが必要
+      # elm-test は devDependencies、elm と elm-format はグローバル
       - name: Install Elm tools
-        run: npm install -g elm elm-format elm-test
+        run: npm install -g elm elm-format
 
       - name: Install just
         uses: extractions/setup-just@v3
@@ -140,11 +143,28 @@ jobs:
           path: frontend/dist/
           retention-days: 7
 
+  # シェルスクリプト チェック: ShellCheck
+  shell:
+    name: Shell
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.shell == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Lint
+        run: just lint-shell
+
   # ブランチ保護用ステータス統合: skipped を成功扱いにし、単一ステータスを提供
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust, elm]
+    needs: [changes, rust, elm, shell]
     if: always()
     steps:
       - name: Check results
@@ -161,6 +181,11 @@ jobs:
 
           if [[ "${{ needs.elm.result }}" == "failure" ]]; then
             echo "Elm checks failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.shell.result }}" == "failure" ]]; then
+            echo "Shell checks failed"
             exit 1
           fi
 

@@ -27,9 +27,11 @@ check-tools:
     @which node > /dev/null || (echo "ERROR: Node.js がインストールされていません" && exit 1)
     @which pnpm > /dev/null || (echo "ERROR: pnpm がインストールされていません" && exit 1)
     @which elm > /dev/null || (echo "ERROR: Elm がインストールされていません" && exit 1)
+    @which elm-format > /dev/null || (echo "ERROR: elm-format がインストールされていません" && exit 1)
     @which docker > /dev/null || (echo "ERROR: Docker がインストールされていません" && exit 1)
     @which sqlx > /dev/null || (echo "ERROR: sqlx-cli がインストールされていません" && exit 1)
     @which lefthook > /dev/null || (echo "ERROR: lefthook がインストールされていません" && exit 1)
+    @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -115,7 +117,7 @@ fmt-elm *files:
 # =============================================================================
 
 # 全体リント
-lint: lint-rust lint-elm
+lint: lint-rust lint-elm lint-shell
 
 # Rust リント（rustfmt + clippy）
 lint-rust:
@@ -125,6 +127,17 @@ lint-rust:
 # Elm リント（elm-format + elm-review）
 lint-elm:
     cd frontend && pnpm run lint
+
+# シェルスクリプト リント（ShellCheck）
+lint-shell:
+    #!/usr/bin/env bash
+    # git ls-files で .git と .gitignore を除外
+    files=$(git ls-files --cached --others --exclude-standard "*.sh")
+    if [ -z "$files" ]; then
+        echo "No shell scripts found"
+    else
+        echo "$files" | xargs shellcheck
+    fi
 
 # =============================================================================
 # テスト
