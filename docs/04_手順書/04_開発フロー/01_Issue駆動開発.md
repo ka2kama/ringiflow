@@ -61,9 +61,9 @@ git checkout -b feature/34-user-auth
 
 ```bash
 # 空コミットで Draft PR を作成
-git commit --allow-empty -m "WIP: ログイン機能を実装 #34"
+git commit --allow-empty -m "#34 WIP: ログイン機能を実装"
 git push -u origin HEAD
-gh pr create --draft --title "ログイン機能を実装" --body "Closes #34"
+gh pr create --draft --title "#34 ログイン機能を実装" --body "Closes #34"
 ```
 
 **Draft PR の目的:**
@@ -153,7 +153,7 @@ TDD（Red → Green → Refactor）で MVP を積み上げる。
 
 ```bash
 git add docs/03_詳細設計書/ openapi/
-git commit -m "ログイン機能の詳細設計を追加 #34"
+git commit -m "#34 ログイン機能の詳細設計を追加"
 ```
 
 設計と実装を分けてコミットすることで:
@@ -195,11 +195,13 @@ Red → Green → Refactor を繰り返す
 - 複数の無関係な変更を1つにまとめる
 - テストが落ちる状態でコミット
 
-コミットメッセージに Issue 番号を含めると GitHub 上でリンクされる。
+コミットメッセージの先頭に Issue 番号を含める（GitHub 上でリンクされる）。
 
 ```bash
-git commit -m "UserRepository: find_by_email を実装 #34"
+git commit -m "#34 UserRepository: find_by_email を実装"
 ```
+
+**自動付与:** lefthook がブランチ名（`feature/34-xxx`）から Issue 番号を抽出して自動で先頭に追加する。手動で書く必要はない。
 
 #### Issue の進捗更新
 
@@ -340,6 +342,8 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-17 | lefthook による Issue 番号の自動付与を追加 |
+| 2026-01-17 | コミットメッセージ・PR タイトルの先頭に Issue 番号を含める形式に統一 |
 | 2026-01-17 | Issue の進捗更新ルールを追加 |
 | 2026-01-17 | Draft PR 運用を導入（ADR-013） |
 | 2026-01-17 | ブランチ作成を設計の前に移動（設計成果物をコミットするため） |

@@ -12,7 +12,7 @@ default:
 # =============================================================================
 
 # 初回セットアップ（全体）
-setup: check-tools setup-env setup-deps dev-deps setup-db
+setup: check-tools setup-env setup-deps setup-hooks dev-deps setup-db
     @echo ""
     @echo "✓ セットアップ完了"
     @echo "  - just dev-bff      : BFF 起動"
@@ -29,6 +29,7 @@ check-tools:
     @which elm > /dev/null || (echo "ERROR: Elm がインストールされていません" && exit 1)
     @which docker > /dev/null || (echo "ERROR: Docker がインストールされていません" && exit 1)
     @which sqlx > /dev/null || (echo "ERROR: sqlx-cli がインストールされていません" && exit 1)
+    @which lefthook > /dev/null || (echo "ERROR: lefthook がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -48,6 +49,12 @@ setup-deps:
     @echo "  Elm/Vite..."
     @cd frontend && pnpm install
     @echo "✓ 依存関係インストール完了"
+
+# Git フックをセットアップ
+setup-hooks:
+    @echo "Git フックをセットアップ中..."
+    @lefthook install
+    @echo "✓ Git フックセットアップ完了"
 
 # データベースをセットアップ
 setup-db:
