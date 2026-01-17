@@ -57,20 +57,29 @@
 mod config;
 mod error;
 mod handler;
+mod usecase;
 
-use std::net::SocketAddr;
+use std::{net::SocketAddr, sync::Arc};
 
-use axum::{Router, routing::get};
+use axum::{
+   Router,
+   routing::{get, post},
+};
 use config::CoreApiConfig;
-use handler::health_check;
+use handler::{AuthState, get_user, health_check, verify};
+use ringiflow_infra::{
+   Argon2PasswordChecker,
+   db,
+   repository::user_repository::PostgresUserRepository,
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use usecase::AuthUseCase;
 
 /// Core API サーバーのエントリーポイント
 ///
 /// BFF とは独立した設定（`CORE_API_HOST`, `CORE_API_PORT`）を使用する。
-/// 将来的にはデータベース接続やリポジトリの初期化もここで行う。
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
    // .env ファイルを読み込む（存在する場合）
@@ -94,10 +103,32 @@ async fn main() -> anyhow::Result<()> {
       config.port
    );
 
+   // データベース接続プールを作成
+   let pool = db::create_pool(&config.database_url)
+      .await
+      .expect("データベース接続に失敗しました");
+   tracing::info!("データベースに接続しました");
+
+   // 依存コンポーネントを初期化
+   let user_repository = PostgresUserRepository::new(pool);
+   let password_checker = Argon2PasswordChecker::new();
+   let auth_usecase = AuthUseCase::new(user_repository, password_checker);
+   let auth_state = Arc::new(AuthState {
+      usecase: auth_usecase,
+   });
+
    // ルーター構築
-   // 将来的にはワークフロー、タスク、ドキュメント関連のルートを追加
    let app = Router::new()
       .route("/health", get(health_check))
+      .route(
+         "/internal/auth/verify",
+         post(verify::<PostgresUserRepository, Argon2PasswordChecker>),
+      )
+      .route(
+         "/internal/users/{user_id}",
+         get(get_user::<PostgresUserRepository, Argon2PasswordChecker>),
+      )
+      .with_state(auth_state)
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動

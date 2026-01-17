@@ -26,3 +26,4 @@ dotenvy.workspace = true
 [dev-dependencies]
 tokio-test.workspace = true
 pretty_assertions.workspace = true
+async-trait.workspace = true
