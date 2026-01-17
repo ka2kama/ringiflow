@@ -54,6 +54,8 @@ pub mod error;
 pub mod password;
 pub mod redis;
 pub mod repository;
+pub mod session;
 
 pub use error::InfraError;
 pub use password::{Argon2PasswordChecker, PasswordChecker};
+pub use session::{RedisSessionManager, SessionData, SessionManager};

@@ -44,7 +44,7 @@ anyhow = "1"
 async-trait = "0.1"
 
 # ユーティリティ
-uuid = { version = "1", features = ["v7", "serde"] }
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 
