@@ -1,6 +1,6 @@
 # Claude Code Action 自動レビュー
 #
-# PRオープン/更新時に自動でコードレビューを実行する。
+# CI 完了後に自動でコードレビューを実行する。
 # Draft PR は除外。
 #
 # 設計判断: [ADR-011](../../docs/05_ADR/011_Claude_Code_Action導入.md)
@@ -8,12 +8,14 @@
 name: Claude Auto Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
 
 # 同時実行制御: 同一PRでの重複実行を防止
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.pull_requests[0].number || github.run_id }}
   cancel-in-progress: true
 
 permissions:
@@ -27,22 +29,38 @@ jobs:
   auto-review:
     name: Auto Review
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    # PR 起因かつ CI 成功の場合のみ実行（Draft チェックはステップ内で実施）
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.pull_requests[0] != null
 
     steps:
+      - name: Check if PR is draft
+        id: check-draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+          IS_DRAFT=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json isDraft --jq '.isDraft')
+          echo "is_draft=$IS_DRAFT" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
+        if: steps.check-draft.outputs.is_draft == 'false'
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Run Claude Code Review
+        if: steps.check-draft.outputs.is_draft == 'false'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
             REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
+            PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
 
             ## 基本方針
 
