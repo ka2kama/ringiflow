@@ -257,6 +257,12 @@ gh pr merge --squash --delete-branch
 
 **注意:** `--auto` は使用しない。レビュー結果を確認してからマージすること。
 
+**マージ後のローカルブランチ削除:**
+
+```bash
+just clean-branches
+```
+
 ## Milestone
 
 Phase ごとに Milestone を作成している。Issue 作成時に適切な Milestone を設定する。
@@ -342,6 +348,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-17 | マージ後のローカルブランチ削除手順を追加 |
 | 2026-01-17 | lefthook による Issue 番号の自動付与を追加 |
 | 2026-01-17 | コミットメッセージ・PR タイトルの先頭に Issue 番号を含める形式に統一 |
 | 2026-01-17 | Issue の進捗更新ルールを追加 |
