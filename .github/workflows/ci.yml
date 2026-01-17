@@ -90,8 +90,81 @@ jobs:
       - name: Lint
         run: just lint-rust
 
-      - name: Test
-        run: cargo test --release --all-features
+      - name: Test (unit tests)
+        # 統合テスト（tests/）は rust-integration ジョブで実行
+        run: cargo test --release --all-features --lib --bins
+        working-directory: backend
+
+  # Rust 統合テスト: PostgreSQL / Redis を使用するテスト
+  rust-integration:
+    name: Rust Integration
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+
+    services:
+      postgres:
+        image: postgres:17
+        ports:
+          - 15432:5432
+        env:
+          POSTGRES_USER: ringiflow
+          POSTGRES_PASSWORD: ringiflow
+          POSTGRES_DB: ringiflow_test
+        options: >-
+          --health-cmd "pg_isready -U ringiflow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 16379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_BACKTRACE: 1
+      SQLX_OFFLINE: true
+      DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow_test
+      REDIS_URL: redis://localhost:16379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+      - name: Run migrations
+        run: sqlx migrate run
+        working-directory: backend
+
+      - name: Test (integration tests)
+        run: cargo test --release --all-features --test '*'
         working-directory: backend
 
   # Elm チェック: リント、テスト、ビルド
@@ -164,7 +237,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust, elm, shell]
+    needs: [changes, rust, rust-integration, elm, shell]
     if: always()
     steps:
       - name: Check results
@@ -176,6 +249,11 @@ jobs:
 
           if [[ "${{ needs.rust.result }}" == "failure" ]]; then
             echo "Rust checks failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.rust-integration.result }}" == "failure" ]]; then
+            echo "Rust integration tests failed"
             exit 1
           fi
 
