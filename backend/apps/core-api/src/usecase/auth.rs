@@ -123,6 +123,11 @@ where
          .await?
          .ok_or(AuthError::AuthenticationFailed)?;
 
+      // 最終ログイン日時を更新（エラーは無視してログイン自体は成功させる）
+      if let Err(e) = self.user_repository.update_last_login(user.id()).await {
+         tracing::warn!("最終ログイン日時の更新に失敗: {}", e);
+      }
+
       Ok((user, roles))
    }
 }

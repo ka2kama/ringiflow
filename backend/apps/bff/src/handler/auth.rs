@@ -135,6 +135,18 @@ impl From<UserWithPermissionsResponse> for MeResponseData {
    }
 }
 
+/// CSRF トークンレスポンス
+#[derive(Debug, Serialize)]
+pub struct CsrfResponse {
+   pub data: CsrfResponseData,
+}
+
+/// CSRF トークンデータ
+#[derive(Debug, Serialize)]
+pub struct CsrfResponseData {
+   pub token: String,
+}
+
 /// エラーレスポンス（RFC 7807 Problem Details）
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
@@ -198,6 +210,17 @@ where
 
          match state.session_manager.create(&session_data).await {
             Ok(session_id) => {
+               // CSRF トークンを作成
+               let tenant_id = TenantId::from_uuid(verified.user.tenant_id);
+               if let Err(e) = state
+                  .session_manager
+                  .create_csrf_token(&tenant_id, &session_id)
+                  .await
+               {
+                  tracing::error!("CSRF トークン作成に失敗: {}", e);
+                  return internal_error_response();
+               }
+
                // Cookie を設定
                let cookie = build_session_cookie(&session_id);
                let jar = jar.add(cookie);
@@ -253,6 +276,15 @@ where
    if let Some(session_cookie) = jar.get(SESSION_COOKIE_NAME) {
       let session_id = session_cookie.value();
       let tenant_id = TenantId::from_uuid(tenant_id);
+
+      // CSRF トークンを削除（エラーは無視）
+      if let Err(e) = state
+         .session_manager
+         .delete_csrf_token(&tenant_id, session_id)
+         .await
+      {
+         tracing::warn!("CSRF トークン削除に失敗（無視）: {}", e);
+      }
 
       // セッションを削除（エラーは無視）
       if let Err(e) = state.session_manager.delete(&tenant_id, session_id).await {
@@ -314,6 +346,76 @@ where
                internal_error_response()
             }
          }
+      }
+      Ok(None) => unauthorized_response(),
+      Err(e) => {
+         tracing::error!("セッション取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+/// GET /auth/csrf
+///
+/// CSRF トークンを取得する。
+/// セッションが存在しない場合は新規作成し、存在する場合は既存のトークンを返す。
+pub async fn csrf<C, S>(
+   State(state): State<Arc<AuthState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+) -> impl IntoResponse
+where
+   C: CoreApiClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // Cookie からセッション ID を取得
+   let session_id = match jar.get(SESSION_COOKIE_NAME) {
+      Some(cookie) => cookie.value().to_string(),
+      None => return unauthorized_response(),
+   };
+
+   let tenant_id = TenantId::from_uuid(tenant_id);
+
+   // セッションが存在するか確認
+   match state.session_manager.get(&tenant_id, &session_id).await {
+      Ok(Some(_)) => {
+         // 既存の CSRF トークンを取得、なければ新規作成
+         let token = match state
+            .session_manager
+            .get_csrf_token(&tenant_id, &session_id)
+            .await
+         {
+            Ok(Some(token)) => token,
+            Ok(None) => {
+               // トークンが存在しない場合は新規作成
+               match state
+                  .session_manager
+                  .create_csrf_token(&tenant_id, &session_id)
+                  .await
+               {
+                  Ok(token) => token,
+                  Err(e) => {
+                     tracing::error!("CSRF トークン作成で内部エラー: {}", e);
+                     return internal_error_response();
+                  }
+               }
+            }
+            Err(e) => {
+               tracing::error!("CSRF トークン取得で内部エラー: {}", e);
+               return internal_error_response();
+            }
+         };
+
+         let response = CsrfResponse {
+            data: CsrfResponseData { token },
+         };
+         (StatusCode::OK, Json(response)).into_response()
       }
       Ok(None) => unauthorized_response(),
       Err(e) => {
@@ -530,6 +632,38 @@ mod tests {
       ) -> Result<Option<i64>, InfraError> {
          Ok(Some(28800))
       }
+
+      async fn create_csrf_token(
+         &self,
+         _tenant_id: &TenantId,
+         _session_id: &str,
+      ) -> Result<String, InfraError> {
+         Ok("a".repeat(64))
+      }
+
+      async fn get_csrf_token(
+         &self,
+         _tenant_id: &TenantId,
+         _session_id: &str,
+      ) -> Result<Option<String>, InfraError> {
+         if self.session.is_some() {
+            Ok(Some("a".repeat(64)))
+         } else {
+            Ok(None)
+         }
+      }
+
+      async fn delete_csrf_token(
+         &self,
+         _tenant_id: &TenantId,
+         _session_id: &str,
+      ) -> Result<(), InfraError> {
+         Ok(())
+      }
+
+      async fn delete_all_csrf_for_tenant(&self, _tenant_id: &TenantId) -> Result<(), InfraError> {
+         Ok(())
+      }
    }
 
    fn create_test_app(client: StubCoreApiClient, session_manager: StubSessionManager) -> Router {
@@ -548,6 +682,10 @@ mod tests {
             post(logout::<StubCoreApiClient, StubSessionManager>),
          )
          .route("/auth/me", get(me::<StubCoreApiClient, StubSessionManager>))
+         .route(
+            "/auth/csrf",
+            get(csrf::<StubCoreApiClient, StubSessionManager>),
+         )
          .with_state(state)
    }
 
@@ -752,5 +890,61 @@ mod tests {
 
       // Then
       assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+   }
+
+   // --- CSRF トークンテスト ---
+
+   #[tokio::test]
+   async fn test_csrf_認証済みでトークンを取得できる() {
+      // Given
+      let tenant_id = TenantId::from_uuid(Uuid::parse_str(TEST_TENANT_ID).unwrap());
+      let user_id = UserId::new();
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubSessionManager::with_session(user_id, tenant_id),
+      );
+
+      let request = Request::builder()
+         .method(Method::GET)
+         .uri("/auth/csrf")
+         .header("X-Tenant-ID", TEST_TENANT_ID)
+         .header("Cookie", "session_id=test-session-id")
+         .body(Body::empty())
+         .unwrap();
+
+      // When
+      let response = app.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::OK);
+
+      let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+         .await
+         .unwrap();
+      let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+      assert!(json["data"]["token"].is_string());
+      let token = json["data"]["token"].as_str().unwrap();
+      assert_eq!(token.len(), 64);
+   }
+
+   #[tokio::test]
+   async fn test_csrf_未認証で401() {
+      // Given
+      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+
+      let request = Request::builder()
+         .method(Method::GET)
+         .uri("/auth/csrf")
+         .header("X-Tenant-ID", TEST_TENANT_ID)
+         // Cookie なし
+         .body(Body::empty())
+         .unwrap();
+
+      // When
+      let response = app.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
    }
 }

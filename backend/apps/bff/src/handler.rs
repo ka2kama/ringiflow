@@ -16,5 +16,5 @@
 pub mod auth;
 pub mod health;
 
-pub use auth::{AuthState, login, logout, me};
+pub use auth::{AuthState, csrf, login, logout, me};
 pub use health::health_check;

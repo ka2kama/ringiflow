@@ -222,3 +222,120 @@ async fn test_created_atとlast_accessed_atが設定される() {
 
    cleanup_session(&manager, &tenant_id, &session_id).await;
 }
+
+// --- CSRF トークンテスト ---
+
+/// テスト後に CSRF トークンをクリーンアップ
+async fn cleanup_csrf(manager: &impl SessionManager, tenant_id: &TenantId, session_id: &str) {
+   let _ = manager.delete_csrf_token(tenant_id, session_id).await;
+}
+
+#[tokio::test]
+async fn test_csrfトークンを作成できる() {
+   let manager = RedisSessionManager::new(&redis_url()).await.unwrap();
+   let tenant_id = TenantId::from_uuid(Uuid::now_v7());
+   let session_id = Uuid::now_v7().to_string();
+
+   let result = manager.create_csrf_token(&tenant_id, &session_id).await;
+
+   assert!(result.is_ok());
+   let token = result.unwrap();
+   // 64文字の hex 文字列
+   assert_eq!(token.len(), 64);
+   assert!(token.chars().all(|c| c.is_ascii_hexdigit()));
+
+   cleanup_csrf(&manager, &tenant_id, &session_id).await;
+}
+
+#[tokio::test]
+async fn test_csrfトークンを取得できる() {
+   let manager = RedisSessionManager::new(&redis_url()).await.unwrap();
+   let tenant_id = TenantId::from_uuid(Uuid::now_v7());
+   let session_id = Uuid::now_v7().to_string();
+
+   let token = manager
+      .create_csrf_token(&tenant_id, &session_id)
+      .await
+      .unwrap();
+   let result = manager.get_csrf_token(&tenant_id, &session_id).await;
+
+   assert!(result.is_ok());
+   let retrieved = result.unwrap();
+   assert!(retrieved.is_some());
+   assert_eq!(retrieved.unwrap(), token);
+
+   cleanup_csrf(&manager, &tenant_id, &session_id).await;
+}
+
+#[tokio::test]
+async fn test_存在しないcsrfトークンはnoneを返す() {
+   let manager = RedisSessionManager::new(&redis_url()).await.unwrap();
+   let tenant_id = TenantId::from_uuid(Uuid::now_v7());
+
+   let result = manager
+      .get_csrf_token(&tenant_id, "nonexistent-session-id")
+      .await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_none());
+}
+
+#[tokio::test]
+async fn test_csrfトークンを削除できる() {
+   let manager = RedisSessionManager::new(&redis_url()).await.unwrap();
+   let tenant_id = TenantId::from_uuid(Uuid::now_v7());
+   let session_id = Uuid::now_v7().to_string();
+
+   manager
+      .create_csrf_token(&tenant_id, &session_id)
+      .await
+      .unwrap();
+   let result = manager.delete_csrf_token(&tenant_id, &session_id).await;
+
+   assert!(result.is_ok());
+
+   // 削除後は None を返す
+   let retrieved = manager
+      .get_csrf_token(&tenant_id, &session_id)
+      .await
+      .unwrap();
+   assert!(retrieved.is_none());
+}
+
+#[tokio::test]
+async fn test_テナント単位で全csrfトークンを削除できる() {
+   let manager = RedisSessionManager::new(&redis_url()).await.unwrap();
+   let tenant_id = TenantId::from_uuid(Uuid::now_v7());
+   let session_id1 = Uuid::now_v7().to_string();
+   let session_id2 = Uuid::now_v7().to_string();
+
+   // 同一テナントに複数の CSRF トークンを作成
+   manager
+      .create_csrf_token(&tenant_id, &session_id1)
+      .await
+      .unwrap();
+   manager
+      .create_csrf_token(&tenant_id, &session_id2)
+      .await
+      .unwrap();
+
+   // テナント単位で削除
+   let result = manager.delete_all_csrf_for_tenant(&tenant_id).await;
+   assert!(result.is_ok());
+
+   // 両方のトークンが削除されている
+   assert!(
+      manager
+         .get_csrf_token(&tenant_id, &session_id1)
+         .await
+         .unwrap()
+         .is_none()
+   );
+   assert!(
+      manager
+         .get_csrf_token(&tenant_id, &session_id2)
+         .await
+         .unwrap()
+         .is_none()
+   );
+}

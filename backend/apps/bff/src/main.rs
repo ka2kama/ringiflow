@@ -53,16 +53,19 @@ pub mod client;
 mod config;
 mod error;
 pub mod handler;
+pub mod middleware;
 
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
    Router,
+   middleware::from_fn_with_state,
    routing::{get, post},
 };
 use client::CoreApiClientImpl;
 use config::BffConfig;
-use handler::{AuthState, health_check, login, logout, me};
+use handler::{AuthState, csrf, health_check, login, logout, me};
+use middleware::{CsrfState, csrf_middleware};
 use ringiflow_infra::RedisSessionManager;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -105,6 +108,11 @@ async fn main() -> anyhow::Result<()> {
       .expect("Redis への接続に失敗しました");
    let core_api_client = CoreApiClientImpl::new(&config.core_api_url);
 
+   // CSRF ミドルウェア用の状態
+   let csrf_state = CsrfState {
+      session_manager: session_manager.clone(),
+   };
+
    let auth_state = Arc::new(AuthState {
       core_api_client,
       session_manager,
@@ -112,6 +120,7 @@ async fn main() -> anyhow::Result<()> {
 
    // ルーター構築
    // TraceLayer により、すべての HTTP リクエストがトレーシングされる
+   // CSRF ミドルウェアは POST/PUT/PATCH/DELETE リクエストを検証する
    let app = Router::new()
       .route("/health", get(health_check))
       .route(
@@ -126,7 +135,15 @@ async fn main() -> anyhow::Result<()> {
          "/auth/me",
          get(me::<CoreApiClientImpl, RedisSessionManager>),
       )
+      .route(
+         "/auth/csrf",
+         get(csrf::<CoreApiClientImpl, RedisSessionManager>),
+      )
       .with_state(auth_state)
+      .layer(from_fn_with_state(
+         csrf_state,
+         csrf_middleware::<RedisSessionManager>,
+      ))
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動
