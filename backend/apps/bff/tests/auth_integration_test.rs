@@ -1,0 +1,430 @@
+//! BFF 認証統合テスト
+//!
+//! 実際の Redis を使用してセッション管理の一連のフローをテストする。
+//! Core API の呼び出しはスタブを使用する。
+//!
+//! ## 実行方法
+//!
+//! ```bash
+//! just dev-deps
+//! cd backend && cargo test -p ringiflow-bff --test auth_integration_test
+//! ```
+//!
+//! ## テストケース
+//!
+//! - ログイン → /auth/me → ログアウトの一連フロー
+//! - ログアウト後に /auth/me で 401
+//! - 不正なパスワードでログインできない
+//! - 存在しないメールでログインできない
+//! - 非アクティブユーザーはログインできない
+
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use axum::{
+   Router,
+   body::Body,
+   http::{Method, Request, StatusCode},
+   routing::{get, post},
+};
+use ringiflow_bff::{
+   client::{
+      CoreApiClient,
+      CoreApiError,
+      RoleResponse,
+      UserResponse,
+      UserWithPermissionsResponse,
+      VerifyResponse,
+   },
+   handler::{AuthState, login, logout, me},
+};
+use ringiflow_infra::{RedisSessionManager, SessionManager};
+use tower::ServiceExt;
+use uuid::Uuid;
+
+/// テスト用の Redis URL
+fn redis_url() -> String {
+   std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:16379".to_string())
+}
+
+/// テスト用のテナント ID
+fn test_tenant_id() -> Uuid {
+   Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
+}
+
+/// テスト用のユーザー ID
+fn test_user_id() -> Uuid {
+   Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap()
+}
+
+// --- Core API スタブ ---
+
+/// Core API スタブの設定
+#[derive(Clone)]
+struct CoreApiStubConfig {
+   /// 認証が成功するか
+   auth_success: bool,
+   /// ユーザーがアクティブか
+   user_active:  bool,
+   /// ユーザーが存在するか
+   user_exists:  bool,
+}
+
+impl CoreApiStubConfig {
+   fn success() -> Self {
+      Self {
+         auth_success: true,
+         user_active:  true,
+         user_exists:  true,
+      }
+   }
+
+   fn wrong_password() -> Self {
+      Self {
+         auth_success: false,
+         user_active:  true,
+         user_exists:  true,
+      }
+   }
+
+   fn user_not_found() -> Self {
+      Self {
+         auth_success: false,
+         user_active:  true,
+         user_exists:  false,
+      }
+   }
+
+   fn user_inactive() -> Self {
+      Self {
+         auth_success: false,
+         user_active:  false,
+         user_exists:  true,
+      }
+   }
+}
+
+/// テスト用 Core API クライアント
+struct StubCoreApiClient {
+   config: CoreApiStubConfig,
+}
+
+impl StubCoreApiClient {
+   fn new(config: CoreApiStubConfig) -> Self {
+      Self { config }
+   }
+
+   fn create_user_response() -> UserResponse {
+      UserResponse {
+         id:        test_user_id(),
+         tenant_id: test_tenant_id(),
+         email:     "user@example.com".to_string(),
+         name:      "Test User".to_string(),
+         status:    "active".to_string(),
+      }
+   }
+
+   fn create_role_response() -> RoleResponse {
+      RoleResponse {
+         id:          Uuid::now_v7(),
+         name:        "user".to_string(),
+         permissions: vec!["workflow:read".to_string()],
+      }
+   }
+}
+
+#[async_trait]
+impl CoreApiClient for StubCoreApiClient {
+   async fn verify_credentials(
+      &self,
+      _tenant_id: Uuid,
+      _email: &str,
+      _password: &str,
+   ) -> Result<VerifyResponse, CoreApiError> {
+      if !self.config.user_exists {
+         return Err(CoreApiError::AuthenticationFailed);
+      }
+      if !self.config.user_active {
+         return Err(CoreApiError::AuthenticationFailed);
+      }
+      if !self.config.auth_success {
+         return Err(CoreApiError::AuthenticationFailed);
+      }
+
+      Ok(VerifyResponse {
+         user:  Self::create_user_response(),
+         roles: vec![Self::create_role_response()],
+      })
+   }
+
+   async fn get_user(&self, _user_id: Uuid) -> Result<UserWithPermissionsResponse, CoreApiError> {
+      if !self.config.user_exists {
+         return Err(CoreApiError::UserNotFound);
+      }
+
+      Ok(UserWithPermissionsResponse {
+         user:        Self::create_user_response(),
+         roles:       vec!["user".to_string()],
+         permissions: vec!["workflow:read".to_string()],
+      })
+   }
+}
+
+// --- テストヘルパー ---
+
+/// テスト用アプリケーションを作成
+async fn create_test_app(
+   config: CoreApiStubConfig,
+) -> (
+   Router,
+   Arc<AuthState<StubCoreApiClient, RedisSessionManager>>,
+) {
+   let session_manager = RedisSessionManager::new(&redis_url())
+      .await
+      .expect("Redis への接続に失敗");
+
+   let state = Arc::new(AuthState {
+      core_api_client: StubCoreApiClient::new(config),
+      session_manager,
+   });
+
+   let app = Router::new()
+      .route(
+         "/auth/login",
+         post(login::<StubCoreApiClient, RedisSessionManager>),
+      )
+      .route(
+         "/auth/logout",
+         post(logout::<StubCoreApiClient, RedisSessionManager>),
+      )
+      .route(
+         "/auth/me",
+         get(me::<StubCoreApiClient, RedisSessionManager>),
+      )
+      .with_state(state.clone());
+
+   (app, state)
+}
+
+/// ログインリクエストを作成
+fn login_request(email: &str, password: &str) -> Request<Body> {
+   let body = serde_json::json!({
+       "email": email,
+       "password": password
+   });
+
+   Request::builder()
+      .method(Method::POST)
+      .uri("/auth/login")
+      .header("content-type", "application/json")
+      .header("X-Tenant-ID", test_tenant_id().to_string())
+      .body(Body::from(serde_json::to_string(&body).unwrap()))
+      .unwrap()
+}
+
+/// ログアウトリクエストを作成
+fn logout_request(session_cookie: &str) -> Request<Body> {
+   Request::builder()
+      .method(Method::POST)
+      .uri("/auth/logout")
+      .header("X-Tenant-ID", test_tenant_id().to_string())
+      .header("Cookie", format!("session_id={}", session_cookie))
+      .body(Body::empty())
+      .unwrap()
+}
+
+/// /auth/me リクエストを作成
+fn me_request(session_cookie: &str) -> Request<Body> {
+   Request::builder()
+      .method(Method::GET)
+      .uri("/auth/me")
+      .header("X-Tenant-ID", test_tenant_id().to_string())
+      .header("Cookie", format!("session_id={}", session_cookie))
+      .body(Body::empty())
+      .unwrap()
+}
+
+/// /auth/me リクエストを作成（Cookie なし）
+fn me_request_without_cookie() -> Request<Body> {
+   Request::builder()
+      .method(Method::GET)
+      .uri("/auth/me")
+      .header("X-Tenant-ID", test_tenant_id().to_string())
+      .body(Body::empty())
+      .unwrap()
+}
+
+/// Set-Cookie ヘッダーからセッション ID を抽出
+fn extract_session_id(set_cookie: &str) -> Option<String> {
+   // "session_id=xxx; Path=/; ..." の形式からセッション ID を抽出
+   set_cookie
+      .split(';')
+      .next()
+      .and_then(|s| s.strip_prefix("session_id="))
+      .map(|s| s.to_string())
+}
+
+// --- テストケース ---
+
+#[tokio::test]
+async fn test_ログインからログアウトまでの一連フロー() {
+   // Given
+   let (app, state) = create_test_app(CoreApiStubConfig::success()).await;
+
+   // When: ログイン
+   let login_response = app
+      .clone()
+      .oneshot(login_request("user@example.com", "password123"))
+      .await
+      .unwrap();
+
+   // Then: ログイン成功
+   assert_eq!(login_response.status(), StatusCode::OK);
+
+   // セッション ID を取得
+   let set_cookie = login_response
+      .headers()
+      .get("set-cookie")
+      .unwrap()
+      .to_str()
+      .unwrap();
+   let session_id = extract_session_id(set_cookie).expect("セッション ID が設定されていない");
+   assert!(!session_id.is_empty());
+
+   // When: /auth/me でユーザー情報を取得
+   let me_response = app.clone().oneshot(me_request(&session_id)).await.unwrap();
+
+   // Then: ユーザー情報が返る
+   assert_eq!(me_response.status(), StatusCode::OK);
+
+   let body = axum::body::to_bytes(me_response.into_body(), usize::MAX)
+      .await
+      .unwrap();
+   let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+   assert_eq!(json["data"]["email"], "user@example.com");
+   assert_eq!(json["data"]["name"], "Test User");
+
+   // When: ログアウト
+   let logout_response = app
+      .clone()
+      .oneshot(logout_request(&session_id))
+      .await
+      .unwrap();
+
+   // Then: ログアウト成功
+   assert_eq!(logout_response.status(), StatusCode::NO_CONTENT);
+
+   // Cookie がクリアされていることを確認
+   let clear_cookie = logout_response
+      .headers()
+      .get("set-cookie")
+      .unwrap()
+      .to_str()
+      .unwrap();
+   assert!(clear_cookie.contains("Max-Age=0"));
+
+   // クリーンアップ: セッションが削除されていることを確認
+   let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
+   let session = state
+      .session_manager
+      .get(&tenant_id, &session_id)
+      .await
+      .unwrap();
+   assert!(session.is_none(), "セッションが削除されていない");
+}
+
+#[tokio::test]
+async fn test_ログアウト後にauthmeで401() {
+   // Given
+   let (app, state) = create_test_app(CoreApiStubConfig::success()).await;
+
+   // ログイン
+   let login_response = app
+      .clone()
+      .oneshot(login_request("user@example.com", "password123"))
+      .await
+      .unwrap();
+   let set_cookie = login_response
+      .headers()
+      .get("set-cookie")
+      .unwrap()
+      .to_str()
+      .unwrap();
+   let session_id = extract_session_id(set_cookie).unwrap();
+
+   // ログアウト
+   app.clone()
+      .oneshot(logout_request(&session_id))
+      .await
+      .unwrap();
+
+   // When: ログアウト後に /auth/me にアクセス
+   let me_response = app.clone().oneshot(me_request(&session_id)).await.unwrap();
+
+   // Then: 401 Unauthorized
+   assert_eq!(me_response.status(), StatusCode::UNAUTHORIZED);
+
+   // クリーンアップ
+   let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
+   let _ = state.session_manager.delete(&tenant_id, &session_id).await;
+}
+
+#[tokio::test]
+async fn test_不正なパスワードでログインできない() {
+   // Given
+   let (app, _state) = create_test_app(CoreApiStubConfig::wrong_password()).await;
+
+   // When
+   let response = app
+      .oneshot(login_request("user@example.com", "wrongpassword"))
+      .await
+      .unwrap();
+
+   // Then
+   assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+   // Cookie が設定されていないことを確認
+   assert!(response.headers().get("set-cookie").is_none());
+}
+
+#[tokio::test]
+async fn test_存在しないメールでログインできない() {
+   // Given
+   let (app, _state) = create_test_app(CoreApiStubConfig::user_not_found()).await;
+
+   // When
+   let response = app
+      .oneshot(login_request("nonexistent@example.com", "password123"))
+      .await
+      .unwrap();
+
+   // Then
+   assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_非アクティブユーザーはログインできない() {
+   // Given
+   let (app, _state) = create_test_app(CoreApiStubConfig::user_inactive()).await;
+
+   // When
+   let response = app
+      .oneshot(login_request("user@example.com", "password123"))
+      .await
+      .unwrap();
+
+   // Then
+   assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_未認証状態でauthmeにアクセスすると401() {
+   // Given
+   let (app, _state) = create_test_app(CoreApiStubConfig::success()).await;
+
+   // When: Cookie なしで /auth/me にアクセス
+   let response = app.oneshot(me_request_without_cookie()).await.unwrap();
+
+   // Then
+   assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
