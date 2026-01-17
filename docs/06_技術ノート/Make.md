@@ -119,7 +119,7 @@ Makefile:3: *** missing separator.  Stop.
 | cargo-make | TOML で定義。Rust 向け |
 | npm scripts | Node.js プロジェクト向け |
 
-本プロジェクトでは just を採用。詳細は [ADR-006](../04_ADR/006_コマンドランナーの選定.md) を参照。
+本プロジェクトでは just を採用。詳細は [ADR-006](../05_ADR/006_コマンドランナーの選定.md) を参照。
 
 ## Make が適しているケース
 

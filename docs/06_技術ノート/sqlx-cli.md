@@ -197,7 +197,7 @@ sqlx database create
 
 - [SQLx 公式リポジトリ](https://github.com/launchbadge/sqlx)
 - [SQLx ドキュメント](https://docs.rs/sqlx/latest/sqlx/)
-- [ADR-005: データベースツールキットの選定](../04_ADR/005_データベースツールキットの選定.md)
+- [ADR-005: データベースツールキットの選定](../05_ADR/005_データベースツールキットの選定.md)
 
 ---
 

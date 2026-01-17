@@ -40,7 +40,7 @@ graph LR
 
 API 設計の一般的なパターンは技術ノートを参照。
 
-→ [RESTful API 設計](../05_技術ノート/REST_API設計.md)
+→ [RESTful API 設計](../06_技術ノート/REST_API設計.md)
 
 ### ベース URL
 
