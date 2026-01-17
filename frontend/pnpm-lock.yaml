@@ -11,6 +11,9 @@ importers:
       elm-review:
         specifier: ^2.13.5
         version: 2.13.5
+      elm-test:
+        specifier: 0.19.1-revision17
+        version: 0.19.1-revision17
       vite:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@25.0.9)
@@ -413,6 +416,10 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
+  commander@9.5.0:
+    resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
+    engines: {node: ^12.20.0 || >=14}
+
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
@@ -455,6 +462,11 @@ packages:
 
   elm-solve-deps-wasm@2.0.0:
     resolution: {integrity: sha512-11OV8FgB9qsth/F94q2SJjb1MoEgbworSyNM1L+YlxVoaxp7wtWPyA8cNcPEkSoIKG1B8Tqg68ED1P6dVamHSg==}
+
+  elm-test@0.19.1-revision17:
+    resolution: {integrity: sha512-P9J8tXdLXmqgIMlSozfcb/KCORq4GuxfwBbzqFLMss8KlGmUKonOJwseRX6xVkdU5xgGVA/mz9rfMTNomIbwng==}
+    engines: {node: '>=12.20.0'}
+    hasBin: true
 
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
@@ -800,6 +812,9 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  split@1.0.1:
+    resolution: {integrity: sha512-mTyOoPbrivtXnwnIxZRFYRrPNtEFKlpB2fvjSnCQUiAA6qAZzqwna5envK4uk6OIeP17CsdF3rSBGYVBsU0Tkg==}
+
   string-width@4.2.3:
     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
     engines: {node: '>=8'}
@@ -826,6 +841,9 @@ packages:
   terminal-link@2.1.1:
     resolution: {integrity: sha512-un0FmiRUQNr5PJqy9kP7c40F5BOfpGlYTrxonDChEZB7pzZxRNp/bt+ymiy9/npwXya9KH99nJ/GXFIiUkYGFQ==}
     engines: {node: '>=8'}
+
+  through@2.3.8:
+    resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
 
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
@@ -912,6 +930,10 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+
+  xmlbuilder@15.1.1:
+    resolution: {integrity: sha512-yMqGBqtXyeN1e3TGYvgNgDVZ3j84W4cwkOXQswghol6APgZWaff9lnbvN7MHYJOiXsvGPXtjTYJEiC9J2wv9Eg==}
+    engines: {node: '>=8.0'}
 
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
@@ -1199,6 +1221,8 @@ snapshots:
 
   color-name@1.1.4: {}
 
+  commander@9.5.0: {}
+
   concat-map@0.0.1: {}
 
   cross-spawn@6.0.5:
@@ -1257,6 +1281,19 @@ snapshots:
       - supports-color
 
   elm-solve-deps-wasm@2.0.0: {}
+
+  elm-test@0.19.1-revision17:
+    dependencies:
+      chalk: 4.1.2
+      chokidar: 3.6.0
+      commander: 9.5.0
+      cross-spawn: 7.0.6
+      elm-solve-deps-wasm: 2.0.0
+      graceful-fs: 4.2.11
+      split: 1.0.1
+      tinyglobby: 0.2.15
+      which: 2.0.2
+      xmlbuilder: 15.1.1
 
   emoji-regex@8.0.0: {}
 
@@ -1617,6 +1654,10 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
+  split@1.0.1:
+    dependencies:
+      through: 2.3.8
+
   string-width@4.2.3:
     dependencies:
       emoji-regex: 8.0.0
@@ -1649,6 +1690,8 @@ snapshots:
     dependencies:
       ansi-escapes: 4.3.2
       supports-hyperlinks: 2.3.0
+
+  through@2.3.8: {}
 
   tinyglobby@0.2.15:
     dependencies:
@@ -1707,6 +1750,8 @@ snapshots:
       strip-ansi: 6.0.1
 
   wrappy@1.0.2: {}
+
+  xmlbuilder@15.1.1: {}
 
   yocto-queue@0.1.0: {}
 
