@@ -248,7 +248,7 @@ impl From<DomainError> for ApiError {
 - [RFC 7807 - Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/html/rfc7807)
 - [thiserror ドキュメント](https://docs.rs/thiserror)
 - [anyhow ドキュメント](https://docs.rs/anyhow)
-- [ADR-005: データベースツールキットの選定](../04_ADR/005_データベースツールキットの選定.md)
+- [ADR-005: データベースツールキットの選定](../05_ADR/005_データベースツールキットの選定.md)
 
 ---
 

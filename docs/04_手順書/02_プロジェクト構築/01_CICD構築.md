@@ -21,11 +21,11 @@ ls -la .github/workflows/
 ## 概要
 
 GitHub Actions で Rust / Elm の CI を構築する。
-設計の詳細は [ADR-004: CI 並列化と変更検出](../../04_ADR/004_CI並列化と変更検出.md) を参照。
+設計の詳細は [ADR-004: CI 並列化と変更検出](../../05_ADR/004_CI並列化と変更検出.md) を参照。
 
 → 参照:
-- [`/.github/workflows/ci.yml`](/.github/workflows/ci.yml)
-- [`/.github/dependabot.yml`](/.github/dependabot.yml)
+- [`.github/workflows/ci.yml`](/.github/workflows/ci.yml)
+- [`.github/dependabot.yml`](/.github/dependabot.yml)
 
 ---
 
