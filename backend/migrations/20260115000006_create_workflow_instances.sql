@@ -3,9 +3,13 @@
 --
 -- 実行中のワークフローインスタンスを管理する。
 -- 定義から生成され、申請から完了までのライフサイクルを持つ。
+--
+-- 注: id は UUID v7（時系列ソート可能）を使用。
+-- アプリケーション側で生成するため DEFAULT 句なし。
+-- 参照: docs/05_ADR/001_ID形式の選定.md
 
 CREATE TABLE workflow_instances (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     definition_id UUID NOT NULL REFERENCES workflow_definitions(id),
     definition_version INTEGER NOT NULL,

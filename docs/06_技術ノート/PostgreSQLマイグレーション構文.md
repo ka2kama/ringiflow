@@ -158,7 +158,54 @@ UPDATE tenants SET settings = settings || '{"new_key": "value"}';
 
 **推奨:** ほぼ常に `JSONB` を使う。`JSON` を選ぶ理由はほとんどない。
 
-### 7. CONSTRAINT ... CHECK
+### 7. UNIQUE 制約とインデックスの関係
+
+```sql
+ALTER TABLE users ADD CONSTRAINT users_tenant_email_key UNIQUE (tenant_id, email);
+```
+
+**UNIQUE 制約を定義すると、PostgreSQL は自動的にユニークインデックスを作成する。**
+
+これは UNIQUE 制約を強制するための内部実装であり、明示的に `CREATE INDEX` する必要はない。
+
+```sql
+-- この UNIQUE 制約を定義すると...
+UNIQUE (tenant_id, email)
+
+-- PostgreSQL が自動的にこれと同等のインデックスを作成する
+CREATE UNIQUE INDEX users_tenant_email_key ON users (tenant_id, email);
+```
+
+**PRIMARY KEY も同様:**
+
+```sql
+PRIMARY KEY (id)  -- 自動的に id にユニークインデックスが作成される
+```
+
+**確認方法:**
+
+```sql
+-- psql でテーブルのインデックス一覧を表示
+\d users
+
+-- SQL で確認
+SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'users';
+```
+
+**注意点:**
+
+| 観点 | 説明 |
+|------|------|
+| 制約削除時 | 制約を削除するとインデックスも一緒に削除される |
+| 命名 | 制約名がそのままインデックス名になる |
+| 機能 | 明示的に作成したインデックスと機能的には同等 |
+
+**設計書との関係:**
+
+設計書で「UNIQUE 制約」と記載されている箇所は、自動的にインデックスも存在することを意味する。
+そのため、同じカラムに対して別途インデックスを作成する必要はない。
+
+### 8. CONSTRAINT ... CHECK
 
 ```sql
 CONSTRAINT tenants_plan_check CHECK (plan IN ('free', 'standard', 'professional', 'enterprise'))
@@ -183,7 +230,7 @@ INSERT INTO tenants (name, subdomain, plan) VALUES ('B社', 'b-corp', 'invalid')
 
 **利点:** アプリではなく DB レベルで不正データを防ぐ。データ整合性の最後の砦。
 
-### 8. CREATE TRIGGER
+### 9. CREATE TRIGGER
 
 **トリガーとは:** テーブルへの操作（INSERT/UPDATE/DELETE）をきっかけに自動実行される処理。
 アプリ側で毎回書く必要がなくなり、漏れを防げる。
@@ -228,7 +275,7 @@ UPDATE tenants SET name = 'New' WHERE id = 1;
 | アプリで毎回 `updated_at = NOW()` を書く | 書き忘れる可能性がある |
 | **トリガーで自動化** | 漏れがない、DB レベルで保証される |
 
-### 9. REFERENCES ... ON DELETE CASCADE
+### 10. REFERENCES ... ON DELETE CASCADE
 
 ```sql
 tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE
@@ -290,3 +337,4 @@ REFERENCES tenants(id) ON DELETE CASCADE ON UPDATE CASCADE
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-17 | 初版作成 |
+| 2026-01-17 | UNIQUE 制約とインデックスの関係を追加 |

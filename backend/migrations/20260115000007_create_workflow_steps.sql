@@ -3,9 +3,13 @@
 --
 -- ワークフローの各ステップの実行状態を管理する。
 -- インスタンスに紐付き、担当者への割り当てや承認/却下の記録を保持。
+--
+-- 注: id は UUID v7（時系列ソート可能）を使用。
+-- アプリケーション側で生成するため DEFAULT 句なし。
+-- 参照: docs/05_ADR/001_ID形式の選定.md
 
 CREATE TABLE workflow_steps (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     instance_id UUID NOT NULL REFERENCES workflow_instances(id) ON DELETE CASCADE,
     step_id VARCHAR(100) NOT NULL,
     step_name VARCHAR(255) NOT NULL,
