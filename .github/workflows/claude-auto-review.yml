@@ -57,7 +57,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          track_progress: true
+          # workflow_run イベントでは track_progress はサポートされていない
+          track_progress: false
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
