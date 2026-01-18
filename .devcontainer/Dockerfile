@@ -44,6 +44,12 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN npm install -g elm@0.19.1 elm-format@0.8.7 elm-test@0.19.1-revision17
 
 # =============================================================================
+# lefthook インストール（Git フック管理）
+# =============================================================================
+# Go 製のツールなので npm でインストール
+RUN npm install -g lefthook
+
+# =============================================================================
 # Rust 追加ツール インストール
 # =============================================================================
 USER vscode
@@ -56,9 +62,6 @@ RUN cargo install sqlx-cli --no-default-features --features rustls,postgres
 
 # just（タスクランナー）
 RUN cargo install just
-
-# lefthook（Git フック管理）
-RUN cargo install lefthook --locked
 
 # cargo-watch（ファイル変更監視）
 RUN cargo install cargo-watch
