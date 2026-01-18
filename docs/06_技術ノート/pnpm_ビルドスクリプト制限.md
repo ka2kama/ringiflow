@@ -68,16 +68,20 @@ $ pnpm approve-builds
   deny (don't run, and warn if present)
 ```
 
-設定は `pnpm-workspace.yaml` または `package.json` に保存される：
+設定は `package.json` の `pnpm` フィールドに保存される：
 
-```yaml
-# pnpm-workspace.yaml
-allowedBuiltDependencies:
-  - esbuild  # スクリプト実行を許可
-
-ignoredBuiltDependencies:
-  - esbuild  # スクリプトを無視（実行しない）
+```json
+{
+  "pnpm": {
+    "neverBuiltDependencies": ["esbuild"]
+  }
+}
 ```
+
+| 設定 | 説明 |
+|------|------|
+| `neverBuiltDependencies` | スクリプトを実行しない（警告も出ない） |
+| `onlyBuiltDependencies` | 指定したパッケージのみスクリプトを実行 |
 
 ## esbuild の場合
 
@@ -120,17 +124,21 @@ pnpm は `postinstall` を実行しなくても、適切なオプショナル依
 
 ## プロジェクトでの運用
 
-本プロジェクトでは `esbuild` を `ignoredBuiltDependencies` に設定：
+本プロジェクトでは `esbuild` を `neverBuiltDependencies` に設定：
 
-```yaml
-# frontend/pnpm-workspace.yaml
-ignoredBuiltDependencies:
-  - esbuild
+```json
+// frontend/package.json
+{
+  "pnpm": {
+    "neverBuiltDependencies": ["esbuild"]
+  }
+}
 ```
 
 理由:
 - esbuild はオプショナル依存関係でバイナリを取得できる
 - 不要なスクリプト実行を避ける
+- `package.json` の設定が最も確実（`.npmrc` は効かないケースがある）
 
 ## 関連リソース
 
