@@ -264,6 +264,7 @@ mod tests {
       role::{Permission, Role},
       tenant::TenantId,
       user::{Email, User, UserId, UserStatus},
+      value_objects::UserName,
    };
    use ringiflow_infra::InfraError;
    use tower::ServiceExt;
@@ -354,7 +355,7 @@ mod tests {
          UserId::new(),
          tenant_id.clone(),
          Email::new("user@example.com").unwrap(),
-         "Test User".to_string(),
+         UserName::new("Test User").unwrap(),
          Some("$argon2id$v=19$m=65536,t=1,p=1$...".to_string()),
          UserStatus::Active,
          None,
