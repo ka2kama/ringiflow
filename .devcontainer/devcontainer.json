@@ -1,0 +1,122 @@
+{
+  "name": "RingiFlow Dev Container",
+
+  // =============================================================================
+  // Docker Compose 設定
+  // =============================================================================
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  // =============================================================================
+  // ライフサイクルフック
+  // =============================================================================
+  // コンテナ作成後に依存関係をインストール
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  // =============================================================================
+  // ユーザー設定
+  // =============================================================================
+  "remoteUser": "vscode",
+
+  // =============================================================================
+  // フォワードするポート
+  // =============================================================================
+  "forwardPorts": [
+    // BFF
+    13000,
+    // Vite（フロントエンド）
+    15173,
+    // PostgreSQL
+    15432,
+    // Redis
+    16379
+  ],
+
+  // =============================================================================
+  // VS Code 設定
+  // =============================================================================
+  "customizations": {
+    "vscode": {
+      // 推奨拡張機能
+      "extensions": [
+        // Rust
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        // Elm
+        "elmtooling.elm-ls-vscode",
+        // Docker
+        "ms-azuretools.vscode-docker",
+        // Terraform
+        "hashicorp.terraform",
+        // just（タスクランナー）
+        "skellock.just",
+        // Git
+        "eamodio.gitlens",
+        // ShellCheck
+        "timonwong.shellcheck",
+        // EditorConfig
+        "editorconfig.editorconfig"
+      ],
+
+      // エディタ設定
+      "settings": {
+        // フォーマット
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": null,
+
+        // Rust
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        },
+        "rust-analyzer.cargo.features": "all",
+        "rust-analyzer.check.command": "clippy",
+
+        // Elm
+        "[elm]": {
+          "editor.defaultFormatter": "elmtooling.elm-ls-vscode"
+        },
+
+        // TOML
+        "[toml]": {
+          "editor.defaultFormatter": "tamasfe.even-better-toml"
+        },
+
+        // ターミナル
+        "terminal.integrated.defaultProfile.linux": "bash",
+
+        // ファイル関連付け
+        "files.associations": {
+          "justfile": "just"
+        }
+      }
+    },
+
+    // =============================================================================
+    // JetBrains Gateway 設定
+    // =============================================================================
+    // JetBrains Gateway から接続時に IDE を選択可能（CLion, RustRover, IntelliJ IDEA 等）
+    "jetbrains": {}
+  },
+
+  // =============================================================================
+  // Features（追加機能）
+  // =============================================================================
+  "features": {
+    // Git（コンテナ内で git コマンドを使用）
+    "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  // =============================================================================
+  // マウント設定
+  // =============================================================================
+  "mounts": [
+    // Git 認証情報を共有
+    "source=${localEnv:HOME}/.gitconfig,target=/home/vscode/.gitconfig,type=bind,consistency=cached",
+    // SSH 鍵を共有（GitHub 認証用）
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ]
+}

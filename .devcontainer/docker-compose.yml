@@ -1,0 +1,74 @@
+# RingiFlow Dev Container 用 Docker Compose
+#
+# 既存の infra/docker/docker-compose.yml を include し、app コンテナのみ追加
+# PostgreSQL/Redis の設定は一元管理（DRY）
+
+# 既存の compose を include（PostgreSQL, Redis）
+include:
+  - path: ../infra/docker/docker-compose.yml
+
+services:
+  # =============================================================================
+  # 開発コンテナ（メイン）
+  # =============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ringiflow-devcontainer-app
+    volumes:
+      # プロジェクトルートをマウント
+      - ..:/workspace:cached
+
+      # パフォーマンス最適化: 重いディレクトリを named volume に分離
+      # macOS/Windows の Docker ファイル共有は遅いため、
+      # node_modules, target, .cargo を分離することで 10〜50 倍高速化
+      - node_modules:/workspace/frontend/node_modules
+      - cargo_target:/workspace/backend/target
+      - cargo_registry:/home/vscode/.cargo/registry
+      - cargo_git:/home/vscode/.cargo/git
+
+    # コンテナを起動し続ける（VS Code / JetBrains がアタッチするため）
+    command: sleep infinity
+
+    # 依存サービス（include した postgres, redis）
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    # 環境変数
+    environment:
+      # データベース接続（コンテナ名で接続）
+      DATABASE_URL: postgres://ringiflow:ringiflow@postgres:5432/ringiflow_dev
+      # Redis 接続
+      REDIS_URL: redis://redis:6379
+
+      # ポート設定（ホストからのアクセス用、.env.template と整合）
+      POSTGRES_PORT: "${POSTGRES_PORT:-15432}"
+      REDIS_PORT: "${REDIS_PORT:-16379}"
+      BFF_PORT: "${BFF_PORT:-13000}"
+      VITE_PORT: "${VITE_PORT:-15173}"
+
+      # Rust 設定
+      CARGO_HOME: /home/vscode/.cargo
+      RUSTUP_HOME: /home/vscode/.rustup
+
+    # ポートフォワード（BFF, Vite）
+    ports:
+      - "${BFF_PORT:-13000}:${BFF_PORT:-13000}"
+      - "${VITE_PORT:-15173}:${VITE_PORT:-15173}"
+
+# =============================================================================
+# 追加の名前付きボリューム（パフォーマンス最適化用）
+# =============================================================================
+volumes:
+  node_modules:
+    name: ringiflow-devcontainer-node-modules
+  cargo_target:
+    name: ringiflow-devcontainer-cargo-target
+  cargo_registry:
+    name: ringiflow-devcontainer-cargo-registry
+  cargo_git:
+    name: ringiflow-devcontainer-cargo-git
