@@ -100,9 +100,17 @@ impl Version {
    pub fn as_i32(&self) -> i32 {
       i32::try_from(self.0).expect("バージョン番号が i32 の範囲を超えています")
    }
+}
 
-   /// i32 から変換する（DB 互換用）
-   pub fn from_i32(value: i32) -> Result<Self, DomainError> {
+impl TryFrom<i32> for Version {
+   type Error = DomainError;
+
+   /// i32 から Version への変換を試みる
+   ///
+   /// # エラー
+   ///
+   /// - 値が 0 以下の場合は `DomainError::Validation` を返す
+   fn try_from(value: i32) -> Result<Self, Self::Error> {
       if value <= 0 {
          return Err(DomainError::Validation(
             "バージョン番号は 1 以上である必要があります".to_string(),
@@ -282,18 +290,18 @@ mod tests {
 
    #[test]
    fn test_バージョンのi32からの変換() {
-      let v = Version::from_i32(42).unwrap();
+      let v = Version::try_from(42).unwrap();
       assert_eq!(v.as_u32(), 42);
    }
 
    #[test]
    fn test_バージョンのi32からの変換_0は無効() {
-      assert!(Version::from_i32(0).is_err());
+      assert!(Version::try_from(0).is_err());
    }
 
    #[test]
    fn test_バージョンのi32からの変換_負数は無効() {
-      assert!(Version::from_i32(-1).is_err());
+      assert!(Version::try_from(-1).is_err());
    }
 
    // UserName のテスト
