@@ -156,9 +156,114 @@ paths-filter が正しく差分を比較するには、比較対象のコミッ�
 
 ---
 
+## workflow_run イベント
+
+別のワークフローの完了をトリガーにして実行するイベント。
+CI 完了後に自動レビューを実行する、といったユースケースに使う。
+
+### 基本構文
+
+```yaml
+on:
+  workflow_run:
+    workflows: ["CI"]  # トリガー元のワークフロー名
+    types:
+      - completed      # 完了時（成功・失敗問わず）
+```
+
+### コンテキスト
+
+`github.event.workflow_run` でトリガー元の情報にアクセスできる：
+
+```yaml
+github.event.workflow_run:
+  id: 12345678              # ワークフロー実行 ID
+  name: "CI"                # ワークフロー名
+  head_sha: "abc123..."     # コミット SHA
+  conclusion: "success"     # 結果（success, failure, cancelled）
+  event: "pull_request"     # 元のトリガーイベント
+  pull_requests:            # 関連する PR の配列
+    - number: 73
+      head:
+        sha: "abc123..."
+        ref: "feature-branch"
+      base:
+        sha: "def456..."
+        ref: "main"
+```
+
+### pull_requests 配列
+
+1 つのコミットが複数の PR に関連付けられる可能性があるため、配列で提供される。
+通常は `[0]` で最初の要素を取得する。
+
+```yaml
+# PR 番号の取得
+PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+
+# PR が存在するかチェック
+if: github.event.workflow_run.pull_requests[0] != null
+```
+
+**含まれる情報:**
+- `number`: PR 番号
+- `head.sha`, `head.ref`: ソースブランチ情報
+- `base.sha`, `base.ref`: ターゲットブランチ情報
+
+**含まれない情報:**
+- `isDraft`: Draft PR かどうか
+- `title`, `body`: タイトル、本文
+- `labels`, `assignees`: ラベル、担当者
+
+これらの情報が必要な場合は `gh pr view` で取得する：
+
+```yaml
+IS_DRAFT=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json isDraft --jq '.isDraft')
+```
+
+### 重要な制約
+
+#### 1. デフォルトブランチのコンテキストで実行される
+
+`workflow_run` はデフォルトブランチ（main）のコンテキストで実行される。
+そのため、PR のコミットにステータスが自動で紐付かない。
+
+**解決策:** GitHub Status API で明示的にステータスを報告する。
+
+```yaml
+gh api "repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.head_sha }}" \
+  -f state=success \
+  -f context="My Check" \
+  -f description="Check completed"
+```
+
+→ 詳細: [ADR-011 補足](../05_ADR/011_Claude_Code_Action導入.md#補足-workflow_run-イベントでのステータス報告)
+
+#### 2. 同時実行制御が必要
+
+同じ PR で複数回 CI が実行されると、複数の `workflow_run` がトリガーされる。
+`concurrency` で重複実行を防止する：
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.pull_requests[0].number || github.run_id }}
+  cancel-in-progress: true
+```
+
+### ユースケース
+
+| ユースケース | 説明 |
+|-------------|------|
+| CI 完了後の自動レビュー | テストが通った PR のみレビューを実行 |
+| デプロイ前のセキュリティスキャン | ビルド成功後にスキャンを実行 |
+| 通知 | CI 結果を Slack などに通知 |
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-18 | workflow_run イベントセクションを追加 |
 | 2026-01-15 | 初版作成（アクション許可設定） |
 | 2026-01-15 | paths-filter セクションを追加 |
