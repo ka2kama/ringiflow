@@ -116,13 +116,15 @@ ringiflow/
 │   └── crates/        # 共有ライブラリ（domain, infra, shared）
 ├── frontend/          # Elm フロントエンド
 ├── infra/             # Terraform, Docker
+├── openapi/           # OpenAPI 仕様
 └── docs/              # ドキュメント
     ├── 01_要件定義書/
     ├── 02_基本設計書/
     ├── 03_詳細設計書/
     ├── 04_手順書/
     ├── 05_ADR/
-    └── 06_技術ノート/
+    ├── 06_技術ノート/
+    └── 07_実装解説/
 ```
 
 ## 開発フロー
@@ -153,24 +155,37 @@ AI エージェント向けのガイドラインは [CLAUDE.md](CLAUDE.md) を�
 開発環境の構築手順: [手順書](docs/04_手順書/01_開発参画/01_開発環境構築.md)
 
 ```bash
-# 利用可能なコマンドを表示
-just --list
+# 初回セットアップ（依存関係インストール、DB 起動、マイグレーション）
+just setup
 
-# ローカル環境の起動（PostgreSQL, Redis）
-docker compose -f infra/docker/docker-compose.yml up -d
+# 開発サーバー起動
+just dev-deps      # PostgreSQL, Redis を起動
+just dev-bff       # BFF 起動
+just dev-core-api  # Core API 起動
+just dev-web       # フロントエンド起動
 
-# 全体チェック（lint + test）
+# コミット前チェック（lint + test）
 just check-all
 ```
 
 ## 開発状況
 
-**Phase 1（MVP）開発中**
+**Phase 1（MVP）開発中** — ユーザー認証実装済み
 
 | Phase | 状態 | 内容 |
 |-------|------|------|
 | Phase 0 | ✅ 完了 | 開発基盤構築（CI/CD、プロジェクト構造、ドキュメント体系） |
 | Phase 1 | 🚧 開発中 | 最小限の動作するワークフローシステム |
-| Phase 2 | 📋 計画中 | 本格的な機能実装 |
+| Phase 2 | 📋 計画中 | 機能拡張（マルチテナント、通知、ドキュメント管理） |
+| Phase 3 | 📋 計画中 | エンタープライズ機能（SSO/MFA、複雑なフロー） |
+| Phase 4 | 📋 計画中 | 高度な機能（CQRS/ES、リアルタイム） |
+
+### Phase 1 の進捗
+
+- [x] 認証（メール/パスワードログイン、ログアウト）
+- [x] セッション管理（HTTPOnly Cookie、Redis）
+- [ ] ワークフロー申請・承認
+- [ ] タスク一覧・詳細
+- [ ] ダッシュボード
 
 詳細: [実装ロードマップ](docs/03_詳細設計書/00_実装ロードマップ.md)
