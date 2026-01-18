@@ -13,8 +13,9 @@
 //!
 //! ## テナント退会時の削除
 //!
-//! - `delete_all_for_tenant` で `session:{tenant_id}:*` パターンを SCAN して削除
-//! - `delete_all_csrf_for_tenant` で `csrf:{tenant_id}:*` パターンを SCAN して削除
+//! - `delete_all_for_tenant` で以下を削除:
+//!   - `session:{tenant_id}:*` パターンを SCAN して削除
+//!   - `csrf:{tenant_id}:*` パターンを SCAN して削除（セッションに紐づくCSRFトークン）
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -125,14 +126,16 @@ pub trait SessionManager: Send + Sync {
       session_id: &str,
    ) -> Result<Option<SessionData>, InfraError>;
 
-   /// セッションを削除する
+   /// セッションとCSRFトークンを削除する
    ///
    /// 存在しないセッションを削除しても成功とする。
+   /// セッションに紐づくCSRFトークンも自動的に削除される。
    async fn delete(&self, tenant_id: &TenantId, session_id: &str) -> Result<(), InfraError>;
 
-   /// テナントの全セッションを削除する（テナント退会時）
+   /// テナントの全セッションとCSRFトークンを削除する（テナント退会時）
    ///
    /// SCAN コマンドでパターンマッチし、該当するキーを全て削除する。
+   /// セッションに紐づくCSRFトークンも自動的に削除される。
    async fn delete_all_for_tenant(&self, tenant_id: &TenantId) -> Result<(), InfraError>;
 
    /// セッションの TTL（残り秒数）を取得する（テスト用）
@@ -276,13 +279,19 @@ impl SessionManager for RedisSessionManager {
    }
 
    async fn delete(&self, tenant_id: &TenantId, session_id: &str) -> Result<(), InfraError> {
+      // セッションを削除
       let key = Self::session_key(tenant_id, session_id);
       let mut conn = self.conn.clone();
       let _: () = conn.del(&key).await?;
+
+      // セッションに紐づく CSRF トークンも削除
+      self.delete_csrf_token(tenant_id, session_id).await?;
+
       Ok(())
    }
 
    async fn delete_all_for_tenant(&self, tenant_id: &TenantId) -> Result<(), InfraError> {
+      // セッションを削除
       let pattern = Self::tenant_session_pattern(tenant_id);
       let mut conn = self.conn.clone();
 
@@ -308,6 +317,9 @@ impl SessionManager for RedisSessionManager {
             break;
          }
       }
+
+      // セッションに紐づく CSRF トークンも削除
+      self.delete_all_csrf_for_tenant(tenant_id).await?;
 
       Ok(())
    }
