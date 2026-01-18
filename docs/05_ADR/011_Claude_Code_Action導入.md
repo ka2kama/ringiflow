@@ -75,8 +75,30 @@ Anthropic 公式の GitHub Action。PRオープン時に自動レビュー、コ
 
 ### 関連ドキュメント
 
-- 実装: [`.github/workflows/claude-review.yml`](../../.github/workflows/claude-review.yml)
+- 実装: [`.github/workflows/claude-auto-review.yml`](../../.github/workflows/claude-auto-review.yml)
 - レビュー基準: [`CLAUDE.md`](../../CLAUDE.md) の「PRレビュー」セクション
+
+---
+
+## 補足: workflow_run イベントでのステータス報告
+
+`workflow_run` イベントでトリガーされるワークフローは、デフォルトブランチ（main）のコンテキストで実行されるため、PR のコミットにステータスが自動で紐付かない。
+
+この問題を解決するため、GitHub Status API を使って明示的にステータスを報告している:
+
+```yaml
+gh api "repos/{owner}/{repo}/statuses/{sha}" \
+  -f state=pending|success|failure \
+  -f context="Claude Auto Review" \
+  -f description="..." \
+  -f target_url="..." || true
+```
+
+`|| true` を付けることで、API エラー時もワークフローを継続する（ステータス報告は補助機能のため）。
+
+これにより、Ruleset で「Claude Auto Review」を必須チェックとして設定可能になる。
+
+参考: [Creating commit status checks](https://docs.github.com/en/rest/commits/statuses)
 
 ---
 
@@ -84,4 +106,5 @@ Anthropic 公式の GitHub Action。PRオープン時に自動レビュー、コ
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-18 | workflow_run イベントでのステータス報告を追加 |
 | 2026-01-15 | 初版作成 |
