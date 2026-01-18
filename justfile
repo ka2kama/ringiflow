@@ -12,7 +12,9 @@ default:
 # =============================================================================
 
 # 初回セットアップ（全体）
-setup: check-tools setup-env setup-deps setup-hooks dev-deps setup-db
+# 順序: ツール確認 → 環境変数 → Git フック → Docker 起動 → DB マイグレーション → 依存関係ビルド
+# ※ sqlx はコンパイル時に DB スキーマを検証するため、cargo build の前にマイグレーションが必要
+setup: check-tools setup-env setup-hooks dev-deps setup-db setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
     @echo "  - just dev-bff      : BFF 起動"
@@ -61,7 +63,6 @@ setup-hooks:
 # データベースをセットアップ（マイグレーション適用）
 setup-db:
     @echo "データベースをセットアップ中..."
-    @sleep 3
     @cd backend && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
     @echo "✓ データベースセットアップ完了"
 
@@ -76,8 +77,9 @@ reset-db:
 # =============================================================================
 
 # Docker で依存サービス（PostgreSQL, Redis）を起動
+# --wait: healthcheck が通るまで待機（setup 時の競合を防止）
 dev-deps:
-    docker compose -f infra/docker/docker-compose.yml up -d
+    docker compose -f infra/docker/docker-compose.yml up -d --wait
     @echo "PostgreSQL: localhost:${POSTGRES_PORT}"
     @echo "Redis: localhost:${REDIS_PORT}"
 
