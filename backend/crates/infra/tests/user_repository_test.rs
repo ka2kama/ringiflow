@@ -78,7 +78,7 @@ async fn test_メールアドレスでユーザーを取得できる(pool: PgPoo
    assert!(user.is_some());
    let user = user.unwrap();
    assert_eq!(user.email().as_str(), "test@example.com");
-   assert_eq!(user.name(), "Test User");
+   assert_eq!(user.name().as_str(), "Test User");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

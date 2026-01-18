@@ -15,6 +15,7 @@ use ringiflow_domain::{
    role::{Permission, Role, RoleId},
    tenant::TenantId,
    user::{Email, User, UserId, UserStatus},
+   value_objects::UserName,
 };
 use sqlx::PgPool;
 
@@ -107,7 +108,7 @@ impl UserRepository for PostgresUserRepository {
          UserId::from_uuid(row.id),
          TenantId::from_uuid(row.tenant_id),
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.name,
+         UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.password_hash,
          row.status
             .parse::<UserStatus>()
@@ -149,7 +150,7 @@ impl UserRepository for PostgresUserRepository {
          UserId::from_uuid(row.id),
          TenantId::from_uuid(row.tenant_id),
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.name,
+         UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.password_hash,
          row.status
             .parse::<UserStatus>()

@@ -21,13 +21,14 @@
 //! use ringiflow_domain::{
 //!    tenant::TenantId,
 //!    user::{Email, User, UserId, UserStatus},
+//!    value_objects::UserName,
 //! };
 //!
 //! // 新規ユーザー作成
 //! let user = User::new(
 //!    TenantId::new(),
 //!    Email::new("user@example.com").unwrap(),
-//!    "山田太郎".to_string(),
+//!    UserName::new("山田太郎").unwrap(),
 //!    Some("$argon2id$...".to_string()),
 //! );
 //!
@@ -39,7 +40,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{DomainError, tenant::TenantId};
+use crate::{DomainError, tenant::TenantId, value_objects::UserName};
 
 /// ユーザー ID（一意識別子）
 ///
@@ -206,7 +207,7 @@ pub struct User {
    id: UserId,
    tenant_id: TenantId,
    email: Email,
-   name: String,
+   name: UserName,
    password_hash: Option<String>,
    status: UserStatus,
    last_login_at: Option<DateTime<Utc>>,
@@ -231,7 +232,7 @@ impl User {
    pub fn new(
       tenant_id: TenantId,
       email: Email,
-      name: String,
+      name: UserName,
       password_hash: Option<String>,
    ) -> Self {
       let now = Utc::now();
@@ -254,7 +255,7 @@ impl User {
       id: UserId,
       tenant_id: TenantId,
       email: Email,
-      name: String,
+      name: UserName,
       password_hash: Option<String>,
       status: UserStatus,
       last_login_at: Option<DateTime<Utc>>,
@@ -288,7 +289,7 @@ impl User {
       &self.email
    }
 
-   pub fn name(&self) -> &str {
+   pub fn name(&self) -> &UserName {
       &self.name
    }
 
@@ -376,7 +377,8 @@ mod tests {
    fn アクティブなユーザー() -> User {
       let tenant_id = TenantId::new();
       let email = Email::new("user@example.com").unwrap();
-      User::new(tenant_id, email, "Test User".to_string(), None)
+      let name = UserName::new("Test User").unwrap();
+      User::new(tenant_id, email, name, None)
    }
 
    // Email のテスト

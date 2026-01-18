@@ -14,13 +14,13 @@
 //! use ringiflow_domain::workflow::{
 //!     WorkflowDefinition, WorkflowDefinitionId, WorkflowDefinitionStatus
 //! };
-//! use ringiflow_domain::{tenant::TenantId, user::UserId};
+//! use ringiflow_domain::{tenant::TenantId, user::UserId, value_objects::WorkflowName};
 //! use serde_json::json;
 //!
 //! // ワークフロー定義の作成
 //! let definition = WorkflowDefinition::new(
 //!     TenantId::new(),
-//!     "汎用申請".to_string(),
+//!     WorkflowName::new("汎用申請").unwrap(),
 //!     Some("シンプルな1段階承認".to_string()),
 //!     json!({"steps": []}),
 //!     UserId::new(),
@@ -33,7 +33,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use uuid::Uuid;
 
-use crate::{DomainError, tenant::TenantId, user::UserId};
+use crate::{
+   DomainError,
+   tenant::TenantId,
+   user::UserId,
+   value_objects::{Version, WorkflowName},
+};
 
 // =========================================================================
 // Workflow Definition（ワークフロー定義）
@@ -115,9 +120,9 @@ impl std::str::FromStr for WorkflowDefinitionStatus {
 pub struct WorkflowDefinition {
    id:          WorkflowDefinitionId,
    tenant_id:   TenantId,
-   name:        String,
+   name:        WorkflowName,
    description: Option<String>,
-   version:     i32,
+   version:     Version,
    definition:  JsonValue,
    status:      WorkflowDefinitionStatus,
    created_by:  UserId,
@@ -129,7 +134,7 @@ impl WorkflowDefinition {
    /// 新しいワークフロー定義を作成する
    pub fn new(
       tenant_id: TenantId,
-      name: String,
+      name: WorkflowName,
       description: Option<String>,
       definition: JsonValue,
       created_by: UserId,
@@ -140,7 +145,7 @@ impl WorkflowDefinition {
          tenant_id,
          name,
          description,
-         version: 1,
+         version: Version::initial(),
          definition,
          status: WorkflowDefinitionStatus::Draft,
          created_by,
@@ -154,9 +159,9 @@ impl WorkflowDefinition {
    pub fn from_db(
       id: WorkflowDefinitionId,
       tenant_id: TenantId,
-      name: String,
+      name: WorkflowName,
       description: Option<String>,
-      version: i32,
+      version: Version,
       definition: JsonValue,
       status: WorkflowDefinitionStatus,
       created_by: UserId,
@@ -187,7 +192,7 @@ impl WorkflowDefinition {
       &self.tenant_id
    }
 
-   pub fn name(&self) -> &str {
+   pub fn name(&self) -> &WorkflowName {
       &self.name
    }
 
@@ -195,7 +200,7 @@ impl WorkflowDefinition {
       self.description.as_deref()
    }
 
-   pub fn version(&self) -> i32 {
+   pub fn version(&self) -> Version {
       self.version
    }
 
@@ -342,7 +347,7 @@ pub struct WorkflowInstance {
    id: WorkflowInstanceId,
    tenant_id: TenantId,
    definition_id: WorkflowDefinitionId,
-   definition_version: i32,
+   definition_version: Version,
    title: String,
    form_data: JsonValue,
    status: WorkflowInstanceStatus,
@@ -359,7 +364,7 @@ impl WorkflowInstance {
    pub fn new(
       tenant_id: TenantId,
       definition_id: WorkflowDefinitionId,
-      definition_version: i32,
+      definition_version: Version,
       title: String,
       form_data: JsonValue,
       initiated_by: UserId,
@@ -388,7 +393,7 @@ impl WorkflowInstance {
       id: WorkflowInstanceId,
       tenant_id: TenantId,
       definition_id: WorkflowDefinitionId,
-      definition_version: i32,
+      definition_version: Version,
       title: String,
       form_data: JsonValue,
       status: WorkflowInstanceStatus,
@@ -430,7 +435,7 @@ impl WorkflowInstance {
       &self.definition_id
    }
 
-   pub fn definition_version(&self) -> i32 {
+   pub fn definition_version(&self) -> Version {
       self.definition_version
    }
 

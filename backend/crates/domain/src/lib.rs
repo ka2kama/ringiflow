@@ -45,6 +45,7 @@ pub mod password;
 pub mod role;
 pub mod tenant;
 pub mod user;
+pub mod value_objects;
 pub mod workflow;
 
 pub use error::DomainError;

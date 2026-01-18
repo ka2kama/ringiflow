@@ -319,6 +319,26 @@ RingiFlow での使用例:
 - `UserId`, `TenantId`, `RoleId` などの ID 型
 - `Email` などの値オブジェクト
 - `Permission` などのドメイン概念
+- `Version`, `UserName`, `WorkflowName` などの共通値オブジェクト（`value_objects` モジュール）
+
+### value_objects モジュール
+
+複数のエンティティで共有される値オブジェクトは `value_objects.rs` に集約:
+
+```rust
+// backend/crates/domain/src/value_objects.rs
+
+/// バージョン番号（1 以上を保証）
+pub struct Version(u32);
+
+/// ユーザー表示名（空文字禁止、100 文字以内）
+pub struct UserName(String);
+
+/// ワークフロー名（空文字禁止、200 文字以内）
+pub struct WorkflowName(String);
+```
+
+Newtype 化の判断基準は [ADR-016](../05_ADR/016_プリミティブ型のNewtype化方針.md) を参照。
 
 ---
 
