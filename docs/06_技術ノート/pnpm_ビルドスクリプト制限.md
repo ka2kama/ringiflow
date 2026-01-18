@@ -108,19 +108,19 @@ esbuild は `optionalDependencies` としてプラットフォーム固有のパ
 ```
 
 pnpm は `postinstall` を実行しなくても、適切なオプショナル依存関係を解決してバイナリを取得できる。
-そのため `ignoredBuiltDependencies` で問題なく動作する。
+そのため `neverBuiltDependencies` で問題なく動作する。
 
 ## 設定の選択基準
 
 | 設定 | 用途 |
 |------|------|
-| `allowedBuiltDependencies` | スクリプト実行が必須のパッケージ |
-| `ignoredBuiltDependencies` | スクリプトなしでも動作するパッケージ |
+| `onlyBuiltDependencies` | 指定したパッケージのみスクリプトを実行 |
+| `neverBuiltDependencies` | 指定したパッケージのスクリプトを実行しない |
 
 判断のポイント:
-1. まず `ignored` で試す
-2. 動作しなければ `allowed` に変更
-3. `allowed` にする場合、パッケージの信頼性を確認
+1. まず `neverBuiltDependencies` で試す
+2. 動作しなければ `onlyBuiltDependencies` に追加
+3. `onlyBuiltDependencies` にする場合、パッケージの信頼性を確認
 
 ## プロジェクトでの運用
 
