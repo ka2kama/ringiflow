@@ -2,7 +2,8 @@
 //!
 //! Redis を使用したセッション管理と CSRF トークン管理を提供する。
 //!
-//! 詳細: [07_認証機能設計.md](../../../docs/03_詳細設計書/07_認証機能設計.md)
+//! - 設計: [07_認証機能設計.md](../../../docs/03_詳細設計書/07_認証機能設計.md)
+//! - Redis: [Redis.md](../../../docs/06_技術ノート/Redis.md)（Pipeline、SCAN など）
 //!
 //! ## Redis キー設計
 //!
@@ -279,13 +280,16 @@ impl SessionManager for RedisSessionManager {
    }
 
    async fn delete(&self, tenant_id: &TenantId, session_id: &str) -> Result<(), InfraError> {
-      // セッションを削除
-      let key = Self::session_key(tenant_id, session_id);
-      let mut conn = self.conn.clone();
-      let _: () = conn.del(&key).await?;
+      let session_key = Self::session_key(tenant_id, session_id);
+      let csrf_key = Self::csrf_key(tenant_id, session_id);
 
-      // セッションに紐づく CSRF トークンも削除
-      self.delete_csrf_token(tenant_id, session_id).await?;
+      // Pipeline で 1 RTT でセッションと CSRF トークンを同時削除
+      let mut conn = self.conn.clone();
+      redis::pipe()
+         .del(&session_key)
+         .del(&csrf_key)
+         .query_async::<()>(&mut conn)
+         .await?;
 
       Ok(())
    }

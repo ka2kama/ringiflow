@@ -522,6 +522,58 @@ loop {
 }
 ```
 
+### Pipeline
+
+複数のコマンドを 1 回のラウンドトリップ（RTT）で送信する仕組み。
+
+**なぜ Pipeline を使うか:**
+
+```
+通常（逐次実行）:
+  App → Redis: DEL session:xxx     (RTT 1)
+  App ← Redis: OK
+  App → Redis: DEL csrf:xxx        (RTT 2)
+  App ← Redis: OK
+  合計: 2 RTT
+
+Pipeline:
+  App → Redis: DEL session:xxx, DEL csrf:xxx  (RTT 1)
+  App ← Redis: OK, OK
+  合計: 1 RTT
+```
+
+ローカル環境では差は微小だが、ネットワーク越し（ElastiCache など）では RTT が数ミリ秒になるため効果が出る。
+
+**実装例:**
+
+```rust
+// 逐次（2 RTT）
+conn.del(&session_key).await?;
+conn.del(&csrf_key).await?;
+
+// Pipeline（1 RTT）
+redis::pipe()
+    .del(&session_key)
+    .del(&csrf_key)
+    .query_async::<()>(&mut conn)
+    .await?;
+```
+
+**使いどころ:**
+
+| ユースケース | Pipeline | 理由 |
+|-------------|----------|------|
+| 複数キーの削除（固定数） | ✅ | シンプルで効果的 |
+| SCAN ループ内の削除 | ❌ | SCAN 自体が複数 RTT 必要 |
+| 高頻度操作（ログアウト等） | ✅ | レイテンシ削減が体感に影響 |
+| 低頻度操作（テナント退会） | どちらでも可 | 最適化の恩恵が小さい |
+
+**注意点:**
+
+- Pipeline 内のコマンドは**アトミックではない**（トランザクションが必要なら `MULTI/EXEC` を使う）
+- エラー発生時は、成功したコマンドはロールバックされない
+- 削除操作は冪等なので、リトライで回復可能
+
 ## 開発環境
 
 ### Docker Compose
@@ -626,3 +678,4 @@ SLOWLOG GET 10
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-18 | 初版作成 |
+| 2026-01-18 | Pipeline セクションを追加 |
