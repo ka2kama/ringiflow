@@ -124,6 +124,16 @@ async fn test_テナント単位で全セッションを削除できる() {
    let session_id1 = manager.create(&data1).await.unwrap();
    let session_id2 = manager.create(&data2).await.unwrap();
 
+   // 各セッションに CSRF トークンを作成
+   manager
+      .create_csrf_token(&tenant_id, &session_id1)
+      .await
+      .unwrap();
+   manager
+      .create_csrf_token(&tenant_id, &session_id2)
+      .await
+      .unwrap();
+
    // テナント単位で削除
    let result = manager.delete_all_for_tenant(&tenant_id).await;
    assert!(result.is_ok());
@@ -139,6 +149,22 @@ async fn test_テナント単位で全セッションを削除できる() {
    assert!(
       manager
          .get(&tenant_id, &session_id2)
+         .await
+         .unwrap()
+         .is_none()
+   );
+
+   // 両方の CSRF トークンも削除されている
+   assert!(
+      manager
+         .get_csrf_token(&tenant_id, &session_id1)
+         .await
+         .unwrap()
+         .is_none()
+   );
+   assert!(
+      manager
+         .get_csrf_token(&tenant_id, &session_id2)
          .await
          .unwrap()
          .is_none()
