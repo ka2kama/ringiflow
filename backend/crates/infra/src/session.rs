@@ -126,9 +126,10 @@ pub trait SessionManager: Send + Sync {
       session_id: &str,
    ) -> Result<Option<SessionData>, InfraError>;
 
-   /// セッションを削除する
+   /// セッションとCSRFトークンを削除する
    ///
    /// 存在しないセッションを削除しても成功とする。
+   /// セッションに紐づくCSRFトークンも自動的に削除される。
    async fn delete(&self, tenant_id: &TenantId, session_id: &str) -> Result<(), InfraError>;
 
    /// テナントの全セッションとCSRFトークンを削除する（テナント退会時）
@@ -278,9 +279,14 @@ impl SessionManager for RedisSessionManager {
    }
 
    async fn delete(&self, tenant_id: &TenantId, session_id: &str) -> Result<(), InfraError> {
+      // セッションを削除
       let key = Self::session_key(tenant_id, session_id);
       let mut conn = self.conn.clone();
       let _: () = conn.del(&key).await?;
+
+      // セッションに紐づく CSRF トークンも削除
+      self.delete_csrf_token(tenant_id, session_id).await?;
+
       Ok(())
    }
 

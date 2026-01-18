@@ -104,11 +104,28 @@ async fn test_削除後のセッションはnoneを返す() {
    let data = test_session_data(&tenant_id, &user_id);
 
    let session_id = manager.create(&data).await.unwrap();
+
+   // CSRF トークンも作成
+   manager
+      .create_csrf_token(&tenant_id, &session_id)
+      .await
+      .unwrap();
+
    manager.delete(&tenant_id, &session_id).await.unwrap();
 
+   // セッションが削除されている
    let result = manager.get(&tenant_id, &session_id).await;
    assert!(result.is_ok());
    assert!(result.unwrap().is_none());
+
+   // CSRF トークンも自動的に削除されている
+   assert!(
+      manager
+         .get_csrf_token(&tenant_id, &session_id)
+         .await
+         .unwrap()
+         .is_none()
+   );
 }
 
 #[tokio::test]
