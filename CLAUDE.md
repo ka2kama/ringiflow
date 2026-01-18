@@ -138,6 +138,8 @@ TEA（The Elm Architecture）パターンを採用。
 
 ## ドキュメント体系
 
+このプロジェクトは一切の暗黙知を許容しない。すべての知識はコード・実装・文書で明示する。
+
 | 知りたいこと | 参照先 |
 |-------------|--------|
 | 何を作るか（WHAT） | [`docs/01_要件定義書/`](docs/01_要件定義書/) |
@@ -275,6 +277,13 @@ just clean-branches  # マージ後のローカルブランチ削除
 Claude Code Action による自動 PR レビューが有効。
 
 → [`.github/workflows/claude-auto-review.yml`](.github/workflows/claude-auto-review.yml)
+
+承認基準:
+
+| 重大度 | 基準 | アクション |
+|--------|------|-----------|
+| Critical/High | マージ前に修正必須 | request-changes |
+| Medium/Low | 改善推奨だがマージ可能 | approve + コメント |
 
 ```bash
 # 指摘対応フロー
