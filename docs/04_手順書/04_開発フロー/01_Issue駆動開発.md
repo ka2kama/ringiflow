@@ -282,12 +282,26 @@ gh api repos/ka2kama/ringiflow/milestones --jq '.[] | "\(.title): \(.open_issues
 
 ## Label
 
+### Issue タイプ
+
+| Label | 用途 | 色 |
+|-------|------|-----|
+| `type:epic` | 複数の Story をまとめる大きな機能 | 紫 |
+| `type:story` | ユーザー価値の単位（1〜数日で完了） | 青 |
+
+### カテゴリ
+
 | Label | 用途 | 色 |
 |-------|------|-----|
 | `backend` | Rust / API 関連 | 青 |
 | `frontend` | Elm / UI 関連 | 緑 |
 | `infra` | Docker / Terraform / AWS | 紫 |
 | `docs` | ドキュメント | 水色 |
+
+### 優先度
+
+| Label | 用途 | 色 |
+|-------|------|-----|
 | `priority:high` | 優先度: 高 | 赤 |
 | `priority:medium` | 優先度: 中 | 黄 |
 | `priority:low` | 優先度: 低 | 緑 |
@@ -305,10 +319,85 @@ Project Board はカンバン形式でタスクを可視化する。
 
 Issue を作成すると自動的に Project に追加される（`--project "RingiFlow"` オプション使用時）。
 
+## Epic / Story 運用
+
+アジャイルの Issue 階層を取り入れ、大きな機能を段階的に管理する。
+
+### 階層構造
+
+```
+Epic（大きな機能）
+├── Story（ユーザー価値の単位）
+│   └── Task（チェックリストで管理）
+└── Story
+    └── Task
+```
+
+| 概念 | 説明 | GitHub での実現 |
+|------|------|----------------|
+| Epic | 複数スプリントにまたがる大きな機能 | Issue + `type:epic` + Sub-issues |
+| Story | ユーザー視点の価値単位（1〜数日） | Issue + `type:story` |
+| Task | 技術的な作業単位 | Issue 内のチェックリスト |
+
+### Epic の作成タイミング
+
+以下の場合に Epic を作成する:
+
+- ADR で方針決定した大きな機能
+- 複数の Story に分解される機能
+- 数週間以上かかる見込みの機能
+
+```bash
+# Epic の作成例
+gh issue create \
+  --title "Auth Service を分離する" \
+  --label "type:epic" \
+  --milestone "Phase 2: 機能拡張" \
+  --project "RingiFlow"
+```
+
+### Story への分解
+
+Epic の設計フェーズで Story に分解する。分解のタイミング:
+
+- Epic 着手時に全体像が見えている場合 → 最初に分解
+- 段階的に明確になる場合 → 進行に応じて追加
+
+```bash
+# Story の作成（Epic の Sub-issue として）
+gh issue create \
+  --title "Auth Service の API を設計する" \
+  --label "type:story,backend" \
+  --milestone "Phase 2: 機能拡張" \
+  --project "RingiFlow"
+
+# 親 Issue（Epic）に紐付け（GitHub UI で設定、または gh api で）
+```
+
+### 運用フロー
+
+```mermaid
+flowchart TB
+    A["ADR で方針決定"] --> B["Epic Issue 作成"]
+    B --> C["設計フェーズで Story に分解"]
+    C --> D["Story ごとに実装（TDD）"]
+    D --> E["Story 完了 → クローズ"]
+    E --> F{"全 Story 完了?"}
+    F -->|No| D
+    F -->|Yes| G["Epic クローズ"]
+```
+
+### 進捗の可視化
+
+- Epic の進捗は Sub-issues progress フィールドで自動追跡される
+- Project Board の Board ビューで Story の状態を確認
+- Milestone で Phase 全体の進捗を確認
+
 ## Issue の粒度
 
 - 大きすぎる Issue は分割する（目安: 1日〜数日で完了できる単位）
 - 小さなタスクは Issue 内のチェックリストで管理する
+- Epic は例外的に大きくて良い（Sub-issues で分解するため）
 
 良い例:
 ```markdown
@@ -348,6 +437,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-18 | Epic / Story 運用セクションを追加、Label を Issue タイプ別に整理 |
 | 2026-01-17 | マージ後のローカルブランチ削除手順を追加 |
 | 2026-01-17 | lefthook による Issue 番号の自動付与を追加 |
 | 2026-01-17 | コミットメッセージ・PR タイトルの先頭に Issue 番号を含める形式に統一 |
