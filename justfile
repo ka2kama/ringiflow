@@ -13,7 +13,8 @@ default:
 
 # 初回セットアップ（全体）
 # 順序: ツール確認 → 環境変数 → Git フック → Docker 起動 → DB マイグレーション → 依存関係ビルド
-# ※ sqlx はコンパイル時に DB スキーマを検証するため、cargo build の前にマイグレーションが必要
+# ※ sqlx の query! マクロはコンパイル時に DB スキーマを検証するため、
+#    マイグレーション完了後に cargo build を実行する必要がある
 setup: check-tools setup-env setup-hooks dev-deps setup-db setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
