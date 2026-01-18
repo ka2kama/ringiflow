@@ -83,14 +83,11 @@ ignoredBuiltDependencies:
 
 esbuild は Go 言語で書かれたネイティブバイナリ。`postinstall` で OS/アーキテクチャに応じたバイナリをダウンロードする。
 
-```
-pnpm install esbuild
-    ↓
-postinstall が実行される
-    ↓
-OS/アーキテクチャを検出（linux-x64, darwin-arm64 等）
-    ↓
-対応するバイナリをダウンロード
+```mermaid
+flowchart TB
+    A["pnpm install esbuild"] --> B["postinstall が実行される"]
+    B --> C["OS/アーキテクチャを検出（linux-x64, darwin-arm64 等）"]
+    C --> D["対応するバイナリをダウンロード"]
 ```
 
 ### ignored でも動作する理由
