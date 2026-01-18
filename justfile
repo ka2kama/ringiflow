@@ -58,12 +58,18 @@ setup-hooks:
     @lefthook install
     @echo "✓ Git フックセットアップ完了"
 
-# データベースをセットアップ
+# データベースをセットアップ（マイグレーション適用）
 setup-db:
     @echo "データベースをセットアップ中..."
     @sleep 3
     @cd backend && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
     @echo "✓ データベースセットアップ完了"
+
+# データベースをリセット（drop → create → migrate）
+reset-db:
+    @echo "データベースをリセット中..."
+    cd backend && sqlx database reset -y
+    @echo "✓ データベースリセット完了"
 
 # =============================================================================
 # 開発サーバー
@@ -143,12 +149,16 @@ lint-shell:
 # テスト
 # =============================================================================
 
-# 全テスト
+# 全テスト（単体テストのみ）
 test: test-rust test-elm
 
-# Rust テスト
+# Rust 単体テスト
 test-rust:
-    cd backend && cargo test --all-features
+    cd backend && cargo test --all-features --lib --bins
+
+# Rust 統合テスト（DB 接続が必要）
+test-rust-integration:
+    cd backend && cargo test --all-features --test '*'
 
 # Elm テスト
 test-elm:

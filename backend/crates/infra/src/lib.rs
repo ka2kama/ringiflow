@@ -12,7 +12,7 @@
 //!
 //! - **データベース接続**: PostgreSQL への接続プール管理
 //! - **キャッシュ接続**: Redis への接続管理
-//! - **リポジトリ実装**: ドメイン層のリポジトリトレイトの具体実装（Phase 1 以降）
+//! - **リポジトリ実装**: ドメイン層のリポジトリトレイトの具体実装
 //! - **外部 API クライアント**: サードパーティサービスとの通信（将来）
 //!
 //! ## 依存関係
@@ -30,11 +30,13 @@
 //!
 //! - [`db`] - PostgreSQL データベース接続管理
 //! - [`redis`] - Redis キャッシュ接続管理
+//! - [`error`] - インフラ層エラー定義
+//! - [`repository`] - リポジトリ実装
 //!
 //! ## 使用例
 //!
 //! ```rust,ignore
-//! use ringiflow_infra::{db, redis};
+//! use ringiflow_infra::{db, redis, repository::UserRepository};
 //!
 //! async fn setup() -> Result<(), Box<dyn std::error::Error>> {
 //!     // データベース接続プールの作成
@@ -48,4 +50,12 @@
 //! ```
 
 pub mod db;
+pub mod error;
+pub mod password;
 pub mod redis;
+pub mod repository;
+pub mod session;
+
+pub use error::InfraError;
+pub use password::{Argon2PasswordChecker, PasswordChecker};
+pub use session::{RedisSessionManager, SessionData, SessionManager};

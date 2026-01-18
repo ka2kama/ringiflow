@@ -1,0 +1,90 @@
+# Phase 4: Core API 認証エンドポイント実装
+
+## 概要
+
+Issue #34「ユーザー認証（ログイン/ログアウト）」の Phase 4 として、
+Core API の内部認証エンドポイントを実装した。
+
+## 背景と目的
+
+BFF から Core API への認証リクエストを処理するため、
+以下のエンドポイントが必要だった:
+
+- `POST /internal/auth/verify`: 認証情報の検証
+- `GET /internal/users/{user_id}`: ユーザー情報の取得
+
+## 実施内容
+
+### 1. AuthUseCase の実装
+
+認証ロジックをユースケース層に実装。
+
+- パスワード検証
+- ユーザーステータス確認
+- タイミング攻撃対策（ダミー検証）
+
+### 2. HTTP ハンドラの実装
+
+axum を使用して内部 API エンドポイントを実装。
+
+- リクエスト/レスポンス型の定義
+- エラーハンドリング（RFC 7807 形式）
+- ジェネリクスを使った依存注入
+
+### 3. main.rs のルーティング設定
+
+DB 接続を追加し、ハンドラをルーターに登録。
+
+## 成果物
+
+### コミット
+
+- `#34 Phase 4: Core API 認証エンドポイントを実装`
+
+### 作成/更新ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `backend/apps/core-api/src/usecase/auth.rs` | 新規作成: AuthUseCase, AuthError |
+| `backend/apps/core-api/src/usecase/mod.rs` | 新規作成: ユースケース層モジュール |
+| `backend/apps/core-api/src/handler/auth.rs` | 新規作成: 認証ハンドラ |
+| `backend/apps/core-api/src/handler/mod.rs` | 更新: auth モジュール追加 |
+| `backend/apps/core-api/src/config.rs` | 更新: DATABASE_URL 追加 |
+| `backend/apps/core-api/src/main.rs` | 更新: ルーティング設定 |
+| `backend/apps/core-api/Cargo.toml` | 更新: async-trait 追加 |
+
+## 設計判断と実装解説
+
+### タイミング攻撃対策
+
+ユーザーが存在しない場合もダミーのパスワード検証を実行し、
+レスポンス時間からユーザーの存在有無を推測できないようにした。
+
+```rust
+let Some(user) = user_result else {
+    let dummy_hash = PasswordHash::new("...");
+    let _ = self.password_checker.verify(password, &dummy_hash);
+    return Err(AuthError::AuthenticationFailed);
+};
+```
+
+### ジェネリクスによる依存注入
+
+ユースケースをジェネリクスで定義し、テスト時にスタブを注入可能にした。
+
+```rust
+pub struct AuthUseCase<R, P>
+where
+    R: UserRepository,
+    P: PasswordChecker,
+```
+
+詳細: [04_Phase4_CoreAPIエンドポイント.md](../../docs/07_実装解説/01_認証機能/04_Phase4_CoreAPIエンドポイント.md)
+
+## 次のステップ
+
+Phase 5: BFF 認証ハンドラの実装
+
+- `POST /auth/login`: ログイン（セッション作成）
+- `POST /auth/logout`: ログアウト（セッション削除）
+- `GET /auth/me`: 現在のユーザー情報取得

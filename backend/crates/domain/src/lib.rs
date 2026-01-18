@@ -41,6 +41,7 @@
 //! ```
 
 pub mod error;
+pub mod password;
 pub mod role;
 pub mod tenant;
 pub mod user;
