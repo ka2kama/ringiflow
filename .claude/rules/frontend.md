@@ -36,3 +36,7 @@ elm install <author/package>
 1. 依存関係を追加する際は最新の stable バージョンを使用する
 2. `pnpm add` または `elm install` で追加
 3. 更新後は `pnpm install` でロックファイルを同期
+
+## 参照
+
+- 最新プラクティス方針: [latest-practices.md](latest-practices.md)

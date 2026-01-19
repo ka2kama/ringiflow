@@ -312,4 +312,5 @@ Rust コードを実装する際:
 ## 参照
 
 - プロジェクト理念: [CLAUDE.md](../../CLAUDE.md)
+- 最新プラクティス方針: [latest-practices.md](latest-practices.md)
 - 実装ガイドライン: [docs/03_詳細設計書/05_実装ガイドライン.md](../../docs/03_詳細設計書/05_実装ガイドライン.md)
