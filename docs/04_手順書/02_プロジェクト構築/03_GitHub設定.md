@@ -134,7 +134,8 @@ gh api repos/{owner}/{repo}/rulesets -X POST --input - << 'EOF'
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {"context": "CI Success", "integration_id": 15368},
-          {"context": "Auto Review", "integration_id": 15368}
+          {"context": "Claude Auto Review", "integration_id": 15368},
+          {"context": "Claude Rules Check", "integration_id": 15368}
         ]
       }
     },
@@ -825,6 +826,17 @@ CLAUDE.md に記載されたプロジェクト理念と品質基準に基づい�
 
 → 設計判断: [ADR-011](../../05_ADR/011_Claude_Code_Action導入.md)
 
+### ワークフロー構成
+
+責務分離のため、2つのワークフローが並列実行される:
+
+| ワークフロー | ファイル | 責務 |
+|-------------|----------|------|
+| Claude Rules Check | `claude-rules-check.yml` | `.claude/rules/` のルール準拠チェック |
+| Claude Auto Review | `claude-auto-review.yml` | コード品質、設計、セキュリティのレビュー |
+
+両ワークフローは CI 成功後に並列実行され、それぞれ独立した Status Check として報告される。
+
 ### 10.1 前提条件
 
 - リポジトリへの Admin 権限があること
@@ -914,7 +926,8 @@ gh api repos/{owner}/{repo}/rulesets/{ruleset_id} -X PUT --input - << 'EOF'
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {"context": "CI Success", "integration_id": 15368},
-          {"context": "Auto Review", "integration_id": 15368}
+          {"context": "Claude Auto Review", "integration_id": 15368},
+          {"context": "Claude Rules Check", "integration_id": 15368}
         ]
       }
     },
@@ -936,7 +949,8 @@ Settings > Rules > Rulesets > main-protection（編集）
 | Status Check | 説明 |
 |--------------|------|
 | `CI Success` | CI ワークフローのジョブ |
-| `Auto Review` | Claude Code Review ワークフローのジョブ |
+| `Claude Auto Review` | コード品質レビュー |
+| `Claude Rules Check` | ルール準拠チェック |
 
 ### 10.5 動作確認
 
@@ -1003,6 +1017,7 @@ Settings > Rules > Rulesets > main-protection（編集）
 
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-01-19 | Claude Rules Check を追加、ワークフロー構成を責務分離 | - |
 | 2026-01-19 | Squash マージ時に PR 本文をコミットメッセージに含める設定に変更 | - |
 | 2026-01-15 | Claude Code Action: OAuth トークン方式に変更、Ruleset 設定追加 | - |
 | 2026-01-15 | Claude Code Action 設定手順を追加 | - |

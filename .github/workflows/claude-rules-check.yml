@@ -1,0 +1,146 @@
+# Claude Rules Check
+#
+# CI 完了後に .claude/rules/ のルール準拠をチェックする。
+# Code Review とは責務を分離し、並列実行する。
+# Draft PR は除外。
+
+name: Claude Rules Check
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.pull_requests[0].number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  actions: read
+  statuses: write
+  id-token: write
+
+jobs:
+  rules-check:
+    name: Claude Rules Check
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.pull_requests[0] != null
+
+    env:
+      STATUS_URL: repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.head_sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Report pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "$STATUS_URL" \
+            -f state=pending \
+            -f context="Claude Rules Check" \
+            -f description="Checking rules compliance..." \
+            -f target_url="$RUN_URL" || true
+
+      - name: Check if PR is draft
+        id: check-draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+          IS_DRAFT=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json isDraft --jq '.isDraft')
+          echo "is_draft=$IS_DRAFT" >> "$GITHUB_OUTPUT"
+
+      - name: Report skipped status for draft PR
+        if: steps.check-draft.outputs.is_draft == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "$STATUS_URL" \
+            -f state=success \
+            -f context="Claude Rules Check" \
+            -f description="Skipped (draft PR)" \
+            -f target_url="$RUN_URL" || true
+
+      - name: Checkout
+        if: steps.check-draft.outputs.is_draft == 'false'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Run Claude Rules Check
+        id: check
+        if: steps.check-draft.outputs.is_draft == 'false'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: false
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+
+            ## 目的
+
+            この PR が `.claude/rules/` に定義されたルールに準拠しているかチェックする。
+            コードの品質や設計に関する詳細なレビューは別のワークフロー（Code Review）で行う。
+
+            ## 手順
+
+            1. `gh pr diff` で変更されたファイルパスを取得
+            2. `.claude/rules/` 内の各ルールファイルを読み、`paths:` パターンとマッチするか確認
+            3. マッチしたルールファイルの内容に基づいて、変更がルールに準拠しているかチェック
+
+            ## チェック観点
+
+            各ルールファイルに記載された内容のみをチェックする:
+            - コーディング規約（命名、構造、スタイル）
+            - 必須の手順（テスト、ドキュメント更新など）
+            - 禁止事項
+
+            ## フィードバック方法
+
+            1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
+               - 該当ルールを引用して指摘
+            2. 全体フィードバック: `gh pr comment` でサマリーを投稿
+               - チェックしたルールファイル一覧
+               - 違反の有無と概要
+            3. 承認判断: `gh pr review`
+               - ルール違反あり → `--request-changes`
+               - ルール違反なし → `--approve` with "Rules: LGTM"
+
+            ## 注意
+
+            - コードの品質、設計、セキュリティ、パフォーマンスについては指摘しない（Code Review の責務）
+            - ルールに明記されていない「好み」の指摘はしない
+          claude_args: |
+            --max-turns 20
+            --allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
+
+      - name: Report success status
+        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "$STATUS_URL" \
+            -f state=success \
+            -f context="Claude Rules Check" \
+            -f description="Rules check completed" \
+            -f target_url="$RUN_URL" || true
+
+      - name: Report failure status
+        if: always() && steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "$STATUS_URL" \
+            -f state=failure \
+            -f context="Claude Rules Check" \
+            -f description="Rules check failed" \
+            -f target_url="$RUN_URL" || true
