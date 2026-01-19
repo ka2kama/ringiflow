@@ -61,13 +61,16 @@ Settings > General > Pull Requests
 このプロジェクトでは Squash merge をデフォルトとする。
 
 ```
-Default commit message: Pull request title
+Default commit message:
+  - Title: Pull request title
+  - Message: Pull request description
 ```
 
 理由:
 - 1 PR = 1 コミットで履歴がクリーン
-- PR タイトルがそのままコミットメッセージになり、追跡しやすい
-- 個々のコミットメッセージは PR 内で確認できる
+- PR タイトルがコミットメッセージのタイトルになる
+- PR 本文（Summary, Test plan 等）がコミットメッセージの body に含まれる
+- `git log` だけで変更の背景を追跡できる
 
 ---
 
@@ -247,7 +250,7 @@ CodeQL は GitHub 提供の静的解析ツール。
 - C#
 - Swift
 
-**注意:** Rust と Elm は CodeQL 非対応。
+注意: Rust と Elm は CodeQL 非対応。
 - Rust: `cargo clippy`, `cargo audit` で代替
 - Elm: 型システムが強力なため、別途ツール不要
 
@@ -1000,6 +1003,7 @@ Settings > Rules > Rulesets > main-protection（編集）
 
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-01-19 | Squash マージ時に PR 本文をコミットメッセージに含める設定に変更 | - |
 | 2026-01-15 | Claude Code Action: OAuth トークン方式に変更、Ruleset 設定追加 | - |
 | 2026-01-15 | Claude Code Action 設定手順を追加 | - |
 | 2026-01-14 | 初版作成 | - |

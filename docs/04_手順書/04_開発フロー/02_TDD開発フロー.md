@@ -48,7 +48,7 @@ async fn test_find_user_by_email_returns_user_when_exists() {
 }
 ```
 
-**重要:** 失敗を確認せずに実装に進まない。失敗を見ることで：
+重要: 失敗を確認せずに実装に進まない。失敗を見ることで：
 - テストが正しく書けていることを確認できる
 - 実装前後の差分が明確になる
 
@@ -67,7 +67,7 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 }
 ```
 
-**重要:** この段階では「動く」ことだけに集中。重複や汚いコードは許容する。
+重要: この段階では「動く」ことだけに集中。重複や汚いコードは許容する。
 
 ### 🔵 Refactor: きれいにする
 

@@ -71,13 +71,13 @@ gh pr create --draft --title "#34 ログイン機能を実装" --body "Closes #3
 - PR Description に設計メモや検討事項を記録
 - 必要に応じて `@claude` メンションで相談
 
-**注意:** Draft PR では自動レビューは実行されない。Ready for Review に変更した時点でレビューが走る。
+注意: Draft PR では自動レビューは実行されない。Ready for Review に変更した時点でレビューが走る。
 
 採用理由: [ADR-013: Draft PR 運用の導入](../../05_ADR/013_Draft_PR運用の導入.md)
 
 ### 4. 設計
 
-**実装前に必ず設計フェーズを経る。** コードを書く前に「何を作るか」「どう作るか」を明確にする。
+実装前に必ず設計フェーズを経る。コードを書く前に「何を作るか」「どう作るか」を明確にする。
 
 ```mermaid
 flowchart TB
@@ -118,7 +118,7 @@ OpenAPI 仕様書（`openapi/openapi.yaml`）を更新する。OpenAPI が Singl
 
 Issue 本文に実装計画を追記する。
 
-**フォーマット:**
+フォーマット:
 
 ```markdown
 ## 実装計画
@@ -145,7 +145,7 @@ TDD（Red → Green → Refactor）で MVP を積み上げる。
 - 正常系 → 異常系 → 境界値の順
 - 詳細: [TDD 開発フロー > テストリスト](./02_TDD開発フロー.md#テストリスト)
 
-**参考例:** [Issue #34: ユーザー認証](https://github.com/ka2kama/ringiflow/issues/34)
+参考例: [Issue #34: ユーザー認証](https://github.com/ka2kama/ringiflow/issues/34)
 
 #### 4.4 設計成果物のコミット
 
@@ -177,7 +177,7 @@ Red → Green → Refactor を繰り返す
 
 #### コミットの粒度
 
-**セーブポイントを積み上げるようにコツコツとコミットする。**
+セーブポイントを積み上げるようにコツコツとコミットする。
 
 | タイミング | 例 |
 |-----------|-----|
@@ -201,11 +201,11 @@ Red → Green → Refactor を繰り返す
 git commit -m "#34 UserRepository: find_by_email を実装"
 ```
 
-**自動付与:** lefthook がブランチ名（`feature/34-xxx`）から Issue 番号を抽出して自動で先頭に追加する。手動で書く必要はない。
+自動付与: lefthook がブランチ名（`feature/34-xxx`）から Issue 番号を抽出して自動で先頭に追加する。手動で書く必要はない。
 
 #### Issue の進捗更新
 
-**Phase やタスクが完了したら、Issue のチェックボックスを都度更新する。**
+Phase やタスクが完了したら、Issue のチェックボックスを都度更新する。
 
 ```bash
 # Issue の本文を更新（チェックボックスを [x] に変更）
@@ -255,7 +255,14 @@ Claude Code Action による自動レビューが実行される。
 gh pr merge --squash --delete-branch
 ```
 
-**注意:** `--auto` は使用しない。レビュー結果を確認してからマージすること。
+**Squash マージの効果:**
+- PR 内の全コミットが 1 つのコミットに統合される
+- コミットメッセージ: PR タイトル + PR 本文（Summary, Test plan 等）
+- `git log` で変更の背景を追跡できる
+
+→ 設定詳細: [GitHub 設定 > Pull Requests](../../02_プロジェクト構築/03_GitHub設定.md#13-pull-requests)
+
+注意: `--auto` は使用しない。レビュー結果を確認してからマージすること。
 
 **マージ後のローカルブランチ削除:**
 
