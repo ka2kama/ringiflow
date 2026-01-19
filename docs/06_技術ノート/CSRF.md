@@ -343,7 +343,7 @@ Set-Cookie: session_id=xxx; SameSite=Lax; HttpOnly; Secure
 | `<img src="bank.com/...">` | ❌ 送信されない |
 | `fetch()` / `XMLHttpRequest` | ❌ 送信されない |
 
-**注意:** `SameSite=Lax` は GET リクエストに対しては保護しない。GET で状態を変更しない設計が前提。
+注意: `SameSite=Lax` は GET リクエストに対しては保護しない。GET で状態を変更しない設計が前提。
 
 ### 2. CSRF トークン
 
@@ -487,7 +487,7 @@ fn generate_csrf_token() -> String {
 | PATCH | **必要** | 状態変更 |
 | DELETE | **必要** | 状態変更 |
 
-**重要:** GET リクエストで状態を変更してはならない。これは REST の原則でもある。
+重要: GET リクエストで状態を変更してはならない。これは REST の原則でもある。
 
 ## フロントエンド実装
 

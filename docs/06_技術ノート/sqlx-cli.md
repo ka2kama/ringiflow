@@ -203,7 +203,7 @@ git add backend/.sqlx/
 git commit -m "SQLx オフラインキャッシュを更新"
 ```
 
-**重要:** `--all-targets` オプションを忘れると、テストコード内の `sqlx::query!` がキャッシュされず、CI でテストビルドが失敗する。
+重要: `--all-targets` オプションを忘れると、テストコード内の `sqlx::query!` がキャッシュされず、CI でテストビルドが失敗する。
 
 ### よくあるミス
 
