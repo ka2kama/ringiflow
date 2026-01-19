@@ -128,8 +128,11 @@ jobs:
 
             ## フィードバック方法
 
-            - コード固有の問題: `mcp__github_inline_comment__create_inline_comment` でインラインコメント
-            - 全体的なフィードバック: `gh pr comment` でPRコメント
+            以下の順序で実行する:
+
+            1. インラインコメント: コード固有の問題は `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
+            2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿。問題の有無に関わらずレビュー結果のサマリーを記載。学習機会があれば解説を含める
+            3. 承認/却下: `gh pr review` で承認判断を実行
 
             ## 承認判断
 
