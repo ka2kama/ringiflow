@@ -61,8 +61,8 @@ source "$ENV_FILE"
 : "${LIGHTSAIL_USER:?LIGHTSAIL_USER が設定されていません}"
 : "${LIGHTSAIL_SSH_KEY:?LIGHTSAIL_SSH_KEY が設定されていません}"
 
-# SSH オプション
-SSH_OPTS="-i ${LIGHTSAIL_SSH_KEY/#\~/$HOME} -o StrictHostKeyChecking=accept-new"
+# SSH オプション（配列として定義）
+SSH_OPTS=(-i "${LIGHTSAIL_SSH_KEY/#\~/$HOME}" -o StrictHostKeyChecking=accept-new)
 SSH_TARGET="$LIGHTSAIL_USER@$LIGHTSAIL_HOST"
 REMOTE_DIR="/home/$LIGHTSAIL_USER/ringiflow"
 
@@ -121,29 +121,30 @@ step "Step 3: Lightsail にファイルを転送"
 
 # リモートディレクトリを作成
 # shellcheck disable=SC2029
-ssh $SSH_OPTS "$SSH_TARGET" "mkdir -p $REMOTE_DIR/{config/nginx/conf.d,images}"
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "mkdir -p $REMOTE_DIR/{config/nginx/conf.d,images,frontend,config/init}"
 
 info "Docker イメージを転送中..."
-scp $SSH_OPTS "$EXPORT_DIR/backend.tar.gz" "$SSH_TARGET:$REMOTE_DIR/images/"
+scp "${SSH_OPTS[@]}" "$EXPORT_DIR/backend.tar.gz" "$SSH_TARGET:$REMOTE_DIR/images/"
 
 info "設定ファイルを転送中..."
-scp $SSH_OPTS infra/lightsail/docker-compose.yml "$SSH_TARGET:$REMOTE_DIR/docker-compose.yml"
-scp $SSH_OPTS infra/lightsail/nginx/nginx.conf "$SSH_TARGET:$REMOTE_DIR/config/nginx/"
-scp $SSH_OPTS infra/lightsail/nginx/conf.d/default.conf "$SSH_TARGET:$REMOTE_DIR/config/nginx/conf.d/"
+scp "${SSH_OPTS[@]}" infra/lightsail/docker-compose.yml "$SSH_TARGET:$REMOTE_DIR/docker-compose.yml"
+scp "${SSH_OPTS[@]}" infra/lightsail/nginx/nginx.conf "$SSH_TARGET:$REMOTE_DIR/config/nginx/"
+scp "${SSH_OPTS[@]}" infra/lightsail/nginx/conf.d/default.conf "$SSH_TARGET:$REMOTE_DIR/config/nginx/conf.d/"
 
 info "Frontend 静的ファイルを転送中..."
-scp $SSH_OPTS -r /tmp/ringiflow-frontend-dist/* "$SSH_TARGET:$REMOTE_DIR/frontend/"
+scp "${SSH_OPTS[@]}" -r /tmp/ringiflow-frontend-dist/* "$SSH_TARGET:$REMOTE_DIR/frontend/"
 
 # init スクリプトも転送
-scp $SSH_OPTS infra/lightsail/init/01_extensions.sql "$SSH_TARGET:$REMOTE_DIR/config/init/"
+scp "${SSH_OPTS[@]}" infra/lightsail/init/01_extensions.sql "$SSH_TARGET:$REMOTE_DIR/config/init/"
 
 # ==========================================================
 # 4. Lightsail 上でデプロイ
 # ==========================================================
 step "Step 4: Lightsail 上でデプロイを実行"
 
-# shellcheck disable=SC2087
-ssh $SSH_OPTS "$SSH_TARGET" << 'REMOTE_SCRIPT'
+# shellcheck disable=SC2087,SC2029
+# SC2029: $SSH_TARGET はクライアント側で展開されるのが意図的な動作（接続先ホストの指定）
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" << 'REMOTE_SCRIPT'
 set -euo pipefail
 cd ~/ringiflow
 

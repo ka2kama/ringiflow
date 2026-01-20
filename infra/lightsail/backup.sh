@@ -20,7 +20,6 @@ BACKUP_RETENTION_DAYS=7
 
 # 日時
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-DATE=$(date +%Y-%m-%d)
 
 # 色付き出力（cron 実行時は無効）
 if [ -t 1 ]; then
@@ -98,9 +97,9 @@ backup() {
 restore() {
     info "リストア開始"
 
-    # 最新のバックアップを検索
-    LATEST_POSTGRES=$(ls -t "$BACKUP_DIR"/postgres_*.sql.gz 2>/dev/null | head -1)
-    LATEST_REDIS=$(ls -t "$BACKUP_DIR"/redis_*.rdb 2>/dev/null | head -1)
+    # 最新のバックアップを検索（ファイル名のタイムスタンプでソート）
+    LATEST_POSTGRES=$(find "$BACKUP_DIR" -name "postgres_*.sql.gz" 2>/dev/null | sort -r | head -1)
+    LATEST_REDIS=$(find "$BACKUP_DIR" -name "redis_*.rdb" 2>/dev/null | sort -r | head -1)
 
     if [ -z "$LATEST_POSTGRES" ]; then
         error "PostgreSQL バックアップが見つかりません"
@@ -115,7 +114,7 @@ restore() {
     echo "  PostgreSQL: $LATEST_POSTGRES"
     echo "  Redis: ${LATEST_REDIS:-なし}"
     echo ""
-    read -p "続行しますか？ (yes/no): " CONFIRM
+    read -rp "続行しますか？ (yes/no): " CONFIRM
     if [ "$CONFIRM" != "yes" ]; then
         error "リストアをキャンセルしました"
     fi
