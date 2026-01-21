@@ -339,48 +339,55 @@ BFF は Auth Service への接続にサーキットブレーカを適用する�
 
 ---
 
-## 移行計画
+## 実装方針
 
-### 段階的移行
+### 初回デプロイ前のため新規構築
+
+本番環境への初回デプロイがまだ行われていないため、段階的移行は不要。最初から Auth Service 分離済みの構成で構築する。
+
+### 実装順序
 
 ```mermaid
 flowchart LR
-    subgraph Step1["Step 1: 並行運用"]
-        A1["Auth Service デプロイ"]
-        A2["credentials マイグレーション"]
-        A3["BFF: 新フロー（Feature Flag）"]
+    subgraph Phase1["Phase 1: インフラ"]
+        A1["auth スキーマ作成"]
+        A2["credentials テーブル作成"]
     end
 
-    subgraph Step2["Step 2: 切り替え"]
-        B1["Feature Flag 有効化"]
-        B2["Core API の verify 無効化"]
+    subgraph Phase2["Phase 2: Auth Service"]
+        B1["auth-service クレート作成"]
+        B2["verify API 実装"]
+        B3["credentials CRUD 実装"]
     end
 
-    subgraph Step3["Step 3: クリーンアップ"]
-        C1["users.password_hash 削除"]
-        C2["Core API の auth コード削除"]
+    subgraph Phase3["Phase 3: 統合"]
+        C1["BFF から Auth Service 呼び出し"]
+        C2["Core API から認証コード削除"]
+        C3["users.password_hash 削除"]
     end
 
-    Step1 --> Step2 --> Step3
+    Phase1 --> Phase2 --> Phase3
 ```
 
-### Step 1: 並行運用
+### Phase 1: インフラ
 
-1. Auth Service をデプロイ（ポート 13002）
-2. credentials テーブルを作成し、既存の password_hash をマイグレーション
-3. BFF に Feature Flag（`use_auth_service`）を追加
-   - `false`: 現行フロー（Core API の `/internal/auth/verify`）
-   - `true`: 新フロー（Auth Service の `/internal/auth/verify`）
+1. `auth` スキーマを作成
+2. `auth.credentials` テーブルを作成
+3. シードデータに credentials を追加
 
-### Step 2: 切り替え
+### Phase 2: Auth Service
 
-1. Feature Flag を `true` に設定
-2. 動作確認後、Core API の `/internal/auth/verify` を無効化
+1. `backend/apps/auth-service` クレートを作成
+2. `/internal/auth/verify` API を実装
+3. `/internal/auth/credentials` CRUD API を実装
+4. 単体テスト・統合テストを作成
 
-### Step 3: クリーンアップ
+### Phase 3: 統合
 
-1. `users.password_hash` カラムを削除
-2. Core API から認証関連コードを削除
+1. BFF の認証フローを Auth Service 経由に変更
+2. Core API から `/internal/auth/verify` を削除
+3. `users.password_hash` カラムを削除
+4. E2E テストで全体の動作を確認
 
 ---
 
