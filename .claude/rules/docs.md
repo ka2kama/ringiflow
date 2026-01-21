@@ -34,7 +34,7 @@ paths:
 | 対象 | ルール |
 |------|--------|
 | `docs/**` | 連番プレフィックス: `00_`, `01_`, ... |
-| `prompts/runs/**` | `YYYY-MM-DD_NN_<トピック>.md` |
+| `prompts/runs/**` | `YYYY-MM-DD_HHMM_<トピック>.md` |
 | その他 | 自由（ただし kebab-case 推奨） |
 
 ## 外国語名の表記
