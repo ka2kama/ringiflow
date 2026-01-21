@@ -88,6 +88,43 @@ flowchart TB
 
 認証情報（credentials）を Core API の users テーブルから分離し、Auth Service 専用の `auth` スキーマに配置する。
 
+#### DB 接続方式
+
+Auth Service と Core API は**同一の PostgreSQL データベース**に接続し、スキーマで論理的に分離する。
+
+```
+PostgreSQL サーバー
+└── ringiflow（データベース）
+    ├── public（スキーマ）← Core API が所有
+    │   ├── users
+    │   ├── tenants
+    │   └── ...
+    └── auth（スキーマ）← Auth Service が所有
+        └── credentials
+```
+
+接続文字列（両サービスとも同じ DB を指定）:
+
+```bash
+# Core API
+DATABASE_URL=postgres://user:pass@db-host:5432/ringiflow
+
+# Auth Service
+DATABASE_URL=postgres://user:pass@db-host:5432/ringiflow
+```
+
+スキーマへのアクセスは SQL で明示的に指定する:
+
+```sql
+-- Core API: public スキーマ（デフォルト）
+SELECT * FROM users;
+
+-- Auth Service: auth スキーマを明示
+SELECT * FROM auth.credentials;
+```
+
+この方式により、将来的に Auth Service を独立したデータベースに分離する際も、接続文字列の変更のみで対応可能。
+
 ```mermaid
 erDiagram
     %% auth スキーマ（Auth Service が所有）
