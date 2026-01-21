@@ -157,7 +157,7 @@ erDiagram
 
 #### 外部キー制約を設けない理由
 
-`auth.credentials.user_id` から `public.users.id` への FK 制約は**意図的に設けない**。
+`auth.credentials.user_id` から `public.users.id` への FK 制約は**意図的に設けない**。詳細は [技術ノート: マイクロサービス間のデータ整合性](../06_技術ノート/マイクロサービス間のデータ整合性.md) を参照。
 
 | 理由 | 説明 |
 |------|------|
