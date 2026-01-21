@@ -64,19 +64,19 @@ GitHub Actions のログを確認し、以下の原因を特定：
 | `prompts/runs/2026-01-16_01_ClaudeCodeAction権限修正.md` | セッションログ |
 | `docs/05_技術ノート/ClaudeCodeAction_権限設定.md` | 技術ノート |
 
-## ユーザープロンプト（抜粋）
+## 議論の経緯
 
-> claude-review.yml 側の権限ではありませんか？
+### 権限設定の調査
 
-> `claude_args` の `allowedTools` ではありませんか？
+OIDC エラーの原因を調査する中で、claude-review.yml 側の権限が原因ではないかという指摘があった。また、`claude_args` の `allowedTools` の設定についても確認があった。
 
-> そのような広範な権限を付与して大丈夫ですか？
+### セキュリティの懸念
 
-> レビュー結果をコメントする権限は必要ではありませんか？
+広範な権限を付与して大丈夫かという懸念があり、必要最小限の権限に絞る方針で設定を見直した。レビュー結果をコメントする権限や、インラインコメント作成の権限についても確認があった。
 
-> `mcp__github_inline_comment__create_inline_comment` もあると良さそうです。
+### 設定の調整
 
-> `max-turns` が少なすぎませんか？
+`max-turns` が少なすぎないかという確認があり、30 に増加した。
 
 ## 学んだこと
 
