@@ -11,6 +11,7 @@ on:
       - main
       - develop
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
       - develop
