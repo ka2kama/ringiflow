@@ -128,7 +128,7 @@ jobs:
               ```
           claude_args: |
             --max-turns 30
-            --allowedTools "Read,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
+            --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
       - name: Report success status
         if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success'
