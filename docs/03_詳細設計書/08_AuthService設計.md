@@ -517,14 +517,21 @@ flowchart TB
 
 ユーザーが存在しない場合も、パスワード検証と同等の時間を消費する。
 
+固定の sleep ではなく、**実際にダミーハッシュで Argon2id 検証を実行**する。これにより CPU/メモリ状況による自然な変動も含めて、実際の検証と同じ時間特性になる。
+
 ```rust
-// BFF でのダミー遅延
+// Auth Service でのダミー検証
 if user_not_found {
-    // Argon2id 検証と同等の時間（約 100ms）を待機
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    // ダミーハッシュで検証（処理時間を均一化）
+    let dummy_hash = PasswordHash::new(
+        "$argon2id$v=19$m=65536,t=1,p=1$AAAAAAAAAAAAAAAAAAAAAA$...",
+    );
+    let _ = password_checker.verify(password, &dummy_hash);
     return Err(AuthenticationFailed);
 }
 ```
+
+固定 sleep（例: 100ms）は統計的分析で検出される可能性があるため採用しない。
 
 ---
 
