@@ -155,6 +155,22 @@ erDiagram
     auth_credentials ||--o| users : "user_id"
 ```
 
+#### 外部キー制約を設けない理由
+
+`auth.credentials.user_id` から `public.users.id` への FK 制約は**意図的に設けない**。
+
+| 理由 | 説明 |
+|------|------|
+| サービス境界の独立性 | FK があると、users 削除前に credentials 削除が必須となり、サービス間の操作順序が強制される |
+| 将来の DB 分離 | Auth Service を独立した DB に分離する際、FK は別 DB 間では設定できない |
+| 障害時の影響局所化 | FK 制約違反で一方のサービスの操作が他方に影響するのを防ぐ |
+
+代わりの整合性担保:
+
+- ユーザー作成時: Core API → Auth Service API で credentials を作成
+- ユーザー削除時: Core API → Auth Service API で credentials を削除
+- テナント退会時: `tenant_id` で両テーブルを並列削除（[テナント退会時データ削除設計](./06_テナント退会時データ削除設計.md)）
+
 ### credentials テーブル設計
 
 #### credential_type の種別
