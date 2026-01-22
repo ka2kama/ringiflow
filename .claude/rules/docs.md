@@ -12,7 +12,19 @@ paths:
 | 項目 | ルール |
 |------|--------|
 | 図表 | Mermaid 記法を使用（ASCII art 禁止） |
-| ノードラベル | `ID["ラベル"]` 形式（例: `A["日本語ラベル"]`） |
+
+### Mermaid ノードラベル
+
+図の種類によって構文が異なる:
+
+| 図の種類 | 構文 | 例 |
+|---------|------|-----|
+| flowchart | `ID["ラベル"]` | `Browser["ブラウザ"]` |
+| sequenceDiagram | `participant ID as ラベル` | `participant Core as Core API` |
+
+補足:
+- sequenceDiagram の `as` 構文は、`as` 以降全体がラベルになるため空白を含んでもクォート不要
+- sequenceDiagram で `ID["ラベル"]` 形式を使うと participant が重複表示される
 
 ## 太字・斜体の使用
 
