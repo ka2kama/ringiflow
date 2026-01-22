@@ -66,8 +66,9 @@ pub trait AuthUseCase: Send + Sync {
    ///
    /// ## 引数
    ///
+   /// - `tenant_id`: テナント ID
    /// - `user_id`: ユーザー ID
-   async fn delete_credentials(&self, user_id: Uuid) -> Result<(), AuthError>;
+   async fn delete_credentials(&self, tenant_id: Uuid, user_id: Uuid) -> Result<(), AuthError>;
 }
 
 /// AuthUseCaseImpl に AuthUseCase トレイトを実装
@@ -98,7 +99,7 @@ where
          .await
    }
 
-   async fn delete_credentials(&self, user_id: Uuid) -> Result<(), AuthError> {
-      self.delete_credentials(user_id).await
+   async fn delete_credentials(&self, tenant_id: Uuid, user_id: Uuid) -> Result<(), AuthError> {
+      self.delete_credentials(tenant_id, user_id).await
    }
 }

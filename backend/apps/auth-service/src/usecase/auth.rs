@@ -56,17 +56,18 @@ where
    /// 処理時間を均一化する。
    pub async fn verify_password(
       &self,
-      _tenant_id: Uuid,
+      tenant_id: Uuid,
       user_id: Uuid,
       password: &str,
    ) -> Result<VerifyResult, AuthError> {
+      let tenant_id = TenantId::from_uuid(tenant_id);
       let user_id = UserId::from_uuid(user_id);
       let plain_password = PlainPassword::new(password);
 
       // 認証情報を取得
       let credential = self
          .credentials_repository
-         .find_by_user_and_type(&user_id, CredentialType::Password)
+         .find_by_user_and_type(&tenant_id, &user_id, CredentialType::Password)
          .await?;
 
       match credential {
@@ -128,9 +129,13 @@ where
    }
 
    /// ユーザーの全認証情報を削除する
-   pub async fn delete_credentials(&self, user_id: Uuid) -> Result<(), AuthError> {
+   pub async fn delete_credentials(&self, tenant_id: Uuid, user_id: Uuid) -> Result<(), AuthError> {
+      let tenant_id = TenantId::from_uuid(tenant_id);
       let user_id = UserId::from_uuid(user_id);
-      self.credentials_repository.delete_by_user(&user_id).await?;
+      self
+         .credentials_repository
+         .delete_by_user(&tenant_id, &user_id)
+         .await?;
       Ok(())
    }
 
@@ -204,6 +209,7 @@ mod tests {
    impl CredentialsRepository for StubCredentialsRepository {
       async fn find_by_user_and_type(
          &self,
+         _tenant_id: &TenantId,
          _user_id: &UserId,
          _credential_type: CredentialType,
       ) -> Result<Option<Credential>, InfraError> {
@@ -220,7 +226,11 @@ mod tests {
          Ok(Uuid::now_v7())
       }
 
-      async fn delete_by_user(&self, _user_id: &UserId) -> Result<(), InfraError> {
+      async fn delete_by_user(
+         &self,
+         _tenant_id: &TenantId,
+         _user_id: &UserId,
+      ) -> Result<(), InfraError> {
          Ok(())
       }
 

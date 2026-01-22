@@ -112,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
       .route("/internal/auth/verify", post(verify))
       .route("/internal/auth/credentials", post(create_credentials))
       .route(
-         "/internal/auth/credentials/{user_id}",
+         "/internal/auth/credentials/{tenant_id}/{user_id}",
          delete(delete_credentials),
       )
       .with_state(auth_state)

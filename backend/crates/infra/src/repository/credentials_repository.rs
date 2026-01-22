@@ -83,6 +83,7 @@ pub trait CredentialsRepository: Send + Sync {
    ///
    /// # 引数
    ///
+   /// - `tenant_id`: テナント ID
    /// - `user_id`: ユーザー ID
    /// - `credential_type`: 認証種別
    ///
@@ -93,6 +94,7 @@ pub trait CredentialsRepository: Send + Sync {
    /// - `Err(_)`: データベースエラー
    async fn find_by_user_and_type(
       &self,
+      tenant_id: &TenantId,
       user_id: &UserId,
       credential_type: CredentialType,
    ) -> Result<Option<Credential>, InfraError>;
@@ -124,13 +126,15 @@ pub trait CredentialsRepository: Send + Sync {
    ///
    /// # 引数
    ///
+   /// - `tenant_id`: テナント ID
    /// - `user_id`: ユーザー ID
    ///
    /// # 戻り値
    ///
    /// - `Ok(())`: 削除成功（該当なしも成功とみなす）
    /// - `Err(_)`: データベースエラー
-   async fn delete_by_user(&self, user_id: &UserId) -> Result<(), InfraError>;
+   async fn delete_by_user(&self, tenant_id: &TenantId, user_id: &UserId)
+   -> Result<(), InfraError>;
 
    /// テナントの全認証情報を削除
    ///
@@ -173,6 +177,7 @@ impl PostgresCredentialsRepository {
 impl CredentialsRepository for PostgresCredentialsRepository {
    async fn find_by_user_and_type(
       &self,
+      tenant_id: &TenantId,
       user_id: &UserId,
       credential_type: CredentialType,
    ) -> Result<Option<Credential>, InfraError> {
@@ -189,8 +194,9 @@ impl CredentialsRepository for PostgresCredentialsRepository {
                 created_at,
                 updated_at
             FROM auth.credentials
-            WHERE user_id = $1 AND credential_type = $2
+            WHERE tenant_id = $1 AND user_id = $2 AND credential_type = $3
             "#,
+         tenant_id.as_uuid(),
          user_id.as_uuid(),
          credential_type.as_str()
       )
@@ -243,12 +249,17 @@ impl CredentialsRepository for PostgresCredentialsRepository {
       Ok(row.id)
    }
 
-   async fn delete_by_user(&self, user_id: &UserId) -> Result<(), InfraError> {
+   async fn delete_by_user(
+      &self,
+      tenant_id: &TenantId,
+      user_id: &UserId,
+   ) -> Result<(), InfraError> {
       sqlx::query!(
          r#"
             DELETE FROM auth.credentials
-            WHERE user_id = $1
+            WHERE tenant_id = $1 AND user_id = $2
             "#,
+         tenant_id.as_uuid(),
          user_id.as_uuid()
       )
       .execute(&self.pool)

@@ -6,7 +6,7 @@
 //!
 //! - `POST /internal/auth/verify` - パスワード認証
 //! - `POST /internal/auth/credentials` - 認証情報作成
-//! - `DELETE /internal/auth/credentials/{user_id}` - 認証情報削除
+//! - `DELETE /internal/auth/credentials/{tenant_id}/{user_id}` - 認証情報削除
 //!
 //! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
@@ -117,17 +117,17 @@ where
    ))
 }
 
-/// DELETE /internal/auth/credentials/{user_id}
+/// DELETE /internal/auth/credentials/{tenant_id}/{user_id}
 ///
 /// ユーザーの全認証情報を削除する（ユーザー削除時に呼び出し）。
 pub async fn delete_credentials<U>(
    State(state): State<Arc<AuthState<U>>>,
-   Path(user_id): Path<Uuid>,
+   Path((tenant_id, user_id)): Path<(Uuid, Uuid)>,
 ) -> Result<impl IntoResponse, AuthError>
 where
    U: AuthUseCase,
 {
-   state.usecase.delete_credentials(user_id).await?;
+   state.usecase.delete_credentials(tenant_id, user_id).await?;
    Ok(StatusCode::NO_CONTENT)
 }
 
@@ -195,7 +195,11 @@ mod tests {
          Ok(Uuid::now_v7())
       }
 
-      async fn delete_credentials(&self, _user_id: Uuid) -> Result<(), AuthError> {
+      async fn delete_credentials(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<(), AuthError> {
          Ok(())
       }
    }
@@ -210,7 +214,7 @@ mod tests {
             post(create_credentials::<StubAuthUseCase>),
          )
          .route(
-            "/internal/auth/credentials/{user_id}",
+            "/internal/auth/credentials/{tenant_id}/{user_id}",
             delete(delete_credentials::<StubAuthUseCase>),
          )
          .with_state(state)
@@ -311,11 +315,15 @@ mod tests {
    async fn test_delete_credentials_成功() {
       // Given
       let app = create_test_app(StubAuthUseCase::success());
+      let tenant_id = Uuid::now_v7();
       let user_id = Uuid::now_v7();
 
       let request = Request::builder()
          .method(Method::DELETE)
-         .uri(format!("/internal/auth/credentials/{}", user_id))
+         .uri(format!(
+            "/internal/auth/credentials/{}/{}",
+            tenant_id, user_id
+         ))
          .body(Body::empty())
          .unwrap();
 
