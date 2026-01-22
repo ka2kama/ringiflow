@@ -179,8 +179,9 @@ test-elm:
 check-all: lint test sqlx-check
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
+# --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック
 sqlx-check:
-    cd backend && cargo sqlx prepare --check --workspace
+    cd backend && cargo sqlx prepare --check --workspace -- --all-targets
 
 # =============================================================================
 # クリーンアップ
