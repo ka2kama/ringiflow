@@ -283,7 +283,8 @@ worktree-remove name:
     echo "worktree を削除中: {{name}}"
 
     # Docker コンテナを停止・削除
-    if docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml ps -q 2>/dev/null | grep -q .; then
+    containers=$(docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml ps -q 2>/dev/null || true)
+    if [[ -n "$containers" ]]; then
         echo "  Docker コンテナを停止中..."
         docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml down -v
     fi
