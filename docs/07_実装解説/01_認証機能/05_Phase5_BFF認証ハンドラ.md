@@ -84,7 +84,7 @@ cargo test -p ringiflow-bff
 ## 関連ドキュメント
 
 - [07_認証機能設計.md](../../03_詳細設計書/07_認証機能設計.md)
-- [Phase 4: Core Service 認証エンドポイント](./04_Phase4_CoreAPI認証エンドポイント.md)
+- [Phase 4: Core Service 認証エンドポイント](./04_Phase4_CoreService認証エンドポイント.md)
 - [Phase 3: SessionManager](./03_Phase3_SessionManager.md)
 
 ---

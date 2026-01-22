@@ -33,11 +33,11 @@ flowchart LR
         TestClient["テストクライアント"]
         BFF["BFF Router"]
         Redis["Redis (実物)"]
-        CoreAPI["Core Service (スタブ)"]
+        CoreService["Core Service (スタブ)"]
 
         TestClient --> BFF
         BFF --> Redis
-        BFF --> CoreAPI
+        BFF --> CoreService
     end
 ```
 

@@ -11,11 +11,11 @@ BFF は、フロントエンド専用のバックエンドサーバーを設け�
 flowchart LR
     Frontend["Frontend<br/>(Elm)"]
     BFF["BFF<br/>(port 3000)"]
-    CoreAPI["Core Service<br/>(port 3001)"]
+    CoreService["Core Service<br/>(port 3001)"]
     Redis["Redis<br/>(Cache)"]
 
     Frontend --> BFF
-    BFF --> CoreAPI
+    BFF --> CoreService
     BFF --> Redis
 ```
 
@@ -48,9 +48,9 @@ flowchart LR
 flowchart LR
     Browser["ブラウザ"]
     BFF["BFF<br/>(公開)"]
-    CoreAPI["Core Service<br/>(内部ネットワーク)"]
+    CoreService["Core Service<br/>(内部ネットワーク)"]
 
-    Browser --> BFF --> CoreAPI
+    Browser --> BFF --> CoreService
 ```
 
 - Core Service は内部ネットワークに配置

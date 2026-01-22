@@ -63,7 +63,7 @@ serde = { workspace = true }
 graph TB
     subgraph "apps/"
         BFF["apps/bff<br/>BFF サービス"]
-        CoreAPI["apps/core-api<br/>Core Service"]
+        CoreService["apps/core-api<br/>Core Service"]
     end
 
     subgraph "packages/"
@@ -72,12 +72,12 @@ graph TB
         Shared["packages/shared<br/>共有"]
     end
 
-    BFF -->|HTTP| CoreAPI
+    BFF -->|HTTP| CoreService
     BFF --> Shared
 
-    CoreAPI --> Domain
-    CoreAPI --> Infra
-    CoreAPI --> Shared
+    CoreService --> Domain
+    CoreService --> Infra
+    CoreService --> Shared
 
     Infra --> Domain
     Infra --> Shared
