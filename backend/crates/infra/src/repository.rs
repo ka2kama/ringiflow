@@ -8,6 +8,13 @@
 //! - **データベース抽象化**: sqlx を使用し、PostgreSQL 固有の処理をカプセル化
 //! - **テスタビリティ**: トレイト経由でモック可能な設計
 
+pub mod credentials_repository;
 pub mod user_repository;
 
+pub use credentials_repository::{
+   Credential,
+   CredentialType,
+   CredentialsRepository,
+   PostgresCredentialsRepository,
+};
 pub use user_repository::{PostgresUserRepository, UserRepository};
