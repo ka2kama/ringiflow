@@ -1,58 +1,46 @@
-//! # 認証ハンドラ
+//! # ユーザーハンドラ
 //!
-//! Core API の内部認証 API を提供する。
+//! Core API のユーザー関連内部 API を提供する。
 //!
 //! ## エンドポイント
 //!
-//! - `POST /internal/auth/verify` - 認証情報を検証
+//! - `GET /internal/users/by-email` - メールアドレスでユーザーを検索
 //! - `GET /internal/users/{user_id}` - ユーザー情報を取得
 //!
-//! 詳細: [認証機能設計](../../../../docs/03_詳細設計書/07_認証機能設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 use std::sync::Arc;
 
 use axum::{
    Json,
-   extract::{Path, State},
+   extract::{Path, Query, State},
    http::StatusCode,
    response::IntoResponse,
 };
 use ringiflow_domain::{
-   password::PlainPassword,
    role::Role,
    tenant::TenantId,
    user::{Email, User, UserId},
 };
-use ringiflow_infra::{PasswordChecker, repository::user_repository::UserRepository};
+use ringiflow_infra::repository::user_repository::UserRepository;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::usecase::{AuthError, AuthUseCase};
-
-/// 認証 API の共有状態
-pub struct AuthState<R, P>
+/// ユーザー API の共有状態
+pub struct UserState<R>
 where
    R: UserRepository,
-   P: PasswordChecker,
 {
-   pub usecase: AuthUseCase<R, P>,
+   pub user_repository: R,
 }
 
 // --- リクエスト/レスポンス型 ---
 
-/// 認証検証リクエスト
+/// メールアドレス検索クエリパラメータ
 #[derive(Debug, Deserialize)]
-pub struct VerifyRequest {
-   pub tenant_id: Uuid,
+pub struct GetUserByEmailQuery {
    pub email:     String,
-   pub password:  String,
-}
-
-/// 認証検証レスポンス
-#[derive(Debug, Serialize)]
-pub struct VerifyResponse {
-   pub user:  UserResponse,
-   pub roles: Vec<RoleResponse>,
+   pub tenant_id: Uuid,
 }
 
 /// ユーザー情報レスポンス
@@ -77,7 +65,17 @@ impl From<&User> for UserResponse {
    }
 }
 
+/// メールアドレス検索レスポンス
+#[derive(Debug, Serialize)]
+pub struct GetUserByEmailResponse {
+   pub user: UserResponse,
+}
+
 /// ロール情報レスポンス
+///
+/// FIXME: `#[allow(dead_code)]` を解消する
+///        （ユーザー取得 API でロール詳細を返すか、構造体ごと削除する）
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct RoleResponse {
    pub id:          Uuid,
@@ -119,20 +117,29 @@ pub struct ErrorResponse {
 
 // --- ハンドラ ---
 
-/// POST /internal/auth/verify
+/// GET /internal/users/by-email
 ///
-/// 認証情報を検証し、ユーザー情報を返す。
-pub async fn verify<R, P>(
-   State(state): State<Arc<AuthState<R, P>>>,
-   Json(req): Json<VerifyRequest>,
+/// メールアドレスでユーザーを検索する。
+///
+/// ## クエリパラメータ
+///
+/// - `email`: メールアドレス
+/// - `tenant_id`: テナント ID
+///
+/// ## レスポンス
+///
+/// - `200 OK`: ユーザー情報
+/// - `400 Bad Request`: メールアドレスの形式が不正
+/// - `404 Not Found`: ユーザーが見つからない
+pub async fn get_user_by_email<R>(
+   State(state): State<Arc<UserState<R>>>,
+   Query(query): Query<GetUserByEmailQuery>,
 ) -> impl IntoResponse
 where
    R: UserRepository,
-   P: PasswordChecker,
 {
-   // リクエストをドメイン型に変換
-   let tenant_id = TenantId::from_uuid(req.tenant_id);
-   let email = match Email::new(&req.email) {
+   // メールアドレスを検証
+   let email = match Email::new(&query.email) {
       Ok(e) => e,
       Err(_) => {
          return (
@@ -147,33 +154,33 @@ where
             .into_response();
       }
    };
-   let password = PlainPassword::new(&req.password);
 
-   // 認証を実行
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   // ユーザーを検索
    match state
-      .usecase
-      .verify_credentials(&tenant_id, &email, &password)
+      .user_repository
+      .find_by_email(&tenant_id, &email)
       .await
    {
-      Ok((user, roles)) => {
-         let response = VerifyResponse {
-            user:  UserResponse::from(&user),
-            roles: roles.iter().map(RoleResponse::from).collect(),
+      Ok(Some(user)) => {
+         let response = GetUserByEmailResponse {
+            user: UserResponse::from(&user),
          };
          (StatusCode::OK, Json(response)).into_response()
       }
-      Err(AuthError::AuthenticationFailed) => (
-         StatusCode::UNAUTHORIZED,
+      Ok(None) => (
+         StatusCode::NOT_FOUND,
          Json(ErrorResponse {
-            error_type: "https://ringiflow.example.com/errors/authentication-failed".to_string(),
-            title:      "Authentication Failed".to_string(),
-            status:     401,
-            detail:     "メールアドレスまたはパスワードが正しくありません".to_string(),
+            error_type: "https://ringiflow.example.com/errors/not-found".to_string(),
+            title:      "Not Found".to_string(),
+            status:     404,
+            detail:     "ユーザーが見つかりません".to_string(),
          }),
       )
          .into_response(),
-      Err(AuthError::Internal(e)) => {
-         tracing::error!("認証処理で内部エラー: {}", e);
+      Err(e) => {
+         tracing::error!("ユーザー検索で内部エラー: {}", e);
          (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ErrorResponse {
@@ -191,23 +198,17 @@ where
 /// GET /internal/users/{user_id}
 ///
 /// ユーザー情報をロール・権限付きで取得する。
-pub async fn get_user<R, P>(
-   State(state): State<Arc<AuthState<R, P>>>,
+pub async fn get_user<R>(
+   State(state): State<Arc<UserState<R>>>,
    Path(user_id): Path<Uuid>,
 ) -> impl IntoResponse
 where
    R: UserRepository,
-   P: PasswordChecker,
 {
    let user_id = UserId::from_uuid(user_id);
 
    // ユーザーをロール付きで取得
-   match state
-      .usecase
-      .user_repository()
-      .find_with_roles(&user_id)
-      .await
-   {
+   match state.user_repository.find_with_roles(&user_id).await {
       Ok(Some((user, roles))) => {
          // 権限を集約
          let permissions: Vec<String> = roles
@@ -257,10 +258,9 @@ mod tests {
       Router,
       body::Body,
       http::{Method, Request},
-      routing::{get, post},
+      routing::get,
    };
    use ringiflow_domain::{
-      password::{PasswordHash, PasswordVerifyResult},
       role::{Permission, Role},
       tenant::TenantId,
       user::{Email, User, UserId, UserStatus},
@@ -320,34 +320,6 @@ mod tests {
       }
    }
 
-   struct StubPasswordChecker {
-      result: PasswordVerifyResult,
-   }
-
-   impl StubPasswordChecker {
-      fn matching() -> Self {
-         Self {
-            result: PasswordVerifyResult::Match,
-         }
-      }
-
-      fn mismatching() -> Self {
-         Self {
-            result: PasswordVerifyResult::Mismatch,
-         }
-      }
-   }
-
-   impl PasswordChecker for StubPasswordChecker {
-      fn verify(
-         &self,
-         _password: &PlainPassword,
-         _hash: &PasswordHash,
-      ) -> Result<PasswordVerifyResult, InfraError> {
-         Ok(self.result)
-      }
-   }
-
    // テストデータ生成
 
    fn create_active_user(tenant_id: &TenantId) -> User {
@@ -375,18 +347,19 @@ mod tests {
       )
    }
 
-   fn create_test_app(repo: StubUserRepository, checker: StubPasswordChecker) -> Router {
-      let usecase = AuthUseCase::new(repo, checker);
-      let state = Arc::new(AuthState { usecase });
+   fn create_test_app(repo: StubUserRepository) -> Router {
+      let state = Arc::new(UserState {
+         user_repository: repo,
+      });
 
       Router::new()
          .route(
-            "/internal/auth/verify",
-            post(verify::<StubUserRepository, StubPasswordChecker>),
+            "/internal/users/by-email",
+            get(get_user_by_email::<StubUserRepository>),
          )
          .route(
             "/internal/users/{user_id}",
-            get(get_user::<StubUserRepository, StubPasswordChecker>),
+            get(get_user::<StubUserRepository>),
          )
          .with_state(state)
    }
@@ -394,27 +367,20 @@ mod tests {
    // テストケース
 
    #[tokio::test]
-   async fn test_verify_正しい認証情報で認証できる() {
+   async fn test_get_user_by_email_ユーザーが見つかる() {
       // Given
       let tenant_id = TenantId::new();
       let user = create_active_user(&tenant_id);
       let roles = vec![create_user_role()];
-      let app = create_test_app(
-         StubUserRepository::with_user(user, roles),
-         StubPasswordChecker::matching(),
-      );
-
-      let request_body = serde_json::json!({
-          "tenant_id": tenant_id.as_uuid(),
-          "email": "user@example.com",
-          "password": "password123"
-      });
+      let app = create_test_app(StubUserRepository::with_user(user, roles));
 
       let request = Request::builder()
-         .method(Method::POST)
-         .uri("/internal/auth/verify")
-         .header("content-type", "application/json")
-         .body(Body::from(serde_json::to_string(&request_body).unwrap()))
+         .method(Method::GET)
+         .uri(format!(
+            "/internal/users/by-email?email=user@example.com&tenant_id={}",
+            tenant_id.as_uuid()
+         ))
+         .body(Body::empty())
          .unwrap();
 
       // When
@@ -422,37 +388,58 @@ mod tests {
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
+
+      let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+         .await
+         .unwrap();
+      let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+      assert_eq!(json["user"]["email"], "user@example.com");
+      assert_eq!(json["user"]["status"], "active");
    }
 
    #[tokio::test]
-   async fn test_verify_不正なパスワードで401() {
+   async fn test_get_user_by_email_ユーザーが見つからない() {
       // Given
+      let app = create_test_app(StubUserRepository::empty());
       let tenant_id = TenantId::new();
-      let user = create_active_user(&tenant_id);
-      let roles = vec![create_user_role()];
-      let app = create_test_app(
-         StubUserRepository::with_user(user, roles),
-         StubPasswordChecker::mismatching(),
-      );
-
-      let request_body = serde_json::json!({
-          "tenant_id": tenant_id.as_uuid(),
-          "email": "user@example.com",
-          "password": "wrongpassword"
-      });
 
       let request = Request::builder()
-         .method(Method::POST)
-         .uri("/internal/auth/verify")
-         .header("content-type", "application/json")
-         .body(Body::from(serde_json::to_string(&request_body).unwrap()))
+         .method(Method::GET)
+         .uri(format!(
+            "/internal/users/by-email?email=notfound@example.com&tenant_id={}",
+            tenant_id.as_uuid()
+         ))
+         .body(Body::empty())
          .unwrap();
 
       // When
       let response = app.oneshot(request).await.unwrap();
 
       // Then
-      assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+      assert_eq!(response.status(), StatusCode::NOT_FOUND);
+   }
+
+   #[tokio::test]
+   async fn test_get_user_by_email_不正なメールアドレス() {
+      // Given
+      let app = create_test_app(StubUserRepository::empty());
+      let tenant_id = TenantId::new();
+
+      let request = Request::builder()
+         .method(Method::GET)
+         .uri(format!(
+            "/internal/users/by-email?email=invalid-email&tenant_id={}",
+            tenant_id.as_uuid()
+         ))
+         .body(Body::empty())
+         .unwrap();
+
+      // When
+      let response = app.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::BAD_REQUEST);
    }
 
    #[tokio::test]
@@ -462,10 +449,7 @@ mod tests {
       let user = create_active_user(&tenant_id);
       let user_id = *user.id().as_uuid();
       let roles = vec![create_user_role()];
-      let app = create_test_app(
-         StubUserRepository::with_user(user, roles),
-         StubPasswordChecker::matching(),
-      );
+      let app = create_test_app(StubUserRepository::with_user(user, roles));
 
       let request = Request::builder()
          .method(Method::GET)
@@ -483,7 +467,7 @@ mod tests {
    #[tokio::test]
    async fn test_get_user_存在しないユーザーで404() {
       // Given
-      let app = create_test_app(StubUserRepository::empty(), StubPasswordChecker::matching());
+      let app = create_test_app(StubUserRepository::empty());
 
       let user_id = Uuid::now_v7();
       let request = Request::builder()

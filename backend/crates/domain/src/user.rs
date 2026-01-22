@@ -202,12 +202,19 @@ impl std::fmt::Display for UserStatus {
 /// - `email` はテナント内で一意
 /// - `password_hash` は SSO ユーザーの場合のみ None
 /// - `status` が `Deleted` の場合、ログイン不可
+///
+/// # TODO(#80)
+///
+/// Phase 4 で `password_hash` フィールドを削除する。
+/// 認証情報は `auth.credentials` テーブルに移行済み。
+/// 削除時は `new()`, `from_db()`, `with_password_hash()` も更新が必要。
 #[derive(Debug, Clone)]
 pub struct User {
    id: UserId,
    tenant_id: TenantId,
    email: Email,
    name: UserName,
+   /// TODO(#80): Phase 4 で削除予定（auth.credentials に移行済み）
    password_hash: Option<String>,
    status: UserStatus,
    last_login_at: Option<DateTime<Utc>>,

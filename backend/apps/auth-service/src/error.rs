@@ -27,7 +27,10 @@ pub enum AuthError {
    #[error("認証に失敗しました")]
    AuthenticationFailed,
 
-   /// 認証情報が見つからない（将来の API で使用予定）
+   /// 認証情報が見つからない
+   ///
+   /// FIXME: `#[allow(dead_code)]` を解消する
+   ///        （認証情報取得 API を追加するか、バリアントごと削除する）
    #[error("認証情報が見つかりません")]
    #[allow(dead_code)]
    CredentialNotFound,

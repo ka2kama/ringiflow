@@ -62,7 +62,7 @@ use axum::{
    middleware::from_fn_with_state,
    routing::{get, post},
 };
-use client::CoreApiClientImpl;
+use client::{AuthServiceClientImpl, CoreApiClientImpl};
 use config::BffConfig;
 use handler::{AuthState, csrf, health_check, login, logout, me};
 use middleware::{CsrfState, csrf_middleware};
@@ -107,6 +107,7 @@ async fn main() -> anyhow::Result<()> {
       .await
       .expect("Redis への接続に失敗しました");
    let core_api_client = CoreApiClientImpl::new(&config.core_api_url);
+   let auth_service_client = AuthServiceClientImpl::new(&config.auth_service_url);
 
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
@@ -115,6 +116,7 @@ async fn main() -> anyhow::Result<()> {
 
    let auth_state = Arc::new(AuthState {
       core_api_client,
+      auth_service_client,
       session_manager,
    });
 
@@ -125,19 +127,19 @@ async fn main() -> anyhow::Result<()> {
       .route("/health", get(health_check))
       .route(
          "/auth/login",
-         post(login::<CoreApiClientImpl, RedisSessionManager>),
+         post(login::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/auth/logout",
-         post(logout::<CoreApiClientImpl, RedisSessionManager>),
+         post(logout::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/auth/me",
-         get(me::<CoreApiClientImpl, RedisSessionManager>),
+         get(me::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/auth/csrf",
-         get(csrf::<CoreApiClientImpl, RedisSessionManager>),
+         get(csrf::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .with_state(auth_state)
       .layer(from_fn_with_state(

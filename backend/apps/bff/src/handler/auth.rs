@@ -8,7 +8,7 @@
 //! - `POST /auth/logout` - ログアウト
 //! - `GET /auth/me` - 現在のユーザー情報を取得
 //!
-//! 詳細: [07_認証機能設計.md](../../../../docs/03_詳細設計書/07_認証機能設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 use std::sync::Arc;
 
@@ -24,7 +24,13 @@ use ringiflow_infra::{SessionData, SessionManager};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::client::{CoreApiClient, CoreApiError, UserWithPermissionsResponse};
+use crate::client::{
+   AuthServiceClient,
+   AuthServiceError,
+   CoreApiClient,
+   CoreApiError,
+   UserWithPermissionsResponse,
+};
 
 /// Cookie 名
 const SESSION_COOKIE_NAME: &str = "session_id";
@@ -63,13 +69,15 @@ impl IntoResponse for TenantIdError {
 const SESSION_MAX_AGE: i64 = 28800; // 8時間
 
 /// 認証ハンドラの共有状態
-pub struct AuthState<C, S>
+pub struct AuthState<C, A, S>
 where
    C: CoreApiClient,
+   A: AuthServiceClient,
    S: SessionManager,
 {
-   pub core_api_client: C,
-   pub session_manager: S,
+   pub core_api_client:     C,
+   pub auth_service_client: A,
+   pub session_manager:     S,
 }
 
 // --- リクエスト/レスポンス型 ---
@@ -164,11 +172,22 @@ pub struct ErrorResponse {
 ///
 /// メール/パスワードでログインし、セッションを確立する。
 ///
-/// # ヘッダー
+/// ## 認証フロー
+///
+/// 1. Core API でユーザーを検索（`GET /internal/users/by-email`）
+/// 2. Auth Service でパスワードを検証（`POST /internal/auth/verify`）
+/// 3. セッションを作成し Cookie を設定
+///
+/// ## タイミング攻撃対策
+///
+/// ユーザーが存在しない場合も Auth Service にダミーリクエストを送信し、
+/// 処理時間を均一化してユーザー存在確認攻撃を防ぐ。
+///
+/// ## ヘッダー
 ///
 /// - `X-Tenant-ID`: テナント ID（必須）
 ///
-/// # リクエストボディ
+/// ## リクエストボディ
 ///
 /// ```json
 /// {
@@ -176,14 +195,15 @@ pub struct ErrorResponse {
 ///   "password": "password123"
 /// }
 /// ```
-pub async fn login<C, S>(
-   State(state): State<Arc<AuthState<C, S>>>,
+pub async fn login<C, A, S>(
+   State(state): State<Arc<AuthState<C, A, S>>>,
    headers: HeaderMap,
    jar: CookieJar,
    Json(req): Json<LoginRequest>,
 ) -> impl IntoResponse
 where
    C: CoreApiClient,
+   A: AuthServiceClient,
    S: SessionManager,
 {
    // X-Tenant-ID ヘッダーからテナント ID を取得
@@ -192,64 +212,101 @@ where
       Err(e) => return e.into_response(),
    };
 
-   // Core API で認証
-   let verify_result = state
+   // Step 1: Core API でユーザーを検索
+   let user_result = state
       .core_api_client
-      .verify_credentials(tenant_id, &req.email, &req.password)
+      .get_user_by_email(tenant_id, &req.email)
       .await;
 
-   match verify_result {
-      Ok(verified) => {
-         // セッションを作成
-         let session_data = SessionData::new(
-            ringiflow_domain::user::UserId::from_uuid(verified.user.id),
-            TenantId::from_uuid(verified.user.tenant_id),
-            verified.user.email.clone(),
-            verified.user.name.clone(),
-            verified.roles.iter().map(|r| r.name.clone()).collect(),
-         );
+   match user_result {
+      Ok(user_response) => {
+         let user = &user_response.user;
 
-         match state.session_manager.create(&session_data).await {
-            Ok(session_id) => {
-               // CSRF トークンを作成
-               let tenant_id = TenantId::from_uuid(verified.user.tenant_id);
-               if let Err(e) = state
-                  .session_manager
-                  .create_csrf_token(&tenant_id, &session_id)
-                  .await
-               {
-                  tracing::error!("CSRF トークン作成に失敗: {}", e);
-                  return internal_error_response();
-               }
+         // Step 2: Auth Service でパスワードを検証
+         let verify_result = state
+            .auth_service_client
+            .verify_password(user.tenant_id, user.id, &req.password)
+            .await;
 
-               // Cookie を設定
-               let cookie = build_session_cookie(&session_id);
-               let jar = jar.add(cookie);
-
-               // レスポンスを返す
-               let response = LoginResponse {
-                  data: LoginResponseData {
-                     user: LoginUserResponse {
-                        id:        verified.user.id,
-                        email:     verified.user.email,
-                        name:      verified.user.name,
-                        tenant_id: verified.user.tenant_id,
-                        roles:     verified.roles.iter().map(|r| r.name.clone()).collect(),
-                     },
-                  },
+         match verify_result {
+            Ok(_) => {
+               // Step 3: ロール情報を取得（get_user で権限付きで取得）
+               let user_with_roles = match state.core_api_client.get_user(user.id).await {
+                  Ok(u) => u,
+                  Err(e) => {
+                     tracing::error!("ユーザー情報取得で内部エラー: {}", e);
+                     return internal_error_response();
+                  }
                };
 
-               (jar, Json(response)).into_response()
+               // Step 4: セッションを作成
+               let session_data = SessionData::new(
+                  ringiflow_domain::user::UserId::from_uuid(user.id),
+                  TenantId::from_uuid(user.tenant_id),
+                  user.email.clone(),
+                  user.name.clone(),
+                  user_with_roles.roles.clone(),
+               );
+
+               match state.session_manager.create(&session_data).await {
+                  Ok(session_id) => {
+                     // CSRF トークンを作成
+                     let tenant_id = TenantId::from_uuid(user.tenant_id);
+                     if let Err(e) = state
+                        .session_manager
+                        .create_csrf_token(&tenant_id, &session_id)
+                        .await
+                     {
+                        tracing::error!("CSRF トークン作成に失敗: {}", e);
+                        return internal_error_response();
+                     }
+
+                     // Cookie を設定
+                     let cookie = build_session_cookie(&session_id);
+                     let jar = jar.add(cookie);
+
+                     // レスポンスを返す
+                     let response = LoginResponse {
+                        data: LoginResponseData {
+                           user: LoginUserResponse {
+                              id:        user.id,
+                              email:     user.email.clone(),
+                              name:      user.name.clone(),
+                              tenant_id: user.tenant_id,
+                              roles:     user_with_roles.roles,
+                           },
+                        },
+                     };
+
+                     (jar, Json(response)).into_response()
+                  }
+                  Err(e) => {
+                     tracing::error!("セッション作成に失敗: {}", e);
+                     internal_error_response()
+                  }
+               }
             }
+            Err(AuthServiceError::AuthenticationFailed) => authentication_failed_response(),
+            Err(AuthServiceError::ServiceUnavailable) => service_unavailable_response(),
             Err(e) => {
-               tracing::error!("セッション作成に失敗: {}", e);
+               tracing::error!("パスワード検証で内部エラー: {}", e);
                internal_error_response()
             }
          }
       }
-      Err(CoreApiError::AuthenticationFailed) => authentication_failed_response(),
+      Err(CoreApiError::UserNotFound) => {
+         // タイミング攻撃対策: ユーザーが存在しない場合もダミー検証を実行
+         // Auth Service にダミーの user_id を送信して処理時間を均一化
+         let dummy_user_id = Uuid::nil();
+         let _ = state
+            .auth_service_client
+            .verify_password(tenant_id, dummy_user_id, &req.password)
+            .await;
+
+         authentication_failed_response()
+      }
       Err(e) => {
-         tracing::error!("認証処理で内部エラー: {}", e);
+         tracing::error!("ユーザー検索で内部エラー: {}", e);
          internal_error_response()
       }
    }
@@ -258,13 +315,14 @@ where
 /// POST /auth/logout
 ///
 /// セッションを無効化してログアウトする。
-pub async fn logout<C, S>(
-   State(state): State<Arc<AuthState<C, S>>>,
+pub async fn logout<C, A, S>(
+   State(state): State<Arc<AuthState<C, A, S>>>,
    headers: HeaderMap,
    jar: CookieJar,
 ) -> impl IntoResponse
 where
    C: CoreApiClient,
+   A: AuthServiceClient,
    S: SessionManager,
 {
    // X-Tenant-ID ヘッダーからテナント ID を取得
@@ -303,13 +361,14 @@ where
 /// GET /auth/me
 ///
 /// 現在のユーザー情報と権限を取得する。
-pub async fn me<C, S>(
-   State(state): State<Arc<AuthState<C, S>>>,
+pub async fn me<C, A, S>(
+   State(state): State<Arc<AuthState<C, A, S>>>,
    headers: HeaderMap,
    jar: CookieJar,
 ) -> impl IntoResponse
 where
    C: CoreApiClient,
+   A: AuthServiceClient,
    S: SessionManager,
 {
    // X-Tenant-ID ヘッダーからテナント ID を取得
@@ -360,13 +419,14 @@ where
 ///
 /// CSRF トークンを取得する。
 /// セッションが存在しない場合は新規作成し、存在する場合は既存のトークンを返す。
-pub async fn csrf<C, S>(
-   State(state): State<Arc<AuthState<C, S>>>,
+pub async fn csrf<C, A, S>(
+   State(state): State<Arc<AuthState<C, A, S>>>,
    headers: HeaderMap,
    jar: CookieJar,
 ) -> impl IntoResponse
 where
    C: CoreApiClient,
+   A: AuthServiceClient,
    S: SessionManager,
 {
    // X-Tenant-ID ヘッダーからテナント ID を取得
@@ -512,6 +572,20 @@ fn internal_error_response() -> axum::response::Response {
       .into_response()
 }
 
+/// Auth Service 利用不可レスポンス
+fn service_unavailable_response() -> axum::response::Response {
+   (
+      StatusCode::SERVICE_UNAVAILABLE,
+      Json(ErrorResponse {
+         error_type: "https://ringiflow.example.com/errors/service-unavailable".to_string(),
+         title:      "Service Unavailable".to_string(),
+         status:     503,
+         detail:     "認証サービスが一時的に利用できません".to_string(),
+      }),
+   )
+      .into_response()
+}
+
 #[cfg(test)]
 mod tests {
    use std::sync::Arc;
@@ -529,13 +603,13 @@ mod tests {
    use uuid::Uuid;
 
    use super::*;
-   use crate::client::{RoleResponse, UserResponse, VerifyResponse};
+   use crate::client::{GetUserByEmailResponse, UserResponse, VerifyResponse};
 
    // テスト用スタブ
 
    struct StubCoreApiClient {
-      verify_result:   Result<VerifyResponse, CoreApiError>,
-      get_user_result: Result<UserWithPermissionsResponse, CoreApiError>,
+      user_by_email_result: Result<GetUserByEmailResponse, CoreApiError>,
+      get_user_result:      Result<UserWithPermissionsResponse, CoreApiError>,
    }
 
    impl StubCoreApiClient {
@@ -547,17 +621,9 @@ mod tests {
             name:      "Test User".to_string(),
             status:    "active".to_string(),
          };
-         let roles = vec![RoleResponse {
-            id:          Uuid::now_v7(),
-            name:        "user".to_string(),
-            permissions: vec!["workflow:read".to_string()],
-         }];
          Self {
-            verify_result:   Ok(VerifyResponse {
-               user:  user.clone(),
-               roles: roles.clone(),
-            }),
-            get_user_result: Ok(UserWithPermissionsResponse {
+            user_by_email_result: Ok(GetUserByEmailResponse { user: user.clone() }),
+            get_user_result:      Ok(UserWithPermissionsResponse {
                user,
                roles: vec!["user".to_string()],
                permissions: vec!["workflow:read".to_string()],
@@ -565,23 +631,22 @@ mod tests {
          }
       }
 
-      fn auth_failed() -> Self {
+      fn user_not_found() -> Self {
          Self {
-            verify_result:   Err(CoreApiError::AuthenticationFailed),
-            get_user_result: Err(CoreApiError::UserNotFound),
+            user_by_email_result: Err(CoreApiError::UserNotFound),
+            get_user_result:      Err(CoreApiError::UserNotFound),
          }
       }
    }
 
    #[async_trait]
    impl CoreApiClient for StubCoreApiClient {
-      async fn verify_credentials(
+      async fn get_user_by_email(
          &self,
          _tenant_id: Uuid,
          _email: &str,
-         _password: &str,
-      ) -> Result<VerifyResponse, CoreApiError> {
-         self.verify_result.clone()
+      ) -> Result<GetUserByEmailResponse, CoreApiError> {
+         self.user_by_email_result.clone()
       }
 
       async fn get_user(
@@ -589,6 +654,39 @@ mod tests {
          _user_id: Uuid,
       ) -> Result<UserWithPermissionsResponse, CoreApiError> {
          self.get_user_result.clone()
+      }
+   }
+
+   struct StubAuthServiceClient {
+      verify_result: Result<VerifyResponse, AuthServiceError>,
+   }
+
+   impl StubAuthServiceClient {
+      fn success() -> Self {
+         Self {
+            verify_result: Ok(VerifyResponse {
+               verified:      true,
+               credential_id: Some(Uuid::now_v7()),
+            }),
+         }
+      }
+
+      fn auth_failed() -> Self {
+         Self {
+            verify_result: Err(AuthServiceError::AuthenticationFailed),
+         }
+      }
+   }
+
+   #[async_trait]
+   impl AuthServiceClient for StubAuthServiceClient {
+      async fn verify_password(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+         _password: &str,
+      ) -> Result<VerifyResponse, AuthServiceError> {
+         self.verify_result.clone()
       }
    }
 
@@ -677,25 +775,33 @@ mod tests {
       }
    }
 
-   fn create_test_app(client: StubCoreApiClient, session_manager: StubSessionManager) -> Router {
+   fn create_test_app(
+      core_client: StubCoreApiClient,
+      auth_client: StubAuthServiceClient,
+      session_manager: StubSessionManager,
+   ) -> Router {
       let state = Arc::new(AuthState {
-         core_api_client: client,
+         core_api_client: core_client,
+         auth_service_client: auth_client,
          session_manager,
       });
 
       Router::new()
          .route(
             "/auth/login",
-            post(login::<StubCoreApiClient, StubSessionManager>),
+            post(login::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
             "/auth/logout",
-            post(logout::<StubCoreApiClient, StubSessionManager>),
+            post(logout::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
          )
-         .route("/auth/me", get(me::<StubCoreApiClient, StubSessionManager>))
+         .route(
+            "/auth/me",
+            get(me::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
+         )
          .route(
             "/auth/csrf",
-            get(csrf::<StubCoreApiClient, StubSessionManager>),
+            get(csrf::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
          )
          .with_state(state)
    }
@@ -707,7 +813,11 @@ mod tests {
    #[tokio::test]
    async fn test_login_成功時にセッションcookieが設定される() {
       // Given
-      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
+         StubSessionManager::new(),
+      );
 
       let body = serde_json::json!({
           "email": "user@example.com",
@@ -739,7 +849,11 @@ mod tests {
    #[tokio::test]
    async fn test_login_成功時にユーザー情報が返る() {
       // Given
-      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
+         StubSessionManager::new(),
+      );
 
       let body = serde_json::json!({
           "email": "user@example.com",
@@ -771,9 +885,13 @@ mod tests {
    }
 
    #[tokio::test]
-   async fn test_login_認証失敗で401() {
+   async fn test_login_パスワード不一致で401() {
       // Given
-      let app = create_test_app(StubCoreApiClient::auth_failed(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::auth_failed(),
+         StubSessionManager::new(),
+      );
 
       let body = serde_json::json!({
           "email": "user@example.com",
@@ -796,9 +914,42 @@ mod tests {
    }
 
    #[tokio::test]
+   async fn test_login_ユーザー不存在で401() {
+      // Given
+      let app = create_test_app(
+         StubCoreApiClient::user_not_found(),
+         StubAuthServiceClient::auth_failed(),
+         StubSessionManager::new(),
+      );
+
+      let body = serde_json::json!({
+          "email": "notfound@example.com",
+          "password": "password123"
+      });
+
+      let request = Request::builder()
+         .method(Method::POST)
+         .uri("/auth/login")
+         .header("content-type", "application/json")
+         .header("X-Tenant-ID", TEST_TENANT_ID)
+         .body(Body::from(serde_json::to_string(&body).unwrap()))
+         .unwrap();
+
+      // When
+      let response = app.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+   }
+
+   #[tokio::test]
    async fn test_logout_セッションが削除されてcookieがクリアされる() {
       // Given
-      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
+         StubSessionManager::new(),
+      );
 
       let request = Request::builder()
          .method(Method::POST)
@@ -829,6 +980,7 @@ mod tests {
       let user_id = UserId::new();
       let app = create_test_app(
          StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
          StubSessionManager::with_session(user_id, tenant_id),
       );
 
@@ -860,7 +1012,11 @@ mod tests {
    #[tokio::test]
    async fn test_me_未認証で401() {
       // Given
-      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
+         StubSessionManager::new(),
+      );
 
       let request = Request::builder()
          .method(Method::GET)
@@ -881,7 +1037,11 @@ mod tests {
    #[allow(non_snake_case)]
    async fn test_login_テナントIDヘッダーなしで400() {
       // Given
-      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
+         StubSessionManager::new(),
+      );
 
       let body = serde_json::json!({
           "email": "user@example.com",
@@ -912,6 +1072,7 @@ mod tests {
       let user_id = UserId::new();
       let app = create_test_app(
          StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
          StubSessionManager::with_session(user_id, tenant_id),
       );
 
@@ -942,7 +1103,11 @@ mod tests {
    #[tokio::test]
    async fn test_csrf_未認証で401() {
       // Given
-      let app = create_test_app(StubCoreApiClient::success(), StubSessionManager::new());
+      let app = create_test_app(
+         StubCoreApiClient::success(),
+         StubAuthServiceClient::success(),
+         StubSessionManager::new(),
+      );
 
       let request = Request::builder()
          .method(Method::GET)

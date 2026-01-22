@@ -57,25 +57,16 @@
 mod config;
 mod error;
 mod handler;
-mod usecase;
 
 use std::{net::SocketAddr, sync::Arc};
 
-use axum::{
-   Router,
-   routing::{get, post},
-};
+use axum::{Router, routing::get};
 use config::CoreApiConfig;
-use handler::{AuthState, get_user, health_check, verify};
-use ringiflow_infra::{
-   Argon2PasswordChecker,
-   db,
-   repository::user_repository::PostgresUserRepository,
-};
+use handler::{UserState, get_user, get_user_by_email, health_check};
+use ringiflow_infra::{db, repository::user_repository::PostgresUserRepository};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use usecase::AuthUseCase;
 
 /// Core API サーバーのエントリーポイント
 ///
@@ -111,24 +102,20 @@ async fn main() -> anyhow::Result<()> {
 
    // 依存コンポーネントを初期化
    let user_repository = PostgresUserRepository::new(pool);
-   let password_checker = Argon2PasswordChecker::new();
-   let auth_usecase = AuthUseCase::new(user_repository, password_checker);
-   let auth_state = Arc::new(AuthState {
-      usecase: auth_usecase,
-   });
+   let user_state = Arc::new(UserState { user_repository });
 
    // ルーター構築
    let app = Router::new()
       .route("/health", get(health_check))
       .route(
-         "/internal/auth/verify",
-         post(verify::<PostgresUserRepository, Argon2PasswordChecker>),
+         "/internal/users/by-email",
+         get(get_user_by_email::<PostgresUserRepository>),
       )
       .route(
          "/internal/users/{user_id}",
-         get(get_user::<PostgresUserRepository, Argon2PasswordChecker>),
+         get(get_user::<PostgresUserRepository>),
       )
-      .with_state(auth_state)
+      .with_state(user_state)
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動
