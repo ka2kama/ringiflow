@@ -3,7 +3,7 @@
 ## 概要
 
 BFF（Backend for Frontend）の認証エンドポイントを実装した。
-ブラウザからのログイン/ログアウトリクエストを受け、Core API との連携とセッション管理を行う。
+ブラウザからのログイン/ログアウトリクエストを受け、Core Service との連携とセッション管理を行う。
 
 ### 対応 Issue
 
@@ -14,7 +14,7 @@ BFF（Backend for Frontend）の認証エンドポイントを実装した。
 | 設計書セクション | 実装内容 |
 |-----------------|---------|
 | [BFF 公開 API](../../03_詳細設計書/07_認証機能設計.md#bff-公開-api) | `/auth/login`, `/auth/logout`, `/auth/me` |
-| [責務分担](../../03_詳細設計書/07_認証機能設計.md#責務分担) | BFF: セッション管理、Cookie 処理、Core API への中継 |
+| [責務分担](../../03_詳細設計書/07_認証機能設計.md#責務分担) | BFF: セッション管理、Cookie 処理、Core Service への中継 |
 | [Cookie 属性](../../03_詳細設計書/07_認証機能設計.md#cookie-属性) | HttpOnly, SameSite=Lax, Path=/, Max-Age=28800 |
 
 ## 実装したコンポーネント
@@ -22,15 +22,15 @@ BFF（Backend for Frontend）の認証エンドポイントを実装した。
 | ファイル | 責務 |
 |---------|------|
 | [`client.rs`](../../../backend/apps/bff/src/client.rs) | クライアントモジュール定義 |
-| [`client/core_api.rs`](../../../backend/apps/bff/src/client/core_api.rs) | Core API との HTTP 通信 |
+| [`client/core_api.rs`](../../../backend/apps/bff/src/client/core_api.rs) | Core Service との HTTP 通信 |
 | [`handler/auth.rs`](../../../backend/apps/bff/src/handler/auth.rs) | 認証エンドポイント |
-| [`config.rs`](../../../backend/apps/bff/src/config.rs) | 設定（Redis URL, Core API URL 追加） |
+| [`config.rs`](../../../backend/apps/bff/src/config.rs) | 設定（Redis URL, Core Service URL 追加） |
 
 ## 実装内容
 
 ### CoreApiClient
 
-Core API との通信を担当するクライアント。テスト容易性のためトレイトで定義。
+Core Service との通信を担当するクライアント。テスト容易性のためトレイトで定義。
 
 ```rust
 #[async_trait]
@@ -52,9 +52,9 @@ pub trait CoreApiClient: Send + Sync {
 
 | エンドポイント | 処理内容 |
 |---------------|---------|
-| `POST /auth/login` | Core API で認証 → セッション作成 → Cookie 設定 |
+| `POST /auth/login` | Core Service で認証 → セッション作成 → Cookie 設定 |
 | `POST /auth/logout` | セッション削除 → Cookie クリア |
-| `GET /auth/me` | セッション取得 → Core API でユーザー情報取得 |
+| `GET /auth/me` | セッション取得 → Core Service でユーザー情報取得 |
 
 ### テナント ID の取得
 
@@ -84,7 +84,7 @@ cargo test -p ringiflow-bff
 ## 関連ドキュメント
 
 - [07_認証機能設計.md](../../03_詳細設計書/07_認証機能設計.md)
-- [Phase 4: Core API 認証エンドポイント](./04_Phase4_CoreAPI認証エンドポイント.md)
+- [Phase 4: Core Service 認証エンドポイント](./04_Phase4_CoreService認証エンドポイント.md)
 - [Phase 3: SessionManager](./03_Phase3_SessionManager.md)
 
 ---
@@ -112,7 +112,7 @@ pub trait CoreApiClient: Send + Sync {
 
 - mockall 等のモックライブラリを使用する
   - トレードオフ: 依存関係が増える、設定が複雑になる場合がある
-- テスト時のみ実際の Core API を起動する
+- テスト時のみ実際の Core Service を起動する
   - トレードオフ: テストが遅くなる、環境依存が増える
 
 トレイトベースの設計は Rust の慣習に沿っており、シンプルで理解しやすい。

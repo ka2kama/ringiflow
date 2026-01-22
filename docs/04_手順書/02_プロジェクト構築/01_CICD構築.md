@@ -38,7 +38,7 @@ CI 環境では PostgreSQL に接続できないため、SQLx のオフライン
 ローカル環境で以下を実行:
 
 ```bash
-cd apps/core-api
+cd apps/core-service
 
 # データベースが起動していることを確認
 docker compose -f ../../infra/docker/docker-compose.yml ps
@@ -209,7 +209,7 @@ git commit -m "pnpm-lock.yaml を追加"
 ls -la .sqlx/
 
 # 再生成
-cd apps/core-api
+cd apps/core-service
 cargo sqlx prepare --workspace
 
 # コミット

@@ -27,8 +27,8 @@ use uuid::Uuid;
 use crate::client::{
    AuthServiceClient,
    AuthServiceError,
-   CoreApiClient,
-   CoreApiError,
+   CoreServiceClient,
+   CoreServiceError,
    UserWithPermissionsResponse,
 };
 
@@ -71,11 +71,11 @@ const SESSION_MAX_AGE: i64 = 28800; // 8時間
 /// 認証ハンドラの共有状態
 pub struct AuthState<C, A, S>
 where
-   C: CoreApiClient,
+   C: CoreServiceClient,
    A: AuthServiceClient,
    S: SessionManager,
 {
-   pub core_api_client:     C,
+   pub core_service_client: C,
    pub auth_service_client: A,
    pub session_manager:     S,
 }
@@ -202,7 +202,7 @@ pub async fn login<C, A, S>(
    Json(req): Json<LoginRequest>,
 ) -> impl IntoResponse
 where
-   C: CoreApiClient,
+   C: CoreServiceClient,
    A: AuthServiceClient,
    S: SessionManager,
 {
@@ -214,7 +214,7 @@ where
 
    // Step 1: Core API でユーザーを検索
    let user_result = state
-      .core_api_client
+      .core_service_client
       .get_user_by_email(tenant_id, &req.email)
       .await;
 
@@ -231,7 +231,7 @@ where
          match verify_result {
             Ok(_) => {
                // Step 3: ロール情報を取得（get_user で権限付きで取得）
-               let user_with_roles = match state.core_api_client.get_user(user.id).await {
+               let user_with_roles = match state.core_service_client.get_user(user.id).await {
                   Ok(u) => u,
                   Err(e) => {
                      tracing::error!("ユーザー情報取得で内部エラー: {}", e);
@@ -294,7 +294,7 @@ where
             }
          }
       }
-      Err(CoreApiError::UserNotFound) => {
+      Err(CoreServiceError::UserNotFound) => {
          // タイミング攻撃対策: ユーザーが存在しない場合もダミー検証を実行
          // Auth Service にダミーの user_id を送信して処理時間を均一化
          let dummy_user_id = Uuid::nil();
@@ -321,7 +321,7 @@ pub async fn logout<C, A, S>(
    jar: CookieJar,
 ) -> impl IntoResponse
 where
-   C: CoreApiClient,
+   C: CoreServiceClient,
    A: AuthServiceClient,
    S: SessionManager,
 {
@@ -367,7 +367,7 @@ pub async fn me<C, A, S>(
    jar: CookieJar,
 ) -> impl IntoResponse
 where
-   C: CoreApiClient,
+   C: CoreServiceClient,
    A: AuthServiceClient,
    S: SessionManager,
 {
@@ -390,14 +390,14 @@ where
       Ok(Some(session_data)) => {
          // Core API からユーザー情報を取得
          let user_id = *session_data.user_id().as_uuid();
-         match state.core_api_client.get_user(user_id).await {
+         match state.core_service_client.get_user(user_id).await {
             Ok(user_info) => {
                let response = MeResponse {
                   data: MeResponseData::from(user_info),
                };
                (StatusCode::OK, Json(response)).into_response()
             }
-            Err(CoreApiError::UserNotFound) => {
+            Err(CoreServiceError::UserNotFound) => {
                // ユーザーが削除された場合
                unauthorized_response()
             }
@@ -425,7 +425,7 @@ pub async fn csrf<C, A, S>(
    jar: CookieJar,
 ) -> impl IntoResponse
 where
-   C: CoreApiClient,
+   C: CoreServiceClient,
    A: AuthServiceClient,
    S: SessionManager,
 {
@@ -607,12 +607,12 @@ mod tests {
 
    // テスト用スタブ
 
-   struct StubCoreApiClient {
-      user_by_email_result: Result<GetUserByEmailResponse, CoreApiError>,
-      get_user_result:      Result<UserWithPermissionsResponse, CoreApiError>,
+   struct StubCoreServiceClient {
+      user_by_email_result: Result<GetUserByEmailResponse, CoreServiceError>,
+      get_user_result:      Result<UserWithPermissionsResponse, CoreServiceError>,
    }
 
-   impl StubCoreApiClient {
+   impl StubCoreServiceClient {
       fn success() -> Self {
          let user = UserResponse {
             id:        Uuid::now_v7(),
@@ -633,26 +633,26 @@ mod tests {
 
       fn user_not_found() -> Self {
          Self {
-            user_by_email_result: Err(CoreApiError::UserNotFound),
-            get_user_result:      Err(CoreApiError::UserNotFound),
+            user_by_email_result: Err(CoreServiceError::UserNotFound),
+            get_user_result:      Err(CoreServiceError::UserNotFound),
          }
       }
    }
 
    #[async_trait]
-   impl CoreApiClient for StubCoreApiClient {
+   impl CoreServiceClient for StubCoreServiceClient {
       async fn get_user_by_email(
          &self,
          _tenant_id: Uuid,
          _email: &str,
-      ) -> Result<GetUserByEmailResponse, CoreApiError> {
+      ) -> Result<GetUserByEmailResponse, CoreServiceError> {
          self.user_by_email_result.clone()
       }
 
       async fn get_user(
          &self,
          _user_id: Uuid,
-      ) -> Result<UserWithPermissionsResponse, CoreApiError> {
+      ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
          self.get_user_result.clone()
       }
    }
@@ -776,12 +776,12 @@ mod tests {
    }
 
    fn create_test_app(
-      core_client: StubCoreApiClient,
+      core_client: StubCoreServiceClient,
       auth_client: StubAuthServiceClient,
       session_manager: StubSessionManager,
    ) -> Router {
       let state = Arc::new(AuthState {
-         core_api_client: core_client,
+         core_service_client: core_client,
          auth_service_client: auth_client,
          session_manager,
       });
@@ -789,19 +789,19 @@ mod tests {
       Router::new()
          .route(
             "/auth/login",
-            post(login::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
+            post(login::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
             "/auth/logout",
-            post(logout::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
+            post(logout::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
             "/auth/me",
-            get(me::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
+            get(me::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
             "/auth/csrf",
-            get(csrf::<StubCoreApiClient, StubAuthServiceClient, StubSessionManager>),
+            get(csrf::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .with_state(state)
    }
@@ -814,7 +814,7 @@ mod tests {
    async fn test_login_成功時にセッションcookieが設定される() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
       );
@@ -850,7 +850,7 @@ mod tests {
    async fn test_login_成功時にユーザー情報が返る() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
       );
@@ -888,7 +888,7 @@ mod tests {
    async fn test_login_パスワード不一致で401() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::auth_failed(),
          StubSessionManager::new(),
       );
@@ -917,7 +917,7 @@ mod tests {
    async fn test_login_ユーザー不存在で401() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::user_not_found(),
+         StubCoreServiceClient::user_not_found(),
          StubAuthServiceClient::auth_failed(),
          StubSessionManager::new(),
       );
@@ -946,7 +946,7 @@ mod tests {
    async fn test_logout_セッションが削除されてcookieがクリアされる() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
       );
@@ -979,7 +979,7 @@ mod tests {
       let tenant_id = TenantId::from_uuid(Uuid::parse_str(TEST_TENANT_ID).unwrap());
       let user_id = UserId::new();
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::with_session(user_id, tenant_id),
       );
@@ -1013,7 +1013,7 @@ mod tests {
    async fn test_me_未認証で401() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
       );
@@ -1038,7 +1038,7 @@ mod tests {
    async fn test_login_テナントIDヘッダーなしで400() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
       );
@@ -1071,7 +1071,7 @@ mod tests {
       let tenant_id = TenantId::from_uuid(Uuid::parse_str(TEST_TENANT_ID).unwrap());
       let user_id = UserId::new();
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::with_session(user_id, tenant_id),
       );
@@ -1104,7 +1104,7 @@ mod tests {
    async fn test_csrf_未認証で401() {
       // Given
       let app = create_test_app(
-         StubCoreApiClient::success(),
+         StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
       );

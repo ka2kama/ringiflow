@@ -31,8 +31,8 @@
 //!
 //! | 変数名 | 必須 | 説明 |
 //! |--------|------|------|
-//! | `AUTH_SERVICE_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
-//! | `AUTH_SERVICE_PORT` | **Yes** | ポート番号 |
+//! | `AUTH_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
+//! | `AUTH_PORT` | **Yes** | ポート番号 |
 //! | `DATABASE_URL` | **Yes** | PostgreSQL 接続 URL |
 //!
 //! ## 起動方法
@@ -42,7 +42,7 @@
 //! cargo run -p ringiflow-auth-service
 //!
 //! # 本番環境
-//! AUTH_SERVICE_PORT=13002 DATABASE_URL=postgres://... cargo run -p ringiflow-auth-service --release
+//! AUTH_PORT=13002 DATABASE_URL=postgres://... cargo run -p ringiflow-auth-service --release
 //! ```
 //!
 //! ## 設計詳細
@@ -60,7 +60,7 @@ use axum::{
    Router,
    routing::{delete, get, post},
 };
-use config::AuthServiceConfig;
+use config::AuthConfig;
 use handler::{AuthState, create_credentials, delete_credentials, health_check, verify};
 use ringiflow_infra::{Argon2PasswordChecker, db, repository::PostgresCredentialsRepository};
 use tokio::net::TcpListener;
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
       .init();
 
    // 設定読み込み
-   let config = AuthServiceConfig::from_env().expect("設定の読み込みに失敗しました");
+   let config = AuthConfig::from_env().expect("設定の読み込みに失敗しました");
 
    tracing::info!(
       "Auth Service サーバーを起動します: {}:{}",

@@ -171,7 +171,7 @@ flowchart TB
     end
 
     subgraph Layer3["Layer 3: API"]
-        E["Core API Handler"]
+        E["Core Service Handler"]
         F["BFF Handler"]
     end
 
@@ -186,7 +186,7 @@ flowchart TB
 1. UserRepository（DB からユーザー取得）
 2. PasswordHasher（パスワード検証）
 3. AuthUseCase（認証ロジック）
-4. Core API Handler（内部 API）
+4. Core Service Handler（内部 API）
 5. SessionManager（セッション管理）
 6. BFF Handler（公開 API）
 

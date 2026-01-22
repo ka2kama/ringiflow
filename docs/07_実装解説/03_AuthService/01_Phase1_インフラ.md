@@ -27,7 +27,7 @@ Auth Service が使用するデータベーススキーマとテーブルを作�
 CREATE SCHEMA IF NOT EXISTS auth;
 ```
 
-Core API（public スキーマ）と Auth Service（auth スキーマ）をスキーマで論理的に分離する。
+Core Service（public スキーマ）と Auth Service（auth スキーマ）をスキーマで論理的に分離する。
 
 ### credentials テーブル
 
@@ -98,7 +98,7 @@ CREATE SCHEMA IF NOT EXISTS auth;
 
 **なぜこの設計か**:
 
-Auth Service と Core API は同一の PostgreSQL データベースに接続しつつ、スキーマで論理的に分離する。これにより:
+Auth Service と Core Service は同一の PostgreSQL データベースに接続しつつ、スキーマで論理的に分離する。これにより:
 
 - 初期段階では運用コストを抑えられる（単一 DB）
 - 将来的に DB を物理分離する際は接続文字列の変更のみで対応可能
@@ -126,10 +126,10 @@ Auth Service と Core API は同一の PostgreSQL データベースに接続し
 | 将来の DB 分離 | Auth Service を独立した DB に分離する際、FK は別 DB 間では設定できない |
 | 障害時の影響局所化 | FK 制約違反で一方のサービスの操作が他方に影響するのを防ぐ |
 
-整合性は API 呼び出しで担保する:
+整合性はサービス間呼び出しで担保する:
 
-- ユーザー作成時: Core API → Auth Service API
-- ユーザー削除時: Core API → Auth Service API
+- ユーザー作成時: Core Service → Auth Service
+- ユーザー削除時: Core Service → Auth Service
 - テナント退会時: `tenant_id` で並列削除
 
 詳細: [技術ノート: マイクロサービス間のデータ整合性](../../06_技術ノート/マイクロサービス間のデータ整合性.md)
@@ -152,7 +152,7 @@ Phase 3完了: users.password_hash ×  auth.credentials ○  （カラム削除�
 
 - ロールバックが容易（credentials を削除するだけ）
 - 段階的な移行が可能（一部機能から Auth Service を使い始められる）
-- 既存の Core API 認証ロジックがそのまま動作
+- 既存の Core Service 認証ロジックがそのまま動作
 
 **リスク**:
 
