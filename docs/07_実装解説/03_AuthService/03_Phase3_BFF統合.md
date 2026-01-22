@@ -41,10 +41,10 @@ BFF の認証フローを Auth Service 経由に変更し、Core API から認�
 
 ```mermaid
 sequenceDiagram
-    participant Browser["ブラウザ"]
+    participant Browser as ブラウザ
     participant BFF
-    participant Core["Core API"]
-    participant Auth["Auth Service"]
+    participant Core as Core API
+    participant Auth as Auth Service
     participant Redis
 
     Browser->>BFF: POST /auth/login
