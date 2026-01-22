@@ -9,13 +9,20 @@
 #
 # ポート番号は .env ファイルで設定（他プロジェクトとの競合回避）
 # 起動前に just setup-env で .env ファイルを作成すること
+#
+# worktree 対応:
+#   プロジェクト名を変えることで、複数のインスタンスを並行起動可能
+#   docker compose -p ringiflow-auth up -d
+#   → コンテナ名: ringiflow-auth-postgres-1, ringiflow-auth-redis-1
+#   → ボリューム名: ringiflow-auth_postgres_data, ringiflow-auth_redis_data
+#   詳細: [並行開発（Worktree）](../../docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
 
 services:
   # PostgreSQL データベース
   # 本番環境: Aurora PostgreSQL Serverless v2
   postgres:
     image: postgres:17-alpine
-    container_name: ringiflow-postgres
+    # container_name は指定しない（プロジェクト名ベースで自動命名）
     environment:
       POSTGRES_USER: ringiflow
       POSTGRES_PASSWORD: ringiflow
@@ -48,7 +55,7 @@ services:
   #   - WebSocket Pub/Sub
   redis:
     image: redis:7-alpine
-    container_name: ringiflow-redis
+    # container_name は指定しない（プロジェクト名ベースで自動命名）
     command: redis-server --appendonly yes
     ports:
       - "${REDIS_PORT}:6379"
@@ -64,8 +71,8 @@ services:
     restart: unless-stopped
 
 # 名前付きボリューム
+# name を指定しない → プロジェクト名がプレフィックスとして付与される
+# 例: ringiflow_postgres_data, ringiflow-auth_postgres_data
 volumes:
   postgres_data:
-    name: ringiflow-postgres-data
   redis_data:
-    name: ringiflow-redis-data
