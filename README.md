@@ -62,6 +62,7 @@ flowchart LR
         CF["CloudFront\n+ WAF"]
         BFF["BFF\n(Rust/axum)"]
         Core["Core Service\n(Rust/axum)"]
+        Auth["Auth Service\n(Rust/axum)"]
 
         subgraph Data
             Aurora["Aurora\nPostgreSQL"]
@@ -72,9 +73,11 @@ flowchart LR
 
     Browser --> CF --> BFF
     BFF --> Core
+    BFF --> Auth
     BFF --> Redis
     Core --> Aurora
     Core --> DynamoDB
+    Auth --> Aurora
 ```
 
 ### 設計パターン
@@ -118,7 +121,7 @@ flowchart LR
 ```
 ringiflow/
 ├── backend/           # Rust バックエンド
-│   ├── apps/          # BFF, Core Service
+│   ├── apps/          # BFF, Core Service, Auth Service
 │   └── crates/        # 共有ライブラリ（domain, infra, shared）
 ├── frontend/          # Elm フロントエンド
 ├── infra/             # Terraform, Docker
