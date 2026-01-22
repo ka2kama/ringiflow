@@ -200,7 +200,7 @@ struct WorkflowResponse {
 | クレート | ポート | 役割 |
 |---------|--------|------|
 | `apps/bff` | 13000 | BFF |
-| `apps/core-api` | 13001 | Core Service |
+| `apps/core-service` | 13001 | Core Service |
 
 ## 関連リソース
 

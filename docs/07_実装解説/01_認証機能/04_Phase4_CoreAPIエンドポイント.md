@@ -19,7 +19,7 @@ HTTP ハンドラで BFF からのリクエストを処理する。
 | 設計書セクション | 対応内容 |
 |----------------|---------|
 | [実装コンポーネント > 実装順序](../../03_詳細設計書/07_認証機能設計.md#実装順序) | Phase 4 の位置づけ |
-| [Core Service 内部 API](../../03_詳細設計書/07_認証機能設計.md#core-api-内部-api) | API 仕様 |
+| [Core Service 内部 API](../../03_詳細設計書/07_認証機能設計.md#core-service-内部-api) | API 仕様 |
 | [パスワード検証フロー](../../03_詳細設計書/07_認証機能設計.md#パスワード検証フロー) | タイミング攻撃対策 |
 | [テスト計画](../../03_詳細設計書/07_認証機能設計.md#テスト計画) | テストケース |
 
@@ -29,15 +29,15 @@ HTTP ハンドラで BFF からのリクエストを処理する。
 
 | ファイル | 責務 |
 |---------|------|
-| [`backend/apps/core-api/src/usecase/auth.rs`](../../../backend/apps/core-api/src/usecase/auth.rs) | AuthUseCase, AuthError |
-| [`backend/apps/core-api/src/usecase/mod.rs`](../../../backend/apps/core-api/src/usecase/mod.rs) | ユースケース層モジュール |
-| [`backend/apps/core-api/src/handler/auth.rs`](../../../backend/apps/core-api/src/handler/auth.rs) | 認証ハンドラ, リクエスト/レスポンス型 |
+| [`backend/apps/core-service/src/usecase/auth.rs`](../../../backend/apps/core-service/src/usecase/auth.rs) | AuthUseCase, AuthError |
+| [`backend/apps/core-service/src/usecase/mod.rs`](../../../backend/apps/core-service/src/usecase/mod.rs) | ユースケース層モジュール |
+| [`backend/apps/core-service/src/handler/auth.rs`](../../../backend/apps/core-service/src/handler/auth.rs) | 認証ハンドラ, リクエスト/レスポンス型 |
 
 ---
 
 ## 実装内容
 
-### AuthUseCase（[`auth.rs:39-120`](../../../backend/apps/core-api/src/usecase/auth.rs#L39-L120)）
+### AuthUseCase（[`auth.rs:39-120`](../../../backend/apps/core-service/src/usecase/auth.rs#L39-L120)）
 
 認証ロジックを提供するユースケース。
 
@@ -61,7 +61,7 @@ usecase.verify_credentials(&tenant_id, &email, &password).await
     // -> Err(AuthError::AuthenticationFailed)
 ```
 
-### AuthError（[`auth.rs:22-34`](../../../backend/apps/core-api/src/usecase/auth.rs#L22-L34)）
+### AuthError（[`auth.rs:22-34`](../../../backend/apps/core-service/src/usecase/auth.rs#L22-L34)）
 
 ```rust
 pub enum AuthError {
@@ -133,7 +133,7 @@ pub enum AuthError {
 ### テスト実行
 
 ```bash
-cd backend && cargo test -p ringiflow-core-api
+cd backend && cargo test -p ringiflow-core-service
 ```
 
 ---
@@ -152,7 +152,7 @@ cd backend && cargo test -p ringiflow-core-api
 
 ## 1. タイミング攻撃対策
 
-**場所:** [`auth.rs:91-97`](../../../backend/apps/core-api/src/usecase/auth.rs#L91-L97)
+**場所:** [`auth.rs:91-97`](../../../backend/apps/core-service/src/usecase/auth.rs#L91-L97)
 
 ```rust
 // ユーザーが存在しない場合、タイミング攻撃対策としてダミー検証を実行
@@ -188,7 +188,7 @@ let Some(user) = user_result else {
 
 ## 2. ジェネリクスを使った依存注入
 
-**場所:** [`auth.rs:39-52`](../../../backend/apps/core-api/src/usecase/auth.rs#L39-L52)
+**場所:** [`auth.rs:39-52`](../../../backend/apps/core-service/src/usecase/auth.rs#L39-L52)
 
 ```rust
 pub struct AuthUseCase<R, P>
@@ -230,7 +230,7 @@ let usecase = AuthUseCase::new(
 
 ## 3. 認証エラーを単一化する理由
 
-**場所:** [`auth.rs:22-34`](../../../backend/apps/core-api/src/usecase/auth.rs#L22-L34)
+**場所:** [`auth.rs:22-34`](../../../backend/apps/core-service/src/usecase/auth.rs#L22-L34)
 
 ```rust
 pub enum AuthError {
@@ -274,7 +274,7 @@ tracing::warn!(
 
 ## 4. ハンドラでのジェネリック型指定
 
-**場所:** [`main.rs:119-125`](../../../backend/apps/core-api/src/main.rs#L119-L125)
+**場所:** [`main.rs:119-125`](../../../backend/apps/core-service/src/main.rs#L119-L125)
 
 ```rust
 .route(
@@ -302,7 +302,7 @@ axum のルーターはハンドラの型を静的に解決する必要がある
 
 ## 5. State の Arc ラップ
 
-**場所:** [`main.rs:112-114`](../../../backend/apps/core-api/src/main.rs#L112-L114)
+**場所:** [`main.rs:112-114`](../../../backend/apps/core-service/src/main.rs#L112-L114)
 
 ```rust
 let auth_state = Arc::new(AuthState {

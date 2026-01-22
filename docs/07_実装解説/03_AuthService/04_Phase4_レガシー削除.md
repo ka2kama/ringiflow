@@ -35,7 +35,7 @@ Phase 2 のマイグレーション（`20260122000002_migrate_password_to_creden
 ### 4. テストの更新
 
 - `user_repository_test.rs`: INSERT 文から `password_hash` を削除
-- `core-api/handler/auth.rs`: テスト用の `User::from_db()` 呼び出しを更新
+- `core-service/handler/auth.rs`: テスト用の `User::from_db()` 呼び出しを更新
 
 ## 設計判断
 
@@ -59,4 +59,4 @@ Phase 2 でパスワードハッシュを `auth.credentials` にコピー済み�
 | `backend/crates/domain/src/user.rs` | `password_hash` 関連の削除 |
 | `backend/crates/infra/src/repository/user_repository.rs` | SQL クエリ更新 |
 | `backend/crates/infra/tests/user_repository_test.rs` | テスト更新 |
-| `backend/apps/core-api/src/handler/auth.rs` | テスト更新 |
+| `backend/apps/core-service/src/handler/auth.rs` | テスト更新 |

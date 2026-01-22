@@ -26,12 +26,12 @@ BFF の認証フローを Auth Service 経由に変更し、Core Service から�
 | [`config.rs`](../../../backend/apps/bff/src/config.rs) | `auth_service_url` 追加 |
 | [`main.rs`](../../../backend/apps/bff/src/main.rs) | Auth Service クライアント初期化追加 |
 
-### Core Service (`backend/apps/core-api`)
+### Core Service (`backend/apps/core-service`)
 
 | ファイル | 変更内容 |
 |---------|---------|
-| [`handler/auth.rs`](../../../backend/apps/core-api/src/handler/auth.rs) | `POST /internal/auth/verify` を削除、`GET /internal/users/by-email` を追加 |
-| [`main.rs`](../../../backend/apps/core-api/src/main.rs) | ルーティング変更、`AuthUseCase` 削除 |
+| [`handler/auth.rs`](../../../backend/apps/core-service/src/handler/auth.rs) | `POST /internal/auth/verify` を削除、`GET /internal/users/by-email` を追加 |
+| [`main.rs`](../../../backend/apps/core-service/src/main.rs) | ルーティング変更、`AuthUseCase` 削除 |
 | `usecase/auth.rs` | 削除 |
 | `usecase.rs` | 削除 |
 
@@ -200,7 +200,7 @@ cargo test --package ringiflow-bff --test auth_integration_test
 ### Core Service ユニットテスト
 
 ```bash
-cargo test --package ringiflow-core-api
+cargo test --package ringiflow-core-service
 ```
 
 | テストケース | 内容 |
@@ -316,7 +316,7 @@ fn create_test_app(
 
 ### 4. Core Service エンドポイントの再設計
 
-**場所**: [`handler/auth.rs:116-192`](../../../backend/apps/core-api/src/handler/auth.rs)
+**場所**: [`handler/auth.rs:116-192`](../../../backend/apps/core-service/src/handler/auth.rs)
 
 **変更前**:
 
