@@ -61,7 +61,7 @@ flowchart LR
     subgraph AWS
         CF["CloudFront\n+ WAF"]
         BFF["BFF\n(Rust/axum)"]
-        Core["Core API\n(Rust/axum)"]
+        Core["Core Service\n(Rust/axum)"]
 
         subgraph Data
             Aurora["Aurora\nPostgreSQL"]
@@ -118,7 +118,7 @@ flowchart LR
 ```
 ringiflow/
 ├── backend/           # Rust バックエンド
-│   ├── apps/          # BFF, Core API
+│   ├── apps/          # BFF, Core Service
 │   └── crates/        # 共有ライブラリ（domain, infra, shared）
 ├── frontend/          # Elm フロントエンド
 ├── infra/             # Terraform, Docker
@@ -169,7 +169,7 @@ just setup
 # 開発サーバー起動
 just dev-deps      # PostgreSQL, Redis を起動
 just dev-bff       # BFF 起動
-just dev-core-api  # Core API 起動
+just dev-core-api  # Core Service 起動
 just dev-web       # フロントエンド起動
 
 # コミット前チェック（lint + test）
