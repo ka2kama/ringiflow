@@ -15,7 +15,7 @@
 #   docker compose -p ringiflow-auth up -d
 #   → コンテナ名: ringiflow-auth-postgres-1, ringiflow-auth-redis-1
 #   → ボリューム名: ringiflow-auth_postgres_data, ringiflow-auth_redis_data
-#   詳細: docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md
+#   詳細: [並行開発（Worktree）](../../docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
 
 services:
   # PostgreSQL データベース
