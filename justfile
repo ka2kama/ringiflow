@@ -230,12 +230,15 @@ worktree-add name branch:
     port_offset=""
     for i in {1..9}; do
         found=false
-        for used in "${used_offsets[@]}"; do
-            if [[ "$used" == "$i" ]]; then
-                found=true
-                break
-            fi
-        done
+        # 配列が空でない場合のみチェック
+        if [[ ${#used_offsets[@]} -gt 0 ]]; then
+            for used in "${used_offsets[@]}"; do
+                if [[ "$used" == "$i" ]]; then
+                    found=true
+                    break
+                fi
+            done
+        fi
         if [[ "$found" == false ]]; then
             port_offset="$i"
             break
