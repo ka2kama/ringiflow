@@ -51,7 +51,7 @@ just test-rust-integration  # DB 接続が必要
 backend/
 ├── apps/
 │   ├── bff/            # BFF（セッション管理、API プロキシ）
-│   ├── core-api/       # Core Service（ビジネスロジック）
+│   ├── core-service/   # Core Service（ビジネスロジック）
 │   └── auth-service/   # Auth Service（認証）
 └── crates/
     ├── domain/         # ドメインモデル

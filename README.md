@@ -172,7 +172,7 @@ just setup
 # 開発サーバー起動
 just dev-deps      # PostgreSQL, Redis を起動
 just dev-bff       # BFF 起動
-just dev-core-api  # Core Service 起動
+just dev-core-service  # Core Service 起動
 just dev-web       # フロントエンド起動
 
 # コミット前チェック（lint + test）
