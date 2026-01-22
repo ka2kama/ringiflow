@@ -24,7 +24,7 @@ graph LR
         API["/api/v1/*"]
     end
 
-    subgraph Core["Core API (内部)"]
+    subgraph Core["Core Service (内部)"]
         Internal["内部 API"]
     end
 
@@ -690,7 +690,7 @@ CSRF トークンを取得する。
 sequenceDiagram
     participant Browser as ブラウザ
     participant BFF as BFF
-    participant Core as Core API
+    participant Core as Core Service
     participant DB as PostgreSQL
     participant Redis as Redis
 
@@ -734,7 +734,7 @@ sequenceDiagram
 sequenceDiagram
     participant Browser as ブラウザ
     participant BFF as BFF
-    participant Core as Core API
+    participant Core as Core Service
     participant DB as PostgreSQL
 
     Browser->>BFF: GET /api/v1/tasks/my

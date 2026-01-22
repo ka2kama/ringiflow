@@ -63,7 +63,7 @@ serde = { workspace = true }
 graph TB
     subgraph "apps/"
         BFF["apps/bff<br/>BFF サービス"]
-        CoreAPI["apps/core-api<br/>Core API"]
+        CoreAPI["apps/core-api<br/>Core Service"]
     end
 
     subgraph "packages/"
@@ -163,7 +163,7 @@ impl UserRepository for PostgresUserRepository {
 }
 ```
 
-### 3. Core API 層で注入
+### 3. Core Service 層で注入
 
 ```rust
 // apps/core-api/src/main.rs
@@ -208,7 +208,7 @@ flowchart TB
 | `domain` | ビジネスロジック、trait 定義 | `shared` のみ |
 | `infra` | trait の実装、外部連携 | `domain`, `shared` |
 | `bff` | BFF サービス | `shared` のみ |
-| `core-api` | Core API、HTTP ハンドラ、DI | 全クレート |
+| `core-api` | Core Service、HTTP ハンドラ、DI | 全クレート |
 
 ## メリット
 

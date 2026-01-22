@@ -151,7 +151,7 @@ builder = builder.secure(true);
 **場所:** [`auth.rs:131`](../../../backend/apps/bff/src/handler/auth.rs#L131)
 
 ```rust
-// TODO(#34): Core API にテナント情報取得エンドポイントを追加して取得
+// TODO(#34): Core Service にテナント情報取得エンドポイントを追加して取得
 tenant_name: "Development Tenant".to_string(),
 ```
 

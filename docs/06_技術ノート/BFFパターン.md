@@ -11,7 +11,7 @@ BFF は、フロントエンド専用のバックエンドサーバーを設け�
 flowchart LR
     Frontend["Frontend<br/>(Elm)"]
     BFF["BFF<br/>(port 3000)"]
-    CoreAPI["Core API<br/>(port 3001)"]
+    CoreAPI["Core Service<br/>(port 3001)"]
     Redis["Redis<br/>(Cache)"]
 
     Frontend --> BFF
@@ -31,7 +31,7 @@ flowchart LR
 | レート制限 | クライアントごとのリクエスト制限 |
 | セキュリティヘッダ | CORS、CSP などのヘッダ付与 |
 
-## Core API の責務
+## Core Service の責務
 
 | 責務 | 説明 |
 |------|------|
@@ -48,19 +48,19 @@ flowchart LR
 flowchart LR
     Browser["ブラウザ"]
     BFF["BFF<br/>(公開)"]
-    CoreAPI["Core API<br/>(内部ネットワーク)"]
+    CoreAPI["Core Service<br/>(内部ネットワーク)"]
 
     Browser --> BFF --> CoreAPI
 ```
 
-- Core API は内部ネットワークに配置
+- Core Service は内部ネットワークに配置
 - 外部からの直接アクセスを防止
 - 攻撃対象を BFF に限定
 
 ### 2. 関心の分離
 
 - BFF: フロントエンド固有の要件（セッション、CSRF、レスポンス形式）
-- Core API: ビジネスロジック（フロントエンドに依存しない）
+- Core Service: ビジネスロジック（フロントエンドに依存しない）
 
 ### 3. 独立したスケーリング
 
@@ -68,22 +68,22 @@ flowchart LR
 flowchart TB
     subgraph "高負荷時"
         BFF1["BFF x3"]
-        Core1["Core API x5"]
+        Core1["Core Service x5"]
     end
 
     subgraph "通常時"
         BFF2["BFF x1"]
-        Core2["Core API x2"]
+        Core2["Core Service x2"]
     end
 ```
 
-- BFF と Core API を別々にスケールアウト可能
+- BFF と Core Service を別々にスケールアウト可能
 - 負荷特性に応じたリソース配分
 
 ### 4. 障害分離
 
-- BFF がダウンしても Core API は影響を受けない
-- Core API がダウンしても BFF はエラーレスポンスを返せる
+- BFF がダウンしても Core Service は影響を受けない
+- Core Service がダウンしても BFF はエラーレスポンスを返せる
 
 ## セッション管理
 
@@ -91,8 +91,8 @@ BFF は HTTPOnly Cookie + Redis でセッションを管理する。
 
 ```
 1. ブラウザ → BFF: POST /auth/login
-2. BFF → Core API: 認証リクエスト
-3. Core API → BFF: ユーザー情報
+2. BFF → Core Service: 認証リクエスト
+3. Core Service → BFF: ユーザー情報
 4. BFF → Redis: セッション保存
 5. BFF → ブラウザ: Set-Cookie: session_id=xxx; HttpOnly; Secure
 ```
@@ -177,7 +177,7 @@ async fn get_dashboard() -> Result<Json<DashboardData>, ApiError> {
 フロントエンドに最適な形式にデータを変換する。
 
 ```rust
-// Core API のレスポンス
+// Core Service のレスポンス
 struct InternalWorkflow {
     id: Uuid,
     definition_id: Uuid,
@@ -200,7 +200,7 @@ struct WorkflowResponse {
 | クレート | ポート | 役割 |
 |---------|--------|------|
 | `apps/bff` | 13000 | BFF |
-| `apps/core-api` | 13001 | Core API |
+| `apps/core-api` | 13001 | Core Service |
 
 ## 関連リソース
 

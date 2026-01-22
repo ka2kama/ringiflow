@@ -1,8 +1,8 @@
-# Phase 3: BFF 統合・Core API 整理
+# Phase 3: BFF 統合・Core Service 整理
 
 ## 概要
 
-BFF の認証フローを Auth Service 経由に変更し、Core API から認証関連のコードを削除する。これにより認証ドメインが Auth Service に集約される。
+BFF の認証フローを Auth Service 経由に変更し、Core Service から認証関連のコードを削除する。これにより認証ドメインが Auth Service に集約される。
 
 ### 対応 Issue
 
@@ -26,7 +26,7 @@ BFF の認証フローを Auth Service 経由に変更し、Core API から認�
 | [`config.rs`](../../../backend/apps/bff/src/config.rs) | `auth_service_url` 追加 |
 | [`main.rs`](../../../backend/apps/bff/src/main.rs) | Auth Service クライアント初期化追加 |
 
-### Core API (`backend/apps/core-api`)
+### Core Service (`backend/apps/core-api`)
 
 | ファイル | 変更内容 |
 |---------|---------|
@@ -43,7 +43,7 @@ BFF の認証フローを Auth Service 経由に変更し、Core API から認�
 sequenceDiagram
     participant Browser as ブラウザ
     participant BFF
-    participant Core as Core API
+    participant Core as Core Service
     participant Auth as Auth Service
     participant Redis
 
@@ -78,10 +78,10 @@ sequenceDiagram
 
 | 項目 | 変更前 | 変更後 |
 |-----|--------|--------|
-| 認証エンドポイント | Core API `/internal/auth/verify` | Auth Service `/internal/auth/verify` |
+| 認証エンドポイント | Core Service `/internal/auth/verify` | Auth Service `/internal/auth/verify` |
 | ユーザー検索 | `verify_credentials` 内で実行 | `GET /internal/users/by-email` |
-| パスワード検証 | Core API 内で実行 | Auth Service で実行 |
-| 責務 | Core API が認証も担当 | 認証は Auth Service に集約 |
+| パスワード検証 | Core Service 内で実行 | Auth Service で実行 |
+| 責務 | Core Service が認証も担当 | 認証は Auth Service に集約 |
 
 ### 主要な型の変更
 
@@ -154,7 +154,7 @@ pub trait AuthServiceClient: Send + Sync {
 }
 ```
 
-### Core API の変更
+### Core Service の変更
 
 #### 削除したエンドポイント
 
@@ -181,7 +181,7 @@ cargo test --package ringiflow-bff --lib
 | `test_login_成功時にセッションcookieが設定される` | Cookie 設定確認 |
 | `test_login_成功時にユーザー情報が返る` | レスポンス確認 |
 | `test_login_パスワード不一致で401` | Auth Service 失敗時 |
-| `test_login_ユーザー不存在で401` | Core API 404 時 |
+| `test_login_ユーザー不存在で401` | Core Service 404 時 |
 
 ### BFF 統合テスト
 
@@ -194,10 +194,10 @@ cargo test --package ringiflow-bff --test auth_integration_test
 |-------------|------|
 | `test_ログインからログアウトまでの一連フロー` | E2E フロー |
 | `test_不正なパスワードでログインできない` | Auth Service 認証失敗 |
-| `test_存在しないメールでログインできない` | Core API 404 |
+| `test_存在しないメールでログインできない` | Core Service 404 |
 | `test_非アクティブユーザーはログインできない` | Auth Service 認証失敗 |
 
-### Core API ユニットテスト
+### Core Service ユニットテスト
 
 ```bash
 cargo test --package ringiflow-core-api
@@ -253,12 +253,12 @@ Err(CoreApiError::UserNotFound) => {
 
 認証フローを 2 つの独立したステップに分離:
 
-1. **ユーザー検索**（Core API）: メールアドレスからユーザーを特定
+1. **ユーザー検索**（Core Service）: メールアドレスからユーザーを特定
 2. **パスワード検証**（Auth Service）: ユーザー ID でパスワードを検証
 
 これにより:
 
-- Core API は「ユーザー情報管理」に専念
+- Core Service は「ユーザー情報管理」に専念
 - Auth Service は「認証」に専念
 - 将来の SSO/MFA 対応時も Auth Service のみ変更
 
@@ -266,7 +266,7 @@ Err(CoreApiError::UserNotFound) => {
 
 ```
 BFF
- ├── Core API: "このメールアドレスのユーザーは誰？"
+ ├── Core Service: "このメールアドレスのユーザーは誰？"
  └── Auth Service: "このユーザー ID とパスワードは正しい？"
 ```
 
@@ -314,7 +314,7 @@ fn create_test_app(
 }
 ```
 
-### 4. Core API エンドポイントの再設計
+### 4. Core Service エンドポイントの再設計
 
 **場所**: [`handler/auth.rs:116-192`](../../../backend/apps/core-api/src/handler/auth.rs)
 
@@ -343,15 +343,15 @@ async fn get_user_by_email<R>(
 
 **なぜこの設計か**:
 
-1. **単一責任**: Core API はユーザー情報の管理のみ
+1. **単一責任**: Core Service はユーザー情報の管理のみ
 2. **RESTful**: GET はリソースの取得、パスワードは送信しない
-3. **セキュリティ**: パスワードが Core API を経由しなくなる
+3. **セキュリティ**: パスワードが Core Service を経由しなくなる
 
 **エンドポイント設計**:
 
 | 設計 | エンドポイント | メリット | デメリット |
 |------|--------------|---------|-----------|
-| 変更前 | `POST /internal/auth/verify` | 1 回の呼び出し | Core API がパスワードを扱う |
+| 変更前 | `POST /internal/auth/verify` | 1 回の呼び出し | Core Service がパスワードを扱う |
 | **変更後** | `GET /internal/users/by-email` | 責務が明確 | 2 回の呼び出しが必要 |
 
 ## 関連ドキュメント
