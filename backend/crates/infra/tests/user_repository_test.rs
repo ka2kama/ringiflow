@@ -36,16 +36,16 @@ async fn setup_test_data(pool: &PgPool) -> (TenantId, UserId) {
 
    // ユーザー作成
    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, email, name, password_hash, status)
-        VALUES ($1, $2, 'test@example.com', 'Test User', '$argon2id$v=19$m=65536,t=1,p=1$dGVzdA$dGVzdA', 'active')
+      r#"
+        INSERT INTO users (id, tenant_id, email, name, status)
+        VALUES ($1, $2, 'test@example.com', 'Test User', 'active')
         "#,
-        user_id.as_uuid(),
-        tenant_id.as_uuid()
-    )
-    .execute(pool)
-    .await
-    .expect("ユーザー作成に失敗");
+      user_id.as_uuid(),
+      tenant_id.as_uuid()
+   )
+   .execute(pool)
+   .await
+   .expect("ユーザー作成に失敗");
 
    (tenant_id, user_id)
 }

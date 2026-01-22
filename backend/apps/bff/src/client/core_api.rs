@@ -4,23 +4,19 @@
 //!
 //! ## エンドポイント
 //!
-//! - `POST /internal/auth/verify` - 認証情報を検証
+//! - `GET /internal/users/by-email` - メールアドレスでユーザーを検索
 //! - `GET /internal/users/{user_id}` - ユーザー情報を取得
 //!
-//! 詳細: [07_認証機能設計.md](../../../../docs/03_詳細設計書/07_認証機能設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use thiserror::Error;
 use uuid::Uuid;
 
 /// Core API クライアントエラー
 #[derive(Debug, Clone, Error)]
 pub enum CoreApiError {
-   /// 認証失敗（401）
-   #[error("認証に失敗しました")]
-   AuthenticationFailed,
-
    /// ユーザーが見つからない（404）
    #[error("ユーザーが見つかりません")]
    UserNotFound,
@@ -40,22 +36,7 @@ impl From<reqwest::Error> for CoreApiError {
    }
 }
 
-// --- リクエスト/レスポンス型 ---
-
-/// 認証検証リクエスト
-#[derive(Debug, Serialize)]
-pub struct VerifyRequest {
-   pub tenant_id: Uuid,
-   pub email:     String,
-   pub password:  String,
-}
-
-/// 認証検証レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct VerifyResponse {
-   pub user:  UserResponse,
-   pub roles: Vec<RoleResponse>,
-}
+// --- レスポンス型 ---
 
 /// ユーザー情報レスポンス
 #[derive(Debug, Clone, Deserialize)]
@@ -67,12 +48,10 @@ pub struct UserResponse {
    pub status:    String,
 }
 
-/// ロール情報レスポンス
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct RoleResponse {
-   pub id:          Uuid,
-   pub name:        String,
-   pub permissions: Vec<String>,
+/// メールアドレス検索レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetUserByEmailResponse {
+   pub user: UserResponse,
 }
 
 /// ユーザー詳細レスポンス（権限付き）
@@ -88,25 +67,23 @@ pub struct UserWithPermissionsResponse {
 /// テスト時にスタブを使用できるようトレイトで定義。
 #[async_trait]
 pub trait CoreApiClient: Send + Sync {
-   /// 認証情報を検証する
+   /// メールアドレスでユーザーを検索する
    ///
-   /// Core API の `POST /internal/auth/verify` を呼び出す。
+   /// Core API の `GET /internal/users/by-email` を呼び出す。
    ///
    /// # 引数
    ///
    /// - `tenant_id`: テナント ID
    /// - `email`: メールアドレス
-   /// - `password`: パスワード（平文）
    ///
    /// # 戻り値
    ///
-   /// 認証成功時は `VerifyResponse`、失敗時は `CoreApiError`
-   async fn verify_credentials(
+   /// ユーザーが存在すれば `GetUserByEmailResponse`、なければ `CoreApiError::UserNotFound`
+   async fn get_user_by_email(
       &self,
       tenant_id: Uuid,
       email: &str,
-      password: &str,
-   ) -> Result<VerifyResponse, CoreApiError>;
+   ) -> Result<GetUserByEmailResponse, CoreApiError>;
 
    /// ユーザー情報を取得する
    ///
@@ -144,27 +121,26 @@ impl CoreApiClientImpl {
 
 #[async_trait]
 impl CoreApiClient for CoreApiClientImpl {
-   async fn verify_credentials(
+   async fn get_user_by_email(
       &self,
       tenant_id: Uuid,
       email: &str,
-      password: &str,
-   ) -> Result<VerifyResponse, CoreApiError> {
-      let url = format!("{}/internal/auth/verify", self.base_url);
-      let request = VerifyRequest {
-         tenant_id,
-         email: email.to_string(),
-         password: password.to_string(),
-      };
+   ) -> Result<GetUserByEmailResponse, CoreApiError> {
+      let url = format!(
+         "{}/internal/users/by-email?email={}&tenant_id={}",
+         self.base_url,
+         urlencoding::encode(email),
+         tenant_id
+      );
 
-      let response = self.client.post(&url).json(&request).send().await?;
+      let response = self.client.get(&url).send().await?;
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<VerifyResponse>().await?;
+            let body = response.json::<GetUserByEmailResponse>().await?;
             Ok(body)
          }
-         reqwest::StatusCode::UNAUTHORIZED => Err(CoreApiError::AuthenticationFailed),
+         reqwest::StatusCode::NOT_FOUND => Err(CoreApiError::UserNotFound),
          status => {
             let body = response.text().await.unwrap_or_default();
             Err(CoreApiError::Unexpected(format!(
@@ -200,6 +176,4 @@ impl CoreApiClient for CoreApiClientImpl {
 #[cfg(test)]
 mod tests {
    // 統合テストで実際の Core API との通信をテストする
-   // ここではユニットテストとしてスタブを使用した認証ハンドラのテストは
-   // handler/auth.rs で行う
 }

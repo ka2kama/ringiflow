@@ -1,23 +1,23 @@
-//! # Core API サーバー
+//! # Auth Service サーバー
 //!
-//! ビジネスロジックを実行する内部 API サーバー。
+//! 認証処理を担当する内部 API サーバー。
 //!
 //! ## 役割
 //!
-//! Core API はビジネスロジックの実行とデータの永続化を担当する:
+//! Auth Service は認証ドメインを専門的に担当する:
 //!
-//! - **ビジネスロジック**: ワークフロー実行、承認処理、タスク管理
-//! - **データ永続化**: PostgreSQL へのエンティティ保存
-//! - **ドメインイベント**: イベント駆動処理のトリガー（将来）
+//! - **パスワード認証**: credentials テーブルを使用したパスワード検証
+//! - **認証情報管理**: パスワード、将来の TOTP/OIDC/SAML 認証情報の CRUD
+//! - **タイミング攻撃対策**: ユーザー存在確認を防ぐためのダミー検証
 //!
 //! ## アクセス制御
 //!
-//! Core API は内部ネットワークからのみアクセス可能とする。
+//! Auth Service は内部ネットワークからのみアクセス可能とする。
 //! 外部からのリクエストは BFF を経由する必要がある。
 //!
 //! ```text
 //! ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-//! │   Internet   │──X──│   Core API   │     │   Database   │
+//! │   Internet   │──X──│ Auth Service │     │   Database   │
 //! └──────────────┘     └──────────────┘     └──────────────┘
 //!                             ↑
 //!                      内部ネットワークのみ
@@ -31,46 +31,44 @@
 //!
 //! | 変数名 | 必須 | 説明 |
 //! |--------|------|------|
-//! | `CORE_API_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
-//! | `CORE_API_PORT` | **Yes** | ポート番号 |
+//! | `AUTH_SERVICE_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
+//! | `AUTH_SERVICE_PORT` | **Yes** | ポート番号 |
 //! | `DATABASE_URL` | **Yes** | PostgreSQL 接続 URL |
 //!
 //! ## 起動方法
 //!
 //! ```bash
 //! # 開発環境
-//! cargo run -p ringiflow-core-api
+//! cargo run -p ringiflow-auth-service
 //!
 //! # 本番環境
-//! CORE_API_PORT=3001 DATABASE_URL=postgres://... cargo run -p ringiflow-core-api --release
+//! AUTH_SERVICE_PORT=13002 DATABASE_URL=postgres://... cargo run -p ringiflow-auth-service --release
 //! ```
 //!
-//! ## BFF との違い
+//! ## 設計詳細
 //!
-//! | 項目 | BFF | Core API |
-//! |------|-----|----------|
-//! | 目的 | フロントエンド向け API | 内部サービス向け API |
-//! | 認証 | セッション管理 | サービス間認証（将来） |
-//! | レスポンス | UI 最適化 | 正規化されたデータ |
-//! | キャッシュ | Redis キャッシュ | なし（DB 直接アクセス） |
+//! → [Auth Service 設計](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 mod config;
 mod error;
 mod handler;
+mod usecase;
 
 use std::{net::SocketAddr, sync::Arc};
 
-use axum::{Router, routing::get};
-use config::CoreApiConfig;
-use handler::{UserState, get_user, get_user_by_email, health_check};
-use ringiflow_infra::{db, repository::user_repository::PostgresUserRepository};
+use axum::{
+   Router,
+   routing::{delete, get, post},
+};
+use config::AuthServiceConfig;
+use handler::{AuthState, create_credentials, delete_credentials, health_check, verify};
+use ringiflow_infra::{Argon2PasswordChecker, db, repository::PostgresCredentialsRepository};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use usecase::AuthUseCaseImpl;
 
-/// Core API サーバーのエントリーポイント
-///
-/// BFF とは独立した設定（`CORE_API_HOST`, `CORE_API_PORT`）を使用する。
+/// Auth Service サーバーのエントリーポイント
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
    // .env ファイルを読み込む（存在する場合）
@@ -86,10 +84,10 @@ async fn main() -> anyhow::Result<()> {
       .init();
 
    // 設定読み込み
-   let config = CoreApiConfig::from_env().expect("設定の読み込みに失敗しました");
+   let config = AuthServiceConfig::from_env().expect("設定の読み込みに失敗しました");
 
    tracing::info!(
-      "Core API サーバーを起動します: {}:{}",
+      "Auth Service サーバーを起動します: {}:{}",
       config.host,
       config.port
    );
@@ -101,21 +99,23 @@ async fn main() -> anyhow::Result<()> {
    tracing::info!("データベースに接続しました");
 
    // 依存コンポーネントを初期化
-   let user_repository = PostgresUserRepository::new(pool);
-   let user_state = Arc::new(UserState { user_repository });
+   let credentials_repository = PostgresCredentialsRepository::new(pool);
+   let password_checker = Argon2PasswordChecker::new();
+   let auth_usecase = AuthUseCaseImpl::new(credentials_repository, password_checker);
+   let auth_state = Arc::new(AuthState {
+      usecase: auth_usecase,
+   });
 
    // ルーター構築
    let app = Router::new()
       .route("/health", get(health_check))
+      .route("/internal/auth/verify", post(verify))
+      .route("/internal/auth/credentials", post(create_credentials))
       .route(
-         "/internal/users/by-email",
-         get(get_user_by_email::<PostgresUserRepository>),
+         "/internal/auth/credentials/{tenant_id}/{user_id}",
+         delete(delete_credentials),
       )
-      .route(
-         "/internal/users/{user_id}",
-         get(get_user::<PostgresUserRepository>),
-      )
-      .with_state(user_state)
+      .with_state(auth_state)
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動
@@ -124,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
       .expect("アドレスのパースに失敗しました");
 
    let listener = TcpListener::bind(addr).await?;
-   tracing::info!("Core API サーバーが起動しました: {}", addr);
+   tracing::info!("Auth Service サーバーが起動しました: {}", addr);
 
    axum::serve(listener, app).await?;
 

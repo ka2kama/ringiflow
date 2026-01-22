@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "apps/auth-service",
     "apps/bff",
     "apps/core-api",
     "crates/domain",
@@ -52,6 +53,7 @@ uuid = { version = "1", features = ["v4", "v7", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 time = "0.3"
 dotenvy = "0.15"
+urlencoding = "2.1"
 
 # パスワード検証
 argon2 = "0.5"

@@ -18,9 +18,10 @@ default:
 setup: check-tools setup-env setup-hooks dev-deps setup-db setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
-    @echo "  - just dev-bff      : BFF 起動"
-    @echo "  - just dev-core-api : Core API 起動"
-    @echo "  - just dev-web      : フロントエンド起動"
+    @echo "  - just dev-bff         : BFF 起動"
+    @echo "  - just dev-core-api    : Core API 起動"
+    @echo "  - just dev-auth-service: Auth Service 起動"
+    @echo "  - just dev-web         : フロントエンド起動"
 
 # 開発ツールのインストール確認
 check-tools:
@@ -95,6 +96,10 @@ dev-bff:
 # Core API 開発サーバーを起動（ポート: $CORE_API_PORT）
 dev-core-api:
     cd backend && cargo run -p ringiflow-core-api
+
+# Auth Service 開発サーバーを起動（ポート: $AUTH_SERVICE_PORT）
+dev-auth-service:
+    cd backend && cargo run -p ringiflow-auth-service
 
 # フロントエンド開発サーバーを起動
 dev-web:
@@ -175,8 +180,13 @@ test-elm:
 # 全チェック
 # =============================================================================
 
-# プッシュ前の全チェック（リント、テスト）
-check-all: lint test
+# プッシュ前の全チェック（リント、テスト、SQLx キャッシュ同期）
+check-all: lint test sqlx-check
+
+# SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
+# --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック
+sqlx-check:
+    cd backend && cargo sqlx prepare --check --workspace -- --all-targets
 
 # =============================================================================
 # クリーンアップ

@@ -29,7 +29,6 @@
 //!    TenantId::new(),
 //!    Email::new("user@example.com").unwrap(),
 //!    UserName::new("山田太郎").unwrap(),
-//!    Some("$argon2id$...".to_string()),
 //! );
 //!
 //! // ステータス確認
@@ -196,11 +195,11 @@ impl std::fmt::Display for UserStatus {
 ///
 /// システムのユーザーを表現する。テナントに所属し、
 /// メール/パスワード認証または SSO 認証でログインする。
+/// 認証情報（パスワードハッシュ等）は Auth Service の `auth.credentials` テーブルで管理。
 ///
 /// # 不変条件
 ///
 /// - `email` はテナント内で一意
-/// - `password_hash` は SSO ユーザーの場合のみ None
 /// - `status` が `Deleted` の場合、ログイン不可
 #[derive(Debug, Clone)]
 pub struct User {
@@ -208,7 +207,6 @@ pub struct User {
    tenant_id: TenantId,
    email: Email,
    name: UserName,
-   password_hash: Option<String>,
    status: UserStatus,
    last_login_at: Option<DateTime<Utc>>,
    created_at: DateTime<Utc>,
@@ -223,25 +221,18 @@ impl User {
    /// - `tenant_id`: テナント ID
    /// - `email`: メールアドレス
    /// - `name`: 表示名
-   /// - `password_hash`: パスワードハッシュ（SSO の場合は None）
    ///
    /// # 不変条件
    ///
    /// - 作成時のステータスは `Active`
    /// - `last_login_at` は None
-   pub fn new(
-      tenant_id: TenantId,
-      email: Email,
-      name: UserName,
-      password_hash: Option<String>,
-   ) -> Self {
+   pub fn new(tenant_id: TenantId, email: Email, name: UserName) -> Self {
       let now = Utc::now();
       Self {
          id: UserId::new(),
          tenant_id,
          email,
          name,
-         password_hash,
          status: UserStatus::Active,
          last_login_at: None,
          created_at: now,
@@ -256,7 +247,6 @@ impl User {
       tenant_id: TenantId,
       email: Email,
       name: UserName,
-      password_hash: Option<String>,
       status: UserStatus,
       last_login_at: Option<DateTime<Utc>>,
       created_at: DateTime<Utc>,
@@ -267,7 +257,6 @@ impl User {
          tenant_id,
          email,
          name,
-         password_hash,
          status,
          last_login_at,
          created_at,
@@ -291,10 +280,6 @@ impl User {
 
    pub fn name(&self) -> &UserName {
       &self.name
-   }
-
-   pub fn password_hash(&self) -> Option<&str> {
-      self.password_hash.as_deref()
    }
 
    pub fn status(&self) -> UserStatus {
@@ -345,15 +330,6 @@ impl User {
       }
    }
 
-   /// パスワードハッシュを更新した新しいインスタンスを返す
-   pub fn with_password_hash(self, password_hash: String) -> Self {
-      Self {
-         password_hash: Some(password_hash),
-         updated_at: Utc::now(),
-         ..self
-      }
-   }
-
    /// 論理削除した新しいインスタンスを返す
    pub fn deleted(self) -> Self {
       Self {
@@ -378,7 +354,7 @@ mod tests {
       let tenant_id = TenantId::new();
       let email = Email::new("user@example.com").unwrap();
       let name = UserName::new("Test User").unwrap();
-      User::new(tenant_id, email, name, None)
+      User::new(tenant_id, email, name)
    }
 
    // Email のテスト

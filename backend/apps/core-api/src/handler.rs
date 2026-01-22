@@ -16,5 +16,5 @@
 pub mod auth;
 pub mod health;
 
-pub use auth::{AuthState, get_user, verify};
+pub use auth::{UserState, get_user, get_user_by_email};
 pub use health::health_check;
