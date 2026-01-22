@@ -32,6 +32,7 @@ BASE_POSTGRES_PORT=15432
 BASE_REDIS_PORT=16379
 BASE_BFF_PORT=13000
 BASE_CORE_API_PORT=13001
+BASE_AUTH_SERVICE_PORT=13002
 BASE_VITE_PORT=15173
 
 # オフセット計算（100 単位）
@@ -41,6 +42,7 @@ POSTGRES_PORT=$((BASE_POSTGRES_PORT + OFFSET))
 REDIS_PORT=$((BASE_REDIS_PORT + OFFSET))
 BFF_PORT=$((BASE_BFF_PORT + OFFSET))
 CORE_API_PORT=$((BASE_CORE_API_PORT + OFFSET))
+AUTH_SERVICE_PORT=$((BASE_AUTH_SERVICE_PORT + OFFSET))
 VITE_PORT=$((BASE_VITE_PORT + OFFSET))
 
 # ルート .env を生成
@@ -94,9 +96,20 @@ CORE_API_HOST=0.0.0.0
 CORE_API_PORT=$CORE_API_PORT
 
 # -----------------------------------------------------------------------------
+# Auth Service サーバー設定
+# -----------------------------------------------------------------------------
+AUTH_SERVICE_HOST=0.0.0.0
+AUTH_SERVICE_PORT=$AUTH_SERVICE_PORT
+
+# -----------------------------------------------------------------------------
 # BFF から Core API への接続
 # -----------------------------------------------------------------------------
 CORE_API_URL=http://localhost:$CORE_API_PORT
+
+# -----------------------------------------------------------------------------
+# BFF から Auth Service への接続
+# -----------------------------------------------------------------------------
+AUTH_SERVICE_URL=http://localhost:$AUTH_SERVICE_PORT
 
 # -----------------------------------------------------------------------------
 # ログ・環境設定
@@ -106,8 +119,9 @@ ENVIRONMENT=development
 EOF
 
 echo "✓ .env ファイルを生成しました（ポートオフセット: $PORT_OFFSET）"
-echo "  PostgreSQL: $POSTGRES_PORT"
-echo "  Redis:      $REDIS_PORT"
-echo "  BFF:        $BFF_PORT"
-echo "  Core API:   $CORE_API_PORT"
-echo "  Vite:       $VITE_PORT"
+echo "  PostgreSQL:   $POSTGRES_PORT"
+echo "  Redis:        $REDIS_PORT"
+echo "  BFF:          $BFF_PORT"
+echo "  Core API:     $CORE_API_PORT"
+echo "  Auth Service: $AUTH_SERVICE_PORT"
+echo "  Vite:         $VITE_PORT"
