@@ -240,11 +240,27 @@ git commit -m "#34 UserRepository: find_by_email を実装"
 
 lefthook により、ブランチ名が `feature/34-xxx` 形式なら Issue 番号は自動付与される。
 
-### PR 作成とマージ
+### PR 作成（Draft）
 
 ```bash
-just check-all  # コミット前に必須
-gh pr create --title "#34 ログイン機能を実装" --body "Closes #34"
+# 空コミットで Draft PR を作成
+git commit --allow-empty -m "#34 WIP: ログイン機能を実装"
+git push -u origin HEAD
+gh pr create --draft --title "#34 ログイン機能を実装" --body "Closes #34"
+```
+
+### Ready for Review
+
+```bash
+just check-all  # lint + test
+gh pr ready     # Draft を解除
+```
+
+→ 詳細チェックリスト: [手順書: Ready for Review](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-ready-for-review)
+
+### マージ
+
+```bash
 gh pr merge --squash --delete-branch
 just clean-branches  # マージ後のローカルブランチ削除
 ```
