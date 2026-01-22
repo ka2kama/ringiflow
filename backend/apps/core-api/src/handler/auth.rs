@@ -72,9 +72,8 @@ pub struct GetUserByEmailResponse {
 }
 
 /// ロール情報レスポンス
-///
-/// FIXME: `#[allow(dead_code)]` を解消する
-///        （ユーザー取得 API でロール詳細を返すか、構造体ごと削除する）
+// FIXME: `#[allow(dead_code)]` を解消する
+//        （ユーザー取得 API でロール詳細を返すか、構造体ごと削除する）
 #[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct RoleResponse {
