@@ -56,13 +56,24 @@ just worktree-add auth feature/auth
 ```bash
 cd ../ringiflow-auth
 
+# 初回のみ: 依存関係をインストール
+cd frontend && pnpm install && cd ..
+
 # 依存サービスを起動（独自のコンテナ・ボリューム）
 just dev-deps
 
+# DB マイグレーションを適用（初回のみ）
+just setup-db
+
 # サーバーを起動
-just dev-bff    # ポート 13100
+just dev-bff    # ポート 13100（初回は cargo build が走る）
 just dev-web    # ポート 15273
 ```
+
+注意: worktree は独立したディレクトリのため、以下が共有されない:
+- `node_modules/`: 初回に `pnpm install` が必要
+- `target/`: 初回に Rust のビルドが走る（数分かかる）
+- DB データ: 初回に `just setup-db` でマイグレーションが必要
 
 ### 並行作業の例
 
