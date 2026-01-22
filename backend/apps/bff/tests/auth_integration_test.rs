@@ -38,8 +38,8 @@ use ringiflow_bff::{
    client::{
       AuthServiceClient,
       AuthServiceError,
-      CoreApiClient,
-      CoreApiError,
+      CoreServiceClient,
+      CoreServiceError,
       GetUserByEmailResponse,
       UserResponse,
       UserWithPermissionsResponse,
@@ -67,16 +67,16 @@ fn test_user_id() -> Uuid {
    Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap()
 }
 
-// --- Core API スタブ ---
+// --- Core Service スタブ ---
 
-/// Core API スタブの設定
+/// Core Service スタブの設定
 #[derive(Clone)]
-struct CoreApiStubConfig {
+struct CoreServiceStubConfig {
    /// ユーザーが存在するか
    user_exists: bool,
 }
 
-impl CoreApiStubConfig {
+impl CoreServiceStubConfig {
    fn success() -> Self {
       Self { user_exists: true }
    }
@@ -88,7 +88,7 @@ impl CoreApiStubConfig {
    /// 非アクティブユーザー用
    ///
    /// 現在の設計では、ユーザーのアクティブ状態は Auth Service 側で
-   /// 認証情報の有効性としてチェックされる。ここでは Core API が
+   /// 認証情報の有効性としてチェックされる。ここでは Core Service が
    /// ユーザーを返すが、Auth Service で認証が失敗するシナリオを
    /// テストするために使用する。
    fn user_inactive() -> Self {
@@ -97,13 +97,13 @@ impl CoreApiStubConfig {
    }
 }
 
-/// テスト用 Core API クライアント
-struct StubCoreApiClient {
-   config: CoreApiStubConfig,
+/// テスト用 Core Service クライアント
+struct StubCoreServiceClient {
+   config: CoreServiceStubConfig,
 }
 
-impl StubCoreApiClient {
-   fn new(config: CoreApiStubConfig) -> Self {
+impl StubCoreServiceClient {
+   fn new(config: CoreServiceStubConfig) -> Self {
       Self { config }
    }
 
@@ -119,14 +119,14 @@ impl StubCoreApiClient {
 }
 
 #[async_trait]
-impl CoreApiClient for StubCoreApiClient {
+impl CoreServiceClient for StubCoreServiceClient {
    async fn get_user_by_email(
       &self,
       _tenant_id: Uuid,
       _email: &str,
-   ) -> Result<GetUserByEmailResponse, CoreApiError> {
+   ) -> Result<GetUserByEmailResponse, CoreServiceError> {
       if !self.config.user_exists {
-         return Err(CoreApiError::UserNotFound);
+         return Err(CoreServiceError::UserNotFound);
       }
 
       Ok(GetUserByEmailResponse {
@@ -134,9 +134,12 @@ impl CoreApiClient for StubCoreApiClient {
       })
    }
 
-   async fn get_user(&self, _user_id: Uuid) -> Result<UserWithPermissionsResponse, CoreApiError> {
+   async fn get_user(
+      &self,
+      _user_id: Uuid,
+   ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
       if !self.config.user_exists {
-         return Err(CoreApiError::UserNotFound);
+         return Err(CoreServiceError::UserNotFound);
       }
 
       Ok(UserWithPermissionsResponse {
@@ -202,11 +205,11 @@ impl AuthServiceClient for StubAuthServiceClient {
 
 /// テスト用アプリケーションを作成
 async fn create_test_app(
-   core_api_config: CoreApiStubConfig,
+   core_service_config: CoreServiceStubConfig,
    auth_service_config: AuthServiceStubConfig,
 ) -> (
    Router,
-   Arc<AuthState<StubCoreApiClient, StubAuthServiceClient, RedisSessionManager>>,
+   Arc<AuthState<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>>,
 ) {
    let session_manager = RedisSessionManager::new(&redis_url())
       .await
@@ -218,7 +221,7 @@ async fn create_test_app(
    };
 
    let state = Arc::new(AuthState {
-      core_api_client: StubCoreApiClient::new(core_api_config),
+      core_service_client: StubCoreServiceClient::new(core_service_config),
       auth_service_client: StubAuthServiceClient::new(auth_service_config),
       session_manager,
    });
@@ -226,19 +229,19 @@ async fn create_test_app(
    let app = Router::new()
       .route(
          "/auth/login",
-         post(login::<StubCoreApiClient, StubAuthServiceClient, RedisSessionManager>),
+         post(login::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .route(
          "/auth/logout",
-         post(logout::<StubCoreApiClient, StubAuthServiceClient, RedisSessionManager>),
+         post(logout::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .route(
          "/auth/me",
-         get(me::<StubCoreApiClient, StubAuthServiceClient, RedisSessionManager>),
+         get(me::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .route(
          "/auth/csrf",
-         get(csrf::<StubCoreApiClient, StubAuthServiceClient, RedisSessionManager>),
+         get(csrf::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .with_state(state.clone())
       .layer(from_fn_with_state(
@@ -313,7 +316,7 @@ fn extract_session_id(set_cookie: &str) -> Option<String> {
 async fn test_ログインからログアウトまでの一連フロー() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -392,7 +395,7 @@ async fn test_ログインからログアウトまでの一連フロー() {
 async fn test_ログアウト後にauthmeで401() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -440,7 +443,7 @@ async fn test_ログアウト後にauthmeで401() {
 async fn test_不正なパスワードでログインできない() {
    // Given
    let (app, _state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::auth_failed(),
    )
    .await;
@@ -462,7 +465,7 @@ async fn test_不正なパスワードでログインできない() {
 async fn test_存在しないメールでログインできない() {
    // Given
    let (app, _state) = create_test_app(
-      CoreApiStubConfig::user_not_found(),
+      CoreServiceStubConfig::user_not_found(),
       AuthServiceStubConfig::auth_failed(),
    )
    .await;
@@ -481,7 +484,7 @@ async fn test_存在しないメールでログインできない() {
 async fn test_非アクティブユーザーはログインできない() {
    // Given
    let (app, _state) = create_test_app(
-      CoreApiStubConfig::user_inactive(),
+      CoreServiceStubConfig::user_inactive(),
       AuthServiceStubConfig::auth_failed(),
    )
    .await;
@@ -500,7 +503,7 @@ async fn test_非アクティブユーザーはログインできない() {
 async fn test_未認証状態でauthmeにアクセスすると401() {
    // Given
    let (app, _state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -541,7 +544,7 @@ fn logout_request_with_csrf(session_cookie: &str, csrf_token: &str) -> Request<B
 async fn test_csrfトークン_ログイン成功時に生成される() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -587,7 +590,7 @@ async fn test_csrfトークン_ログイン成功時に生成される() {
 async fn test_csrfトークン_get_auth_csrfで取得できる() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -637,7 +640,7 @@ async fn test_csrfトークン_get_auth_csrfで取得できる() {
 async fn test_csrfトークン_正しいトークンでpostリクエストが成功する() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -691,7 +694,7 @@ async fn test_csrfトークン_正しいトークンでpostリクエストが成
 async fn test_csrfトークン_トークンなしでpostリクエストが403になる() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -740,7 +743,7 @@ async fn test_csrfトークン_トークンなしでpostリクエストが403に
 async fn test_csrfトークン_不正なトークンでpostリクエストが403になる() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
@@ -789,7 +792,7 @@ async fn test_csrfトークン_不正なトークンでpostリクエストが403
 async fn test_csrfトークン_ログアウト時に削除される() {
    // Given
    let (app, state) = create_test_app(
-      CoreApiStubConfig::success(),
+      CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;

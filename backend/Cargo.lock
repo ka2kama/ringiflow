@@ -1700,7 +1700,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ringiflow-core-api"
+name = "ringiflow-core-service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
