@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                tenant_id,\n                email,\n                name,\n                password_hash,\n                status,\n                last_login_at,\n                created_at,\n                updated_at\n            FROM users\n            WHERE id = $1\n            ",
+  "query": "\n            SELECT\n                id,\n                tenant_id,\n                email,\n                name,\n                status,\n                last_login_at,\n                created_at,\n                updated_at\n            FROM users\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -25,26 +25,21 @@
       },
       {
         "ordinal": 4,
-        "name": "password_hash",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 5,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 6,
+        "ordinal": 5,
         "name": "last_login_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -59,12 +54,11 @@
       false,
       false,
       false,
-      true,
       false,
       true,
       false,
       false
     ]
   },
-  "hash": "fba7f18a82b8717759aa8711b677de823e4838734934539bd4e80160a01c1d23"
+  "hash": "7a4558c2ae4f16fa03c86ba42c3d0a7df5ac4bd8b3489f188bea491aae94c4b2"
 }

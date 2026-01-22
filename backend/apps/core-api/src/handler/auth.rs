@@ -327,7 +327,6 @@ mod tests {
          tenant_id.clone(),
          Email::new("user@example.com").unwrap(),
          UserName::new("Test User").unwrap(),
-         Some("$argon2id$v=19$m=65536,t=1,p=1$...".to_string()),
          UserStatus::Active,
          None,
          chrono::Utc::now(),

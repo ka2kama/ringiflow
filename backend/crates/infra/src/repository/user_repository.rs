@@ -9,15 +9,6 @@
 //! - **ロールの一括取得**: N+1 問題を避けるため JOIN で取得
 //!
 //! 詳細: [認証機能設計](../../../../docs/03_詳細設計書/07_認証機能設計.md)
-//!
-//! # TODO(#80)
-//!
-//! Phase 4 で `users.password_hash` カラムを削除する際、以下の対応が必要:
-//!
-//! 1. マイグレーション: `ALTER TABLE users DROP COLUMN password_hash`
-//! 2. クエリから `password_hash` を削除（`find_by_email`, `find_by_id`）
-//! 3. `User::from_db()` から `password_hash` 引数を削除
-//! 4. ドメイン層の `User` 構造体から `password_hash` フィールドを削除
 
 use async_trait::async_trait;
 use ringiflow_domain::{
@@ -95,7 +86,6 @@ impl UserRepository for PostgresUserRepository {
                 tenant_id,
                 email,
                 name,
-                password_hash,
                 status,
                 last_login_at,
                 created_at,
@@ -118,7 +108,6 @@ impl UserRepository for PostgresUserRepository {
          TenantId::from_uuid(row.tenant_id),
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.password_hash,
          row.status
             .parse::<UserStatus>()
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
@@ -138,7 +127,6 @@ impl UserRepository for PostgresUserRepository {
                 tenant_id,
                 email,
                 name,
-                password_hash,
                 status,
                 last_login_at,
                 created_at,
@@ -160,7 +148,6 @@ impl UserRepository for PostgresUserRepository {
          TenantId::from_uuid(row.tenant_id),
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.password_hash,
          row.status
             .parse::<UserStatus>()
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
