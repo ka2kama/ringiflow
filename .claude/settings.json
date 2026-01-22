@@ -61,7 +61,15 @@
       "Bash(just test-rust-integration)",
       "Bash(just check-all)",
       "Bash(just check-tools)",
-      "Bash(just worktree-list)"
+      "Bash(just worktree-list)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh repo view:*)"
     ],
     "ask": [
       "Bash(git add:*)",
