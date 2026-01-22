@@ -108,6 +108,11 @@ flowchart LR
 - **リント**: clippy (Rust), elm-review (Elm)
 - **フォーマット**: rustfmt, elm-format
 
+### 開発環境
+
+- **並行開発対応**: git worktree + Docker Compose で、複数タスクを独立した環境で同時進行可能
+  - **ポート自動割り当て**: 環境ごとに衝突しないポートを自動設定
+
 ## ディレクトリ構成
 
 ```
@@ -154,6 +159,8 @@ AI エージェント向けのガイドラインは [CLAUDE.md](CLAUDE.md) を�
 ## Getting Started
 
 開発環境の構築手順: [手順書](docs/04_手順書/01_開発参画/01_開発環境構築.md)
+
+複数タスクを同時に進める場合: [並行開発（Worktree）](docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
 
 ```bash
 # 初回セットアップ（依存関係インストール、DB 起動、マイグレーション）
