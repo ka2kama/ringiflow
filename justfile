@@ -79,10 +79,14 @@ reset-db:
 
 # Docker で依存サービス（PostgreSQL, Redis）を起動
 # --wait: healthcheck が通るまで待機（setup 時の競合を防止）
+# プロジェクト名はディレクトリ名から自動取得（worktree対応）
 dev-deps:
-    docker compose -f infra/docker/docker-compose.yml up -d --wait
-    @echo "PostgreSQL: localhost:${POSTGRES_PORT}"
-    @echo "Redis: localhost:${REDIS_PORT}"
+    #!/usr/bin/env bash
+    PROJECT_NAME=$(basename "$(pwd)")
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml up -d --wait
+    echo "PostgreSQL: localhost:${POSTGRES_PORT}"
+    echo "Redis: localhost:${REDIS_PORT}"
+    echo "プロジェクト名: $PROJECT_NAME"
 
 # BFF 開発サーバーを起動（ポート: $BFF_PORT）
 dev-bff:
@@ -179,8 +183,11 @@ check-all: lint test
 # =============================================================================
 
 # ビルド成果物とコンテナを削除
+# プロジェクト名はディレクトリ名から自動取得（worktree対応）
 clean:
-    docker compose -f infra/docker/docker-compose.yml down -v
+    #!/usr/bin/env bash
+    PROJECT_NAME=$(basename "$(pwd)")
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml down -v
     cd backend && cargo clean
     cd frontend && rm -rf node_modules elm-stuff dist
 
@@ -190,3 +197,103 @@ clean-branches:
     git pull
     git fetch --prune
     git branch --merged main | grep -v main | xargs -r git branch -d
+
+# =============================================================================
+# Worktree 管理（並行開発用）
+# =============================================================================
+
+# worktree を追加（並行開発用の独立した作業ディレクトリを作成）
+# 使い方: just worktree-add NAME BRANCH
+# 例: just worktree-add auth feature/auth
+# ポートオフセットは自動で空き番号が割り当てられる
+worktree-add name branch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PARENT_DIR=$(dirname "$(pwd)")
+    WORKTREE_PATH="${PARENT_DIR}/ringiflow-{{name}}"
+
+    # 使用中のオフセットを収集（各 worktree の .env から POSTGRES_PORT を読み取り）
+    used_offsets=()
+    while IFS= read -r wt_path; do
+        env_file="$wt_path/.env"
+        if [[ -f "$env_file" ]]; then
+            port=$(grep -E '^POSTGRES_PORT=' "$env_file" 2>/dev/null | cut -d= -f2)
+            if [[ -n "$port" ]]; then
+                # ベースポート 15432 からのオフセットを計算（100単位）
+                offset=$(( (port - 15432) / 100 ))
+                used_offsets+=("$offset")
+            fi
+        fi
+    done < <(git worktree list --porcelain | grep '^worktree ' | cut -d' ' -f2-)
+
+    # 空きオフセットを探す（1-9、0 はメイン用）
+    port_offset=""
+    for i in {1..9}; do
+        found=false
+        for used in "${used_offsets[@]}"; do
+            if [[ "$used" == "$i" ]]; then
+                found=true
+                break
+            fi
+        done
+        if [[ "$found" == false ]]; then
+            port_offset="$i"
+            break
+        fi
+    done
+
+    if [[ -z "$port_offset" ]]; then
+        echo "エラー: 空きポートオフセットがありません（最大9個まで）" >&2
+        exit 1
+    fi
+
+    echo "worktree を作成中: {{name}}"
+    echo "  パス: $WORKTREE_PATH"
+    echo "  ブランチ: {{branch}}"
+    echo "  ポートオフセット: $port_offset（自動割り当て）"
+
+    # worktree を追加（ブランチがなければ作成）
+    if git rev-parse --verify "{{branch}}" >/dev/null 2>&1; then
+        git worktree add "$WORKTREE_PATH" "{{branch}}"
+    else
+        git worktree add -b "{{branch}}" "$WORKTREE_PATH"
+    fi
+
+    # .env を生成
+    cd "$WORKTREE_PATH"
+    ./scripts/generate-env.sh "$port_offset"
+
+    echo ""
+    echo "✓ worktree を作成しました"
+    echo "  cd $WORKTREE_PATH"
+    echo "  just dev-deps  # 依存サービスを起動"
+
+# worktree を削除
+# 使い方: just worktree-remove NAME
+worktree-remove name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PARENT_DIR=$(dirname "$(pwd)")
+    WORKTREE_PATH="${PARENT_DIR}/ringiflow-{{name}}"
+    PROJECT_NAME="ringiflow-{{name}}"
+
+    echo "worktree を削除中: {{name}}"
+
+    # Docker コンテナを停止・削除
+    if docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml ps -q 2>/dev/null | grep -q .; then
+        echo "  Docker コンテナを停止中..."
+        docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml down -v
+    fi
+
+    # worktree を削除
+    git worktree remove "$WORKTREE_PATH" --force
+
+    echo "✓ worktree を削除しました: {{name}}"
+
+# worktree 一覧を表示
+worktree-list:
+    @echo "=== Worktree 一覧 ==="
+    @git worktree list
+    @echo ""
+    @echo "=== Docker プロジェクト一覧 ==="
+    @docker compose ls --filter "name=ringiflow" 2>/dev/null || echo "（実行中のプロジェクトなし）"
