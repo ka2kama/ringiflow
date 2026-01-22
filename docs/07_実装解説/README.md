@@ -16,16 +16,9 @@ AI エージェント主導で実装した内容の詳細解説を記録する�
 ```
 docs/07_実装解説/
 ├── README.md                           # 本ファイル
-├── 01_認証機能/                        # Issue/機能単位
-│   ├── 00_概要.md                      # 機能全体の概要（任意）
-│   ├── 01_Phase1_UserRepository.md     # Phase 単位の解説
-│   ├── 02_Phase2_PasswordHasher.md
-│   └── ...
-├── 02_AuthService/                     # Auth Service 分離
-│   ├── 00_概要.md
-│   ├── 01_Phase1_インフラ.md
-│   └── 02_Phase2_AuthService.md
-└── 03_承認フロー/
+└── NN_<機能名>/                        # Issue/機能単位
+    ├── 00_概要.md                      # 機能全体の概要（任意）
+    ├── 01_Phase1_<コンポーネント名>.md # Phase 単位の解説
     └── ...
 ```
 
