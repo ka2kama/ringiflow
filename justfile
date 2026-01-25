@@ -37,6 +37,7 @@ check-tools:
     @which lefthook > /dev/null || (echo "ERROR: lefthook がインストールされていません" && exit 1)
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
+    @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -136,7 +137,7 @@ fmt-elm *files:
 # =============================================================================
 
 # 全体リント
-lint: lint-rust lint-elm lint-shell
+lint: lint-rust lint-elm lint-shell lint-ci
 
 # Rust リント（rustfmt + clippy）
 lint-rust:
@@ -157,6 +158,10 @@ lint-shell:
     else
         echo "$files" | xargs shellcheck
     fi
+
+# GitHub Actions ワークフロー リント（actionlint）
+lint-ci:
+    actionlint
 
 # =============================================================================
 # テスト
@@ -205,38 +210,7 @@ api-test-clean:
 # API テスト実行（hurl）
 # サービスを起動してテストを実行し、終了後にサービスを停止する
 test-api: api-test-deps api-test-reset-db
-    #!/usr/bin/env bash
-    set -e
-    trap 'kill $(jobs -p) 2>/dev/null' EXIT
-
-    echo "サービスを起動中..."
-
-    # API テスト環境変数でサービスを起動（バックグラウンド）
-    cd backend
-    env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-bff &
-    env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-core-service &
-    env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-auth-service &
-
-    # ヘルスチェックを待機（API テスト用ポート: 14000-14002）
-    echo "サービス起動を待機中..."
-    cd ..
-    for i in {1..30}; do
-        if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
-           curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
-           curl -sf http://localhost:14002/health > /dev/null 2>&1; then
-            echo "✓ 全サービス起動完了"
-            break
-        fi
-        if [ "$i" -eq 30 ]; then
-            echo "エラー: サービス起動タイムアウト"
-            exit 1
-        fi
-        sleep 1
-    done
-
-    # API テスト実行
-    echo "API テストを実行中..."
-    hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
+    ./scripts/run-api-tests.sh
 
 # =============================================================================
 # 全チェック
@@ -279,69 +253,7 @@ clean-branches:
 # 例: just worktree-add auth feature/auth
 # ポートオフセットは自動で空き番号が割り当てられる
 worktree-add name branch:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    PARENT_DIR=$(dirname "$(pwd)")
-    WORKTREE_PATH="${PARENT_DIR}/ringiflow-{{name}}"
-
-    # 使用中のオフセットを収集（各 worktree の .env から POSTGRES_PORT を読み取り）
-    used_offsets=()
-    while IFS= read -r wt_path; do
-        env_file="$wt_path/.env"
-        if [[ -f "$env_file" ]]; then
-            port=$(grep -E '^POSTGRES_PORT=' "$env_file" 2>/dev/null | cut -d= -f2)
-            if [[ -n "$port" ]]; then
-                # ベースポート 15432 からのオフセットを計算（100単位）
-                offset=$(( (port - 15432) / 100 ))
-                used_offsets+=("$offset")
-            fi
-        fi
-    done < <(git worktree list --porcelain | grep '^worktree ' | cut -d' ' -f2-)
-
-    # 空きオフセットを探す（1-9、0 はメイン用）
-    port_offset=""
-    for i in {1..9}; do
-        found=false
-        # 配列が空でない場合のみチェック
-        if [[ ${#used_offsets[@]} -gt 0 ]]; then
-            for used in "${used_offsets[@]}"; do
-                if [[ "$used" == "$i" ]]; then
-                    found=true
-                    break
-                fi
-            done
-        fi
-        if [[ "$found" == false ]]; then
-            port_offset="$i"
-            break
-        fi
-    done
-
-    if [[ -z "$port_offset" ]]; then
-        echo "エラー: 空きポートオフセットがありません（最大9個まで）" >&2
-        exit 1
-    fi
-
-    echo "worktree を作成中: {{name}}"
-    echo "  パス: $WORKTREE_PATH"
-    echo "  ブランチ: {{branch}}"
-    echo "  ポートオフセット: $port_offset（自動割り当て）"
-
-    # worktree を追加（ブランチがなければ作成）
-    if git rev-parse --verify "{{branch}}" >/dev/null 2>&1; then
-        git worktree add "$WORKTREE_PATH" "{{branch}}"
-    else
-        git worktree add -b "{{branch}}" "$WORKTREE_PATH"
-    fi
-
-    # .env を生成
-    cd "$WORKTREE_PATH"
-    ./scripts/generate-env.sh "$port_offset"
-
-    echo ""
-    echo "✓ worktree を作成しました"
-    echo "  cd $WORKTREE_PATH"
-    echo "  just dev-deps  # 依存サービスを起動"
+    ./scripts/worktree-add.sh {{name}} {{branch}}
 
 # worktree を削除
 # 使い方: just worktree-remove NAME
