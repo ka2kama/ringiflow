@@ -140,23 +140,7 @@
     ]
   },
   "sandbox": {
-    "enabled": true,
-    "excludedCommands": [
-      "bash",
-      "sh",
-      "git",
-      "gh",
-      "cargo",
-      "elm",
-      "npm",
-      "node",
-      "terraform",
-      "docker",
-      "docker-compose",
-      "psql",
-      "redis-cli",
-      "just"
-    ]
+    "enabled": false
   },
   "attribution": {
     "commit": "Co-Authored-By: Claude Code <noreply@anthropic.com>"

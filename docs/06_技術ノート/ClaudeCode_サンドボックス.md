@@ -96,9 +96,9 @@ rm .bashrc  # 「デバイスもしくはリソースがビジー状態です」
 
 ## 解決策
 
-### 設定変更
+### 試行 1: excludedCommands による回避（失敗）
 
-`.claude/settings.json` の `excludedCommands` に `bash` と `sh` を追加する。
+`.claude/settings.json` の `excludedCommands` に `bash` と `sh` を追加する方法を試みた。
 
 ```json
 {
@@ -115,26 +115,41 @@ rm .bashrc  # 「デバイスもしくはリソースがビジー状態です」
 }
 ```
 
-これにより bash コマンドがサンドボックス外で実行され、マウントポイントが作成されなくなる。
+**結果:** 効果なし。スタブファイルは引き続き作成された。
+
+理由の推測:
+- スタブファイルはセッション起動時の bubblewrap 初期化で作成される
+- `excludedCommands` は個別コマンド実行時のサンドボックス適用を制御するものであり、初期化処理には影響しない
+
+### 試行 2: サンドボックス無効化（採用）
+
+サンドボックス自体を無効化する。
+
+```json
+{
+  "sandbox": {
+    "enabled": false
+  }
+}
+```
+
+**結果:** スタブファイルが作成されなくなった。
 
 ### 既存ファイルの削除
 
-設定変更後、Claude Code セッションを終了してからファイルを削除する。
+サンドボックス無効化後、既存のスタブファイルを削除する。
 
 ```bash
-# セッション終了後に実行
 rm -f .bashrc .bash_profile .zshrc .zprofile .profile .gitconfig .gitmodules .ripgreprc .mcp.json
 rm -rf .vscode .claude/agents .claude/commands
 rm -f .claude/settings.local.json
 ```
 
-サンドボックス内からは削除できない（マウントポイントがビジー状態）。
-
 ## トレードオフ
 
-`bash` を `excludedCommands` に追加することで:
+サンドボックスを無効化することで:
 - ✅ スタブファイルが作成されなくなる
-- ⚠️ bash コマンドはサンドボックス外で実行される
+- ⚠️ すべてのコマンドがサンドボックス外で実行される
 
 セキュリティは `permissions` 設定の `deny` ルールで担保する:
 
@@ -150,6 +165,8 @@ rm -f .claude/settings.local.json
   }
 }
 ```
+
+Issue #17258 が解決されたら、サンドボックスを再有効化することを検討する。
 
 ## /sandbox コマンド
 
