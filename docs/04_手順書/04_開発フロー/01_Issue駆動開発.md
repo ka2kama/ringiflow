@@ -447,10 +447,17 @@ flowchart TB
 - [ ] フロントエンドでログイン画面が動作する
 ```
 
-## Assignee について
+## 運用補足
+
+### Assignee
 
 個人開発かつ AI エージェント運用のため、Issue / PR に assignee は設定しない。
 作業状態は Project Board の Status と Draft PR で管理する。
+
+### Project 紐づけ
+
+Issue のみ Project に紐づけ、PR は紐づけない。
+Issue 駆動開発では Issue が作業単位であり、PR は `Closes #xx` で Issue に紐づくため、Board は Issue のみで管理する。
 
 ## よく使うコマンド
 
@@ -480,7 +487,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
-| 2026-01-25 | Assignee についてセクションを追加（AI エージェント運用のため設定しない方針） |
+| 2026-01-25 | 運用補足セクションを追加（Assignee / Project 紐づけ方針） |
 | 2026-01-22 | Ready for Review セクションを拡充（整合性チェック、手動確認チェックリスト追加） |
 | 2026-01-18 | Epic / Story 運用セクションを追加、Label を Issue タイプ別に整理 |
 | 2026-01-17 | マージ後のローカルブランチ削除手順を追加 |
