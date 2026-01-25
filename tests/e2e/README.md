@@ -56,42 +56,20 @@ just test-e2e
 
 ```
 tests/e2e/
-├── README.md           # 本ファイル
 ├── hurl/
-│   ├── vars.env        # 共通変数（URL、テナント ID、テストユーザー）
-│   ├── health.hurl     # ヘルスチェック
-│   └── auth/
-│       ├── login.hurl  # ログインテスト
-│       ├── me.hurl     # ユーザー情報取得テスト
-│       ├── logout.hurl # ログアウトテスト
-│       └── csrf.hurl   # CSRF トークン取得テスト
+│   ├── vars.env    # 共通変数（URL、テナント ID、テストユーザー）
+│   ├── health.hurl # ヘルスチェック
+│   └── auth/       # 認証 API テスト
 └── scripts/
-    └── wait-for-healthy.sh  # サービス起動待機スクリプト
+    └── wait-for-healthy.sh
 ```
 
-## テストケース
+テストファイルは `tests/e2e/hurl/` 配下の `.hurl` ファイルを参照。
 
-| エンドポイント | テストケース | ファイル |
-|---------------|-------------|---------|
-| GET /health | 正常レスポンス | health.hurl |
-| POST /auth/login | 正常ログイン | auth/login.hurl |
-| POST /auth/login | パスワード不一致（401） | auth/login.hurl |
-| POST /auth/login | ユーザー不存在（401） | auth/login.hurl |
-| POST /auth/login | テナント ID なし（400） | auth/login.hurl |
-| GET /auth/me | 認証済み | auth/me.hurl |
-| GET /auth/me | 未認証（401） | auth/me.hurl |
-| POST /auth/logout | ログアウト | auth/logout.hurl |
-| GET /auth/csrf | CSRF トークン取得 | auth/csrf.hurl |
+## hurl の注意点
 
-## 変数（vars.env）
-
-| 変数 | 値 | 説明 |
-|------|-----|------|
-| bff_url | http://localhost:13000 | BFF エンドポイント |
-| tenant_id | 00000000-... | 開発用テナント ID |
-| admin_email | admin@example.com | 管理者ユーザー |
-| user_email | user@example.com | 一般ユーザー |
-| password | password123 | テストパスワード |
+- 同一ファイル内で Cookie は自動管理される
+- 認証済み/未認証のテストは別ファイルに分離する
 
 ## トラブルシューティング
 
@@ -100,7 +78,6 @@ tests/e2e/
 サービスが起動していない可能性がある。以下を確認:
 
 ```bash
-# ヘルスチェック
 curl http://localhost:13000/health
 curl http://localhost:13001/health
 curl http://localhost:13002/health
@@ -117,4 +94,3 @@ just reset-db
 ## 参考
 
 - [Hurl 公式ドキュメント](https://hurl.dev/docs/manual.html)
-- [Issue #98](https://github.com/ka2kama/ringiflow/issues/98)
