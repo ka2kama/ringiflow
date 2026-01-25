@@ -39,6 +39,7 @@
 //! | `REDIS_URL` | **Yes** | Redis 接続 URL |
 //! | `CORE_URL` | **Yes** | Core Service の URL |
 //! | `AUTH_URL` | **Yes** | Auth Service の URL |
+//! | `DEV_AUTH_ENABLED` | No | 開発用認証バイパスの有効化（`true` で有効） |
 //!
 //! ## 起動方法
 //!
@@ -52,6 +53,7 @@
 
 pub mod client;
 mod config;
+mod dev_auth;
 mod error;
 pub mod handler;
 pub mod middleware;
@@ -109,6 +111,27 @@ async fn main() -> anyhow::Result<()> {
       .expect("Redis への接続に失敗しました");
    let core_service_client = CoreServiceClientImpl::new(&config.core_url);
    let auth_service_client = AuthServiceClientImpl::new(&config.auth_url);
+
+   // DevAuth の初期化（開発環境のみ）
+   if config.dev_auth_enabled {
+      tracing::warn!("========================================");
+      tracing::warn!("⚠️  DevAuth が有効です！");
+      tracing::warn!("   本番環境では絶対に有効にしないでください");
+      tracing::warn!("========================================");
+
+      match dev_auth::setup_dev_session(&session_manager).await {
+         Ok(csrf_token) => {
+            tracing::info!("DevAuth: 開発用セッションを作成しました");
+            tracing::info!("  Tenant ID: {}", dev_auth::DEV_TENANT_ID);
+            tracing::info!("  User ID: {}", dev_auth::DEV_USER_ID);
+            tracing::info!("  Session ID: {}", dev_auth::DEV_SESSION_ID);
+            tracing::info!("  CSRF Token: {}", csrf_token);
+         }
+         Err(e) => {
+            tracing::error!("DevAuth: セッション作成に失敗しました: {}", e);
+         }
+      }
+   }
 
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
