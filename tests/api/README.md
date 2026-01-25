@@ -7,6 +7,30 @@ BFF の API テストを [hurl](https://hurl.dev/) で実装している。
 Auth Service 分離により、認証フローが BFF → Core API → Auth Service と複数サービスにまたがる。
 Unit テストやスタブを使った Integration テストでは検証できないサービス間通信を、実際のサービスを起動した状態でテストする。
 
+## テストピラミッドでの位置づけ
+
+```
+                    /\
+                   /  \      API テスト（本ディレクトリ）
+                  /    \     全サービス起動、HTTP レベル
+                 /──────\
+                /        \   rust-integration
+               /          \  Repository/Session + BFF 部分統合
+              /────────────\
+             /              \ rust (unit)
+            /                \ モック使用、高速
+           /──────────────────\
+```
+
+| テスト種別 | 実行コマンド | 本物 | スタブ/モック |
+|-----------|-------------|------|--------------|
+| Unit | `cargo test --lib --bins` | なし | 全部モック |
+| Integration | `cargo test --test '*'` | DB, Redis | 外部サービスはスタブ |
+| API | `just test-api` | 全部 | なし |
+
+API テストは「サービス間連携が正しく動くか」を検証する。
+Integration テストは「各層が DB/Redis と正しく連携するか」を検証する。
+
 ## 前提条件
 
 以下がインストールされていること:
@@ -118,6 +142,14 @@ just api-test-reset-db
 `.env.api-test` を使用せずにサービスを起動している可能性がある。
 `just test-api` を使用するか、手動実行時は環境変数を指定する。
 
+## CI
+
+GitHub Actions で自動実行される。
+
+- トリガー: `backend/**` または `tests/api/**` の変更時
+- ワークフロー: `.github/workflows/ci.yml` の `api-test` ジョブ
+
 ## 参考
 
 - [Hurl 公式ドキュメント](https://hurl.dev/docs/manual.html)
+- [技術ノート: hurl](../../docs/06_技術ノート/hurl.md)

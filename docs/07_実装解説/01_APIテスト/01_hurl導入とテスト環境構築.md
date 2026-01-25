@@ -59,9 +59,17 @@ just api-test-reset-db
 hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
 ```
 
+## CI 統合
+
+GitHub Actions で自動実行される（`.github/workflows/ci.yml`）。
+
+- トリガー: `backend/**` または `tests/api/**` の変更時
+- `api-test` ジョブとして、他のテスト（rust, rust-integration, elm）と並列実行
+
 ## 関連ドキュメント
 
 - [`tests/api/README.md`](../../../tests/api/README.md) - テスト実行手順とトラブルシューティング
+- [技術ノート: hurl](../../06_技術ノート/hurl.md) - hurl の使い方
 
 ---
 
@@ -88,16 +96,30 @@ hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
 **テストピラミッドでの位置づけ**:
 
 ```
-        /\
-       /  \     E2E テスト（ブラウザ自動操作）← 今回は対象外
-      /----\
-     /      \   API テスト（今回実装）
-    /--------\
-   /          \ Integration テスト（スタブ使用）
-  /------------\
- /              \ Unit テスト
-/----------------\
+                    /\
+                   /  \      API テスト（今回実装）
+                  /    \     全サービス起動、HTTP レベル
+                 /──────\
+                /        \   rust-integration
+               /          \  Repository/Session + BFF 部分統合
+              /────────────\
+             /              \ rust (unit)
+            /                \ モック使用、高速
+           /──────────────────\
 ```
+
+**テスト種別の詳細**:
+
+| テスト | 実行コマンド | 本物 | スタブ/モック | 検証対象 |
+|-------|-------------|------|--------------|---------|
+| rust (unit) | `cargo test --lib --bins` | なし | 全部 | 各関数/モジュールの動作 |
+| rust-integration | `cargo test --test '*'` | DB, Redis | 外部サービス | Repository/Session 層 |
+| api-test | `just test-api` | 全部 | なし | サービス間連携 |
+
+rust-integration の対象テスト:
+- `backend/crates/infra/tests/user_repository_test.rs` - PostgreSQL との結合
+- `backend/crates/infra/tests/session_test.rs` - Redis との結合
+- `backend/apps/bff/tests/auth_integration_test.rs` - BFF 認証フロー（外部サービスはスタブ）
 
 **代替案**:
 - `tests/integration/` - Rust の統合テストと紛らわしい
