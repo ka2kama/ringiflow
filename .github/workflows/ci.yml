@@ -242,12 +242,15 @@ jobs:
         if: needs.changes.outputs.shell == 'true'
         run: just lint-shell
 
+      - name: Install actionlint
+        if: needs.changes.outputs.ci == 'true'
+        run: |
+          bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          sudo mv actionlint /usr/local/bin/
+
       - name: Lint GitHub Actions
         if: needs.changes.outputs.ci == 'true'
-        uses: reviewdog/action-actionlint@v1
-        with:
-          fail_level: error
-          reporter: github-pr-check
+        run: just lint-ci
 
   # API テスト: 実際のサービスを起動して hurl でテスト
   api-test:

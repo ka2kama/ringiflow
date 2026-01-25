@@ -37,6 +37,7 @@ check-tools:
     @which lefthook > /dev/null || (echo "ERROR: lefthook がインストールされていません" && exit 1)
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
+    @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -136,7 +137,7 @@ fmt-elm *files:
 # =============================================================================
 
 # 全体リント
-lint: lint-rust lint-elm lint-shell
+lint: lint-rust lint-elm lint-shell lint-ci
 
 # Rust リント（rustfmt + clippy）
 lint-rust:
@@ -157,6 +158,10 @@ lint-shell:
     else
         echo "$files" | xargs shellcheck
     fi
+
+# GitHub Actions ワークフロー リント（actionlint）
+lint-ci:
+    actionlint
 
 # =============================================================================
 # テスト
