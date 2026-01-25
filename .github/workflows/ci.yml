@@ -25,6 +25,7 @@ jobs:
       rust: ${{ steps.filter.outputs.rust }}
       elm: ${{ steps.filter.outputs.elm }}
       shell: ${{ steps.filter.outputs.shell }}
+      ci: ${{ steps.filter.outputs.ci }}
       api-test: ${{ steps.filter.outputs.api-test }}
     steps:
       - name: Checkout
@@ -44,6 +45,8 @@ jobs:
               - 'frontend/**'
             shell:
               - '**/*.sh'
+            ci:
+              - '.github/workflows/**'
             api-test:
               - 'backend/**'
               - 'tests/api/**'
@@ -221,12 +224,12 @@ jobs:
           path: frontend/dist/
           retention-days: 7
 
-  # シェルスクリプト チェック: ShellCheck
+  # シェルスクリプト・CI ワークフロー チェック: ShellCheck + actionlint
   shell:
     name: Shell
     runs-on: ubuntu-latest
     needs: changes
-    if: needs.changes.outputs.shell == 'true'
+    if: needs.changes.outputs.shell == 'true' || needs.changes.outputs.ci == 'true'
 
     steps:
       - name: Checkout
@@ -235,8 +238,19 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
-      - name: Lint
+      - name: Lint shell scripts
+        if: needs.changes.outputs.shell == 'true'
         run: just lint-shell
+
+      - name: Install actionlint
+        if: needs.changes.outputs.ci == 'true'
+        run: |
+          bash <(curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          sudo mv actionlint /usr/local/bin/
+
+      - name: Lint GitHub Actions
+        if: needs.changes.outputs.ci == 'true'
+        run: just lint-ci
 
   # API テスト: 実際のサービスを起動して hurl でテスト
   api-test:
