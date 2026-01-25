@@ -111,6 +111,16 @@ pub trait SessionManager: Send + Sync {
    /// 生成されたセッション ID（UUID v4）
    async fn create(&self, data: &SessionData) -> Result<String, InfraError>;
 
+   /// 指定したセッション ID でセッションを作成する
+   ///
+   /// DevAuth など、固定のセッション ID を使用したい場合に使用する。
+   ///
+   /// # 引数
+   ///
+   /// - `session_id`: セッション ID
+   /// - `data`: セッションデータ
+   async fn create_with_id(&self, session_id: &str, data: &SessionData) -> Result<(), InfraError>;
+
    /// セッションを取得する
    ///
    /// # 引数
@@ -251,13 +261,18 @@ impl SessionManager for RedisSessionManager {
    async fn create(&self, data: &SessionData) -> Result<String, InfraError> {
       // UUID v4 でセッション ID を生成（暗号論的に安全なランダム値）
       let session_id = Uuid::new_v4().to_string();
-      let key = Self::session_key(data.tenant_id(), &session_id);
+      self.create_with_id(&session_id, data).await?;
+      Ok(session_id)
+   }
+
+   async fn create_with_id(&self, session_id: &str, data: &SessionData) -> Result<(), InfraError> {
+      let key = Self::session_key(data.tenant_id(), session_id);
       let json = serde_json::to_string(data)?;
 
       let mut conn = self.conn.clone();
       let _: () = conn.set_ex(&key, json, SESSION_TTL_SECONDS).await?;
 
-      Ok(session_id)
+      Ok(())
    }
 
    async fn get(

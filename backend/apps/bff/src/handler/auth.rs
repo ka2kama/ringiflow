@@ -718,6 +718,14 @@ mod tests {
          Ok(Uuid::now_v7().to_string())
       }
 
+      async fn create_with_id(
+         &self,
+         _session_id: &str,
+         _data: &SessionData,
+      ) -> Result<(), InfraError> {
+         Ok(())
+      }
+
       async fn get(
          &self,
          _tenant_id: &TenantId,
