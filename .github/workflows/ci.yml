@@ -25,6 +25,7 @@ jobs:
       rust: ${{ steps.filter.outputs.rust }}
       elm: ${{ steps.filter.outputs.elm }}
       shell: ${{ steps.filter.outputs.shell }}
+      api-test: ${{ steps.filter.outputs.api-test }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -43,6 +44,9 @@ jobs:
               - 'frontend/**'
             shell:
               - '**/*.sh'
+            api-test:
+              - 'backend/**'
+              - 'tests/api/**'
 
   # Rust チェック: リント、テスト
   rust:
@@ -234,11 +238,93 @@ jobs:
       - name: Lint
         run: just lint-shell
 
+  # API テスト: 実際のサービスを起動して hurl でテスト
+  api-test:
+    name: API Test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.api-test == 'true'
+
+    env:
+      CARGO_TERM_COLOR: always
+      SQLX_OFFLINE: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.92.0
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install tools
+        run: |
+          cargo install sqlx-cli --no-default-features --features rustls,postgres
+          cargo install hurl
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Start dependencies
+        run: just api-test-deps
+
+      - name: Reset database
+        run: just api-test-reset-db
+
+      - name: Build services
+        run: cargo build --release
+        working-directory: backend
+
+      - name: Run API tests
+        run: |
+          # サービスをバックグラウンドで起動
+          cd backend
+          env $(cat .env.api-test | grep -v '^#' | xargs) ./target/release/ringiflow-bff &
+          env $(cat .env.api-test | grep -v '^#' | xargs) ./target/release/ringiflow-core-service &
+          env $(cat .env.api-test | grep -v '^#' | xargs) ./target/release/ringiflow-auth-service &
+          cd ..
+
+          # ヘルスチェック待機
+          for i in {1..30}; do
+            if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:14002/health > /dev/null 2>&1; then
+              echo "All services are healthy"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Service startup timeout"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # テスト実行
+          hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
+
+      - name: Cleanup
+        if: always()
+        run: just api-test-clean
+
   # ブランチ保護用ステータス統合: skipped を成功扱いにし、単一ステータスを提供
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust, rust-integration, elm, shell]
+    needs: [changes, rust, rust-integration, elm, shell, api-test]
     if: always()
     steps:
       - name: Check results
@@ -265,6 +351,11 @@ jobs:
 
           if [[ "${{ needs.shell.result }}" == "failure" ]]; then
             echo "Shell checks failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.api-test.result }}" == "failure" ]]; then
+            echo "API tests failed"
             exit 1
           fi
 
