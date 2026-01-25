@@ -3,7 +3,7 @@
 ## 概要
 
 BFF の認証フローを実際の Redis を使用してテストする統合テストを実装した。
-Core API の呼び出しはスタブを使用し、セッション管理の一連の動作を検証する。
+Core Service の呼び出しはスタブを使用し、セッション管理の一連の動作を検証する。
 
 ### 対応 Issue
 
@@ -33,11 +33,11 @@ flowchart LR
         TestClient["テストクライアント"]
         BFF["BFF Router"]
         Redis["Redis (実物)"]
-        CoreAPI["Core API (スタブ)"]
+        CoreService["Core Service (スタブ)"]
 
         TestClient --> BFF
         BFF --> Redis
-        BFF --> CoreAPI
+        BFF --> CoreService
     end
 ```
 
@@ -86,7 +86,7 @@ let session_manager = RedisSessionManager::new(&redis_url()).await?;
 
 これにより、セッションの作成・取得・削除が実際に動作することを検証できる。
 
-#### Core API はスタブ
+#### Core Service はスタブ
 
 `CoreApiClient` トレイトを実装したスタブを使用:
 
@@ -134,7 +134,7 @@ sequenceDiagram
 | 要素 | 選択 | 理由 |
 |------|------|------|
 | Redis | 実物 | セッション管理はシステムの重要部分。実際の動作を確認したい |
-| Core API | スタブ | Phase 4 で既にテスト済み。認証ロジックのテストに集中 |
+| Core Service | スタブ | Phase 4 で既にテスト済み。認証ロジックのテストに集中 |
 | HTTP | oneshot | サーバー起動不要で高速。ポート競合も回避 |
 
 ### 実行方法
@@ -189,7 +189,7 @@ async fn create_test_app(
 
 実際の Redis を使用することで、本番環境により近い条件でテストできる。
 
-### 2. Core API のスタブ設計
+### 2. Core Service のスタブ設計
 
 **場所:** [`tests/auth_integration_test.rs:62-105`](../../../backend/apps/bff/tests/auth_integration_test.rs#L62-L105)
 

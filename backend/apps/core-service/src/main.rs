@@ -1,10 +1,10 @@
-//! # Core API サーバー
+//! # Core Service サーバー
 //!
-//! ビジネスロジックを実行する内部 API サーバー。
+//! ビジネスロジックを実行する内部サービス。
 //!
 //! ## 役割
 //!
-//! Core API はビジネスロジックの実行とデータの永続化を担当する:
+//! Core Service はビジネスロジックの実行とデータの永続化を担当する:
 //!
 //! - **ビジネスロジック**: ワークフロー実行、承認処理、タスク管理
 //! - **データ永続化**: PostgreSQL へのエンティティ保存
@@ -12,12 +12,12 @@
 //!
 //! ## アクセス制御
 //!
-//! Core API は内部ネットワークからのみアクセス可能とする。
+//! Core Service は内部ネットワークからのみアクセス可能とする。
 //! 外部からのリクエストは BFF を経由する必要がある。
 //!
 //! ```text
 //! ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-//! │   Internet   │──X──│   Core API   │     │   Database   │
+//! │   Internet   │──X──│Core Service  │     │   Database   │
 //! └──────────────┘     └──────────────┘     └──────────────┘
 //!                             ↑
 //!                      内部ネットワークのみ
@@ -31,24 +31,24 @@
 //!
 //! | 変数名 | 必須 | 説明 |
 //! |--------|------|------|
-//! | `CORE_API_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
-//! | `CORE_API_PORT` | **Yes** | ポート番号 |
+//! | `CORE_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
+//! | `CORE_PORT` | **Yes** | ポート番号 |
 //! | `DATABASE_URL` | **Yes** | PostgreSQL 接続 URL |
 //!
 //! ## 起動方法
 //!
 //! ```bash
 //! # 開発環境
-//! cargo run -p ringiflow-core-api
+//! cargo run -p ringiflow-core-service
 //!
 //! # 本番環境
-//! CORE_API_PORT=3001 DATABASE_URL=postgres://... cargo run -p ringiflow-core-api --release
+//! CORE_PORT=3001 DATABASE_URL=postgres://... cargo run -p ringiflow-core-service --release
 //! ```
 //!
 //! ## BFF との違い
 //!
-//! | 項目 | BFF | Core API |
-//! |------|-----|----------|
+//! | 項目 | BFF | Core Service |
+//! |------|-----|--------------|
 //! | 目的 | フロントエンド向け API | 内部サービス向け API |
 //! | 認証 | セッション管理 | サービス間認証（将来） |
 //! | レスポンス | UI 最適化 | 正規化されたデータ |
@@ -61,16 +61,16 @@ mod handler;
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::{Router, routing::get};
-use config::CoreApiConfig;
+use config::CoreConfig;
 use handler::{UserState, get_user, get_user_by_email, health_check};
 use ringiflow_infra::{db, repository::user_repository::PostgresUserRepository};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-/// Core API サーバーのエントリーポイント
+/// Core Service サーバーのエントリーポイント
 ///
-/// BFF とは独立した設定（`CORE_API_HOST`, `CORE_API_PORT`）を使用する。
+/// BFF とは独立した設定（`CORE_HOST`, `CORE_PORT`）を使用する。
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
    // .env ファイルを読み込む（存在する場合）
@@ -86,10 +86,10 @@ async fn main() -> anyhow::Result<()> {
       .init();
 
    // 設定読み込み
-   let config = CoreApiConfig::from_env().expect("設定の読み込みに失敗しました");
+   let config = CoreConfig::from_env().expect("設定の読み込みに失敗しました");
 
    tracing::info!(
-      "Core API サーバーを起動します: {}:{}",
+      "Core Service サーバーを起動します: {}:{}",
       config.host,
       config.port
    );
@@ -124,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
       .expect("アドレスのパースに失敗しました");
 
    let listener = TcpListener::bind(addr).await?;
-   tracing::info!("Core API サーバーが起動しました: {}", addr);
+   tracing::info!("Core Service サーバーが起動しました: {}", addr);
 
    axum::serve(listener, app).await?;
 

@@ -12,7 +12,7 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 
 | レイヤー | 技術 |
 |---------|------|
-| バックエンド | Rust + axum（BFF / Core API） |
+| バックエンド | Rust + axum（BFF / Core Service / Auth Service） |
 | フロントエンド | Elm |
 | インフラ | AWS（ECS Fargate, Aurora PostgreSQL, ElastiCache Redis） |
 | IaC | Terraform |
@@ -50,8 +50,9 @@ just test-rust-integration  # DB 接続が必要
 ```
 backend/
 ├── apps/
-│   ├── bff/            # BFF（セッション管理、認証、API プロキシ）
-│   └── core-api/       # Core API（ビジネスロジック）
+│   ├── bff/            # BFF（セッション管理、API プロキシ）
+│   ├── core-service/   # Core Service（ビジネスロジック）
+│   └── auth-service/   # Auth Service（認証）
 └── crates/
     ├── domain/         # ドメインモデル
     ├── infra/          # インフラ層（DB、Redis）

@@ -19,7 +19,7 @@ setup: check-tools setup-env setup-hooks dev-deps setup-db setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
     @echo "  - just dev-bff         : BFF 起動"
-    @echo "  - just dev-core-api    : Core API 起動"
+    @echo "  - just dev-core-service: Core Service 起動"
     @echo "  - just dev-auth-service: Auth Service 起動"
     @echo "  - just dev-web         : フロントエンド起動"
 
@@ -93,11 +93,11 @@ dev-deps:
 dev-bff:
     cd backend && cargo run -p ringiflow-bff
 
-# Core API 開発サーバーを起動（ポート: $CORE_API_PORT）
-dev-core-api:
-    cd backend && cargo run -p ringiflow-core-api
+# Core Service 開発サーバーを起動（ポート: $CORE_PORT）
+dev-core-service:
+    cd backend && cargo run -p ringiflow-core-service
 
-# Auth Service 開発サーバーを起動（ポート: $AUTH_SERVICE_PORT）
+# Auth Service 開発サーバーを起動（ポート: $AUTH_PORT）
 dev-auth-service:
     cd backend && cargo run -p ringiflow-auth-service
 

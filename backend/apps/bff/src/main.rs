@@ -17,7 +17,7 @@
 //!
 //! ```text
 //! ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-//! │   Browser    │────▶│     BFF      │────▶│   Core API   │
+//! │   Browser    │────▶│     BFF      │────▶│Core Service  │
 //! │   (Elm)      │     │  port: 13000 │     │  port: 13001 │
 //! └──────────────┘     └──────────────┘     └──────────────┘
 //!                             │
@@ -37,7 +37,8 @@
 //! | `BFF_HOST` | No | バインドアドレス（デフォルト: `0.0.0.0`） |
 //! | `BFF_PORT` | **Yes** | ポート番号 |
 //! | `REDIS_URL` | **Yes** | Redis 接続 URL |
-//! | `CORE_API_URL` | **Yes** | Core API の URL |
+//! | `CORE_URL` | **Yes** | Core Service の URL |
+//! | `AUTH_URL` | **Yes** | Auth Service の URL |
 //!
 //! ## 起動方法
 //!
@@ -62,7 +63,7 @@ use axum::{
    middleware::from_fn_with_state,
    routing::{get, post},
 };
-use client::{AuthServiceClientImpl, CoreApiClientImpl};
+use client::{AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{AuthState, csrf, health_check, login, logout, me};
 use middleware::{CsrfState, csrf_middleware};
@@ -106,8 +107,8 @@ async fn main() -> anyhow::Result<()> {
    let session_manager = RedisSessionManager::new(&config.redis_url)
       .await
       .expect("Redis への接続に失敗しました");
-   let core_api_client = CoreApiClientImpl::new(&config.core_api_url);
-   let auth_service_client = AuthServiceClientImpl::new(&config.auth_service_url);
+   let core_service_client = CoreServiceClientImpl::new(&config.core_url);
+   let auth_service_client = AuthServiceClientImpl::new(&config.auth_url);
 
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
@@ -115,7 +116,7 @@ async fn main() -> anyhow::Result<()> {
    };
 
    let auth_state = Arc::new(AuthState {
-      core_api_client,
+      core_service_client,
       auth_service_client,
       session_manager,
    });
@@ -127,19 +128,19 @@ async fn main() -> anyhow::Result<()> {
       .route("/health", get(health_check))
       .route(
          "/auth/login",
-         post(login::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
+         post(login::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/auth/logout",
-         post(logout::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
+         post(logout::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/auth/me",
-         get(me::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
+         get(me::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/auth/csrf",
-         get(csrf::<CoreApiClientImpl, AuthServiceClientImpl, RedisSessionManager>),
+         get(csrf::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .with_state(auth_state)
       .layer(from_fn_with_state(

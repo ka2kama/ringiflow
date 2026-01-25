@@ -358,7 +358,7 @@ Rust 1.65+ の `let-else` と Rust nightly の `if-let chains` を活用して�
 
 **`find_by_id` はテナント ID 不要な理由:**
 
-- 内部 API 向け（BFF → Core API 間）
+- 内部 API 向け（BFF → Core Service 間）
 - 呼び出し元ですでに認証・認可済み
 - User ID 自体がテナントに紐づいているため、クロステナントアクセスは発生しない
 

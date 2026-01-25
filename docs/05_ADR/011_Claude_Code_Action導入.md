@@ -102,9 +102,31 @@ gh api "repos/{owner}/{repo}/statuses/{sha}" \
 
 ---
 
+## 補足: Bot からの PR 対応
+
+Claude Code Action はデフォルトで Bot からの PR を処理しない（セキュリティ上の理由）。
+
+Dependabot によるセキュリティアップデート PR など、信頼できる Bot からの PR にもレビューを実行するには、`allowed_bots` パラメータを設定する:
+
+```yaml
+- uses: anthropics/claude-code-action@v1
+  with:
+    allowed_bots: "dependabot[bot]"  # Dependabot を許可
+    # allowed_bots: "*"  # 全 Bot を許可（非推奨）
+```
+
+設定値:
+- `"dependabot[bot]"`: Dependabot のみ許可
+- `"dependabot[bot],renovate[bot]"`: 複数 Bot をカンマ区切りで許可
+- `"*"`: 全 Bot を許可（セキュリティリスクあり）
+- `""` (デフォルト): Bot を許可しない
+
+---
+
 ## 変更履歴
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-25 | Bot からの PR 対応（allowed_bots）を追加 |
 | 2026-01-18 | workflow_run イベントでのステータス報告を追加 |
 | 2026-01-15 | 初版作成 |

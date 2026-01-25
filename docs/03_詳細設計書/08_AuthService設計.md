@@ -7,7 +7,9 @@
 ### 関連ドキュメント
 
 - [ADR-017: Auth Service 分離の方針](../05_ADR/017_AuthService分離の方針.md)
+- [ADR-022: バックエンドサービスの命名規則と層構造の統一](../05_ADR/022_バックエンドサービスの命名規則と層構造の統一.md)
 - [07_認証機能設計.md](./07_認証機能設計.md)（現行設計、Phase 1）
+- [09_命名規則統一リファクタリング設計.md](./09_命名規則統一リファクタリング設計.md)
 
 ### Phase 2 スコープ
 
@@ -15,7 +17,7 @@
 |-----------|---------------------------|
 | メール/パスワード認証の移行 | MFA（TOTP） |
 | credentials テーブル分離 | SSO（OIDC/SAML） |
-| Auth Service API | パスワードリセット |
+| Auth Service | パスワードリセット |
 | サービス間通信設計 | SCIM |
 
 ---
@@ -41,7 +43,7 @@ flowchart TB
         CredRepo["Credentials Repository"]
     end
 
-    subgraph CoreAPI["Core API (port 13001)"]
+    subgraph CoreService["Core Service (port 13001)"]
         UserAPI["ユーザー API"]
         UserRepo["User Repository"]
         Domain["ドメインロジック"]
@@ -56,7 +58,7 @@ flowchart TB
     Browser --> BFFLayer
     Session --> Redis
     Proxy --> AuthService
-    Proxy --> CoreAPI
+    Proxy --> CoreService
     AuthAPI --> CredRepo
     CredRepo --> AuthDB
     UserAPI --> UserRepo
@@ -69,15 +71,15 @@ flowchart TB
 |--------------|------|----------|
 | **BFF** | セッション管理、Cookie/CSRF、API 中継、レート制限 | セッション（Redis） |
 | **Auth Service** | パスワード認証、将来の SSO/MFA | credentials |
-| **Core API** | ユーザー情報管理、ビジネスロジック、認可 | users, roles, permissions |
+| **Core Service** | ユーザー情報管理、ビジネスロジック、認可 | users, roles, permissions |
 
 ### 現状との比較
 
 | 観点 | 現状（Phase 1） | 分離後（Phase 2） |
 |-----|----------------|------------------|
-| パスワード検証 | Core API | **Auth Service** |
+| パスワード検証 | Core Service | **Auth Service** |
 | credentials 保存 | users テーブル | **credentials テーブル（auth スキーマ）** |
-| ユーザー情報取得 | Core API | Core API（変更なし） |
+| ユーザー情報取得 | Core Service | Core Service（変更なし） |
 | セッション管理 | BFF | BFF（変更なし） |
 
 ---
@@ -86,16 +88,16 @@ flowchart TB
 
 ### スキーマ分離
 
-認証情報（credentials）を Core API の users テーブルから分離し、Auth Service 専用の `auth` スキーマに配置する。
+認証情報（credentials）を Core Service の users テーブルから分離し、Auth Service 専用の `auth` スキーマに配置する。
 
 #### DB 接続方式
 
-Auth Service と Core API は**同一の PostgreSQL データベース**に接続し、スキーマで論理的に分離する。
+Auth Service と Core Service は**同一の PostgreSQL データベース**に接続し、スキーマで論理的に分離する。
 
 ```
 PostgreSQL サーバー
 └── ringiflow（データベース）
-    ├── public（スキーマ）← Core API が所有
+    ├── public（スキーマ）← Core Service が所有
     │   ├── users
     │   ├── tenants
     │   └── ...
@@ -106,17 +108,17 @@ PostgreSQL サーバー
 接続文字列（両サービスとも同じ DB を指定）:
 
 ```bash
-# Core API
-DATABASE_URL=postgres://user:pass@db-host:5432/ringiflow
+# Core Service
+CORE_DATABASE_URL=postgres://user:pass@db-host:5432/ringiflow
 
 # Auth Service
-DATABASE_URL=postgres://user:pass@db-host:5432/ringiflow
+AUTH_DATABASE_URL=postgres://user:pass@db-host:5432/ringiflow
 ```
 
 スキーマへのアクセスは SQL で明示的に指定する:
 
 ```sql
--- Core API: public スキーマ（デフォルト）
+-- Core Service: public スキーマ（デフォルト）
 SELECT * FROM users;
 
 -- Auth Service: auth スキーマを明示
@@ -140,7 +142,7 @@ erDiagram
         timestamp updated_at "更新日時"
     }
 
-    %% public スキーマ（Core API が所有）
+    %% public スキーマ（Core Service が所有）
     users {
         uuid id PK "User ID"
         uuid tenant_id FK "Tenant ID"
@@ -167,8 +169,8 @@ erDiagram
 
 代わりの整合性担保:
 
-- ユーザー作成時: Core API → Auth Service API で credentials を作成
-- ユーザー削除時: Core API → Auth Service API で credentials を削除
+- ユーザー作成時: Core Service → Auth Service で credentials を作成
+- ユーザー削除時: Core Service → Auth Service で credentials を削除
 - テナント退会時: `tenant_id` で両テーブルを並列削除（[テナント退会時データ削除設計](./06_テナント退会時データ削除設計.md)）
 
 ### credentials テーブル設計
@@ -232,9 +234,9 @@ DELETE FROM auth.credentials WHERE tenant_id = $1;
 
 ## API 設計
 
-### Auth Service API
+### Auth Service
 
-Auth Service は内部 API のみを提供し、BFF からのみアクセス可能。
+Auth Service は内部エンドポイントのみを提供し、BFF からのみアクセス可能。
 
 #### POST /internal/auth/verify
 
@@ -296,9 +298,9 @@ Auth Service は内部 API のみを提供し、BFF からのみアクセス可�
 
 ---
 
-### BFF API（変更点）
+### BFF（変更点）
 
-現行の `/auth/login` フローを変更し、Core API と Auth Service の両方を呼び出す。
+現行の `/auth/login` フローを変更し、Core Service と Auth Service の両方を呼び出す。
 
 #### 変更後のログインフロー
 
@@ -307,7 +309,7 @@ sequenceDiagram
     autonumber
     participant Browser as ブラウザ
     participant BFF as BFF
-    participant Core as Core API
+    participant Core as Core Service
     participant Auth as Auth Service
     participant Redis as Redis
 
@@ -329,7 +331,7 @@ sequenceDiagram
     end
 ```
 
-### Core API API（変更点）
+### Core Service（変更点）
 
 #### GET /internal/users/by-email
 
@@ -363,8 +365,8 @@ sequenceDiagram
 | 呼び出し元 | 呼び出し先 | プロトコル | 目的 |
 |-----------|-----------|----------|------|
 | BFF | Auth Service | HTTP/REST | パスワード認証 |
-| BFF | Core API | HTTP/REST | ユーザー情報取得 |
-| Core API | Auth Service | HTTP/REST | 認証情報の CRUD（ユーザー作成/削除時） |
+| BFF | Core Service | HTTP/REST | ユーザー情報取得 |
+| Core Service | Auth Service | HTTP/REST | 認証情報の CRUD（ユーザー作成/削除時） |
 
 ### エラーハンドリング
 
@@ -415,7 +417,7 @@ flowchart LR
 
     subgraph Phase3["Phase 3: 統合"]
         C1["BFF から Auth Service 呼び出し"]
-        C2["Core API から認証コード削除"]
+        C2["Core Service から認証コード削除"]
         C3["users.password_hash 削除"]
     end
 
@@ -438,7 +440,7 @@ flowchart LR
 ### Phase 3: 統合
 
 1. BFF の認証フローを Auth Service 経由に変更
-2. Core API から `/internal/auth/verify` を削除
+2. Core Service から `/internal/auth/verify` を削除
 3. `users.password_hash` カラムを削除
 4. E2E テストで全体の動作を確認
 
@@ -452,7 +454,7 @@ flowchart LR
 backend/
 ├── apps/
 │   ├── bff/                    # 既存
-│   ├── core-api/               # 既存
+│   ├── core-service/           # 既存
 │   └── auth-service/           # 新規
 │       ├── Cargo.toml
 │       └── src/
@@ -479,7 +481,7 @@ backend/
 flowchart TB
     subgraph Apps
         BFF["bff"]
-        Core["core-api"]
+        Core["core-service"]
         Auth["auth-service"]
     end
 
@@ -548,7 +550,7 @@ if user_not_found {
 
 | シナリオ | テストケース |
 |---------|-------------|
-| ログイン（新フロー） | BFF → Core API → Auth Service の連携 |
+| ログイン（新フロー） | BFF → Core Service → Auth Service の連携 |
 | 認証情報作成 | ユーザー作成時に credentials も作成 |
 | テナント退会 | credentials が削除される |
 
@@ -566,3 +568,4 @@ if user_not_found {
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-22 | 初版作成（責務整理、データモデル設計） |
+| 2026-01-22 | ADR-022 に基づき命名規則を統一（Core API → Core Service、環境変数名） |

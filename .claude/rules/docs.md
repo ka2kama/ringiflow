@@ -20,7 +20,7 @@ paths:
 | 図の種類 | 構文 | 例 |
 |---------|------|-----|
 | flowchart | `ID["ラベル"]` | `Browser["ブラウザ"]` |
-| sequenceDiagram | `participant ID as ラベル` | `participant Core as Core API` |
+| sequenceDiagram | `participant ID as ラベル` | `participant Core as Core Service` |
 
 補足:
 - sequenceDiagram の `as` 構文は、`as` 以降全体がラベルになるため空白を含んでもクォート不要
