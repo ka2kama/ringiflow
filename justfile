@@ -36,6 +36,7 @@ check-tools:
     @which sqlx > /dev/null || (echo "ERROR: sqlx-cli がインストールされていません" && exit 1)
     @which lefthook > /dev/null || (echo "ERROR: lefthook がインストールされていません" && exit 1)
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
+    @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
