@@ -1,0 +1,55 @@
+# RingiFlow API テスト環境
+#
+# 開発環境とは独立した DB/Redis を提供する。
+# 開発中のデータに影響を与えずに API テストを実行可能。
+#
+# 起動: docker compose -f docker-compose.api-test.yml -p ringiflow-api-test up -d
+# 停止: docker compose -f docker-compose.api-test.yml -p ringiflow-api-test down
+# 削除（データ含む）: docker compose -f docker-compose.api-test.yml -p ringiflow-api-test down -v
+#
+# ポート番号:
+#   PostgreSQL: 15433（開発環境: 15432）
+#   Redis: 16380（開発環境: 16379）
+
+services:
+  # PostgreSQL データベース（API テスト用）
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ringiflow
+      POSTGRES_PASSWORD: ringiflow
+      POSTGRES_DB: ringiflow_api_test
+      TZ: Asia/Tokyo
+      PGTZ: Asia/Tokyo
+    ports:
+      - "15433:5432"
+    volumes:
+      - postgres_api_test_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ringiflow -d ringiflow_api_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Redis（API テスト用）
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "16380:6379"
+    volumes:
+      - redis_api_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  postgres_api_test_data:
+  redis_api_test_data:
