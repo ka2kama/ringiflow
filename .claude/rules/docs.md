@@ -11,7 +11,7 @@ paths:
 
 | 項目 | ルール |
 |------|--------|
-| 図表 | Mermaid 記法を使用（ASCII art 禁止） |
+| 図表 | Mermaid 記法を使用。ASCII art は原則禁止（ピラミッド等 Mermaid で表現不可能な図のみ例外） |
 
 ### Mermaid ノードラベル
 
