@@ -271,10 +271,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install tools
+      - name: Install hurl
         run: |
-          cargo install sqlx-cli --no-default-features --features rustls,postgres
-          cargo install hurl
+          HURL_VERSION=6.1.1
+          curl -sSL "https://github.com/Orange-OpenSource/hurl/releases/download/${HURL_VERSION}/hurl-${HURL_VERSION}-x86_64-unknown-linux-gnu.tar.gz" -o hurl.tar.gz
+          tar xzf hurl.tar.gz
+          sudo mv "hurl-${HURL_VERSION}-x86_64-unknown-linux-gnu/hurl" /usr/local/bin/
+          rm -rf hurl.tar.gz "hurl-${HURL_VERSION}-x86_64-unknown-linux-gnu"
+
+      - name: Install sqlx-cli
+        run: |
+          if ! command -v sqlx &> /dev/null; then
+            cargo install sqlx-cli --no-default-features --features rustls,postgres
+          fi
 
       - name: Install just
         uses: extractions/setup-just@v3
@@ -291,11 +300,15 @@ jobs:
 
       - name: Run API tests
         run: |
-          # サービスをバックグラウンドで起動
+          # ログディレクトリ作成
+          mkdir -p /tmp/api-test-logs
+
+          # サービスをバックグラウンドで起動（ログをファイルに出力）
           cd backend
-          env $(cat .env.api-test | grep -v '^#' | xargs) ./target/release/ringiflow-bff &
-          env $(cat .env.api-test | grep -v '^#' | xargs) ./target/release/ringiflow-core-service &
-          env $(cat .env.api-test | grep -v '^#' | xargs) ./target/release/ringiflow-auth-service &
+          set -a && source .env.api-test && set +a
+          ./target/release/ringiflow-bff > /tmp/api-test-logs/bff.log 2>&1 &
+          ./target/release/ringiflow-core-service > /tmp/api-test-logs/core.log 2>&1 &
+          ./target/release/ringiflow-auth-service > /tmp/api-test-logs/auth.log 2>&1 &
           cd ..
 
           # ヘルスチェック待機
@@ -307,7 +320,10 @@ jobs:
               break
             fi
             if [ "$i" -eq 30 ]; then
-              echo "Service startup timeout"
+              echo "Service startup timeout. Showing logs:"
+              echo "=== BFF ===" && cat /tmp/api-test-logs/bff.log
+              echo "=== Core Service ===" && cat /tmp/api-test-logs/core.log
+              echo "=== Auth Service ===" && cat /tmp/api-test-logs/auth.log
               exit 1
             fi
             sleep 1
