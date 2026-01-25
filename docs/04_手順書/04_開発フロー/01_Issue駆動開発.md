@@ -63,7 +63,7 @@ git checkout -b feature/34-user-auth
 # 空コミットで Draft PR を作成
 git commit --allow-empty -m "#34 WIP: ログイン機能を実装"
 git push -u origin HEAD
-gh pr create --draft --title "#34 ログイン機能を実装" --body "Closes #34"
+gh pr create --draft --title "#34 ログイン機能を実装" --body-file .github/pull_request_template.md
 ```
 
 **Draft PR の目的:**
@@ -74,6 +74,26 @@ gh pr create --draft --title "#34 ログイン機能を実装" --body "Closes #3
 注意: Draft PR では自動レビューは実行されない。Ready for Review に変更した時点でレビューが走る。
 
 採用理由: [ADR-013: Draft PR 運用の導入](../../05_ADR/013_Draft_PR運用の導入.md)
+
+#### PR 本文のルール
+
+PR テンプレート（`.github/pull_request_template.md`）の形式に従う。
+Squash マージで PR 本文がコミットメッセージになるため、以下を守る:
+
+| セクション | 必須 | 内容 |
+|-----------|------|------|
+| Summary | ✓ | 変更内容を 1〜3 行で |
+| Related | ✓ | 関連 Issue 番号（`#34`, `Closes #34` など） |
+| Test plan | ✓ | 完了したテスト項目を `[x]` で記載 |
+
+オプションセクション（必要な場合のみ追加）:
+- **Changes** — Summary で足りない場合の詳細な変更点
+- **Notes** — 設計判断の背景、レビュアーへの補足
+
+注意:
+- 空のセクションは削除する
+- HTML コメント（`<!-- -->`）は使用しない
+- Test plan には完了項目のみ記載（未完了 `[ ]` を残さない）
 
 ### 4. 設計
 
@@ -505,6 +525,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-01-26 | PR テンプレート導入、PR 本文のルールを追加 |
 | 2026-01-25 | 運用補足セクションを追加（Assignee / Project 紐づけ方針） |
 | 2026-01-22 | Ready for Review セクションを拡充（整合性チェック、手動確認チェックリスト追加） |
 | 2026-01-18 | Epic / Story 運用セクションを追加、Label を Issue タイプ別に整理 |

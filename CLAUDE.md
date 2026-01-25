@@ -244,12 +244,16 @@ lefthook により、ブランチ名が `feature/34-xxx` 形式なら Issue 番�
 
 ### PR 作成（Draft）
 
+→ 詳細: [手順書: Draft PR を作成](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#3-draft-pr-を作成)
+
 ```bash
-# 空コミットで Draft PR を作成
 git commit --allow-empty -m "#34 WIP: ログイン機能を実装"
 git push -u origin HEAD
-gh pr create --draft --title "#34 ログイン機能を実装" --body "Closes #34"
+gh pr create --draft --title "#34 ログイン機能を実装" --body-file .github/pull_request_template.md
 ```
+
+AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する:
+`🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
 ### Ready for Review
 
