@@ -5,9 +5,11 @@
 //! ## モジュール構成
 //!
 //! - `client`: 外部 API クライアント（Core API 等）
+//! - `dev_auth`: 開発用認証バイパス
 //! - `handler`: HTTP ハンドラ
 //! - `middleware`: ミドルウェア（CSRF 検証等）
 
 pub mod client;
+pub mod dev_auth;
 pub mod handler;
 pub mod middleware;
