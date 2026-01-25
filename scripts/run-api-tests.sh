@@ -28,8 +28,8 @@ echo "サービスを起動中..."
 # API テスト環境変数でサービスを起動（バックグラウンド）
 cd "$PROJECT_ROOT/backend"
 
-# .env.api-test から環境変数を読み込み（コメント行を除外）
-env_vars=$(grep -v '^#' .env.api-test | xargs)
+# .env.api-test から環境変数を読み込み（空行とコメント行を除外）
+env_vars=$(grep -Ev '^\s*$|^\s*#' .env.api-test | xargs)
 
 # shellcheck disable=SC2086
 env $env_vars cargo run -p ringiflow-bff &
