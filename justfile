@@ -177,6 +177,11 @@ test-rust-integration:
 test-elm:
     cd frontend && pnpm run test
 
+# E2E テスト（hurl）
+# 事前に dev-deps, reset-db を実行し、BFF/Core/Auth の各サービスを起動しておくこと
+test-e2e:
+    hurl --test --variables-file tests/e2e/hurl/vars.env tests/e2e/hurl/**/*.hurl
+
 # =============================================================================
 # 全チェック
 # =============================================================================
