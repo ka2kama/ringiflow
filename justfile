@@ -177,10 +177,66 @@ test-rust-integration:
 test-elm:
     cd frontend && pnpm run test
 
-# E2E テスト（hurl）
-# 事前に dev-deps, reset-db を実行し、BFF/Core/Auth の各サービスを起動しておくこと
-test-e2e:
-    hurl --test --variables-file tests/e2e/hurl/vars.env tests/e2e/hurl/**/*.hurl
+# =============================================================================
+# API テスト
+# =============================================================================
+
+# API テスト用の DB/Redis を起動（開発環境とは独立）
+api-test-deps:
+    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yml up -d --wait
+    @echo "API テスト環境:"
+    @echo "  PostgreSQL: localhost:15433"
+    @echo "  Redis: localhost:16380"
+
+# API テスト用の DB をリセット
+api-test-reset-db:
+    @echo "API テスト用データベースをリセット中..."
+    cd backend && DATABASE_URL=postgres://ringiflow:ringiflow@localhost:15433/ringiflow_api_test sqlx database reset -y
+    @echo "✓ API テスト用データベースリセット完了"
+
+# API テスト用の DB/Redis を停止
+api-test-stop:
+    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yml down
+
+# API テスト用の DB/Redis を削除（データ含む）
+api-test-clean:
+    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yml down -v
+
+# API テスト実行（hurl）
+# サービスを起動してテストを実行し、終了後にサービスを停止する
+test-api: api-test-deps api-test-reset-db
+    #!/usr/bin/env bash
+    set -e
+    trap 'kill $(jobs -p) 2>/dev/null' EXIT
+
+    echo "サービスを起動中..."
+
+    # API テスト環境変数でサービスを起動（バックグラウンド）
+    cd backend
+    env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-bff &
+    env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-core-service &
+    env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-auth-service &
+
+    # ヘルスチェックを待機
+    echo "サービス起動を待機中..."
+    cd ..
+    for i in {1..30}; do
+        if curl -sf http://localhost:13000/health > /dev/null 2>&1 && \
+           curl -sf http://localhost:13001/health > /dev/null 2>&1 && \
+           curl -sf http://localhost:13002/health > /dev/null 2>&1; then
+            echo "✓ 全サービス起動完了"
+            break
+        fi
+        if [ "$i" -eq 30 ]; then
+            echo "エラー: サービス起動タイムアウト"
+            exit 1
+        fi
+        sleep 1
+    done
+
+    # API テスト実行
+    echo "API テストを実行中..."
+    hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
 
 # =============================================================================
 # 全チェック
