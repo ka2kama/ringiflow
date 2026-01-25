@@ -19,11 +19,25 @@ session_cookie: cookie "session_id"
 
 
 # -----------------------------------------------------------------------------
-# 正常系: ログアウト
+# CSRF トークンを取得
+# -----------------------------------------------------------------------------
+
+GET {{bff_url}}/auth/csrf
+X-Tenant-ID: {{tenant_id}}
+Cookie: session_id={{session_cookie}}
+
+HTTP 200
+[Captures]
+csrf_token: jsonpath "$.data.token"
+
+
+# -----------------------------------------------------------------------------
+# 正常系: ログアウト（CSRF トークン付き）
 # -----------------------------------------------------------------------------
 
 POST {{bff_url}}/auth/logout
 X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
 Cookie: session_id={{session_cookie}}
 
 HTTP 204

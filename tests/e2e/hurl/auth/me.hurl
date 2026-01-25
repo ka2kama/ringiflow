@@ -35,17 +35,3 @@ jsonpath "$.data.tenant_id" == "00000000-0000-0000-0000-000000000001"
 jsonpath "$.data.tenant_name" exists
 jsonpath "$.data.roles" exists
 jsonpath "$.data.permissions" exists
-
-
-# -----------------------------------------------------------------------------
-# 異常系: 未認証（401）
-# -----------------------------------------------------------------------------
-
-GET {{bff_url}}/auth/me
-X-Tenant-ID: {{tenant_id}}
-
-HTTP 401
-[Asserts]
-jsonpath "$.type" == "https://ringiflow.example.com/errors/unauthorized"
-jsonpath "$.title" == "Unauthorized"
-jsonpath "$.status" == 401

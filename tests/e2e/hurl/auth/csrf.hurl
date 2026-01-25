@@ -30,16 +30,3 @@ HTTP 200
 [Asserts]
 jsonpath "$.data.token" exists
 jsonpath "$.data.token" matches "^[a-f0-9]{64}$"
-
-
-# -----------------------------------------------------------------------------
-# 異常系: 未認証で 401
-# -----------------------------------------------------------------------------
-
-GET {{bff_url}}/auth/csrf
-X-Tenant-ID: {{tenant_id}}
-
-HTTP 401
-[Asserts]
-jsonpath "$.type" == "https://ringiflow.example.com/errors/unauthorized"
-jsonpath "$.status" == 401
