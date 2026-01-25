@@ -217,13 +217,13 @@ test-api: api-test-deps api-test-reset-db
     env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-core-service &
     env $(cat .env.api-test | grep -v '^#' | xargs) cargo run -p ringiflow-auth-service &
 
-    # ヘルスチェックを待機
+    # ヘルスチェックを待機（API テスト用ポート: 14000-14002）
     echo "サービス起動を待機中..."
     cd ..
     for i in {1..30}; do
-        if curl -sf http://localhost:13000/health > /dev/null 2>&1 && \
-           curl -sf http://localhost:13001/health > /dev/null 2>&1 && \
-           curl -sf http://localhost:13002/health > /dev/null 2>&1; then
+        if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
+           curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
+           curl -sf http://localhost:14002/health > /dev/null 2>&1; then
             echo "✓ 全サービス起動完了"
             break
         fi

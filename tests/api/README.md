@@ -74,12 +74,15 @@ tests/api/
 
 ## 開発環境との分離
 
-API テストは専用の DB/Redis を使用するため、開発中のデータに影響しない。
+API テストは専用の DB/Redis/ポートを使用するため、開発環境と並行して実行可能。
 
-| 環境 | PostgreSQL | Redis |
-|------|-----------|-------|
-| 開発 | localhost:15432 | localhost:16379 |
-| API テスト | localhost:15433 | localhost:16380 |
+| コンポーネント | 開発 | API テスト |
+|---------------|------|-----------|
+| PostgreSQL | localhost:15432 | localhost:15433 |
+| Redis | localhost:16379 | localhost:16380 |
+| BFF | localhost:13000 | localhost:14000 |
+| Core Service | localhost:13001 | localhost:14001 |
+| Auth Service | localhost:13002 | localhost:14002 |
 
 設定ファイル:
 - 開発: `backend/.env`
@@ -97,9 +100,9 @@ API テストは専用の DB/Redis を使用するため、開発中のデータ
 サービスが起動していない可能性がある。以下を確認:
 
 ```bash
-curl http://localhost:13000/health
-curl http://localhost:13001/health
-curl http://localhost:13002/health
+curl http://localhost:14000/health
+curl http://localhost:14001/health
+curl http://localhost:14002/health
 ```
 
 ### `401 Unauthorized` でログインが失敗する
