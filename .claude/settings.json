@@ -142,6 +142,8 @@
   "sandbox": {
     "enabled": true,
     "excludedCommands": [
+      "bash",
+      "sh",
       "git",
       "gh",
       "cargo",
