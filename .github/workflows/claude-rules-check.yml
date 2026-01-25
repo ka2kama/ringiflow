@@ -1,8 +1,14 @@
 # Claude Rules Check
 #
 # CI 完了後に .claude/rules/ のルール準拠をチェックする。
-# Code Review とは責務を分離し、並列実行する。
 # Draft PR は除外。
+#
+# 責務分離:
+# - このワークフロー: ルール準拠チェック（違反時のみ request-changes、それ以外は comment）
+# - claude-auto-review.yml: コード品質レビュー + 承認判断（approve/request-changes）
+#
+# 重要: このワークフローは --approve を使用しない。
+# 承認権限は Auto Review に一元化し、誤った承認を防ぐ。
 
 name: Claude Rules Check
 
@@ -110,12 +116,12 @@ jobs:
 
             1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
                - 該当ルールを引用して指摘
-            2. 全体フィードバック: `gh pr comment` でサマリーを投稿
-               - チェックしたルールファイル一覧
-               - 違反の有無と概要
-            3. 承認判断: `gh pr review`
-               - ルール違反あり → `--request-changes`
-               - ルール違反なし → `--approve` with "Rules: LGTM"
+            2. 全体フィードバック: `gh pr review` でレビューを投稿
+               - ルール違反あり → `--request-changes` with 違反内容のサマリー
+               - ルール違反なし → `--comment` with "Rules Check: LGTM ✅" + チェックしたルール一覧
+
+            **重要:** ルール違反がない場合でも `--approve` は使用しない。
+            承認判断は Auto Review ワークフローが担当する。
 
             ## 注意
 
