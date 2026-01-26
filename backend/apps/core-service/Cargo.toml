@@ -8,6 +8,7 @@ license.workspace = true
 ringiflow-domain.workspace = true
 ringiflow-infra.workspace = true
 ringiflow-shared.workspace = true
+async-trait.workspace = true
 axum.workspace = true
 tokio.workspace = true
 tower.workspace = true

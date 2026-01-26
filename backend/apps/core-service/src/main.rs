@@ -57,6 +57,7 @@
 mod config;
 mod error;
 mod handler;
+mod usecase;
 
 use std::{net::SocketAddr, sync::Arc};
 
