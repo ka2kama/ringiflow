@@ -22,7 +22,6 @@ pub struct ErrorResponse {
 
 /// Core Service で発生するエラー
 #[derive(Debug, Error)]
-#[allow(dead_code)]
 pub enum CoreError {
    /// リソースが見つからない
    #[error("リソースが見つかりません: {0}")]
