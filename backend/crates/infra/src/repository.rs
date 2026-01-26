@@ -10,6 +10,7 @@
 
 pub mod credentials_repository;
 pub mod user_repository;
+pub mod workflow_definition_repository;
 
 pub use credentials_repository::{
    Credential,
@@ -18,3 +19,7 @@ pub use credentials_repository::{
    PostgresCredentialsRepository,
 };
 pub use user_repository::{PostgresUserRepository, UserRepository};
+pub use workflow_definition_repository::{
+   PostgresWorkflowDefinitionRepository,
+   WorkflowDefinitionRepository,
+};
