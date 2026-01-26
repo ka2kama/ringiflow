@@ -107,6 +107,26 @@ current_step_id:
     - 'null'
 ```
 
+**なぜ `'null'` をクォートするのか？**
+
+YAML では `null` はリテラル値（空値）として解釈される。
+クォートしないと意図した通りに動作しない可能性がある。
+
+```yaml
+# クォートなし → YAML の null リテラル
+type:
+  - string
+  - null      # パーサーによっては無視される
+
+# クォート付き → 文字列 "null"
+type:
+  - string
+  - 'null'    # JSON Schema の type として正しく解釈
+```
+
+JSON Schema では `type` に `"null"` という**文字列**を指定して nullable を表現するため、
+YAML で書く際はクォートが必要。
+
 ### security: [] の明示
 
 認証不要なエンドポイントには、明示的に空の security を指定する。
