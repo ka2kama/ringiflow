@@ -116,26 +116,33 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_optional(&self.pool)
       .await?;
 
-      Ok(row.map(|r| {
-         WorkflowStep::from_db(
-            WorkflowStepId::from_uuid(r.id),
-            WorkflowInstanceId::from_uuid(r.instance_id),
-            r.step_id,
-            r.step_name,
-            r.step_type,
-            WorkflowStepStatus::from_str(&r.status).expect("不正なステータス"),
-            r.assigned_to.map(UserId::from_uuid),
-            r.decision
-               .as_deref()
-               .map(|d| StepDecision::from_str(d).expect("不正な判断")),
-            r.comment,
-            r.due_date,
-            r.started_at,
-            r.completed_at,
-            r.created_at,
-            r.updated_at,
-         )
-      }))
+      let Some(r) = row else {
+         return Ok(None);
+      };
+
+      let step = WorkflowStep::from_db(
+         WorkflowStepId::from_uuid(r.id),
+         WorkflowInstanceId::from_uuid(r.instance_id),
+         r.step_id,
+         r.step_name,
+         r.step_type,
+         WorkflowStepStatus::from_str(&r.status)
+            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+         r.assigned_to.map(UserId::from_uuid),
+         r.decision
+            .as_deref()
+            .map(StepDecision::from_str)
+            .transpose()
+            .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
+         r.comment,
+         r.due_date,
+         r.started_at,
+         r.completed_at,
+         r.created_at,
+         r.updated_at,
+      );
+
+      Ok(Some(step))
    }
 
    async fn find_by_instance(
@@ -161,29 +168,32 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      Ok(rows
+      rows
          .into_iter()
-         .map(|r| {
-            WorkflowStep::from_db(
+         .map(|r| -> Result<WorkflowStep, InfraError> {
+            Ok(WorkflowStep::from_db(
                WorkflowStepId::from_uuid(r.id),
                WorkflowInstanceId::from_uuid(r.instance_id),
                r.step_id,
                r.step_name,
                r.step_type,
-               WorkflowStepStatus::from_str(&r.status).expect("不正なステータス"),
+               WorkflowStepStatus::from_str(&r.status)
+                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
                r.assigned_to.map(UserId::from_uuid),
                r.decision
                   .as_deref()
-                  .map(|d| StepDecision::from_str(d).expect("不正な判断")),
+                  .map(StepDecision::from_str)
+                  .transpose()
+                  .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
                r.comment,
                r.due_date,
                r.started_at,
                r.completed_at,
                r.created_at,
                r.updated_at,
-            )
+            ))
          })
-         .collect())
+         .collect()
    }
 
    async fn find_by_assigned_to(
@@ -209,29 +219,32 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      Ok(rows
+      rows
          .into_iter()
-         .map(|r| {
-            WorkflowStep::from_db(
+         .map(|r| -> Result<WorkflowStep, InfraError> {
+            Ok(WorkflowStep::from_db(
                WorkflowStepId::from_uuid(r.id),
                WorkflowInstanceId::from_uuid(r.instance_id),
                r.step_id,
                r.step_name,
                r.step_type,
-               WorkflowStepStatus::from_str(&r.status).expect("不正なステータス"),
+               WorkflowStepStatus::from_str(&r.status)
+                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
                r.assigned_to.map(UserId::from_uuid),
                r.decision
                   .as_deref()
-                  .map(|d| StepDecision::from_str(d).expect("不正な判断")),
+                  .map(StepDecision::from_str)
+                  .transpose()
+                  .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
                r.comment,
                r.due_date,
                r.started_at,
                r.completed_at,
                r.created_at,
                r.updated_at,
-            )
+            ))
          })
-         .collect())
+         .collect()
    }
 }
 

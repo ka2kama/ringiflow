@@ -24,7 +24,6 @@ use crate::error::CoreError;
 
 /// ワークフロー作成入力
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct CreateWorkflowInput {
    /// ワークフロー定義 ID
    pub definition_id: WorkflowDefinitionId,
@@ -36,7 +35,6 @@ pub struct CreateWorkflowInput {
 
 /// ワークフロー申請入力
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct SubmitWorkflowInput {
    /// 承認者のユーザー ID
    pub assigned_to: UserId,
@@ -45,14 +43,12 @@ pub struct SubmitWorkflowInput {
 /// ワークフローユースケース実装
 ///
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
-#[allow(dead_code)]
 pub struct WorkflowUseCaseImpl<D, I, S> {
    definition_repo: D,
    instance_repo:   I,
    step_repo:       S,
 }
 
-#[allow(dead_code)]
 impl<D, I, S> WorkflowUseCaseImpl<D, I, S>
 where
    D: WorkflowDefinitionRepository,

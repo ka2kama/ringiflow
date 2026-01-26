@@ -123,6 +123,23 @@ pub struct ErrorResponse {
    pub detail:     String,
 }
 
+impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
+   fn from(dto: crate::client::WorkflowInstanceDto) -> Self {
+      Self {
+         id: dto.id,
+         title: dto.title,
+         definition_id: dto.definition_id,
+         status: dto.status,
+         form_data: dto.form_data,
+         initiated_by: dto.initiated_by,
+         current_step_id: dto.current_step_id,
+         submitted_at: dto.submitted_at,
+         created_at: dto.created_at,
+         updated_at: dto.updated_at,
+      }
+   }
+}
+
 // --- ハンドラ ---
 
 /// POST /api/v1/workflows
@@ -168,18 +185,7 @@ where
    match state.core_service_client.create_workflow(core_req).await {
       Ok(core_response) => {
          let response = WorkflowResponse {
-            data: WorkflowData {
-               id: core_response.data.id,
-               title: core_response.data.title,
-               definition_id: core_response.data.definition_id,
-               status: core_response.data.status,
-               form_data: core_response.data.form_data,
-               initiated_by: core_response.data.initiated_by,
-               current_step_id: core_response.data.current_step_id,
-               submitted_at: core_response.data.submitted_at,
-               created_at: core_response.data.created_at,
-               updated_at: core_response.data.updated_at,
-            },
+            data: core_response.data.into(),
          };
          (StatusCode::CREATED, Json(response)).into_response()
       }
@@ -241,18 +247,7 @@ where
    {
       Ok(core_response) => {
          let response = WorkflowResponse {
-            data: WorkflowData {
-               id: core_response.data.id,
-               title: core_response.data.title,
-               definition_id: core_response.data.definition_id,
-               status: core_response.data.status,
-               form_data: core_response.data.form_data,
-               initiated_by: core_response.data.initiated_by,
-               current_step_id: core_response.data.current_step_id,
-               submitted_at: core_response.data.submitted_at,
-               created_at: core_response.data.created_at,
-               updated_at: core_response.data.updated_at,
-            },
+            data: core_response.data.into(),
          };
          (StatusCode::OK, Json(response)).into_response()
       }
