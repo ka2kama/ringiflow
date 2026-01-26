@@ -55,6 +55,7 @@ paths:
 
         成功時は `Set-Cookie` ヘッダーでセッション Cookie が設定される。
       operationId: login
+      security: []  # 認証不要
       requestBody:
         required: true
         content:
@@ -296,6 +297,7 @@ paths:
       summary: ヘルスチェック
       description: サーバーの稼働状態を確認する。
       operationId: healthCheck
+      security: []  # 認証不要
       responses:
         '200':
           description: 正常
@@ -311,6 +313,7 @@ paths:
       summary: レディネスチェック
       description: 依存サービス（DB、Redis、Core API）を含めた稼働状態を確認する。
       operationId: readinessCheck
+      security: []  # 認証不要
       responses:
         '200':
           description: 準備完了
@@ -443,13 +446,15 @@ components:
           format: uuid
           description: 申請者のユーザー ID
         current_step_id:
-          type: string
-          nullable: true
+          type:
+            - string
+            - 'null'
           description: 現在の承認ステップ ID
         submitted_at:
-          type: string
+          type:
+            - string
+            - 'null'
           format: date-time
-          nullable: true
           description: 申請日時
         created_at:
           type: string

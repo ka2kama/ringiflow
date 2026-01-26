@@ -137,7 +137,7 @@ fmt-elm *files:
 # =============================================================================
 
 # 全体リント
-lint: lint-rust lint-elm lint-shell lint-ci
+lint: lint-rust lint-elm lint-shell lint-ci lint-openapi
 
 # Rust リント（rustfmt + clippy）
 lint-rust:
@@ -162,6 +162,10 @@ lint-shell:
 # GitHub Actions ワークフロー リント（actionlint）
 lint-ci:
     actionlint
+
+# OpenAPI 仕様書 リント（Redocly CLI）
+lint-openapi:
+    npx --yes @redocly/cli@latest lint --config openapi/redocly.yaml
 
 # =============================================================================
 # テスト

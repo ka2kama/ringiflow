@@ -26,6 +26,7 @@ jobs:
       elm: ${{ steps.filter.outputs.elm }}
       shell: ${{ steps.filter.outputs.shell }}
       ci: ${{ steps.filter.outputs.ci }}
+      openapi: ${{ steps.filter.outputs.openapi }}
       api-test: ${{ steps.filter.outputs.api-test }}
     steps:
       - name: Checkout
@@ -47,6 +48,8 @@ jobs:
               - '**/*.sh'
             ci:
               - '.github/workflows/**'
+            openapi:
+              - 'openapi/**'
             api-test:
               - 'backend/**'
               - 'tests/api/**'
@@ -252,6 +255,28 @@ jobs:
         if: needs.changes.outputs.ci == 'true'
         run: just lint-ci
 
+  # OpenAPI 仕様書 チェック: Redocly CLI で lint
+  openapi:
+    name: OpenAPI
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.openapi == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Lint OpenAPI
+        run: just lint-openapi
+
   # API テスト: 実際のサービスを起動して hurl でテスト
   api-test:
     name: API Test
@@ -354,7 +379,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust, rust-integration, elm, shell, api-test]
+    needs: [changes, rust, rust-integration, elm, shell, openapi, api-test]
     if: always()
     steps:
       - name: Check results
@@ -381,6 +406,11 @@ jobs:
 
           if [[ "${{ needs.shell.result }}" == "failure" ]]; then
             echo "Shell checks failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.openapi.result }}" == "failure" ]]; then
+            echo "OpenAPI checks failed"
             exit 1
           fi
 
