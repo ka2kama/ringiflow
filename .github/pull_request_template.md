@@ -13,14 +13,14 @@ Issue との関連:
 ## Test plan
 
 <!--
-段階的な実装（Phase 1-N）の場合:
-- 各 Phase では `just check-all` が通ることを確認
-- Test plan は最終 Phase（API 実装完了後）に記載する
-- 途中の Phase では「最終 Phase 完了後に確認」と記載
+判断基準: Issue に「Phase 1, 2, 3...」の構成があるか？
 
-単一 PR で完結する場合:
-- 実装したテストを記載
-- 手動テストが必要な場合はその手順を記載
+■ Phase 構成がある場合（段階的実装）
+  - 途中 Phase: 「最終 Phase 完了後に確認」と記載
+  - 最終 Phase: 実際のテスト手順を記載
+
+■ Phase 構成がない場合（単一 PR）
+  - 実装したテストと手動テスト手順を記載
 -->
 
 - [ ] `just check-all` が通る
