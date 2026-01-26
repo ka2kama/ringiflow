@@ -309,6 +309,17 @@ just clean-branches  # マージ後のローカルブランチ削除
 
 **禁止:** DB 接続が必要なテストを `src/` に配置、`sqlx-prepare` の省略
 
+## API 実装時の必須対応
+
+BFF の公開 API エンドポイントを追加・変更・削除した場合、以下を必ず実施する。
+
+→ 詳細: [`.claude/rules/api.md`](.claude/rules/api.md)
+
+1. OpenAPI 仕様書 ([`openapi/openapi.yaml`](openapi/openapi.yaml)) を更新
+2. API 設計書との整合性を確認
+
+**禁止:** 実装と OpenAPI 仕様書が乖離した状態でコミットすること
+
 ## 開発ツール追加時の必須対応
 
 新しい開発ツールを追加する場合、以下を同時に更新:

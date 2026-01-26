@@ -24,3 +24,4 @@ Issue との関連:
 -->
 
 - [ ] `just check-all` が通る
+- [ ] API エンドポイントを追加・変更・削除した場合: OpenAPI 仕様書 (`openapi/openapi.yaml`) を更新した
