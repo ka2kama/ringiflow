@@ -10,11 +10,12 @@
 //!
 //! ## 今後追加予定のハンドラ
 //!
-//! - `workflow`: ワークフロー CRUD
 //! - `task`: タスク操作
 
 pub mod auth;
 pub mod health;
+pub mod workflow;
 
 pub use auth::{UserState, get_user, get_user_by_email};
 pub use health::health_check;
+pub use workflow::{WorkflowState, create_workflow, submit_workflow};
