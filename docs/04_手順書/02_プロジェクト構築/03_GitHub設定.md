@@ -191,7 +191,7 @@ Add target > Include by pattern > main
 | └─ Require conversation resolution | ✅ | レビューコメントの解決を強制 |
 | Require status checks to pass | ✅ | CI 必須 |
 | ├─ Require branches to be up to date | ✅ | 最新の main でテスト済みを保証 |
-| └─ Status checks | `CI Success` | ci.yml の ci-success ジョブ |
+| └─ Status checks | `CI Success` | ci.yaml の ci-success ジョブ |
 | Block force pushes | ✅ | 履歴の改変を防止 |
 
 **RingiFlow 固有設定:**
@@ -226,7 +226,7 @@ Settings > Security > Code security and analysis
 | Dependabot alerts | ✅ 有効 | 脆弱性の通知 |
 | Dependabot security updates | ✅ 有効 | セキュリティ修正 PR の自動作成 |
 | Grouped security updates | ✅ 有効 | セキュリティ更新を 1 PR にまとめる |
-| Dependabot version updates | ✅ 有効 | 通常の依存更新（dependabot.yml で設定済み） |
+| Dependabot version updates | ✅ 有効 | 通常の依存更新（dependabot.yaml で設定済み） |
 | Dependabot on Actions runners | 任意 | self-hosted runner 使用時 |
 | Code scanning | ✅ 有効 | コードの脆弱性スキャン |
 | Secret scanning | ✅ 有効 | シークレットの漏洩検知 |
@@ -239,7 +239,7 @@ Settings > Security > Code security and analysis > Code scanning > Set up > Defa
 ```
 
 CodeQL は GitHub 提供の静的解析ツール。
-セットアップすると `.github/workflows/codeql.yml` が作成される。
+セットアップすると `.github/workflows/codeql.yaml` が作成される。
 
 **対応言語:**
 - JavaScript/TypeScript
@@ -506,15 +506,15 @@ PR が作成されると、変更ファイルに応じて自動でレビュワ�
 
 ```
 .github/ISSUE_TEMPLATE/
-├── bug_report.yml
-├── feature_request.yml
-└── config.yml
+├── bug_report.yaml
+├── feature_request.yaml
+└── config.yaml
 ```
 
 **バグ報告テンプレート（YAML 形式）:**
 
 ```yaml
-# .github/ISSUE_TEMPLATE/bug_report.yml
+# .github/ISSUE_TEMPLATE/bug_report.yaml
 name: バグ報告
 description: バグや不具合を報告する
 labels: ["bug"]
@@ -565,7 +565,7 @@ body:
 **機能要望テンプレート:**
 
 ```yaml
-# .github/ISSUE_TEMPLATE/feature_request.yml
+# .github/ISSUE_TEMPLATE/feature_request.yaml
 name: 機能要望
 description: 新機能や改善の提案
 labels: ["enhancement"]
@@ -594,7 +594,7 @@ body:
 **テンプレート選択画面の設定:**
 
 ```yaml
-# .github/ISSUE_TEMPLATE/config.yml
+# .github/ISSUE_TEMPLATE/config.yaml
 blank_issues_enabled: false
 contact_links:
   - name: 質問・相談
@@ -780,7 +780,7 @@ Security > Secret scanning > Alerts > アラートを選択 > Close as > Not a s
 
 **パターンを除外する場合:**
 
-`.github/secret_scanning.yml` でカスタムパターンを除外:
+`.github/secret_scanning.yaml` でカスタムパターンを除外:
 
 ```yaml
 paths-ignore:
@@ -790,7 +790,7 @@ paths-ignore:
 
 ### Dependabot PR が多すぎる
 
-`dependabot.yml` で制限:
+`dependabot.yaml` で制限:
 
 ```yaml
 open-pull-requests-limit: 3  # 5 → 3 に減らす
@@ -832,8 +832,8 @@ CLAUDE.md に記載されたプロジェクト理念と品質基準に基づい�
 
 | ワークフロー | ファイル | 責務 |
 |-------------|----------|------|
-| Claude Rules Check | `claude-rules-check.yml` | `.claude/rules/` のルール準拠チェック |
-| Claude Auto Review | `claude-auto-review.yml` | コード品質、設計、セキュリティのレビュー |
+| Claude Rules Check | `claude-rules-check.yaml` | `.claude/rules/` のルール準拠チェック |
+| Claude Auto Review | `claude-auto-review.yaml` | コード品質、設計、セキュリティのレビュー |
 
 両ワークフローは CI 成功後に並列実行され、それぞれ独立した Status Check として報告される。
 

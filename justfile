@@ -86,7 +86,7 @@ reset-db:
 dev-deps:
     #!/usr/bin/env bash
     PROJECT_NAME=$(basename "$(pwd)")
-    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml up -d --wait
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml up -d --wait
     echo "PostgreSQL: localhost:${POSTGRES_PORT}"
     echo "Redis: localhost:${REDIS_PORT}"
     echo "プロジェクト名: $PROJECT_NAME"
@@ -188,7 +188,7 @@ test-elm:
 
 # API テスト用の DB/Redis を起動（開発環境とは独立）
 api-test-deps:
-    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yml up -d --wait
+    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml up -d --wait
     @echo "API テスト環境:"
     @echo "  PostgreSQL: localhost:15433"
     @echo "  Redis: localhost:16380"
@@ -201,11 +201,11 @@ api-test-reset-db:
 
 # API テスト用の DB/Redis を停止
 api-test-stop:
-    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yml down
+    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml down
 
 # API テスト用の DB/Redis を削除（データ含む）
 api-test-clean:
-    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yml down -v
+    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml down -v
 
 # API テスト実行（hurl）
 # サービスを起動してテストを実行し、終了後にサービスを停止する
@@ -249,7 +249,7 @@ pre-commit: sqlx-prepare check-all
 clean:
     #!/usr/bin/env bash
     PROJECT_NAME=$(basename "$(pwd)")
-    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml down -v
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
     cd backend && cargo clean
     cd frontend && rm -rf node_modules elm-stuff dist
 
@@ -283,10 +283,10 @@ worktree-remove name:
     echo "worktree を削除中: {{name}}"
 
     # Docker コンテナを停止・削除
-    containers=$(docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml ps -q 2>/dev/null || true)
+    containers=$(docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml ps -q 2>/dev/null || true)
     if [[ -n "$containers" ]]; then
         echo "  Docker コンテナを停止中..."
-        docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yml down -v
+        docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
     fi
 
     # worktree を削除

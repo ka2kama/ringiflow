@@ -3,9 +3,9 @@
 # 開発環境とは独立した DB/Redis を提供する。
 # 開発中のデータに影響を与えずに API テストを実行可能。
 #
-# 起動: docker compose -f docker-compose.api-test.yml -p ringiflow-api-test up -d
-# 停止: docker compose -f docker-compose.api-test.yml -p ringiflow-api-test down
-# 削除（データ含む）: docker compose -f docker-compose.api-test.yml -p ringiflow-api-test down -v
+# 起動: docker compose -f docker-compose.api-test.yaml -p ringiflow-api-test up -d
+# 停止: docker compose -f docker-compose.api-test.yaml -p ringiflow-api-test down
+# 削除（データ含む）: docker compose -f docker-compose.api-test.yaml -p ringiflow-api-test down -v
 #
 # ポート番号:
 #   PostgreSQL: 15433（開発環境: 15432）

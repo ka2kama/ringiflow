@@ -34,7 +34,7 @@ Auth Service 分離により認証フローが複数サービスにまたがる�
 |---------|------|
 | [`tests/api/hurl/vars.env`](../../../tests/api/hurl/vars.env) | hurl 用共通変数 |
 | [`backend/.env.api-test`](../../../backend/.env.api-test) | API テスト用環境変数 |
-| [`infra/docker/docker-compose.api-test.yml`](../../../infra/docker/docker-compose.api-test.yml) | API テスト用 DB/Redis |
+| [`infra/docker/docker-compose.api-test.yaml`](../../../infra/docker/docker-compose.api-test.yaml) | API テスト用 DB/Redis |
 
 ### justfile コマンド
 
@@ -61,7 +61,7 @@ hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
 
 ## CI 統合
 
-GitHub Actions で自動実行される（`.github/workflows/ci.yml`）。
+GitHub Actions で自動実行される（`.github/workflows/ci.yaml`）。
 
 - トリガー: `backend/**` または `tests/api/**` の変更時
 - `api-test` ジョブとして、他のテスト（rust, rust-integration, elm）と並列実行
@@ -203,7 +203,7 @@ CSRF 保護のような「暗黙の前提」を忘れずにテストに含める
 
 ### 4. テスト環境の完全分離
 
-**場所**: [`backend/.env.api-test`](../../../backend/.env.api-test)、[`infra/docker/docker-compose.api-test.yml`](../../../infra/docker/docker-compose.api-test.yml)
+**場所**: [`backend/.env.api-test`](../../../backend/.env.api-test)、[`infra/docker/docker-compose.api-test.yaml`](../../../infra/docker/docker-compose.api-test.yaml)
 
 **問題**:
 当初、開発用の DB/Redis をテストでも使う設計だった。
@@ -232,7 +232,7 @@ docker compose -p ringiflow up -d
 # → コンテナ: ringiflow-postgres-1, ringiflow-redis-1
 
 # API テスト環境
-docker compose -p ringiflow-api-test -f docker-compose.api-test.yml up -d
+docker compose -p ringiflow-api-test -f docker-compose.api-test.yaml up -d
 # → コンテナ: ringiflow-api-test-postgres-1, ringiflow-api-test-redis-1
 ```
 
@@ -294,7 +294,7 @@ header "Set-Cookie" contains "session_id="
 外部サービス（メール送信、決済など）を呼び出す場合は、モックサーバーを使う。
 
 ```yaml
-# docker-compose.api-test.yml（将来の拡張例）
+# docker-compose.api-test.yaml（将来の拡張例）
 services:
   mock-server:
     image: mockserver/mockserver

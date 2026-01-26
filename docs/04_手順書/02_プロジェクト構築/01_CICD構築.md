@@ -24,8 +24,8 @@ GitHub Actions で Rust / Elm の CI を構築する。
 設計の詳細は [ADR-004: CI 並列化と変更検出](../../05_ADR/004_CI並列化と変更検出.md) を参照。
 
 → 参照:
-- [`.github/workflows/ci.yml`](/.github/workflows/ci.yml)
-- [`.github/dependabot.yml`](/.github/dependabot.yml)
+- [`.github/workflows/ci.yaml`](/.github/workflows/ci.yaml)
+- [`.github/dependabot.yaml`](/.github/dependabot.yaml)
 
 ---
 
@@ -41,7 +41,7 @@ CI 環境では PostgreSQL に接続できないため、SQLx のオフライン
 cd apps/core-service
 
 # データベースが起動していることを確認
-docker compose -f ../../infra/docker/docker-compose.yml ps
+docker compose -f ../../infra/docker/docker-compose.yaml ps
 
 # クエリメタデータを生成
 cargo sqlx prepare --workspace
@@ -140,8 +140,8 @@ just test-elm
 
 ```bash
 # ワークフローファイルを追加
-git add .github/workflows/ci.yml
-git add .github/dependabot.yml
+git add .github/workflows/ci.yaml
+git add .github/dependabot.yaml
 
 # コミット
 git commit -m "GitHub Actions CI を追加"
@@ -167,7 +167,7 @@ git push origin main
 
 | 項目 | 確認方法 | 期待結果 |
 |------|---------|----------|
-| ci.yml 存在 | `cat .github/workflows/ci.yml` | ファイル内容表示 |
+| ci.yaml 存在 | `cat .github/workflows/ci.yaml` | ファイル内容表示 |
 | ローカル Rust チェック | `just fmt-check-rust && just lint-rust && just test-rust` | 終了コード 0 |
 | ローカル Elm チェック | `just fmt-check-elm && just test-elm` | 終了コード 0 |
 | ローカル全チェック | `just ci` | 終了コード 0 |

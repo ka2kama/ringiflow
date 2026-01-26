@@ -47,7 +47,7 @@ lefthook install
 
 ### 設定ファイル
 
-`lefthook.yml` をプロジェクトルートに配置する。
+`lefthook.yaml` をプロジェクトルートに配置する。
 
 ```yaml
 # コミット前に実行
@@ -90,7 +90,7 @@ prepare-commit-msg:
 ブランチ名から Issue 番号を抽出してコミットメッセージの先頭に追加する。
 
 ```yaml
-# lefthook.yml
+# lefthook.yaml
 prepare-commit-msg:
   scripts:
     "add-issue-number.sh":

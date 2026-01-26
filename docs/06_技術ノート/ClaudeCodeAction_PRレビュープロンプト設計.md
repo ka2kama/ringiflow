@@ -127,7 +127,7 @@ prompt: |
 
 ### ワークフローファイル変更時の OAuth 検証エラー
 
-**現象**: ワークフローファイル（`.github/workflows/*.yml`）自体を変更する PR では、Auto Review が以下のエラーで失敗する。
+**現象**: ワークフローファイル（`.github/workflows/*.yaml`）自体を変更する PR では、Auto Review が以下のエラーで失敗する。
 
 ```
 Workflow validation failed. The workflow file must exist and have identical content

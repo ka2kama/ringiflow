@@ -5,7 +5,7 @@
 #
 # 責務分離:
 # - このワークフロー: ルール準拠チェック（違反時のみ request-changes、それ以外は comment）
-# - claude-auto-review.yml: コード品質レビュー + 承認判断（approve/request-changes）
+# - claude-auto-review.yaml: コード品質レビュー + 承認判断（approve/request-changes）
 #
 # 重要: このワークフローは --approve を使用しない。
 # 承認権限は Auto Review に一元化し、誤った承認を防ぐ。

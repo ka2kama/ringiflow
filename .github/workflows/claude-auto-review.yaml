@@ -5,7 +5,7 @@
 #
 # 責務分離:
 # - このワークフロー: コード品質、設計、セキュリティ、パフォーマンスのレビュー
-# - claude-rules-check.yml: .claude/rules/ のルール準拠チェック
+# - claude-rules-check.yaml: .claude/rules/ のルール準拠チェック
 #
 # 設計判断: [ADR-011](../../docs/05_ADR/011_Claude_Code_Action導入.md)
 #
