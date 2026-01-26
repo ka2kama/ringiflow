@@ -79,7 +79,7 @@ Issue 駆動開発において、PR を作成するタイミングと自動レ�
 ### 関連ドキュメント
 
 - 手順書: [Issue 駆動開発](../04_手順書/04_開発フロー/01_Issue駆動開発.md)
-- 実装: [.github/workflows/claude-review.yml](../../.github/workflows/claude-review.yml)
+- 実装: [.github/workflows/claude-review.yaml](../../.github/workflows/claude-review.yaml)
 
 ---
 

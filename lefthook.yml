@@ -1,8 +1,0 @@
-# lefthook 設定
-# インストール: https://github.com/evilmartians/lefthook
-
-# コミットメッセージ作成時に Issue 番号を自動付与
-prepare-commit-msg:
-  scripts:
-    "add-issue-number.sh":
-      runner: bash

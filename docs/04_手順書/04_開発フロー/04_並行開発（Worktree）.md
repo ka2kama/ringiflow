@@ -105,8 +105,8 @@ just worktree-list
 
 === Docker プロジェクト一覧 ===
 NAME              STATUS   CONFIG FILES
-ringiflow         running  /home/user/ringiflow/infra/docker/docker-compose.yml
-ringiflow-auth    running  /home/user/ringiflow-auth/infra/docker/docker-compose.yml
+ringiflow         running  /home/user/ringiflow/infra/docker/docker-compose.yaml
+ringiflow-auth    running  /home/user/ringiflow-auth/infra/docker/docker-compose.yaml
 ```
 
 ### worktree を削除する
@@ -169,7 +169,7 @@ docker ps --filter "name=ringiflow"
 git worktree remove ../ringiflow-auth --force
 
 # Docker コンテナを手動で削除
-docker compose -p ringiflow-auth -f infra/docker/docker-compose.yml down -v
+docker compose -p ringiflow-auth -f infra/docker/docker-compose.yaml down -v
 ```
 
 ## 参考

@@ -1,0 +1,23 @@
+# lefthook 設定
+# インストール: https://github.com/evilmartians/lefthook
+
+# コミット前のチェック
+pre-commit:
+  commands:
+    no-yml-extension:
+      # .yml ファイルの追加を禁止（.yaml を使用すること）
+      # .gitignore 内の参照は許可
+      run: |
+        files=$(git diff --cached --name-only --diff-filter=A | grep '\.yml$' || true)
+        if [ -n "$files" ]; then
+          echo "Error: .yml 拡張子は使用できません。.yaml を使用してください。"
+          echo "該当ファイル:"
+          echo "$files"
+          exit 1
+        fi
+
+# コミットメッセージ作成時に Issue 番号を自動付与
+prepare-commit-msg:
+  scripts:
+    "add-issue-number.sh":
+      runner: bash

@@ -216,7 +216,7 @@ git commit -m "SQLx オフラインキャッシュを更新"
 ### CI での設定
 
 ```yaml
-# .github/workflows/ci.yml
+# .github/workflows/ci.yaml
 env:
   SQLX_OFFLINE: true  # オフラインモードを有効化
 ```

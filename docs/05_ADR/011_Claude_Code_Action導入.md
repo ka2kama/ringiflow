@@ -75,7 +75,7 @@ Anthropic 公式の GitHub Action。PRオープン時に自動レビュー、コ
 
 ### 関連ドキュメント
 
-- 実装: [`.github/workflows/claude-auto-review.yml`](../../.github/workflows/claude-auto-review.yml)
+- 実装: [`.github/workflows/claude-auto-review.yaml`](../../.github/workflows/claude-auto-review.yaml)
 - レビュー基準: [`CLAUDE.md`](../../CLAUDE.md) の「PRレビュー」セクション
 
 ---

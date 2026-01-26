@@ -14,12 +14,12 @@ Dependabot は GitHub が提供する依存関係の自動更新サービス。
 
 ### 1. バージョン更新（Version Updates）
 
-設定ファイル（`dependabot.yml`）に基づき、定期的に依存をスキャンして更新 PR を作成する。
+設定ファイル（`dependabot.yaml`）に基づき、定期的に依存をスキャンして更新 PR を作成する。
 
 ### 2. セキュリティ更新（Security Updates）
 
 GitHub Advisory Database で脆弱性が公開されると、影響を受ける依存の更新 PR を即座に作成する。
-`dependabot.yml` の設定がなくても、リポジトリ設定で有効化できる。
+`dependabot.yaml` の設定がなくても、リポジトリ設定で有効化できる。
 
 ### 3. アラート（Dependabot Alerts）
 
@@ -27,7 +27,7 @@ GitHub Advisory Database で脆弱性が公開されると、影響を受ける�
 
 ## 設定ファイル
 
-`.github/dependabot.yml` で設定する。
+`.github/dependabot.yaml` で設定する。
 
 ### 基本構造
 
@@ -59,7 +59,7 @@ updates:
 |-----------|-------------|------|
 | `cargo` | `Cargo.toml`, `Cargo.lock` | Rust |
 | `npm` | `package.json`, `package-lock.json` | JavaScript/TypeScript |
-| `github-actions` | `.github/workflows/*.yml` | GitHub Actions |
+| `github-actions` | `.github/workflows/*.yaml` | GitHub Actions |
 | `pip` | `requirements.txt`, `Pipfile` | Python |
 | `gomod` | `go.mod` | Go |
 | `docker` | `Dockerfile` | Docker |
@@ -137,7 +137,7 @@ labels:
 GitHub Actions と組み合わせて、セキュリティ更新を自動マージできる:
 
 ```yaml
-# .github/workflows/dependabot-auto-merge.yml
+# .github/workflows/dependabot-auto-merge.yaml
 name: Dependabot auto-merge
 on: pull_request
 
@@ -168,7 +168,7 @@ jobs:
 
 ### 設定ファイル
 
-`.github/dependabot.yml` で以下のエコシステムを管理:
+`.github/dependabot.yaml` で以下のエコシステムを管理:
 
 | エコシステム | ディレクトリ | 対象 |
 |-------------|-------------|------|
@@ -191,7 +191,7 @@ Elm パッケージ（`elm.json` の dependencies）は Dependabot 非対応。
 
 ### PR が作成されない
 
-1. `dependabot.yml` の構文エラーを確認
+1. `dependabot.yaml` の構文エラーを確認
 2. `directory` パスが正しいか確認（パッケージファイルがある場所）
 3. GitHub の Settings → Code security and analysis で Dependabot が有効か確認
 
@@ -210,7 +210,7 @@ Dependabot の PR で CI が失敗する場合:
 ### 複数 PR がコンフリクトする
 
 同じファイルを変更する複数の Dependabot PR は、1 つマージすると他がコンフリクト状態になる。
-例: GitHub Actions の複数アクションを更新する PR が同時に作成された場合（すべて `ci.yml` を変更）
+例: GitHub Actions の複数アクションを更新する PR が同時に作成された場合（すべて `ci.yaml` を変更）
 
 **対処法:**
 
@@ -282,7 +282,7 @@ Dependabot がセキュリティアラートを検出した場合の対応方法
 ## 関連リソース
 
 - [Dependabot 公式ドキュメント](https://docs.github.com/en/code-security/dependabot)
-- [dependabot.yml 設定リファレンス](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file)
+- [dependabot.yaml 設定リファレンス](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yaml-file)
 - [GitHub Advisory Database](https://github.com/advisories)
 
 ---

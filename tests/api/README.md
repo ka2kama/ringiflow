@@ -147,7 +147,7 @@ just api-test-reset-db
 GitHub Actions で自動実行される。
 
 - トリガー: `backend/**` または `tests/api/**` の変更時
-- ワークフロー: `.github/workflows/ci.yml` の `api-test` ジョブ
+- ワークフロー: `.github/workflows/ci.yaml` の `api-test` ジョブ
 
 ## 参考
 

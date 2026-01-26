@@ -35,7 +35,7 @@ sqlx migrate run
 
 ## 使い方
 
-### 1. docker-compose.yml で healthcheck を定義
+### 1. docker-compose.yaml で healthcheck を定義
 
 ```yaml
 services:

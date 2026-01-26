@@ -206,6 +206,23 @@ TEA（The Elm Architecture）パターンを採用。
 
 特に注力: アーキテクチャ設計（DDD, CQRS）、Elm/TEA パターン、ソフトウェア設計原則
 
+### 複数選択肢の提示
+
+ユーザーに複数の選択肢を提示する際は、推奨オプションを明示する。
+
+```
+どの方法で進めますか？
+1. 選択肢 A
+2. 選択肢 B
+3. 選択肢 C
+4. **A + C の組み合わせ（推奨）** ← 理由を簡潔に
+```
+
+- 選択肢だけ列挙して「どれにしますか？」と聞くのではなく、判断材料と推奨を提供する
+- 単一選択だけでなく、組み合わせが最適な場合はそれを推奨として明示する
+
+注: Yes/No で答えられるクローズドクエスチョンには適用しない。
+
 ## Issue 駆動開発
 
 → 詳細: [手順書: Issue 駆動開発](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md)
@@ -335,7 +352,7 @@ BFF の公開 API エンドポイントを追加・変更・削除した場合�
 
 Claude Code Action による自動 PR レビューが有効。
 
-→ [`.github/workflows/claude-auto-review.yml`](.github/workflows/claude-auto-review.yml)
+→ [`.github/workflows/claude-auto-review.yaml`](.github/workflows/claude-auto-review.yaml)
 
 承認基準:
 
