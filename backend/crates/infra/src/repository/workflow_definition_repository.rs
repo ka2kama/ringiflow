@@ -17,7 +17,6 @@ use ringiflow_domain::{
    value_objects::{Version, WorkflowName},
    workflow::{WorkflowDefinition, WorkflowDefinitionId, WorkflowDefinitionStatus},
 };
-use serde_json::Value as JsonValue;
 use sqlx::PgPool;
 
 use crate::error::InfraError;
@@ -188,7 +187,7 @@ mod tests {
       PostgresWorkflowDefinitionRepository::new(pool)
    }
 
-   #[sqlx::test]
+   #[sqlx::test(migrations = "../../migrations")]
    async fn test_find_published_by_tenant_returns_published_definitions(pool: PgPool) {
       // Arrange
       let repo = setup_test_repository(pool).await;
@@ -203,7 +202,7 @@ mod tests {
       assert!(!definitions.is_empty());
    }
 
-   #[sqlx::test]
+   #[sqlx::test(migrations = "../../migrations")]
    async fn test_find_published_by_tenant_filters_by_tenant(pool: PgPool) {
       // Arrange
       let repo = setup_test_repository(pool).await;
@@ -218,7 +217,7 @@ mod tests {
       assert!(definitions.is_empty());
    }
 
-   #[sqlx::test]
+   #[sqlx::test(migrations = "../../migrations")]
    async fn test_find_by_id_returns_definition_when_exists(pool: PgPool) {
       // Arrange
       let repo = setup_test_repository(pool).await;
@@ -234,7 +233,7 @@ mod tests {
       assert!(result.unwrap().is_some());
    }
 
-   #[sqlx::test]
+   #[sqlx::test(migrations = "../../migrations")]
    async fn test_find_by_id_returns_none_when_not_exists(pool: PgPool) {
       // Arrange
       let repo = setup_test_repository(pool).await;
