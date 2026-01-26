@@ -135,8 +135,8 @@ jobs:
               )"
               ```
           claude_args: |
-            --max-turns 30
-            --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
+            --max-turns 40
+            --allowedTools "Read,Bash(cat:*),Bash(grep:*),Bash(find:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
       - name: Check review decision
         id: review-decision
