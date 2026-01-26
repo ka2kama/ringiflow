@@ -1,0 +1,17 @@
+# Redocly CLI 設定
+# 参照: https://redocly.com/docs/cli/configuration
+
+apis:
+  main:
+    root: openapi.yaml
+
+# ルール設定
+rules:
+  # 開発環境用に localhost や example.com を許容
+  no-server-example.com: off
+
+  # ヘルスチェック API には 4XX レスポンス不要
+  operation-4xx-response: warn
+
+  # 将来使用予定のコンポーネントを許容
+  no-unused-components: warn
