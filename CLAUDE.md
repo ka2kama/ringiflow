@@ -252,8 +252,20 @@ git push -u origin HEAD
 gh pr create --draft --title "#34 ログイン機能を実装" --body-file .github/pull_request_template.md
 ```
 
-AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する:
-`🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+**PR 本文の形式:**
+
+- 本文の先頭に `## Issue` セクションを配置:
+  - Issue をクローズする場合: `Closes #123`
+  - Issue を参照するだけの場合: `Related to #123`
+  - Issue がない場合: `なし`
+- AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+
+**Test plan の記載について:**
+
+- **段階的な実装（Phase 1-N）の場合**: Test plan は最終 Phase（API 実装完了後）に記載する
+  - 各 Phase では `just check-all` が通ることのみ確認
+  - 途中の Phase では「最終 Phase 完了後に確認」と記載
+- **単一 PR で完結する場合**: 実装したテストと手動テストの手順を記載
 
 ### Ready for Review
 
@@ -282,6 +294,20 @@ just clean-branches  # マージ後のローカルブランチ削除
 1. `tenant_id` による削除が可能か確認
 2. 削除レジストリに登録
 3. 設計書を更新
+
+## リポジトリ実装時の必須対応
+
+新しいリポジトリを実装する場合、以下の手順を厳守する。
+
+→ 詳細: [`.claude/rules/repository.md`](.claude/rules/repository.md)
+
+1. 既存のリポジトリテストを確認（配置、パターン）
+2. テストは `backend/crates/infra/tests/` に配置
+3. `#[sqlx::test(migrations = "../../migrations")]` を使用
+4. `just sqlx-prepare` でキャッシュを更新
+5. `just pre-commit` で全体チェック
+
+**禁止:** DB 接続が必要なテストを `src/` に配置、`sqlx-prepare` の省略
 
 ## 開発ツール追加時の必須対応
 

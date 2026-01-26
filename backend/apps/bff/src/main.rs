@@ -67,7 +67,17 @@ use axum::{
 };
 use client::{AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
-use handler::{AuthState, csrf, health_check, login, logout, me};
+use handler::{
+   AuthState,
+   WorkflowState,
+   create_workflow,
+   csrf,
+   health_check,
+   login,
+   logout,
+   me,
+   submit_workflow,
+};
 use middleware::{CsrfState, csrf_middleware};
 use ringiflow_infra::RedisSessionManager;
 use tokio::net::TcpListener;
@@ -139,8 +149,13 @@ async fn main() -> anyhow::Result<()> {
    };
 
    let auth_state = Arc::new(AuthState {
-      core_service_client,
+      core_service_client: core_service_client.clone(),
       auth_service_client,
+      session_manager: session_manager.clone(),
+   });
+
+   let workflow_state = Arc::new(WorkflowState {
+      core_service_client,
       session_manager,
    });
 
@@ -166,6 +181,15 @@ async fn main() -> anyhow::Result<()> {
          get(csrf::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .with_state(auth_state)
+      .route(
+         "/api/v1/workflows",
+         post(create_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/api/v1/workflows/{id}/submit",
+         post(submit_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .with_state(workflow_state)
       .layer(from_fn_with_state(
          csrf_state,
          csrf_middleware::<RedisSessionManager>,

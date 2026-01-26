@@ -57,16 +57,37 @@
 mod config;
 mod error;
 mod handler;
+mod usecase;
 
 use std::{net::SocketAddr, sync::Arc};
 
-use axum::{Router, routing::get};
+use axum::{
+   Router,
+   routing::{get, post},
+};
 use config::CoreConfig;
-use handler::{UserState, get_user, get_user_by_email, health_check};
-use ringiflow_infra::{db, repository::user_repository::PostgresUserRepository};
+use handler::{
+   UserState,
+   WorkflowState,
+   create_workflow,
+   get_user,
+   get_user_by_email,
+   health_check,
+   submit_workflow,
+};
+use ringiflow_infra::{
+   db,
+   repository::{
+      user_repository::PostgresUserRepository,
+      workflow_definition_repository::PostgresWorkflowDefinitionRepository,
+      workflow_instance_repository::PostgresWorkflowInstanceRepository,
+      workflow_step_repository::PostgresWorkflowStepRepository,
+   },
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use usecase::WorkflowUseCaseImpl;
 
 /// Core Service サーバーのエントリーポイント
 ///
@@ -101,8 +122,17 @@ async fn main() -> anyhow::Result<()> {
    tracing::info!("データベースに接続しました");
 
    // 依存コンポーネントを初期化
-   let user_repository = PostgresUserRepository::new(pool);
+   let user_repository = PostgresUserRepository::new(pool.clone());
    let user_state = Arc::new(UserState { user_repository });
+
+   // ワークフロー関連の依存コンポーネント
+   let definition_repo = PostgresWorkflowDefinitionRepository::new(pool.clone());
+   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
+   let workflow_usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+   let workflow_state = Arc::new(WorkflowState {
+      usecase: workflow_usecase,
+   });
 
    // ルーター構築
    let app = Router::new()
@@ -116,6 +146,27 @@ async fn main() -> anyhow::Result<()> {
          get(get_user::<PostgresUserRepository>),
       )
       .with_state(user_state)
+      .route(
+         "/internal/workflows",
+         post(
+            create_workflow::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      .route(
+         "/internal/workflows/{id}/submit",
+         post(
+            submit_workflow::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      .with_state(workflow_state)
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動

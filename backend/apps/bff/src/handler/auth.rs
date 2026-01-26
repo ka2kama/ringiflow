@@ -655,6 +655,23 @@ mod tests {
       ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
          self.get_user_result.clone()
       }
+
+      async fn create_workflow(
+         &self,
+         _req: crate::client::CreateWorkflowRequest,
+      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("create_workflow is not used in auth tests")
+      }
+
+      async fn submit_workflow(
+         &self,
+         _workflow_id: Uuid,
+         _req: crate::client::SubmitWorkflowRequest,
+      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("submit_workflow is not used in auth tests")
+      }
    }
 
    struct StubAuthServiceClient {

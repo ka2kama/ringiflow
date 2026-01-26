@@ -40,10 +40,13 @@ use ringiflow_bff::{
       AuthServiceError,
       CoreServiceClient,
       CoreServiceError,
+      CreateWorkflowRequest,
       GetUserByEmailResponse,
+      SubmitWorkflowRequest,
       UserResponse,
       UserWithPermissionsResponse,
       VerifyResponse,
+      WorkflowResponse,
    },
    handler::{AuthState, csrf, login, logout, me},
    middleware::{CsrfState, csrf_middleware},
@@ -147,6 +150,23 @@ impl CoreServiceClient for StubCoreServiceClient {
          roles:       vec!["user".to_string()],
          permissions: vec!["workflow:read".to_string()],
       })
+   }
+
+   async fn create_workflow(
+      &self,
+      _req: CreateWorkflowRequest,
+   ) -> Result<WorkflowResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("create_workflow is not used in auth tests")
+   }
+
+   async fn submit_workflow(
+      &self,
+      _workflow_id: Uuid,
+      _req: SubmitWorkflowRequest,
+   ) -> Result<WorkflowResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("submit_workflow is not used in auth tests")
    }
 }
 
