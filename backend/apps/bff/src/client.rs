@@ -15,7 +15,11 @@ pub use core_service::{
    CoreServiceClient,
    CoreServiceClientImpl,
    CoreServiceError,
+   CreateWorkflowRequest,
    GetUserByEmailResponse,
+   SubmitWorkflowRequest,
    UserResponse,
    UserWithPermissionsResponse,
+   WorkflowInstanceDto,
+   WorkflowResponse,
 };

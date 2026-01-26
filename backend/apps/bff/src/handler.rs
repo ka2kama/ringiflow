@@ -12,9 +12,12 @@
 //!
 //! - `health`: ヘルスチェック
 //! - `auth`: 認証関連（ログイン、ログアウト）
+//! - `workflow`: ワークフロー関連（作成、申請）
 
 pub mod auth;
 pub mod health;
+pub mod workflow;
 
 pub use auth::{AuthState, csrf, login, logout, me};
 pub use health::health_check;
+pub use workflow::{WorkflowState, create_workflow, submit_workflow};
