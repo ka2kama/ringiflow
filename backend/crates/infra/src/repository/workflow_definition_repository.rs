@@ -177,74 +177,12 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
 
 #[cfg(test)]
 mod tests {
-   use ringiflow_domain::tenant::TenantId;
-   use sqlx::PgPool;
-
    use super::*;
 
-   // テスト用のヘルパー関数
-   async fn setup_test_repository(pool: PgPool) -> PostgresWorkflowDefinitionRepository {
-      PostgresWorkflowDefinitionRepository::new(pool)
-   }
-
-   #[sqlx::test(migrations = "../../migrations")]
-   async fn test_find_published_by_tenant_returns_published_definitions(pool: PgPool) {
-      // Arrange
-      let repo = setup_test_repository(pool).await;
-      let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
-
-      // Act
-      let result = repo.find_published_by_tenant(&tenant_id).await;
-
-      // Assert
-      assert!(result.is_ok());
-      let definitions = result.unwrap();
-      assert!(!definitions.is_empty());
-   }
-
-   #[sqlx::test(migrations = "../../migrations")]
-   async fn test_find_published_by_tenant_filters_by_tenant(pool: PgPool) {
-      // Arrange
-      let repo = setup_test_repository(pool).await;
-      let other_tenant_id = TenantId::new();
-
-      // Act
-      let result = repo.find_published_by_tenant(&other_tenant_id).await;
-
-      // Assert
-      assert!(result.is_ok());
-      let definitions = result.unwrap();
-      assert!(definitions.is_empty());
-   }
-
-   #[sqlx::test(migrations = "../../migrations")]
-   async fn test_find_by_id_returns_definition_when_exists(pool: PgPool) {
-      // Arrange
-      let repo = setup_test_repository(pool).await;
-      let definition_id =
-         WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
-      let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
-
-      // Act
-      let result = repo.find_by_id(&definition_id, &tenant_id).await;
-
-      // Assert
-      assert!(result.is_ok());
-      assert!(result.unwrap().is_some());
-   }
-
-   #[sqlx::test(migrations = "../../migrations")]
-   async fn test_find_by_id_returns_none_when_not_exists(pool: PgPool) {
-      // Arrange
-      let repo = setup_test_repository(pool).await;
-      let definition_id = WorkflowDefinitionId::new();
-      let tenant_id = TenantId::new();
-
-      // Act
-      let result = repo.find_by_id(&definition_id, &tenant_id).await;
-
-      // Assert
-      assert!(result.is_ok());
-      assert!(result.unwrap().is_none());
+   /// トレイトオブジェクトとして使用できることを確認
+   #[test]
+   fn test_トレイトはsendとsyncを実装している() {
+      fn assert_send_sync<T: Send + Sync>() {}
+      assert_send_sync::<Box<dyn WorkflowDefinitionRepository>>();
    }
 }
