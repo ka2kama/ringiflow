@@ -157,7 +157,7 @@ async fn main() -> anyhow::Result<()> {
          ),
       )
       .route(
-         "/internal/workflows/:id/submit",
+         "/internal/workflows/{id}/submit",
          post(
             submit_workflow::<
                PostgresWorkflowDefinitionRepository,

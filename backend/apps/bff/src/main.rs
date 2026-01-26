@@ -186,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
          post(create_workflow::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/api/v1/workflows/:id/submit",
+         "/api/v1/workflows/{id}/submit",
          post(submit_workflow::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .with_state(workflow_state)
