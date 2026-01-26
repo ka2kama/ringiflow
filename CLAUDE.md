@@ -255,6 +255,13 @@ gh pr create --draft --title "#34 ログイン機能を実装" --body-file .gith
 AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する:
 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
+**Test plan の記載について:**
+
+- **段階的な実装（Phase 1-N）の場合**: Test plan は最終 Phase（API 実装完了後）に記載する
+  - 各 Phase では `just check-all` が通ることのみ確認
+  - 途中の Phase では「最終 Phase 完了後に確認」と記載
+- **単一 PR で完結する場合**: 実装したテストと手動テストの手順を記載
+
 ### Ready for Review
 
 ```bash
