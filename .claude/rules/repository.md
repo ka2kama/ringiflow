@@ -187,53 +187,79 @@ pub async fn create_workflow_with_steps(
 
 ## テスト
 
-### テストデータベース
+### テスト配置
+
+| 配置場所 | 用途 | DB 接続 | CI ジョブ |
+|---------|------|--------|-----------|
+| `src/` の `#[cfg(test)]` | トレイトの Send + Sync チェックのみ | 不要 | Rust（ユニットテスト） |
+| `tests/` | 実際のリポジトリテスト | 必要 | Rust Integration |
+
+**重要:** DB 接続が必要なテストは必ず `backend/crates/infra/tests/` に配置する。
 
 ```rust
+// src/repository/user_repository.rs
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::PgPool;
 
-    async fn setup_test_db() -> PgPool {
-        let database_url = std::env::var("TEST_DATABASE_URL")
-            .expect("TEST_DATABASE_URL must be set");
-
-        let pool = PgPool::connect(&database_url)
-            .await
-            .expect("Failed to connect to test database");
-
-        // マイグレーション実行
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
-
-        pool
-    }
-
-    #[tokio::test]
-    async fn test_find_by_id_正常系() {
-        let pool = setup_test_db().await;
-        let repo = PostgresUserRepository::new(pool.clone());
-
-        // テストデータ作成
-        let user_id = UserId::new();
-        // ...
-
-        // Act
-        let result = repo.find_by_id(&user_id).await;
-
-        // Assert
-        assert!(result.is_ok());
+    /// トレイトオブジェクトとして使用できることを確認
+    #[test]
+    fn test_トレイトはsendとsyncを実装している() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<Box<dyn UserRepository>>();
     }
 }
 ```
 
+```rust
+// tests/user_repository_test.rs
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_id_正常系(pool: PgPool) {
+    let repo = PostgresUserRepository::new(pool);
+    // ...
+}
+```
+
+### sqlx::test マクロの使用
+
+`tests/` 内のテストでは `#[sqlx::test]` マクロを使用し、必ず `migrations` パラメータを指定する：
+
+```rust
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_メールアドレスでユーザーを取得できる(pool: PgPool) {
+    let repo = PostgresUserRepository::new(pool);
+    let tenant_id = TenantId::from_uuid("...".parse().unwrap());
+
+    let result = repo.find_by_email(&tenant_id, &email).await;
+
+    assert!(result.is_ok());
+}
+```
+
+**理由:** ワークスペース構成では、デフォルトのマイグレーションパス（プロジェクトルートの `migrations/`）が機能しない。
+
+### SQLx オフラインモード対応
+
+新しい `sqlx::query!` を追加したら、必ずクエリキャッシュを更新する：
+
+```bash
+just sqlx-prepare
+```
+
+または
+
+```bash
+cd backend && cargo sqlx prepare --workspace -- --all-targets
+```
+
+**重要:** `--all-targets` を指定しないと `tests/` 内のクエリがキャッシュされず、CI で失敗する。
+
+変更された `.sqlx/` ファイルは必ずコミットに含める。
+
 ### テストの分離
 
-- **単体テスト**: モック/スタブを使用してロジックのみテスト
-- **統合テスト**: 実際の DB を使用してクエリの動作確認
+- **単体テスト（src/）**: トレイトの型チェックのみ、DB 接続不要
+- **統合テスト（tests/）**: 実際の DB を使用してクエリの動作確認
 
 ## パフォーマンス最適化
 
@@ -283,15 +309,40 @@ pub async fn save_many(&self, users: &[User]) -> Result<(), RepositoryError> {
 
 ## AI エージェントへの指示
 
-リポジトリ層を実装する際:
+### 新しいリポジトリを実装する際の必須手順
 
-1. **必ず `tenant_id` でフィルタ**: データ漏洩を防ぐ
-2. **SQLx クエリマクロを使用**: 型安全性を確保
-3. **エラーを適切に変換**: `RepositoryError` にマップ
-4. **テストを書く**: 少なくとも CRUD の基本操作
-5. **N+1 を意識**: バッチ操作や JOIN を活用
+1. **既存パターンの確認**
+   ```bash
+   ls backend/crates/infra/tests/
+   grep -r "sqlx::test" backend/crates/infra/tests/
+   ```
+
+2. **テストファイルの作成**
+   - `backend/crates/infra/tests/` に新しいテストファイルを作成
+   - `#[sqlx::test(migrations = "../../migrations")]` を使用
+   - DB 接続が必要なテストを `src/` に書かない
+
+3. **実装**
+   - 必ず `tenant_id` でフィルタ（データ漏洩を防ぐ）
+   - SQLx クエリマクロを使用（型安全性を確保）
+   - エラーを適切に変換（`RepositoryError` にマップ）
+
+4. **SQLx クエリキャッシュの更新**
+   ```bash
+   just sqlx-prepare
+   ```
+
+5. **コミット前の確認**
+   ```bash
+   just pre-commit
+   ```
+
+この手順を省略しない。ローカルで動作していても、CI で失敗する可能性がある。
 
 **禁止事項:**
+- DB 接続が必要なテストを `src/` に配置
+- `sqlx::test` で `migrations` パラメータを省略
+- `sqlx-prepare` を実行せずにコミット
 - `tenant_id` なしのクエリ
 - 文字列結合による SQL 構築
 - トランザクションが必要な箇所での未使用

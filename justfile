@@ -224,6 +224,22 @@ check-all: lint test sqlx-check
 sqlx-check:
     cd backend && cargo sqlx prepare --check --workspace -- --all-targets
 
+# SQLx クエリキャッシュを更新（DB 接続が必要）
+# 新しい sqlx::query! を追加したら必ず実行する
+# --all-targets: 統合テスト内の sqlx::query! マクロも含めてキャッシュ
+sqlx-prepare:
+    cd backend && cargo sqlx prepare --workspace -- --all-targets
+    @echo "✓ SQLx クエリキャッシュを更新しました"
+    @echo "  変更された .sqlx/ ファイルをコミットに含めてください"
+
+# コミット前の完全チェック（sqlx-prepare + check-all）
+# 新しいリポジトリ実装時やクエリ追加時は必ず実行する
+pre-commit: sqlx-prepare check-all
+    @echo ""
+    @echo "✓ コミット前チェック完了"
+    @echo "  git add backend/.sqlx/"
+    @echo "  git commit"
+
 # =============================================================================
 # クリーンアップ
 # =============================================================================

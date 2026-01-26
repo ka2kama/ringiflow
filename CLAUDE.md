@@ -283,6 +283,20 @@ just clean-branches  # マージ後のローカルブランチ削除
 2. 削除レジストリに登録
 3. 設計書を更新
 
+## リポジトリ実装時の必須対応
+
+新しいリポジトリを実装する場合、以下の手順を厳守する。
+
+→ 詳細: [`.claude/rules/repository.md`](.claude/rules/repository.md)
+
+1. 既存のリポジトリテストを確認（配置、パターン）
+2. テストは `backend/crates/infra/tests/` に配置
+3. `#[sqlx::test(migrations = "../../migrations")]` を使用
+4. `just sqlx-prepare` でキャッシュを更新
+5. `just pre-commit` で全体チェック
+
+**禁止:** DB 接続が必要なテストを `src/` に配置、`sqlx-prepare` の省略
+
 ## 開発ツール追加時の必須対応
 
 新しい開発ツールを追加する場合、以下を同時に更新:
