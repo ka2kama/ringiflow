@@ -6,14 +6,14 @@ use std::sync::Arc;
 
 use axum::{
    Json,
-   extract::{Path, State},
+   extract::{Path, Query, State},
    http::StatusCode,
    response::{IntoResponse, Response},
 };
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   workflow::{WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId},
+   workflow::{WorkflowDefinition, WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId},
 };
 use ringiflow_infra::repository::{
    WorkflowDefinitionRepository,
@@ -52,10 +52,74 @@ pub struct SubmitWorkflowRequest {
    pub tenant_id:   Uuid,
 }
 
+/// テナント指定クエリパラメータ（GET リクエスト用）
+#[derive(Debug, Deserialize)]
+pub struct TenantQuery {
+   /// テナント ID
+   pub tenant_id: Uuid,
+}
+
+/// ユーザー指定クエリパラメータ（GET リクエスト用）
+#[derive(Debug, Deserialize)]
+pub struct UserQuery {
+   /// テナント ID
+   pub tenant_id: Uuid,
+   /// ユーザー ID
+   pub user_id:   Uuid,
+}
+
 /// ワークフローレスポンス
 #[derive(Debug, Serialize)]
 pub struct WorkflowResponse {
    pub data: WorkflowInstanceDto,
+}
+
+/// ワークフロー一覧レスポンス
+#[derive(Debug, Serialize)]
+pub struct WorkflowListResponse {
+   pub data: Vec<WorkflowInstanceDto>,
+}
+
+/// ワークフロー定義レスポンス
+#[derive(Debug, Serialize)]
+pub struct WorkflowDefinitionResponse {
+   pub data: WorkflowDefinitionDto,
+}
+
+/// ワークフロー定義一覧レスポンス
+#[derive(Debug, Serialize)]
+pub struct WorkflowDefinitionListResponse {
+   pub data: Vec<WorkflowDefinitionDto>,
+}
+
+/// ワークフロー定義 DTO
+#[derive(Debug, Serialize)]
+pub struct WorkflowDefinitionDto {
+   pub id:          String,
+   pub name:        String,
+   pub description: Option<String>,
+   pub version:     i32,
+   pub definition:  serde_json::Value,
+   pub status:      String,
+   pub created_by:  String,
+   pub created_at:  String,
+   pub updated_at:  String,
+}
+
+impl From<WorkflowDefinition> for WorkflowDefinitionDto {
+   fn from(def: WorkflowDefinition) -> Self {
+      Self {
+         id:          def.id().to_string(),
+         name:        def.name().to_string(),
+         description: def.description().map(|s| s.to_string()),
+         version:     def.version().as_i32(),
+         definition:  def.definition().clone(),
+         status:      format!("{:?}", def.status()),
+         created_by:  def.created_by().to_string(),
+         created_at:  def.created_at().to_rfc3339(),
+         updated_at:  def.updated_at().to_rfc3339(),
+      }
+   }
 }
 
 /// ワークフローインスタンス DTO
@@ -174,6 +238,140 @@ where
    // レスポンスを返す
    let response = WorkflowResponse {
       data: WorkflowInstanceDto::from(instance),
+   };
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+// ===== GET ハンドラ =====
+
+/// ワークフロー定義一覧を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflow-definitions?tenant_id={tenant_id}
+///
+/// ## 処理フロー
+/// 1. クエリパラメータからテナント ID を取得
+/// 2. ユースケースを呼び出し
+/// 3. レスポンスを返す
+pub async fn list_workflow_definitions<D, I, S>(
+   State(state): State<Arc<WorkflowState<D, I, S>>>,
+   Query(query): Query<TenantQuery>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   let definitions = state.usecase.list_workflow_definitions(tenant_id).await?;
+
+   let response = WorkflowDefinitionListResponse {
+      data: definitions
+         .into_iter()
+         .map(WorkflowDefinitionDto::from)
+         .collect(),
+   };
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// ワークフロー定義の詳細を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflow-definitions/{id}?tenant_id={tenant_id}
+///
+/// ## 処理フロー
+/// 1. パスパラメータから ID を取得
+/// 2. クエリパラメータからテナント ID を取得
+/// 3. ユースケースを呼び出し
+/// 4. レスポンスを返す
+pub async fn get_workflow_definition<D, I, S>(
+   State(state): State<Arc<WorkflowState<D, I, S>>>,
+   Path(id): Path<Uuid>,
+   Query(query): Query<TenantQuery>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   let definition_id = WorkflowDefinitionId::from_uuid(id);
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   let definition = state
+      .usecase
+      .get_workflow_definition(definition_id, tenant_id)
+      .await?;
+
+   let response = WorkflowDefinitionResponse {
+      data: WorkflowDefinitionDto::from(definition),
+   };
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// 自分のワークフロー一覧を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflows?tenant_id={tenant_id}&user_id={user_id}
+///
+/// ## 処理フロー
+/// 1. クエリパラメータからテナント ID とユーザー ID を取得
+/// 2. ユースケースを呼び出し
+/// 3. レスポンスを返す
+pub async fn list_my_workflows<D, I, S>(
+   State(state): State<Arc<WorkflowState<D, I, S>>>,
+   Query(query): Query<UserQuery>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+   let user_id = UserId::from_uuid(query.user_id);
+
+   let workflows = state.usecase.list_my_workflows(tenant_id, user_id).await?;
+
+   let response = WorkflowListResponse {
+      data: workflows
+         .into_iter()
+         .map(WorkflowInstanceDto::from)
+         .collect(),
+   };
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// ワークフローの詳細を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflows/{id}?tenant_id={tenant_id}
+///
+/// ## 処理フロー
+/// 1. パスパラメータから ID を取得
+/// 2. クエリパラメータからテナント ID を取得
+/// 3. ユースケースを呼び出し
+/// 4. レスポンスを返す
+pub async fn get_workflow<D, I, S>(
+   State(state): State<Arc<WorkflowState<D, I, S>>>,
+   Path(id): Path<Uuid>,
+   Query(query): Query<TenantQuery>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   let instance_id = WorkflowInstanceId::from_uuid(id);
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   let workflow = state.usecase.get_workflow(instance_id, tenant_id).await?;
+
+   let response = WorkflowResponse {
+      data: WorkflowInstanceDto::from(workflow),
    };
 
    Ok((StatusCode::OK, Json(response)).into_response())

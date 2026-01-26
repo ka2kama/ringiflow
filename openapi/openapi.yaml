@@ -163,9 +163,101 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ============================================================
+  # ワークフロー定義 API
+  # ============================================================
+  /api/v1/workflow-definitions:
+    get:
+      tags:
+        - workflows
+      summary: ワークフロー定義一覧取得
+      description: |
+        公開済みのワークフロー定義一覧を取得する。
+
+        フロントエンドの申請フォームで、ユーザーが選択可能なワークフロー定義を表示するために使用する。
+      operationId: listWorkflowDefinitions
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+      responses:
+        '200':
+          description: ワークフロー定義一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinitionListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workflow-definitions/{id}:
+    get:
+      tags:
+        - workflows
+      summary: ワークフロー定義詳細取得
+      description: |
+        指定された ID のワークフロー定義を取得する。
+
+        申請フォームで選択されたワークフロー定義の詳細（フォーム定義など）を取得するために使用する。
+      operationId: getWorkflowDefinition
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - name: id
+          in: path
+          required: true
+          description: ワークフロー定義 ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ワークフロー定義
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDefinitionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ワークフロー定義が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/workflow-definition-not-found
+                title: Workflow Definition Not Found
+                status: 404
+                detail: ワークフロー定義が見つかりません
+
+  # ============================================================
   # ワークフロー API
   # ============================================================
   /api/v1/workflows:
+    get:
+      tags:
+        - workflows
+      summary: 自分のワークフロー一覧取得
+      description: |
+        ログインユーザーが申請したワークフローインスタンスの一覧を取得する。
+
+        申請履歴の確認に使用する。
+      operationId: listMyWorkflows
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+      responses:
+        '200':
+          description: ワークフロー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
     post:
       tags:
         - workflows
@@ -223,6 +315,48 @@ paths:
                 title: Workflow Definition Not Found
                 status: 404
                 detail: ワークフロー定義が見つかりません
+
+  /api/v1/workflows/{id}:
+    get:
+      tags:
+        - workflows
+      summary: ワークフロー詳細取得
+      description: |
+        指定された ID のワークフローインスタンスを取得する。
+
+        申請詳細の表示に使用する。
+      operationId: getWorkflow
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - name: id
+          in: path
+          required: true
+          description: ワークフローインスタンス ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ワークフロー詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ワークフローインスタンスが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/workflow-instance-not-found
+                title: Workflow Instance Not Found
+                status: 404
+                detail: ワークフローインスタンスが見つかりません
 
   /api/v1/workflows/{id}/submit:
     post:
@@ -402,6 +536,90 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/WorkflowInstance'
+
+    WorkflowListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowInstance'
+
+    WorkflowDefinitionResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkflowDefinition'
+
+    WorkflowDefinitionListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowDefinition'
+
+    WorkflowDefinition:
+      type: object
+      required:
+        - id
+        - name
+        - version
+        - definition
+        - status
+        - created_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ワークフロー定義 ID
+        name:
+          type: string
+          description: ワークフロー定義名
+        description:
+          type:
+            - string
+            - 'null'
+          description: 説明
+        version:
+          type: integer
+          description: バージョン番号
+        definition:
+          type: object
+          description: |
+            ワークフロー定義の詳細（フォーム定義、ステップ定義など）。
+
+            フロントエンドはこの `definition` オブジェクトの `form.fields` を
+            使用して動的フォームを生成する。
+          additionalProperties: true
+        status:
+          type: string
+          enum: [Draft, Published, Archived]
+          description: |
+            ワークフロー定義の状態:
+            - Draft: 下書き
+            - Published: 公開済み
+            - Archived: アーカイブ済み
+        created_by:
+          type: string
+          format: uuid
+          description: 作成者のユーザー ID
+        created_at:
+          type: string
+          format: date-time
+          description: 作成日時
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新日時
 
     WorkflowInstance:
       type: object

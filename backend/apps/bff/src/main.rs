@@ -72,7 +72,11 @@ use handler::{
    WorkflowState,
    create_workflow,
    csrf,
+   get_workflow,
+   get_workflow_definition,
    health_check,
+   list_my_workflows,
+   list_workflow_definitions,
    login,
    logout,
    me,
@@ -181,9 +185,24 @@ async fn main() -> anyhow::Result<()> {
          get(csrf::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .with_state(auth_state)
+      // ワークフロー定義 API
+      .route(
+         "/api/v1/workflow-definitions",
+         get(list_workflow_definitions::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/api/v1/workflow-definitions/{id}",
+         get(get_workflow_definition::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      // ワークフローインスタンス API
       .route(
          "/api/v1/workflows",
-         post(create_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+         get(list_my_workflows::<CoreServiceClientImpl, RedisSessionManager>)
+            .post(create_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/api/v1/workflows/{id}",
+         get(get_workflow::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
          "/api/v1/workflows/{id}/submit",

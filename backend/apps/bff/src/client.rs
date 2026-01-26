@@ -20,6 +20,10 @@ pub use core_service::{
    SubmitWorkflowRequest,
    UserResponse,
    UserWithPermissionsResponse,
+   WorkflowDefinitionDto,
+   WorkflowDefinitionListResponse,
+   WorkflowDefinitionResponse,
    WorkflowInstanceDto,
+   WorkflowListResponse,
    WorkflowResponse,
 };

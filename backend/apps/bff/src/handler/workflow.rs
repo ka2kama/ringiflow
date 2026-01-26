@@ -4,6 +4,13 @@
 //!
 //! ## エンドポイント
 //!
+//! ### ワークフロー定義
+//! - `GET /api/v1/workflow-definitions` - ワークフロー定義一覧
+//! - `GET /api/v1/workflow-definitions/{id}` - ワークフロー定義詳細
+//!
+//! ### ワークフローインスタンス
+//! - `GET /api/v1/workflows` - 自分の申請一覧
+//! - `GET /api/v1/workflows/{id}` - ワークフロー詳細
 //! - `POST /api/v1/workflows` - ワークフローを作成（下書き）
 //! - `POST /api/v1/workflows/{id}/submit` - ワークフローを申請
 //!
@@ -136,6 +143,54 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
          submitted_at: dto.submitted_at,
          created_at: dto.created_at,
          updated_at: dto.updated_at,
+      }
+   }
+}
+
+/// ワークフロー一覧レスポンス
+#[derive(Debug, Serialize)]
+pub struct WorkflowListResponse {
+   pub data: Vec<WorkflowData>,
+}
+
+/// ワークフロー定義レスポンス
+#[derive(Debug, Serialize)]
+pub struct WorkflowDefinitionResponse {
+   pub data: WorkflowDefinitionData,
+}
+
+/// ワークフロー定義一覧レスポンス
+#[derive(Debug, Serialize)]
+pub struct WorkflowDefinitionListResponse {
+   pub data: Vec<WorkflowDefinitionData>,
+}
+
+/// ワークフロー定義データ
+#[derive(Debug, Serialize)]
+pub struct WorkflowDefinitionData {
+   pub id:          String,
+   pub name:        String,
+   pub description: Option<String>,
+   pub version:     i32,
+   pub definition:  serde_json::Value,
+   pub status:      String,
+   pub created_by:  String,
+   pub created_at:  String,
+   pub updated_at:  String,
+}
+
+impl From<crate::client::WorkflowDefinitionDto> for WorkflowDefinitionData {
+   fn from(dto: crate::client::WorkflowDefinitionDto) -> Self {
+      Self {
+         id:          dto.id,
+         name:        dto.name,
+         description: dto.description,
+         version:     dto.version,
+         definition:  dto.definition,
+         status:      dto.status,
+         created_by:  dto.created_by,
+         created_at:  dto.created_at,
+         updated_at:  dto.updated_at,
       }
    }
 }
@@ -358,4 +413,225 @@ fn validation_error_response(detail: &str) -> Response {
       }),
    )
       .into_response()
+}
+
+// ===== GET ハンドラ =====
+
+/// GET /api/v1/workflow-definitions
+///
+/// ワークフロー定義一覧を取得する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id` を取得
+/// 2. Core Service の `GET /internal/workflow-definitions` を呼び出し
+/// 3. レスポンスを返す
+pub async fn list_workflow_definitions<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   match state
+      .core_service_client
+      .list_workflow_definitions(*session_data.tenant_id().as_uuid())
+      .await
+   {
+      Ok(core_response) => {
+         let response = WorkflowDefinitionListResponse {
+            data: core_response
+               .data
+               .into_iter()
+               .map(WorkflowDefinitionData::from)
+               .collect(),
+         };
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(e) => {
+         tracing::error!("ワークフロー定義一覧取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+/// GET /api/v1/workflow-definitions/{id}
+///
+/// ワークフロー定義の詳細を取得する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id` を取得
+/// 2. Core Service の `GET /internal/workflow-definitions/{id}` を呼び出し
+/// 3. レスポンスを返す
+pub async fn get_workflow_definition<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(definition_id): Path<Uuid>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   match state
+      .core_service_client
+      .get_workflow_definition(definition_id, *session_data.tenant_id().as_uuid())
+      .await
+   {
+      Ok(core_response) => {
+         let response = WorkflowDefinitionResponse {
+            data: WorkflowDefinitionData::from(core_response.data),
+         };
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(CoreServiceError::WorkflowDefinitionNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/workflow-definition-not-found",
+         "Workflow Definition Not Found",
+         "ワークフロー定義が見つかりません",
+      ),
+      Err(e) => {
+         tracing::error!("ワークフロー定義取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+/// GET /api/v1/workflows
+///
+/// 自分のワークフロー一覧を取得する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id`, `user_id` を取得
+/// 2. Core Service の `GET /internal/workflows` を呼び出し
+/// 3. レスポンスを返す
+pub async fn list_my_workflows<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   match state
+      .core_service_client
+      .list_my_workflows(
+         *session_data.tenant_id().as_uuid(),
+         *session_data.user_id().as_uuid(),
+      )
+      .await
+   {
+      Ok(core_response) => {
+         let response = WorkflowListResponse {
+            data: core_response
+               .data
+               .into_iter()
+               .map(WorkflowData::from)
+               .collect(),
+         };
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(e) => {
+         tracing::error!("ワークフロー一覧取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+/// GET /api/v1/workflows/{id}
+///
+/// ワークフローの詳細を取得する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id` を取得
+/// 2. Core Service の `GET /internal/workflows/{id}` を呼び出し
+/// 3. レスポンスを返す
+pub async fn get_workflow<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(workflow_id): Path<Uuid>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   match state
+      .core_service_client
+      .get_workflow(workflow_id, *session_data.tenant_id().as_uuid())
+      .await
+   {
+      Ok(core_response) => {
+         let response = WorkflowResponse {
+            data: WorkflowData::from(core_response.data),
+         };
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "Workflow Instance Not Found",
+         "ワークフローインスタンスが見つかりません",
+      ),
+      Err(e) => {
+         tracing::error!("ワークフロー取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
 }

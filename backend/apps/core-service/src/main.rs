@@ -72,7 +72,11 @@ use handler::{
    create_workflow,
    get_user,
    get_user_by_email,
+   get_workflow,
+   get_workflow_definition,
    health_check,
+   list_my_workflows,
+   list_workflow_definitions,
    submit_workflow,
 };
 use ringiflow_infra::{
@@ -146,10 +150,49 @@ async fn main() -> anyhow::Result<()> {
          get(get_user::<PostgresUserRepository>),
       )
       .with_state(user_state)
+      // ワークフロー定義 API
+      .route(
+         "/internal/workflow-definitions",
+         get(
+            list_workflow_definitions::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      .route(
+         "/internal/workflow-definitions/{id}",
+         get(
+            get_workflow_definition::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      // ワークフローインスタンス API
       .route(
          "/internal/workflows",
-         post(
+         get(
+            list_my_workflows::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         )
+         .post(
             create_workflow::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      .route(
+         "/internal/workflows/{id}",
+         get(
+            get_workflow::<
                PostgresWorkflowDefinitionRepository,
                PostgresWorkflowInstanceRepository,
                PostgresWorkflowStepRepository,
