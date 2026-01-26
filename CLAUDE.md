@@ -252,8 +252,13 @@ git push -u origin HEAD
 gh pr create --draft --title "#34 ログイン機能を実装" --body-file .github/pull_request_template.md
 ```
 
-AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する:
-`🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+**PR 本文の形式:**
+
+- 本文の先頭に `## Issue` セクションを配置:
+  - Issue をクローズする場合: `Closes #123`
+  - Issue を参照するだけの場合: `Related to #123`
+  - Issue がない場合: `なし`
+- AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
 **Test plan の記載について:**
 

@@ -1,10 +1,14 @@
+## Issue
+<!--
+Issue との関連:
+- Issue をクローズする場合: Closes #123
+- Issue を参照するだけの場合: Related to #123
+- Issue がない場合: なし と明示
+-->
+
 ## Summary
 
 <!-- 実装した機能や変更内容を簡潔に説明する -->
-
-## Related
-
-<!-- 関連する Issue を記載（例: Closes #123） -->
 
 ## Test plan
 
