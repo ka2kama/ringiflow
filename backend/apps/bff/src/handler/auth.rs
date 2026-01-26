@@ -672,6 +672,41 @@ mod tests {
          // テストスタブでは未使用
          unimplemented!("submit_workflow is not used in auth tests")
       }
+
+      async fn list_workflow_definitions(
+         &self,
+         _tenant_id: Uuid,
+      ) -> Result<crate::client::WorkflowDefinitionListResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("list_workflow_definitions is not used in auth tests")
+      }
+
+      async fn get_workflow_definition(
+         &self,
+         _definition_id: Uuid,
+         _tenant_id: Uuid,
+      ) -> Result<crate::client::WorkflowDefinitionResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("get_workflow_definition is not used in auth tests")
+      }
+
+      async fn list_my_workflows(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<crate::client::WorkflowListResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("list_my_workflows is not used in auth tests")
+      }
+
+      async fn get_workflow(
+         &self,
+         _workflow_id: Uuid,
+         _tenant_id: Uuid,
+      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("get_workflow is not used in auth tests")
+      }
    }
 
    struct StubAuthServiceClient {
