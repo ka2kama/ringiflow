@@ -44,7 +44,7 @@ pub enum TenantIdError {
 }
 
 impl IntoResponse for TenantIdError {
-   fn into_response(self) -> axum::response::Response {
+   fn into_response(self) -> Response {
       let (status, detail) = match self {
          TenantIdError::Missing => (StatusCode::BAD_REQUEST, "X-Tenant-ID ヘッダーが必要です"),
          TenantIdError::InvalidFormat => (StatusCode::BAD_REQUEST, "X-Tenant-ID の形式が不正です"),

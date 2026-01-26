@@ -162,6 +162,131 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ============================================================
+  # ワークフロー API
+  # ============================================================
+  /api/v1/workflows:
+    post:
+      tags:
+        - workflows
+      summary: ワークフロー作成（下書き）
+      description: |
+        ワークフロー定義を元に、新しいワークフローインスタンスを下書き状態で作成する。
+
+        作成後は `draft` 状態となり、`/submit` で申請するまで承認フローは開始されない。
+      operationId: createWorkflow
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+            example:
+              definition_id: "123e4567-e89b-12d3-a456-426614174000"
+              title: "経費精算申請"
+              form_data:
+                amount: 50000
+                description: "出張費用"
+      responses:
+        '201':
+          description: ワークフロー作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '400':
+          description: バリデーションエラー（定義が未公開など）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/validation-error
+                title: Validation Error
+                status: 400
+                detail: 公開されていないワークフロー定義です
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ワークフロー定義が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/workflow-definition-not-found
+                title: Workflow Definition Not Found
+                status: 404
+                detail: ワークフロー定義が見つかりません
+
+  /api/v1/workflows/{id}/submit:
+    post:
+      tags:
+        - workflows
+      summary: ワークフロー申請
+      description: |
+        下書き状態のワークフローを申請する。
+
+        申請すると承認ステップが作成され、ワークフローは `in_progress` 状態に遷移する。
+        MVP では1段階承認のみサポート。
+      operationId: submitWorkflow
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+        - name: id
+          in: path
+          required: true
+          description: ワークフローインスタンス ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitWorkflowRequest'
+            example:
+              assigned_to: "987fcdeb-51a2-3d4e-b567-890123456789"
+      responses:
+        '200':
+          description: 申請成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '400':
+          description: バリデーションエラー（下書き以外の申請など）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/validation-error
+                title: Validation Error
+                status: 400
+                detail: 下書き状態のワークフローのみ申請できます
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: ワークフローインスタンスが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/workflow-instance-not-found
+                title: Workflow Instance Not Found
+                status: 404
+                detail: ワークフローインスタンスが見つかりません
+
+  # ============================================================
   # ヘルスチェック API
   # ============================================================
   /health:
@@ -208,7 +333,133 @@ components:
       name: session_id
       description: HTTPOnly セッション Cookie
 
+  parameters:
+    XTenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      description: テナント ID
+      schema:
+        type: string
+        format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+    XCsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: CSRF トークン（/auth/csrf で取得）
+      schema:
+        type: string
+      example: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
   schemas:
+    # ============================================================
+    # ワークフロー関連
+    # ============================================================
+    CreateWorkflowRequest:
+      type: object
+      required:
+        - definition_id
+        - title
+        - form_data
+      properties:
+        definition_id:
+          type: string
+          format: uuid
+          description: ワークフロー定義 ID
+        title:
+          type: string
+          description: ワークフロータイトル
+          minLength: 1
+          maxLength: 255
+          example: "経費精算申請"
+        form_data:
+          type: object
+          description: フォームデータ（定義に応じた任意の JSON）
+          additionalProperties: true
+          example:
+            amount: 50000
+            description: "出張費用"
+
+    SubmitWorkflowRequest:
+      type: object
+      required:
+        - assigned_to
+      properties:
+        assigned_to:
+          type: string
+          format: uuid
+          description: 承認者のユーザー ID
+
+    WorkflowResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkflowInstance'
+
+    WorkflowInstance:
+      type: object
+      required:
+        - id
+        - title
+        - definition_id
+        - status
+        - form_data
+        - initiated_by
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ワークフローインスタンス ID
+        title:
+          type: string
+          description: ワークフロータイトル
+        definition_id:
+          type: string
+          format: uuid
+          description: ワークフロー定義 ID
+        status:
+          type: string
+          enum: [Draft, Pending, InProgress, Approved, Rejected, Cancelled]
+          description: |
+            ワークフローの状態:
+            - Draft: 下書き
+            - Pending: 申請待ち
+            - InProgress: 承認中
+            - Approved: 承認済み
+            - Rejected: 却下
+            - Cancelled: キャンセル
+        form_data:
+          type: object
+          description: フォームデータ
+          additionalProperties: true
+        initiated_by:
+          type: string
+          format: uuid
+          description: 申請者のユーザー ID
+        current_step_id:
+          type: string
+          nullable: true
+          description: 現在の承認ステップ ID
+        submitted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: 申請日時
+        created_at:
+          type: string
+          format: date-time
+          description: 作成日時
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新日時
+
     # ============================================================
     # 認証関連
     # ============================================================
