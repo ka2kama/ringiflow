@@ -14,6 +14,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page.Home
 import Page.NotFound
+import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Route exposing (Route)
@@ -65,6 +66,7 @@ type Page
     = HomePage
     | WorkflowsPage WorkflowList.Model
     | WorkflowNewPage WorkflowNew.Model
+    | WorkflowDetailPage WorkflowDetail.Model
     | NotFoundPage
 
 
@@ -132,9 +134,12 @@ initPage route session =
             in
             ( WorkflowNewPage model, Cmd.map WorkflowNewMsg cmd )
 
-        Route.WorkflowDetail _ ->
-            -- TODO: Sub-Phase 3-5 で WorkflowDetailPage を実装
-            ( NotFoundPage, Cmd.none )
+        Route.WorkflowDetail id ->
+            let
+                ( model, cmd ) =
+                    WorkflowDetail.init session id
+            in
+            ( WorkflowDetailPage model, Cmd.map WorkflowDetailMsg cmd )
 
         Route.NotFound ->
             ( NotFoundPage, Cmd.none )
@@ -154,6 +159,7 @@ type Msg
     | UrlChanged Url
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
+    | WorkflowDetailMsg WorkflowDetail.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -207,7 +213,20 @@ update msg model =
                     )
 
                 _ ->
-                    -- 現在のページと一致しないメッセージは無視
+                    ( model, Cmd.none )
+
+        WorkflowDetailMsg subMsg ->
+            case model.page of
+                WorkflowDetailPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowDetail.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowDetailPage newSubModel }
+                    , Cmd.map WorkflowDetailMsg subCmd
+                    )
+
+                _ ->
                     ( model, Cmd.none )
 
 
@@ -281,6 +300,10 @@ viewMain model =
             WorkflowNewPage subModel ->
                 WorkflowNew.view subModel
                     |> Html.map WorkflowNewMsg
+
+            WorkflowDetailPage subModel ->
+                WorkflowDetail.view subModel
+                    |> Html.map WorkflowDetailMsg
 
             NotFoundPage ->
                 Page.NotFound.view
