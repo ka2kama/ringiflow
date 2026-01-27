@@ -76,7 +76,7 @@ getWorkflow { config, id, toMsg } =
     Api.get
         { config = config
         , url = "/api/v1/workflows/" ++ id
-        , decoder = WorkflowInstance.decoder
+        , decoder = Decode.field "data" WorkflowInstance.decoder
         , toMsg = toMsg
         }
 
