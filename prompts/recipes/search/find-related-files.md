@@ -76,6 +76,37 @@ rg "struct UserRepository|impl UserRepository" --type rust
 - `.gitignore` を自動で尊重
 - `--type` でファイル種別を簡単に指定
 
+### `--type` オプションの使い方
+
+ripgrep に組み込まれたファイルタイプフィルター。言語ごとに対応する拡張子が定義されている。
+
+```bash
+# 利用可能なタイプ一覧を確認
+rg --type-list
+
+# このプロジェクトで使うタイプ
+# rust: *.rs
+# elm:  *.elm
+```
+
+使い分け:
+
+```bash
+# 特定の言語だけ検索
+rg "Repository" -t rust           # Rust のみ
+rg "Msg" -t elm                   # Elm のみ
+
+# 複数タイプを指定
+rg "Config" -t rust -t toml       # Rust と TOML
+
+# 特定タイプを除外（大文字 T）
+rg "test" -T rust                 # Rust 以外
+```
+
+`--type` vs `--glob` の使い分け:
+- `--type rust` → 言語単位でフィルタ（簡潔）
+- `--glob "*.rs"` → 拡張子を細かく指定（柔軟）
+
 ### IDE の検索との違い
 
 IDE の「Find Usages」も有効だが:
