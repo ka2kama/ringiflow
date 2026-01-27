@@ -17,6 +17,8 @@ suite =
     describe "Data.WorkflowInstance"
         [ statusToStringTests
         , statusFromStringTests
+        , statusToJapaneseTests
+        , statusToCssClassTests
         , decoderTests
         , listDecoderTests
         ]
@@ -95,6 +97,74 @@ statusFromStringTests =
             \_ ->
                 WorkflowInstance.statusFromString "draft"
                     |> Expect.equal Nothing
+        ]
+
+
+
+-- statusToJapanese
+
+
+statusToJapaneseTests : Test
+statusToJapaneseTests =
+    describe "statusToJapanese"
+        [ test "Draft → 下書き" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese Draft
+                    |> Expect.equal "下書き"
+        , test "Pending → 申請待ち" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese Pending
+                    |> Expect.equal "申請待ち"
+        , test "InProgress → 承認中" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese InProgress
+                    |> Expect.equal "承認中"
+        , test "Approved → 承認済み" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese Approved
+                    |> Expect.equal "承認済み"
+        , test "Rejected → 却下" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese Rejected
+                    |> Expect.equal "却下"
+        , test "Cancelled → キャンセル" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese Cancelled
+                    |> Expect.equal "キャンセル"
+        ]
+
+
+
+-- statusToCssClass
+
+
+statusToCssClassTests : Test
+statusToCssClassTests =
+    describe "statusToCssClass"
+        [ test "Draft → status-draft" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass Draft
+                    |> Expect.equal "status-draft"
+        , test "Pending → status-pending" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass Pending
+                    |> Expect.equal "status-pending"
+        , test "InProgress → status-in-progress" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass InProgress
+                    |> Expect.equal "status-in-progress"
+        , test "Approved → status-approved" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass Approved
+                    |> Expect.equal "status-approved"
+        , test "Rejected → status-rejected" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass Rejected
+                    |> Expect.equal "status-rejected"
+        , test "Cancelled → status-cancelled" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass Cancelled
+                    |> Expect.equal "status-cancelled"
         ]
 
 

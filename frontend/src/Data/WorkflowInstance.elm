@@ -5,6 +5,8 @@ module Data.WorkflowInstance exposing
     , decoder
     , listDecoder
     , statusFromString
+    , statusToCssClass
+    , statusToJapanese
     , statusToString
     )
 
@@ -126,6 +128,54 @@ statusFromString str =
 
         _ ->
             Nothing
+
+
+{-| ステータスを日本語に変換（UI 表示用）
+-}
+statusToJapanese : Status -> String
+statusToJapanese status =
+    case status of
+        Draft ->
+            "下書き"
+
+        Pending ->
+            "申請待ち"
+
+        InProgress ->
+            "承認中"
+
+        Approved ->
+            "承認済み"
+
+        Rejected ->
+            "却下"
+
+        Cancelled ->
+            "キャンセル"
+
+
+{-| ステータスを CSS クラス名に変換（スタイリング用）
+-}
+statusToCssClass : Status -> String
+statusToCssClass status =
+    case status of
+        Draft ->
+            "status-draft"
+
+        Pending ->
+            "status-pending"
+
+        InProgress ->
+            "status-in-progress"
+
+        Approved ->
+            "status-approved"
+
+        Rejected ->
+            "status-rejected"
+
+        Cancelled ->
+            "status-cancelled"
 
 
 
