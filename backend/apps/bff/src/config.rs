@@ -27,6 +27,20 @@ pub struct BffConfig {
 impl BffConfig {
    /// 環境変数から設定を読み込む
    pub fn from_env() -> Result<Self, env::VarError> {
+      let dev_auth_enabled = env::var("DEV_AUTH_ENABLED")
+         .map(|v| v.eq_ignore_ascii_case("true"))
+         .unwrap_or(false);
+
+      // リリースビルドで DevAuth が有効な場合は panic
+      // 本番環境への誤デプロイを防ぐためのセーフティネット
+      #[cfg(not(debug_assertions))]
+      if dev_auth_enabled {
+         panic!(
+            "DEV_AUTH_ENABLED=true はリリースビルドでは使用できません。\n\
+             本番環境では認証バイパスは許可されません。"
+         );
+      }
+
       Ok(Self {
          host: env::var("BFF_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
          port: env::var("BFF_PORT")
@@ -39,9 +53,7 @@ impl BffConfig {
             .expect("CORE_URL が設定されていません（just setup-env を実行してください）"),
          auth_url: env::var("AUTH_URL")
             .expect("AUTH_URL が設定されていません（just setup-env を実行してください）"),
-         dev_auth_enabled: env::var("DEV_AUTH_ENABLED")
-            .map(|v| v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false),
+         dev_auth_enabled,
       })
    }
 }
