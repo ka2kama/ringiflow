@@ -150,6 +150,8 @@ TEA（The Elm Architecture）パターンを採用。
 | 意思決定（WHY） | [`docs/05_ADR/`](docs/05_ADR/) |
 | 技術知識 | [`docs/06_技術ノート/`](docs/06_技術ノート/) |
 | 実装解説 | [`docs/07_実装解説/`](docs/07_実装解説/) |
+| セッションログ | [`prompts/runs/`](prompts/runs/) |
+| 操作パターン | [`prompts/recipes/`](prompts/recipes/) |
 
 作業開始時は [`docs/01_要件定義書/00_はじめに.md`](docs/01_要件定義書/00_はじめに.md) から読み、全体像を把握すること。
 
@@ -179,6 +181,7 @@ TEA（The Elm Architecture）パターンを採用。
 - **技術ノート** — 新しいツール・パターン導入、技術解説
 - **セッションログ** — コード変更、設計判断（→ [`prompts/runs/`](prompts/runs/)）
 - **実装解説** — Phase 完了、設計判断を伴う実装（→ [`docs/07_実装解説/`](docs/07_実装解説/)）
+- **操作レシピ** — 非自明な操作で問題解決、再利用可能なパターン発見（→ [`prompts/recipes/`](prompts/recipes/)）
 
 ## 学習支援
 
