@@ -23,16 +23,39 @@ config =
       NoUnused.CustomTypeConstructors.rule []
     , -- 未使用のコンストラクタ引数
       NoUnused.CustomTypeConstructorArgs.rule
+        -- TODO: Phase 1 で作成した API/Data モジュール。Phase 2 で UI 実装後に除外設定を削除する
+        |> Rule.ignoreErrorsForFiles
+            [ "src/Api/Http.elm"
+            , "src/Data/FormField.elm"
+            ]
     , -- 未使用の依存関係
       NoUnused.Dependencies.rule
     , -- 未使用のエクスポート
       NoUnused.Exports.rule
         -- TODO: Ports.elm は BFF 連携実装時に使用予定。使用開始後にこの除外設定を削除する
         |> Rule.ignoreErrorsForFiles [ "src/Ports.elm" ]
+        -- TODO: Phase 1 で作成した API/Data モジュール。Phase 2 で UI 実装後に除外設定を削除する
+        |> Rule.ignoreErrorsForFiles
+            [ "src/Api/Http.elm"
+            , "src/Api/Workflow.elm"
+            , "src/Api/WorkflowDefinition.elm"
+            , "src/Data/FormField.elm"
+            , "src/Data/WorkflowDefinition.elm"
+            , "src/Data/WorkflowInstance.elm"
+            ]
     , -- 未使用のモジュール
       NoUnused.Modules.rule
         -- TODO: Ports.elm は BFF 連携実装時に使用予定。使用開始後にこの除外設定を削除する
         |> Rule.ignoreErrorsForFiles [ "src/Ports.elm" ]
+        -- TODO: Phase 1 で作成した API/Data モジュール。Phase 2 で UI 実装後に除外設定を削除する
+        |> Rule.ignoreErrorsForFiles
+            [ "src/Api/Http.elm"
+            , "src/Api/Workflow.elm"
+            , "src/Api/WorkflowDefinition.elm"
+            , "src/Data/FormField.elm"
+            , "src/Data/WorkflowDefinition.elm"
+            , "src/Data/WorkflowInstance.elm"
+            ]
     , -- 未使用のパラメータ
       NoUnused.Parameters.rule
     , -- 未使用のパターン
