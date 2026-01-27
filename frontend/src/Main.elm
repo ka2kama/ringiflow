@@ -14,6 +14,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page.Home
 import Page.NotFound
+import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Route exposing (Route)
 import Session exposing (Session)
@@ -62,6 +63,7 @@ Nested TEA パターンにより、各ページの Model を Page 型で保持�
 -}
 type Page
     = HomePage
+    | WorkflowsPage WorkflowList.Model
     | WorkflowNewPage WorkflowNew.Model
     | NotFoundPage
 
@@ -117,8 +119,11 @@ initPage route session =
             ( HomePage, Cmd.none )
 
         Route.Workflows ->
-            -- TODO: Sub-Phase 3-3 で WorkflowsPage を実装
-            ( NotFoundPage, Cmd.none )
+            let
+                ( model, cmd ) =
+                    WorkflowList.init session
+            in
+            ( WorkflowsPage model, Cmd.map WorkflowsMsg cmd )
 
         Route.WorkflowNew ->
             let
@@ -147,6 +152,7 @@ initPage route session =
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
+    | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
 
 
@@ -174,6 +180,20 @@ update msg model =
             ( { model | url = url, route = route, page = page }
             , pageCmd
             )
+
+        WorkflowsMsg subMsg ->
+            case model.page of
+                WorkflowsPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowList.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowsPage newSubModel }
+                    , Cmd.map WorkflowsMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
         WorkflowNewMsg subMsg ->
             case model.page of
@@ -253,6 +273,10 @@ viewMain model =
         [ case model.page of
             HomePage ->
                 Page.Home.view
+
+            WorkflowsPage subModel ->
+                WorkflowList.view subModel
+                    |> Html.map WorkflowsMsg
 
             WorkflowNewPage subModel ->
                 WorkflowNew.view subModel
