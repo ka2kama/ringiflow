@@ -42,13 +42,9 @@ check-tools:
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
+# worktree の場合は空きポートオフセットを自動割り当て
 setup-env:
-    @echo "環境変数ファイルを確認中..."
-    @test -f .env || (cp .env.template .env && echo "  作成: .env")
-    @test -f .env && echo "  確認: .env"
-    @test -f backend/.env || (cp backend/.env.template backend/.env && echo "  作成: backend/.env")
-    @test -f backend/.env && echo "  確認: backend/.env"
-    @echo "✓ 環境変数ファイル準備完了"
+    ./scripts/setup-env.sh
 
 # 依存関係をインストール
 setup-deps:
