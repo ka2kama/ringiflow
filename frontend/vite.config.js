@@ -11,6 +11,9 @@ import elmPlugin from "vite-plugin-elm";
 export default defineConfig({
   plugins: [elmPlugin()],
 
+  // SPA モード: 存在しないパスは index.html にフォールバック
+  appType: "spa",
+
   server: {
     port: parseInt(process.env.VITE_PORT),
     // 開発環境で CORS を回避するため Rust バックエンドにプロキシ

@@ -38,6 +38,16 @@ viewQuickActions =
         , style "margin-top" "1.5rem"
         ]
         [ a
+            [ href "/workflows"
+            , style "display" "inline-block"
+            , style "padding" "0.75rem 1.5rem"
+            , style "background-color" "#34a853"
+            , style "color" "white"
+            , style "text-decoration" "none"
+            , style "border-radius" "4px"
+            ]
+            [ text "申請一覧" ]
+        , a
             [ href "/workflows/new"
             , style "display" "inline-block"
             , style "padding" "0.75rem 1.5rem"
