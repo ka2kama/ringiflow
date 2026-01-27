@@ -26,6 +26,22 @@ just check-all          # リント + テスト（コミット前に必須）
 just fmt                # 全体フォーマット
 ```
 
+### 開発サーバー起動
+
+開発サーバーは必ず `just` コマンドで起動する。直接 `pnpm run dev` や `cargo run` を実行してはいけない。
+
+```bash
+just dev-deps           # PostgreSQL, Redis を起動（先に実行）
+just dev-bff            # BFF
+just dev-core-service   # Core Service
+just dev-auth-service   # Auth Service
+just dev-web            # フロントエンド
+```
+
+理由: 環境変数はルートの `.env` ファイルで管理し、justfile の `set dotenv-load := true` で読み込む設計。`just` を経由しないと環境変数が設定されない。
+
+→ 詳細: [技術ノート: Vite](docs/06_技術ノート/Vite.md#環境変数管理)
+
 ### 単一テスト実行
 
 ```bash
