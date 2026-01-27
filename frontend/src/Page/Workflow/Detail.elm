@@ -63,7 +63,7 @@ type alias Model =
 type RemoteData a
     = NotAsked
     | Loading
-    | Failure ApiError
+    | Failure
     | Success a
 
 
@@ -112,8 +112,8 @@ update msg model =
                         }
                     )
 
-                Err error ->
-                    ( { model | workflow = Failure error }
+                Err _ ->
+                    ( { model | workflow = Failure }
                     , Cmd.none
                     )
 
@@ -124,8 +124,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    ( { model | definition = Failure error }
+                Err _ ->
+                    ( { model | definition = Failure }
                     , Cmd.none
                     )
 
@@ -170,7 +170,7 @@ viewContent model =
         Loading ->
             div [ class "loading" ] [ text "読み込み中..." ]
 
-        Failure _ ->
+        Failure ->
             viewError
 
         Success workflow ->
@@ -240,7 +240,7 @@ viewFormData workflow maybeDefinition =
             Loading ->
                 div [ class "loading" ] [ text "読み込み中..." ]
 
-            Failure _ ->
+            Failure ->
                 viewRawFormData workflow.formData
 
             Success definition ->

@@ -55,9 +55,8 @@ type alias Model =
 {-| リモートデータの状態
 -}
 type RemoteData a
-    = NotAsked
-    | Loading
-    | Failure ApiError
+    = Loading
+    | Failure
     | Success a
 
 
@@ -100,8 +99,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err error ->
-                    ( { model | workflows = Failure error }
+                Err _ ->
+                    ( { model | workflows = Failure }
                     , Cmd.none
                     )
 
@@ -145,21 +144,18 @@ viewHeader =
 viewContent : Model -> Html Msg
 viewContent model =
     case model.workflows of
-        NotAsked ->
-            div [] []
-
         Loading ->
             div [ class "loading" ] [ text "読み込み中..." ]
 
-        Failure error ->
-            viewError error
+        Failure ->
+            viewError
 
         Success workflows ->
             viewWorkflowList model.statusFilter workflows
 
 
-viewError : ApiError -> Html Msg
-viewError _ =
+viewError : Html Msg
+viewError =
     div [ class "error-message" ]
         [ p [] [ text "データの取得に失敗しました。" ]
         , button [ onClick Refresh, class "btn btn-secondary" ]
