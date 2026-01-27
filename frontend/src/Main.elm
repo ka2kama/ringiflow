@@ -13,6 +13,7 @@ import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Route exposing (Route)
+import Session exposing (Session)
 import Url exposing (Url)
 
 
@@ -52,29 +53,37 @@ type alias Flags =
 
 {-| アプリケーションの状態
 
-最小限の状態のみを保持し、派生値は view 関数内で計算する。
+グローバル状態（Session）と現在のページ状態を保持する。
+Nested TEA パターンにより、各ページの状態は Page 型で管理。
 
 -}
 type alias Model =
     { key : Nav.Key
     , url : Url
     , route : Route
-    , apiBaseUrl : String
+    , session : Session
     }
 
 
 {-| アプリケーションの初期化
+
+Session を初期化し、初期ルートを設定する。
+将来的には GET /auth/me でユーザー情報を取得する。
+
 -}
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         route =
             Route.fromUrl url
+
+        session =
+            Session.init { apiBaseUrl = flags.apiBaseUrl }
     in
     ( { key = key
       , url = url
       , route = route
-      , apiBaseUrl = flags.apiBaseUrl
+      , session = session
       }
     , Cmd.none
     )

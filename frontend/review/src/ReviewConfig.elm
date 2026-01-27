@@ -43,6 +43,8 @@ config =
             , "src/Data/WorkflowDefinition.elm"
             , "src/Data/WorkflowInstance.elm"
             ]
+        -- TODO: Session.elm は Phase 2 の後続 Sub-Phase で使用予定
+        |> Rule.ignoreErrorsForFiles [ "src/Session.elm" ]
     , -- 未使用のモジュール
       NoUnused.Modules.rule
         -- TODO: Ports.elm は BFF 連携実装時に使用予定。使用開始後にこの除外設定を削除する
@@ -58,6 +60,8 @@ config =
             ]
     , -- 未使用のパラメータ
       NoUnused.Parameters.rule
+        -- TODO: Session.elm の extractTenantId は User 型拡張後に修正予定
+        |> Rule.ignoreErrorsForFiles [ "src/Session.elm" ]
     , -- 未使用のパターン
       NoUnused.Patterns.rule
     , -- コード簡略化
