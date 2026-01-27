@@ -38,6 +38,7 @@ check-tools:
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
+    @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
