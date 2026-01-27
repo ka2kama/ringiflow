@@ -30,6 +30,8 @@ import Api.Http exposing (ApiError)
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Dict exposing (Dict)
+import Form.DynamicForm as DynamicForm
+import Form.Validation as Validation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
@@ -157,12 +159,86 @@ update msg model =
             )
 
         SaveDraft ->
-            -- TODO: 下書き保存 API 呼び出し
-            ( model, Cmd.none )
+            -- 下書き保存時は最小限のバリデーション（タイトルのみ）
+            let
+                titleErrors =
+                    case Validation.validateTitle model.title of
+                        Err msg ->
+                            Dict.singleton "title" msg
+
+                        Ok _ ->
+                            Dict.empty
+            in
+            if Dict.isEmpty titleErrors then
+                -- TODO: 下書き保存 API 呼び出し（Sub-Phase 2-8 で実装）
+                ( model, Cmd.none )
+
+            else
+                ( { model | validationErrors = titleErrors }, Cmd.none )
 
         Submit ->
-            -- TODO: 申請 API 呼び出し
-            ( model, Cmd.none )
+            -- 申請時は全項目バリデーション
+            let
+                validationErrors =
+                    validateForm model
+            in
+            if Dict.isEmpty validationErrors then
+                -- TODO: 申請 API 呼び出し（Sub-Phase 2-9 で実装）
+                ( model, Cmd.none )
+
+            else
+                ( { model | validationErrors = validationErrors }, Cmd.none )
+
+
+{-| フォーム全体のバリデーション
+
+タイトルと動的フォームフィールドを検証する。
+
+-}
+validateForm : Model -> Dict String String
+validateForm model =
+    let
+        -- タイトルのバリデーション
+        titleErrors =
+            case Validation.validateTitle model.title of
+                Err msg ->
+                    Dict.singleton "title" msg
+
+                Ok _ ->
+                    Dict.empty
+
+        -- 動的フィールドのバリデーション
+        fieldErrors =
+            case model.definitions of
+                Success definitions ->
+                    case getSelectedDefinition model.selectedDefinitionId definitions of
+                        Just definition ->
+                            case DynamicForm.extractFormFields definition.definition of
+                                Ok fields ->
+                                    Validation.validateAllFields fields model.formValues
+
+                                Err _ ->
+                                    Dict.empty
+
+                        Nothing ->
+                            Dict.empty
+
+                _ ->
+                    Dict.empty
+    in
+    Dict.union titleErrors fieldErrors
+
+
+{-| 選択されたワークフロー定義を取得
+-}
+getSelectedDefinition : Maybe String -> List WorkflowDefinition -> Maybe WorkflowDefinition
+getSelectedDefinition maybeId definitions =
+    maybeId
+        |> Maybe.andThen
+            (\defId ->
+                List.filter (\d -> d.id == defId) definitions
+                    |> List.head
+            )
 
 
 
@@ -228,14 +304,24 @@ viewError =
 -}
 viewForm : Model -> List WorkflowDefinition -> Html Msg
 viewForm model definitions =
+    let
+        -- 選択された定義を取得
+        selectedDefinition =
+            model.selectedDefinitionId
+                |> Maybe.andThen
+                    (\defId ->
+                        List.filter (\d -> d.id == defId) definitions
+                            |> List.head
+                    )
+    in
     div []
         [ -- Step 1: ワークフロー定義選択
           viewDefinitionSelector definitions model.selectedDefinitionId
 
         -- Step 2: フォーム入力（定義選択後に表示）
-        , case model.selectedDefinitionId of
-            Just _ ->
-                viewFormInputs model
+        , case selectedDefinition of
+            Just definition ->
+                viewFormInputs model definition
 
             Nothing ->
                 text ""
@@ -305,14 +391,19 @@ viewDefinitionOption selectedId definition =
 
 {-| フォーム入力エリア
 -}
-viewFormInputs : Model -> Html Msg
-viewFormInputs model =
+viewFormInputs : Model -> WorkflowDefinition -> Html Msg
+viewFormInputs model definition =
     div []
         [ h3 [] [ text "Step 2: フォーム入力" ]
 
         -- タイトル入力
-        , div [ style "margin-bottom" "1rem" ]
-            [ label [ for "title", style "display" "block", style "margin-bottom" "0.5rem" ]
+        , div [ style "margin-bottom" "1.5rem" ]
+            [ label
+                [ for "title"
+                , style "display" "block"
+                , style "margin-bottom" "0.5rem"
+                , style "font-weight" "500"
+                ]
                 [ text "タイトル"
                 , span [ style "color" "#d93025" ] [ text " *" ]
                 ]
@@ -327,14 +418,73 @@ viewFormInputs model =
                 , style "border" "1px solid #dadce0"
                 , style "border-radius" "4px"
                 , style "font-size" "1rem"
+                , style "box-sizing" "border-box"
                 ]
                 []
+            , viewTitleError model
             ]
 
-        -- TODO: 動的フォームフィールド（Sub-Phase 2-5, 2-6 で実装）
+        -- 動的フォームフィールド
+        , viewDynamicFormFields definition model
+
         -- アクションボタン
         , viewActions model
         ]
+
+
+{-| タイトルのエラー表示
+-}
+viewTitleError : Model -> Html Msg
+viewTitleError model =
+    case Dict.get "title" model.validationErrors of
+        Just errorMsg ->
+            div
+                [ style "color" "#d93025"
+                , style "font-size" "0.875rem"
+                , style "margin-top" "0.25rem"
+                ]
+                [ text errorMsg ]
+
+        Nothing ->
+            text ""
+
+
+{-| 動的フォームフィールドを描画
+-}
+viewDynamicFormFields : WorkflowDefinition -> Model -> Html Msg
+viewDynamicFormFields definition model =
+    case DynamicForm.extractFormFields definition.definition of
+        Ok fields ->
+            if List.isEmpty fields then
+                text ""
+
+            else
+                div
+                    [ style "margin-bottom" "1.5rem"
+                    , style "padding" "1rem"
+                    , style "background-color" "#f8f9fa"
+                    , style "border-radius" "8px"
+                    ]
+                    [ h4
+                        [ style "margin" "0 0 1rem 0"
+                        , style "color" "#202124"
+                        ]
+                        [ text (definition.name ++ " フォーム") ]
+                    , DynamicForm.viewFields
+                        fields
+                        model.formValues
+                        model.validationErrors
+                        UpdateField
+                    ]
+
+        Err _ ->
+            div
+                [ style "color" "#d93025"
+                , style "padding" "1rem"
+                , style "background-color" "#fce8e6"
+                , style "border-radius" "4px"
+                ]
+                [ text "フォーム定義の読み込みに失敗しました。" ]
 
 
 {-| アクションボタン
