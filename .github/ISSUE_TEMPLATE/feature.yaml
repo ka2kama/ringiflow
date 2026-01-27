@@ -1,0 +1,74 @@
+name: 機能追加
+description: 新機能の追加や既存機能の拡張
+labels: ["type:story"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 機能追加 Issue テンプレート
+
+        完了条件と関連ドキュメントを明記することで、ゴールを明確にし、学習効果を最大化します。
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要
+      description: 何を実現するか
+      placeholder: |
+        例: ユーザーがメールアドレスでログインできるようにする
+    validations:
+      required: true
+
+  - type: textarea
+    id: done-criteria
+    attributes:
+      label: 完了条件
+      description: |
+        何をもって完了とするか。具体的・検証可能に記述してください。
+        チェックリスト形式で記載します。
+      placeholder: |
+        - [ ] POST /auth/login でログインできる
+        - [ ] 不正なパスワードの場合は 401 を返す
+        - [ ] ログイン成功時にセッション Cookie が発行される
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-docs
+    attributes:
+      label: 関連ドキュメント
+      description: 要件定義書、設計書へのリンク
+      placeholder: |
+        - 要件: docs/01_要件定義書/xxx
+        - 設計: docs/02_基本設計書/xxx
+        - ADR: docs/05_ADR/xxx
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation-plan
+    attributes:
+      label: 実装計画
+      description: |
+        設計フェーズで記入。Phase 分割とテストリストを含めます。
+        着手時に記入しない場合は空欄のままで OK。
+      placeholder: |
+        TDD（Red → Green → Refactor）で MVP を積み上げる。
+
+        ### Phase 1: コンポーネント名
+
+        **テストリスト:**
+        - [ ] 正常系のテスト
+        - [ ] 異常系のテスト
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 備考
+      description: その他の情報、検討事項など
+    validations:
+      required: false

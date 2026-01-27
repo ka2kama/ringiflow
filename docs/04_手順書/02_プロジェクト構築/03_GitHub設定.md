@@ -500,9 +500,61 @@ PR が作成されると、変更ファイルに応じて自動でレビュワ�
 
 ---
 
-## 7. Issue / PR テンプレート
+## 7. Labels
 
-### 7.1 Issue テンプレート
+Issue を分類するためのラベルを設定する。
+
+### 7.1 ラベル一覧
+
+| ラベル | 説明 | 色 |
+|-------|------|-----|
+| **Issue タイプ** | | |
+| `type:epic` | 複数の Story をまとめる大きな機能 | 紫 `#7B68EE` |
+| `type:story` | ユーザー価値の単位（1〜数日で完了） | 青 `#1E90FF` |
+| `idea` | 後で検討するアイデア・メモ | 黄 `#FBCA04` |
+| `bug` | バグ報告 | 赤 `#d73a4a` |
+| `enhancement` | 機能改善 | 水色 `#a2eeef` |
+| **カテゴリ** | | |
+| `backend` | Rust / API 関連 | 青 `#0366d6` |
+| `frontend` | Elm / UI 関連 | 緑 `#28a745` |
+| `infra` | Docker / Terraform / AWS | 紫 `#6f42c1` |
+| `docs` | ドキュメント | 水色 `#0075ca` |
+| **優先度** | | |
+| `priority:high` | 優先度: 高 | 赤 `#d73a4a` |
+| `priority:medium` | 優先度: 中 | 黄 `#fbca04` |
+| `priority:low` | 優先度: 低 | 緑 `#0e8a16` |
+
+### 7.2 ラベル作成（CLI）
+
+```bash
+# Issue タイプ
+gh label create "type:epic" --description "複数の Story をまとめる大きな機能" --color "7B68EE"
+gh label create "type:story" --description "ユーザー価値の単位（1〜数日で完了）" --color "1E90FF"
+gh label create "idea" --description "後で検討するアイデア・メモ" --color "FBCA04"
+
+# カテゴリ
+gh label create "backend" --description "Rust / API 関連" --color "0366d6"
+gh label create "frontend" --description "Elm / UI 関連" --color "28a745"
+gh label create "infra" --description "Docker / Terraform / AWS" --color "6f42c1"
+gh label create "docs" --description "ドキュメント" --color "0075ca"
+
+# 優先度
+gh label create "priority:high" --description "優先度: 高" --color "d73a4a"
+gh label create "priority:medium" --description "優先度: 中" --color "fbca04"
+gh label create "priority:low" --description "優先度: 低" --color "0e8a16"
+```
+
+`bug`, `enhancement` はリポジトリ作成時にデフォルトで存在するため、作成不要。
+
+### 7.3 ラベル一括作成（スクリプト）
+
+→ `just setup-labels` で一括作成可能。
+
+---
+
+## 8. Issue / PR テンプレート
+
+### 8.1 Issue テンプレート
 
 ```
 .github/ISSUE_TEMPLATE/
@@ -602,7 +654,7 @@ contact_links:
     about: 質問や相談は Discussions へ
 ```
 
-### 7.2 PR テンプレート
+### 8.2 PR テンプレート
 
 ```markdown
 <!-- .github/pull_request_template.md -->
@@ -1017,6 +1069,7 @@ Settings > Rules > Rulesets > main-protection（編集）
 
 | 日付 | 変更内容 | 担当 |
 |------|---------|------|
+| 2026-01-27 | Labels セクションを追加、`just setup-labels` を追加 | - |
 | 2026-01-19 | Claude Rules Check を追加、ワークフロー構成を責務分離 | - |
 | 2026-01-19 | Squash マージ時に PR 本文をコミットメッセージに含める設定に変更 | - |
 | 2026-01-15 | Claude Code Action: OAuth トークン方式に変更、Ruleset 設定追加 | - |

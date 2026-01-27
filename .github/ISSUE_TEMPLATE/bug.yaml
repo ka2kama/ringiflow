@@ -1,0 +1,90 @@
+name: バグ報告
+description: バグや不具合の報告
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## バグ報告 Issue テンプレート
+
+        再現手順と期待動作を明記することで、問題の特定と修正を迅速に行えます。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: バグの概要
+      placeholder: |
+        例: ログイン画面でパスワードを入力すると画面がフリーズする
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 再現手順
+      description: バグを再現するための手順
+      placeholder: |
+        1. ログイン画面を開く
+        2. メールアドレスを入力する
+        3. パスワードを入力する
+        4. 送信ボタンをクリックする
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待動作
+      description: 本来どのように動作すべきか
+      placeholder: |
+        例: ログイン処理が実行され、ダッシュボードに遷移する
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+      description: 実際にどのような動作になるか
+      placeholder: |
+        例: 画面がフリーズし、操作を受け付けなくなる
+    validations:
+      required: true
+
+  - type: textarea
+    id: done-criteria
+    attributes:
+      label: 完了条件
+      description: 何をもって修正完了とするか
+      placeholder: |
+        - [ ] パスワード入力後、正常にログイン処理が実行される
+        - [ ] ログイン成功時にダッシュボードに遷移する
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境
+      description: 発生環境の情報
+      placeholder: |
+        - OS: macOS 14.0
+        - ブラウザ: Chrome 120
+        - 該当サービス: BFF
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 備考
+      description: その他の情報、調査メモなど
+    validations:
+      required: false

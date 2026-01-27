@@ -1,0 +1,44 @@
+name: アイデア・メモ
+description: 開発中に思いついたこと、後で検討したいこと
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## アイデア・メモ
+
+        開発中に思いついたことを一旦外部化しておくためのテンプレート。
+        完了条件は不要。後で Story に昇格させるか、クローズするかは別途判断。
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: アイデア
+      description: 何を思いついたか、何を改善できそうか
+      placeholder: |
+        例: API レスポンスをキャッシュしたら速くなるかも
+        例: このエラーメッセージ、もう少し分かりやすくできそう
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 背景・きっかけ
+      description: なぜこのアイデアを思いついたか（任意）
+      placeholder: |
+        例: #115 の実装中に API が遅いと感じた
+        例: テスト書いてて気づいた
+    validations:
+      required: false
+
+  - type: textarea
+    id: related
+    attributes:
+      label: 関連
+      description: 関連する Issue、ドキュメント、コードなど（任意）
+      placeholder: |
+        - 関連 Issue: #123
+        - 該当コード: src/handler/auth.rs:45
+    validations:
+      required: false

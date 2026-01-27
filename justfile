@@ -38,6 +38,7 @@ check-tools:
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
+    @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -75,6 +76,29 @@ reset-db:
     @echo "データベースをリセット中..."
     cd backend && sqlx database reset -y
     @echo "✓ データベースリセット完了"
+
+# =============================================================================
+# GitHub 設定
+# =============================================================================
+
+# GitHub ラベルを一括作成（冪等: 既存ラベルはスキップ）
+# → 詳細: docs/04_手順書/02_プロジェクト構築/03_GitHub設定.md#7-labels
+setup-labels:
+    @echo "GitHub ラベルをセットアップ中..."
+    @# Issue タイプ
+    @gh label create "type:epic" --description "複数の Story をまとめる大きな機能" --color "7B68EE" 2>/dev/null || echo "  スキップ: type:epic（既存）"
+    @gh label create "type:story" --description "ユーザー価値の単位（1〜数日で完了）" --color "1E90FF" 2>/dev/null || echo "  スキップ: type:story（既存）"
+    @gh label create "idea" --description "後で検討するアイデア・メモ" --color "FBCA04" 2>/dev/null || echo "  スキップ: idea（既存）"
+    @# カテゴリ
+    @gh label create "backend" --description "Rust / API 関連" --color "0366d6" 2>/dev/null || echo "  スキップ: backend（既存）"
+    @gh label create "frontend" --description "Elm / UI 関連" --color "28a745" 2>/dev/null || echo "  スキップ: frontend（既存）"
+    @gh label create "infra" --description "Docker / Terraform / AWS" --color "6f42c1" 2>/dev/null || echo "  スキップ: infra（既存）"
+    @gh label create "docs" --description "ドキュメント" --color "0075ca" 2>/dev/null || echo "  スキップ: docs（既存）"
+    @# 優先度
+    @gh label create "priority:high" --description "優先度: 高" --color "d73a4a" 2>/dev/null || echo "  スキップ: priority:high（既存）"
+    @gh label create "priority:medium" --description "優先度: 中" --color "fbca04" 2>/dev/null || echo "  スキップ: priority:medium（既存）"
+    @gh label create "priority:low" --description "優先度: 低" --color "0e8a16" 2>/dev/null || echo "  スキップ: priority:low（既存）"
+    @echo "✓ GitHub ラベルセットアップ完了"
 
 # =============================================================================
 # 開発サーバー
