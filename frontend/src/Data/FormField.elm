@@ -1,6 +1,7 @@
 module Data.FormField exposing
     ( FieldType(..)
     , FormField
+    , SelectOption
     , Validation
     , decoder
     , listDecoder
@@ -32,7 +33,7 @@ MVP では以下のタイプをサポート:
 -}
 
 import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (custom, optional, required)
 
 
 
@@ -141,7 +142,7 @@ decoder =
     Decode.succeed FormField
         |> required "id" Decode.string
         |> required "label" Decode.string
-        |> Decode.andMap fieldTypeDecoder
+        |> custom fieldTypeDecoder
         |> optional "placeholder" (Decode.nullable Decode.string) Nothing
         |> optional "validation" validationDecoder defaultValidation
 

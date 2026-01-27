@@ -210,6 +210,12 @@ test-rust-integration:
 test-elm:
     cd frontend && pnpm run test
 
+# Elm ビルドチェック（コンパイルエラー検出）
+# lint-elm や test-elm ではコンパイルエラーを検出できないため、
+# 実際にビルドしてコンパイルエラーがないことを確認する
+build-elm:
+    cd frontend && pnpm run build
+
 # =============================================================================
 # API テスト
 # =============================================================================
@@ -244,8 +250,8 @@ test-api: api-test-deps api-test-reset-db
 # 全チェック
 # =============================================================================
 
-# プッシュ前の全チェック（リント、テスト、SQLx キャッシュ同期）
-check-all: lint test sqlx-check
+# プッシュ前の全チェック（リント、テスト、ビルド、SQLx キャッシュ同期）
+check-all: lint test build-elm sqlx-check
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック

@@ -200,9 +200,9 @@ update msg model =
                     , Cmd.none
                     )
 
-                ( _, Err msg ) ->
+                ( _, Err errorMsg ) ->
                     ( { model
-                        | validationErrors = Dict.singleton "title" msg
+                        | validationErrors = Dict.singleton "title" errorMsg
                         , saveMessage = Nothing
                       }
                     , Cmd.none
