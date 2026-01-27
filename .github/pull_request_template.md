@@ -1,6 +1,6 @@
 ## Issue
 
-Closes #
+<!-- Closes #123 または Related to #123 または なし -->
 
 ## Summary
 
@@ -8,4 +8,4 @@ Closes #
 
 ## Test plan
 
-- [x] `just check-all` が通る
+- [ ] `just check-all` が通る
