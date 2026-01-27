@@ -96,10 +96,10 @@ jobs:
 
           # PR コメントと Review コメントを取得（最新20件、claude[bot] 自身を除外）
           COMMENTS=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
-            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, created_at: .created_at}] | last(20)' 2>/dev/null || echo "[]")
+            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, created_at: .created_at}] | .[-20:]' 2>/dev/null || echo "[]")
 
           REVIEW_COMMENTS=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments" \
-            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, path: .path, created_at: .created_at}] | last(20)' 2>/dev/null || echo "[]")
+            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, path: .path, created_at: .created_at}] | .[-20:]' 2>/dev/null || echo "[]")
 
           # JSON を環境ファイルに出力（multiline safe）
           {
