@@ -116,12 +116,20 @@ initPage route session =
         Route.Home ->
             ( HomePage, Cmd.none )
 
+        Route.Workflows ->
+            -- TODO: Sub-Phase 3-3 で WorkflowsPage を実装
+            ( NotFoundPage, Cmd.none )
+
         Route.WorkflowNew ->
             let
                 ( model, cmd ) =
                     WorkflowNew.init session
             in
             ( WorkflowNewPage model, Cmd.map WorkflowNewMsg cmd )
+
+        Route.WorkflowDetail _ ->
+            -- TODO: Sub-Phase 3-5 で WorkflowDetailPage を実装
+            ( NotFoundPage, Cmd.none )
 
         Route.NotFound ->
             ( NotFoundPage, Cmd.none )
