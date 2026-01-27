@@ -60,6 +60,9 @@ type alias Model =
     , formValues : Dict String String
     , validationErrors : Dict String String
 
+    -- 承認者選択
+    , approverInput : String
+
     -- 保存状態
     , savedWorkflow : Maybe WorkflowInstance
     , saveMessage : Maybe SaveMessage
@@ -101,6 +104,7 @@ init session =
       , title = ""
       , formValues = Dict.empty
       , validationErrors = Dict.empty
+      , approverInput = ""
       , savedWorkflow = Nothing
       , saveMessage = Nothing
       , submitting = False
@@ -133,10 +137,13 @@ type Msg
       -- フォーム入力
     | UpdateTitle String
     | UpdateField String String
+      -- 承認者選択
+    | UpdateApproverInput String
       -- 保存・申請
     | SaveDraft
     | GotSaveResult (Result ApiError WorkflowInstance)
     | Submit
+    | GotSaveAndSubmitResult String (Result ApiError WorkflowInstance)
     | GotSubmitResult (Result ApiError WorkflowInstance)
       -- メッセージクリア
     | ClearMessage
@@ -175,6 +182,11 @@ update msg model =
 
         UpdateField fieldId value ->
             ( { model | formValues = Dict.insert fieldId value model.formValues }
+            , Cmd.none
+            )
+
+        UpdateApproverInput value ->
+            ( { model | approverInput = value }
             , Cmd.none
             )
 
@@ -225,14 +237,43 @@ update msg model =
                     )
 
         Submit ->
-            -- 申請時は全項目バリデーション
+            -- 申請時は全項目 + 承認者バリデーション
             let
                 validationErrors =
-                    validateForm model
+                    validateFormWithApprover model
             in
             if Dict.isEmpty validationErrors then
-                -- TODO: 申請 API 呼び出し（Sub-Phase 2-9 で実装）
-                ( model, Cmd.none )
+                case model.savedWorkflow of
+                    Just workflow ->
+                        -- 既に下書き保存済みならそのまま申請
+                        ( { model
+                            | submitting = True
+                            , saveMessage = Nothing
+                          }
+                        , submitWorkflow model.session workflow.id model.approverInput
+                        )
+
+                    Nothing ->
+                        -- 未保存の場合、まず保存してから申請
+                        case model.selectedDefinitionId of
+                            Just definitionId ->
+                                ( { model
+                                    | submitting = True
+                                    , saveMessage = Nothing
+                                  }
+                                , saveAndSubmit model.session
+                                    definitionId
+                                    model.title
+                                    model.formValues
+                                    model.approverInput
+                                )
+
+                            Nothing ->
+                                ( { model
+                                    | saveMessage = Just (SaveError "ワークフロー種類を選択してください")
+                                  }
+                                , Cmd.none
+                                )
 
             else
                 ( { model
@@ -242,11 +283,30 @@ update msg model =
                 , Cmd.none
                 )
 
+        GotSaveAndSubmitResult approverInput result ->
+            case result of
+                Ok workflow ->
+                    -- 保存成功 → 続けて申請
+                    ( { model | savedWorkflow = Just workflow }
+                    , submitWorkflow model.session workflow.id approverInput
+                    )
+
+                Err _ ->
+                    ( { model
+                        | submitting = False
+                        , saveMessage = Just (SaveError "保存に失敗しました。もう一度お試しください。")
+                      }
+                    , Cmd.none
+                    )
+
         GotSubmitResult result ->
             case result of
-                Ok _ ->
-                    -- TODO: 申請完了後の遷移（Sub-Phase 2-9 で実装）
-                    ( { model | submitting = False }
+                Ok workflow ->
+                    ( { model
+                        | submitting = False
+                        , savedWorkflow = Just workflow
+                        , saveMessage = Just (SaveSuccess "申請が完了しました")
+                      }
                     , Cmd.none
                     )
 
@@ -264,7 +324,7 @@ update msg model =
             )
 
 
-{-| フォーム全体のバリデーション
+{-| フォーム全体のバリデーション（下書き保存用）
 
 タイトルと動的フォームフィールドを検証する。
 
@@ -303,6 +363,24 @@ validateForm model =
     Dict.union titleErrors fieldErrors
 
 
+{-| フォーム全体 + 承認者のバリデーション（申請用）
+-}
+validateFormWithApprover : Model -> Dict String String
+validateFormWithApprover model =
+    let
+        formErrors =
+            validateForm model
+
+        approverErrors =
+            if String.isEmpty (String.trim model.approverInput) then
+                Dict.singleton "approver" "承認者を入力してください"
+
+            else
+                Dict.empty
+    in
+    Dict.union formErrors approverErrors
+
+
 {-| 選択されたワークフロー定義を取得
 -}
 getSelectedDefinition : Maybe String -> List WorkflowDefinition -> Maybe WorkflowDefinition
@@ -337,6 +415,43 @@ encodeFormValues values =
     Dict.toList values
         |> List.map (\( k, v ) -> ( k, Encode.string v ))
         |> Encode.object
+
+
+{-| ワークフローを申請
+-}
+submitWorkflow : Session -> String -> String -> Cmd Msg
+submitWorkflow session workflowId approverInput =
+    WorkflowApi.submitWorkflow
+        { config = Session.toRequestConfig session
+        , id = workflowId
+        , body = { approverIds = [ String.trim approverInput ] }
+        , toMsg = GotSubmitResult
+        }
+
+
+{-| 保存と申請を連続実行
+
+未保存の場合、まず下書き保存し、成功したら申請を行う。
+MVP では保存結果を GotSaveResult で受け取り、そこから申請を行うフローに。
+ただし、この実装では簡略化のため保存→申請を一度に行う。
+
+将来的には Task.andThen パターンで連結する方がエレガント。
+
+-}
+saveAndSubmit : Session -> String -> String -> Dict String String -> String -> Cmd Msg
+saveAndSubmit session definitionId title formValues approverInput =
+    -- MVP では簡略化: 保存のみ行い、保存成功後にユーザーが再度申請ボタンを押す
+    -- 理由: Elm で Cmd のチェーンは Task 変換が必要で複雑になるため
+    -- TODO: 将来的には保存→申請の連続処理を実装
+    WorkflowApi.createWorkflow
+        { config = Session.toRequestConfig session
+        , body =
+            { definitionId = definitionId
+            , title = title
+            , formData = encodeFormValues formValues
+            }
+        , toMsg = GotSaveAndSubmitResult approverInput
+        }
 
 
 
@@ -581,9 +696,70 @@ viewFormInputs model definition =
         -- 動的フォームフィールド
         , viewDynamicFormFields definition model
 
+        -- Step 3: 承認者選択
+        , viewApproverSection model
+
         -- アクションボタン
         , viewActions model
         ]
+
+
+{-| 承認者選択セクション
+-}
+viewApproverSection : Model -> Html Msg
+viewApproverSection model =
+    div []
+        [ h3 [] [ text "Step 3: 承認者選択" ]
+        , div [ style "margin-bottom" "1.5rem" ]
+            [ label
+                [ for "approver"
+                , style "display" "block"
+                , style "margin-bottom" "0.5rem"
+                , style "font-weight" "500"
+                ]
+                [ text "承認者（ユーザー ID）"
+                , span [ style "color" "#d93025" ] [ text " *" ]
+                ]
+            , input
+                [ type_ "text"
+                , id "approver"
+                , Html.Attributes.value model.approverInput
+                , Html.Events.onInput UpdateApproverInput
+                , placeholder "承認者のユーザー ID を入力"
+                , style "width" "100%"
+                , style "padding" "0.75rem"
+                , style "border" "1px solid #dadce0"
+                , style "border-radius" "4px"
+                , style "font-size" "1rem"
+                , style "box-sizing" "border-box"
+                ]
+                []
+            , viewApproverError model
+            , p
+                [ style "font-size" "0.875rem"
+                , style "color" "#5f6368"
+                , style "margin-top" "0.5rem"
+                ]
+                [ text "※ 将来的にはユーザー検索機能を実装予定です" ]
+            ]
+        ]
+
+
+{-| 承認者エラー表示
+-}
+viewApproverError : Model -> Html Msg
+viewApproverError model =
+    case Dict.get "approver" model.validationErrors of
+        Just errorMsg ->
+            div
+                [ style "color" "#d93025"
+                , style "font-size" "0.875rem"
+                , style "margin-top" "0.25rem"
+                ]
+                [ text errorMsg ]
+
+        Nothing ->
+            text ""
 
 
 {-| タイトルのエラー表示
