@@ -424,7 +424,7 @@ submitWorkflow session workflowId approverInput =
     WorkflowApi.submitWorkflow
         { config = Session.toRequestConfig session
         , id = workflowId
-        , body = { approverIds = [ String.trim approverInput ] }
+        , body = { assignedTo = String.trim approverInput }
         , toMsg = GotSubmitResult
         }
 

@@ -146,7 +146,7 @@ type alias CreateWorkflowRequest =
 {-| ワークフロー申請リクエスト
 -}
 type alias SubmitWorkflowRequest =
-    { approverIds : List String
+    { assignedTo : String
     }
 
 
@@ -166,7 +166,7 @@ encodeCreateRequest req =
 encodeSubmitRequest : SubmitWorkflowRequest -> Encode.Value
 encodeSubmitRequest req =
     Encode.object
-        [ ( "approver_ids", Encode.list Encode.string req.approverIds )
+        [ ( "assigned_to", Encode.string req.assignedTo )
         ]
 
 
