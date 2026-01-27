@@ -27,14 +27,17 @@ module Page.Workflow.New exposing
 -}
 
 import Api.Http exposing (ApiError)
+import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
+import Data.WorkflowInstance exposing (WorkflowInstance)
 import Dict exposing (Dict)
 import Form.DynamicForm as DynamicForm
 import Form.Validation as Validation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
+import Json.Encode as Encode
 import Session exposing (Session)
 
 
@@ -57,9 +60,20 @@ type alias Model =
     , formValues : Dict String String
     , validationErrors : Dict String String
 
+    -- 保存状態
+    , savedWorkflow : Maybe WorkflowInstance
+    , saveMessage : Maybe SaveMessage
+
     -- 操作状態
     , submitting : Bool
     }
+
+
+{-| 保存結果メッセージ
+-}
+type SaveMessage
+    = SaveSuccess String
+    | SaveError String
 
 
 {-| リモートデータの状態
@@ -87,6 +101,8 @@ init session =
       , title = ""
       , formValues = Dict.empty
       , validationErrors = Dict.empty
+      , savedWorkflow = Nothing
+      , saveMessage = Nothing
       , submitting = False
       }
     , fetchDefinitions session
@@ -119,7 +135,11 @@ type Msg
     | UpdateField String String
       -- 保存・申請
     | SaveDraft
+    | GotSaveResult (Result ApiError WorkflowInstance)
     | Submit
+    | GotSubmitResult (Result ApiError WorkflowInstance)
+      -- メッセージクリア
+    | ClearMessage
 
 
 {-| 状態更新
@@ -159,22 +179,50 @@ update msg model =
             )
 
         SaveDraft ->
-            -- 下書き保存時は最小限のバリデーション（タイトルのみ）
-            let
-                titleErrors =
-                    case Validation.validateTitle model.title of
-                        Err msg ->
-                            Dict.singleton "title" msg
+            -- 下書き保存時は最小限のバリデーション（タイトル + 定義選択）
+            case ( model.selectedDefinitionId, Validation.validateTitle model.title ) of
+                ( Nothing, _ ) ->
+                    ( { model
+                        | saveMessage = Just (SaveError "ワークフロー種類を選択してください")
+                      }
+                    , Cmd.none
+                    )
 
-                        Ok _ ->
-                            Dict.empty
-            in
-            if Dict.isEmpty titleErrors then
-                -- TODO: 下書き保存 API 呼び出し（Sub-Phase 2-8 で実装）
-                ( model, Cmd.none )
+                ( _, Err msg ) ->
+                    ( { model
+                        | validationErrors = Dict.singleton "title" msg
+                        , saveMessage = Nothing
+                      }
+                    , Cmd.none
+                    )
 
-            else
-                ( { model | validationErrors = titleErrors }, Cmd.none )
+                ( Just definitionId, Ok _ ) ->
+                    ( { model
+                        | submitting = True
+                        , saveMessage = Nothing
+                        , validationErrors = Dict.empty
+                      }
+                    , saveDraft model.session definitionId model.title model.formValues
+                    )
+
+        GotSaveResult result ->
+            case result of
+                Ok workflow ->
+                    ( { model
+                        | submitting = False
+                        , savedWorkflow = Just workflow
+                        , saveMessage = Just (SaveSuccess "下書きを保存しました")
+                      }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( { model
+                        | submitting = False
+                        , saveMessage = Just (SaveError "保存に失敗しました。もう一度お試しください。")
+                      }
+                    , Cmd.none
+                    )
 
         Submit ->
             -- 申請時は全項目バリデーション
@@ -187,7 +235,33 @@ update msg model =
                 ( model, Cmd.none )
 
             else
-                ( { model | validationErrors = validationErrors }, Cmd.none )
+                ( { model
+                    | validationErrors = validationErrors
+                    , saveMessage = Nothing
+                  }
+                , Cmd.none
+                )
+
+        GotSubmitResult result ->
+            case result of
+                Ok _ ->
+                    -- TODO: 申請完了後の遷移（Sub-Phase 2-9 で実装）
+                    ( { model | submitting = False }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( { model
+                        | submitting = False
+                        , saveMessage = Just (SaveError "申請に失敗しました。もう一度お試しください。")
+                      }
+                    , Cmd.none
+                    )
+
+        ClearMessage ->
+            ( { model | saveMessage = Nothing }
+            , Cmd.none
+            )
 
 
 {-| フォーム全体のバリデーション
@@ -241,6 +315,30 @@ getSelectedDefinition maybeId definitions =
             )
 
 
+{-| 下書き保存 API を呼び出す
+-}
+saveDraft : Session -> String -> String -> Dict String String -> Cmd Msg
+saveDraft session definitionId title formValues =
+    WorkflowApi.createWorkflow
+        { config = Session.toRequestConfig session
+        , body =
+            { definitionId = definitionId
+            , title = title
+            , formData = encodeFormValues formValues
+            }
+        , toMsg = GotSaveResult
+        }
+
+
+{-| フォーム値を JSON にエンコード
+-}
+encodeFormValues : Dict String String -> Encode.Value
+encodeFormValues values =
+    Dict.toList values
+        |> List.map (\( k, v ) -> ( k, Encode.string v ))
+        |> Encode.object
+
+
 
 -- VIEW
 
@@ -251,8 +349,64 @@ view : Model -> Html Msg
 view model =
     div []
         [ h2 [] [ text "新規申請" ]
+        , viewSaveMessage model.saveMessage
         , viewContent model
         ]
+
+
+{-| 保存メッセージバナー
+-}
+viewSaveMessage : Maybe SaveMessage -> Html Msg
+viewSaveMessage maybeSaveMessage =
+    case maybeSaveMessage of
+        Just (SaveSuccess message) ->
+            div
+                [ style "padding" "1rem"
+                , style "margin-bottom" "1rem"
+                , style "background-color" "#e6f4ea"
+                , style "color" "#137333"
+                , style "border-radius" "4px"
+                , style "display" "flex"
+                , style "justify-content" "space-between"
+                , style "align-items" "center"
+                ]
+                [ text message
+                , button
+                    [ Html.Events.onClick ClearMessage
+                    , style "background" "none"
+                    , style "border" "none"
+                    , style "cursor" "pointer"
+                    , style "font-size" "1.25rem"
+                    , style "color" "#137333"
+                    ]
+                    [ text "×" ]
+                ]
+
+        Just (SaveError message) ->
+            div
+                [ style "padding" "1rem"
+                , style "margin-bottom" "1rem"
+                , style "background-color" "#fce8e6"
+                , style "color" "#d93025"
+                , style "border-radius" "4px"
+                , style "display" "flex"
+                , style "justify-content" "space-between"
+                , style "align-items" "center"
+                ]
+                [ text message
+                , button
+                    [ Html.Events.onClick ClearMessage
+                    , style "background" "none"
+                    , style "border" "none"
+                    , style "cursor" "pointer"
+                    , style "font-size" "1.25rem"
+                    , style "color" "#d93025"
+                    ]
+                    [ text "×" ]
+                ]
+
+        Nothing ->
+            text ""
 
 
 {-| メインコンテンツ
