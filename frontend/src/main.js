@@ -37,6 +37,23 @@
 import { Elm } from "./Main.elm";
 
 /**
+ * 開発用認証バイパス（DevAuth）のセットアップ
+ *
+ * 開発環境でログイン画面なしに認証済み状態を実現する。
+ * 詳細: docs/06_技術ノート/DevAuth.md
+ *
+ * ## 動作条件
+ *
+ * - 開発環境（import.meta.env.DEV が true）のみ有効
+ * - BFF 側で DEV_AUTH_ENABLED=true が設定されている必要あり
+ */
+if (import.meta.env.DEV) {
+  // 開発用セッション Cookie を設定
+  // BFF の dev_auth.rs で定義されている DEV_SESSION_ID と一致させる
+  document.cookie = "session_id=dev-session; path=/";
+}
+
+/**
  * Elm アプリケーションの初期化
  *
  * ## Elm.Main.init の引数

@@ -12,7 +12,13 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Page.Home
+import Page.NotFound
+import Page.Workflow.Detail as WorkflowDetail
+import Page.Workflow.List as WorkflowList
+import Page.Workflow.New as WorkflowNew
 import Route exposing (Route)
+import Session exposing (Session)
 import Url exposing (Url)
 
 
@@ -50,34 +56,93 @@ type alias Flags =
 -- MODEL
 
 
+{-| 現在のページ状態
+
+Nested TEA パターンにより、各ページの Model を Page 型で保持する。
+状態を持たないページ（Home, NotFound）は専用のコンストラクタを使用。
+
+-}
+type Page
+    = HomePage
+    | WorkflowsPage WorkflowList.Model
+    | WorkflowNewPage WorkflowNew.Model
+    | WorkflowDetailPage WorkflowDetail.Model
+    | NotFoundPage
+
+
 {-| アプリケーションの状態
 
-最小限の状態のみを保持し、派生値は view 関数内で計算する。
+グローバル状態（Session）と現在のページ状態を保持する。
 
 -}
 type alias Model =
     { key : Nav.Key
     , url : Url
     , route : Route
-    , apiBaseUrl : String
+    , session : Session
+    , page : Page
     }
 
 
 {-| アプリケーションの初期化
+
+Session を初期化し、初期ルートに対応するページを初期化する。
+将来的には GET /auth/me でユーザー情報を取得する。
+
 -}
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         route =
             Route.fromUrl url
+
+        session =
+            Session.init { apiBaseUrl = flags.apiBaseUrl }
+
+        ( page, pageCmd ) =
+            initPage route session
     in
     ( { key = key
       , url = url
       , route = route
-      , apiBaseUrl = flags.apiBaseUrl
+      , session = session
+      , page = page
       }
-    , Cmd.none
+    , pageCmd
     )
+
+
+{-| ルートに応じたページを初期化
+-}
+initPage : Route -> Session -> ( Page, Cmd Msg )
+initPage route session =
+    case route of
+        Route.Home ->
+            ( HomePage, Cmd.none )
+
+        Route.Workflows ->
+            let
+                ( model, cmd ) =
+                    WorkflowList.init session
+            in
+            ( WorkflowsPage model, Cmd.map WorkflowsMsg cmd )
+
+        Route.WorkflowNew ->
+            let
+                ( model, cmd ) =
+                    WorkflowNew.init session
+            in
+            ( WorkflowNewPage model, Cmd.map WorkflowNewMsg cmd )
+
+        Route.WorkflowDetail id ->
+            let
+                ( model, cmd ) =
+                    WorkflowDetail.init session id
+            in
+            ( WorkflowDetailPage model, Cmd.map WorkflowDetailMsg cmd )
+
+        Route.NotFound ->
+            ( NotFoundPage, Cmd.none )
 
 
 
@@ -85,10 +150,16 @@ init flags url key =
 
 
 {-| アプリケーションで発生するメッセージ
+
+グローバルメッセージと、各ページのメッセージをラップした形式。
+
 -}
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
+    | WorkflowsMsg WorkflowList.Msg
+    | WorkflowNewMsg WorkflowNew.Msg
+    | WorkflowDetailMsg WorkflowDetail.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -105,9 +176,58 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            ( { model | url = url, route = Route.fromUrl url }
-            , Cmd.none
+            let
+                route =
+                    Route.fromUrl url
+
+                ( page, pageCmd ) =
+                    initPage route model.session
+            in
+            ( { model | url = url, route = route, page = page }
+            , pageCmd
             )
+
+        WorkflowsMsg subMsg ->
+            case model.page of
+                WorkflowsPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowList.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowsPage newSubModel }
+                    , Cmd.map WorkflowsMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        WorkflowNewMsg subMsg ->
+            case model.page of
+                WorkflowNewPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowNew.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowNewPage newSubModel }
+                    , Cmd.map WorkflowNewMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        WorkflowDetailMsg subMsg ->
+            case model.page of
+                WorkflowDetailPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowDetail.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowDetailPage newSubModel }
+                    , Cmd.map WorkflowDetailMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 
@@ -157,6 +277,10 @@ viewHeader =
 
 
 {-| メインコンテンツ部分の描画
+
+Page に応じて対応するページモジュールの view を呼び出す。
+Nested TEA パターンにより、ページの Msg は Main の Msg にマップされる。
+
 -}
 viewMain : Model -> Html Msg
 viewMain model =
@@ -165,45 +289,24 @@ viewMain model =
         , style "max-width" "1200px"
         , style "margin" "0 auto"
         ]
-        [ case model.route of
-            Route.Home ->
-                viewHome
+        [ case model.page of
+            HomePage ->
+                Page.Home.view
 
-            Route.NotFound ->
-                viewNotFound
-        ]
+            WorkflowsPage subModel ->
+                WorkflowList.view subModel
+                    |> Html.map WorkflowsMsg
 
+            WorkflowNewPage subModel ->
+                WorkflowNew.view subModel
+                    |> Html.map WorkflowNewMsg
 
-{-| ホームページの描画
--}
-viewHome : Html Msg
-viewHome =
-    div []
-        [ h2 [] [ text "ようこそ RingiFlow へ" ]
-        , p [] [ text "ワークフロー管理システムです。" ]
-        , div
-            [ style "background-color" "white"
-            , style "padding" "1.5rem"
-            , style "border-radius" "8px"
-            , style "box-shadow" "0 2px 4px rgba(0,0,0,0.1)"
-            , style "margin-top" "1rem"
-            ]
-            [ h3 [] [ text "Phase 0 完了" ]
-            , p [] [ text "Elm フロントエンドが正常に動作しています。" ]
-            ]
-        ]
+            WorkflowDetailPage subModel ->
+                WorkflowDetail.view subModel
+                    |> Html.map WorkflowDetailMsg
 
-
-{-| 404 ページの描画
--}
-viewNotFound : Html Msg
-viewNotFound =
-    div []
-        [ h2 [] [ text "404 - ページが見つかりません" ]
-        , p []
-            [ text "お探しのページは存在しません。"
-            , a [ href "/" ] [ text "ホームに戻る" ]
-            ]
+            NotFoundPage ->
+                Page.NotFound.view
         ]
 
 

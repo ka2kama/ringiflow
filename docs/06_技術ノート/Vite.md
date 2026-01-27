@@ -126,6 +126,53 @@ pnpm run build        # dist/ を生成
 # dist/ の内容を CDN/S3 にアップロード
 ```
 
+## 環境変数管理
+
+### justfile 経由の環境変数読み込み
+
+このプロジェクトでは、ポート番号などの設定をルートの `.env` ファイルで管理し、justfile の `set dotenv-load := true` で読み込む。
+
+```javascript
+// vite.config.js
+server: {
+  port: parseInt(process.env.VITE_PORT),
+  proxy: {
+    "/api": {
+      target: `http://localhost:${process.env.BFF_PORT}`,
+      changeOrigin: true,
+    },
+  },
+},
+```
+
+### 開発サーバーの起動方法
+
+環境変数を正しく読み込むため、必ず `just` コマンドを使用する。
+
+```bash
+# 正しい方法
+just dev-web     # フロントエンド開発サーバー
+just dev         # 全体（バックエンド + フロントエンド）
+
+# 避けるべき方法
+cd frontend && pnpm run dev  # .env が読み込まれない
+```
+
+`pnpm run dev` を直接実行すると `.env` が読み込まれず、以下のエラーが発生する:
+
+```
+TypeError: Invalid URL
+  code: 'ERR_INVALID_URL',
+  input: 'http://localhost:undefined'
+```
+
+### 環境変数一覧
+
+| 変数名 | 用途 | 例 |
+|--------|------|-----|
+| `VITE_PORT` | Vite 開発サーバーのポート | 15173 |
+| `BFF_PORT` | BFF サーバーのポート（プロキシ先） | 13000 |
+
 ## プロジェクトでの使用
 
 ### ファイル構成

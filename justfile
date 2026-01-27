@@ -42,13 +42,9 @@ check-tools:
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
+# worktree の場合は空きポートオフセットを自動割り当て
 setup-env:
-    @echo "環境変数ファイルを確認中..."
-    @test -f .env || (cp .env.template .env && echo "  作成: .env")
-    @test -f .env && echo "  確認: .env"
-    @test -f backend/.env || (cp backend/.env.template backend/.env && echo "  作成: backend/.env")
-    @test -f backend/.env && echo "  確認: backend/.env"
-    @echo "✓ 環境変数ファイル準備完了"
+    ./scripts/setup-env.sh
 
 # 依存関係をインストール
 setup-deps:
@@ -210,6 +206,12 @@ test-rust-integration:
 test-elm:
     cd frontend && pnpm run test
 
+# Elm ビルドチェック（コンパイルエラー検出）
+# lint-elm や test-elm ではコンパイルエラーを検出できないため、
+# 実際にビルドしてコンパイルエラーがないことを確認する
+build-elm:
+    cd frontend && pnpm run build
+
 # =============================================================================
 # API テスト
 # =============================================================================
@@ -244,8 +246,8 @@ test-api: api-test-deps api-test-reset-db
 # 全チェック
 # =============================================================================
 
-# プッシュ前の全チェック（リント、テスト、SQLx キャッシュ同期）
-check-all: lint test sqlx-check
+# プッシュ前の全チェック（リント、テスト、ビルド、SQLx キャッシュ同期）
+check-all: lint test build-elm sqlx-check
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック

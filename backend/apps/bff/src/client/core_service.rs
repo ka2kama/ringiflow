@@ -116,6 +116,38 @@ pub struct WorkflowResponse {
    pub data: WorkflowInstanceDto,
 }
 
+/// ワークフロー一覧レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowListResponse {
+   pub data: Vec<WorkflowInstanceDto>,
+}
+
+/// ワークフロー定義 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowDefinitionDto {
+   pub id:          String,
+   pub name:        String,
+   pub description: Option<String>,
+   pub version:     i32,
+   pub definition:  serde_json::Value,
+   pub status:      String,
+   pub created_by:  String,
+   pub created_at:  String,
+   pub updated_at:  String,
+}
+
+/// ワークフロー定義レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowDefinitionResponse {
+   pub data: WorkflowDefinitionDto,
+}
+
+/// ワークフロー定義一覧レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowDefinitionListResponse {
+   pub data: Vec<WorkflowDefinitionDto>,
+}
+
 /// Core Service クライアントトレイト
 ///
 /// テスト時にスタブを使用できるようトレイトで定義。
@@ -185,6 +217,78 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       workflow_id: Uuid,
       req: SubmitWorkflowRequest,
+   ) -> Result<WorkflowResponse, CoreServiceError>;
+
+   // ===== GET 系メソッド =====
+
+   /// ワークフロー定義一覧を取得する
+   ///
+   /// Core Service の `GET /internal/workflow-definitions` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// 公開済みワークフロー定義の一覧
+   async fn list_workflow_definitions(
+      &self,
+      tenant_id: Uuid,
+   ) -> Result<WorkflowDefinitionListResponse, CoreServiceError>;
+
+   /// ワークフロー定義の詳細を取得する
+   ///
+   /// Core Service の `GET /internal/workflow-definitions/{id}` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `definition_id`: ワークフロー定義 ID
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// ワークフロー定義
+   async fn get_workflow_definition(
+      &self,
+      definition_id: Uuid,
+      tenant_id: Uuid,
+   ) -> Result<WorkflowDefinitionResponse, CoreServiceError>;
+
+   /// 自分のワークフロー一覧を取得する
+   ///
+   /// Core Service の `GET /internal/workflows` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `tenant_id`: テナント ID
+   /// - `user_id`: ユーザー ID
+   ///
+   /// # 戻り値
+   ///
+   /// 自分が申請したワークフローインスタンスの一覧
+   async fn list_my_workflows(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<WorkflowListResponse, CoreServiceError>;
+
+   /// ワークフローの詳細を取得する
+   ///
+   /// Core Service の `GET /internal/workflows/{id}` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `workflow_id`: ワークフローインスタンス ID
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// ワークフローインスタンス
+   async fn get_workflow(
+      &self,
+      workflow_id: Uuid,
+      tenant_id: Uuid,
    ) -> Result<WorkflowResponse, CoreServiceError>;
 }
 
@@ -315,6 +419,117 @@ impl CoreServiceClient for CoreServiceClientImpl {
             let body = response.text().await.unwrap_or_default();
             Err(CoreServiceError::ValidationError(body))
          }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   // ===== GET 系メソッドの実装 =====
+
+   async fn list_workflow_definitions(
+      &self,
+      tenant_id: Uuid,
+   ) -> Result<WorkflowDefinitionListResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflow-definitions?tenant_id={}",
+         self.base_url, tenant_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<WorkflowDefinitionListResponse>().await?;
+            Ok(body)
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn get_workflow_definition(
+      &self,
+      definition_id: Uuid,
+      tenant_id: Uuid,
+   ) -> Result<WorkflowDefinitionResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflow-definitions/{}?tenant_id={}",
+         self.base_url, definition_id, tenant_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<WorkflowDefinitionResponse>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowDefinitionNotFound),
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn list_my_workflows(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<WorkflowListResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows?tenant_id={}&user_id={}",
+         self.base_url, tenant_id, user_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<WorkflowListResponse>().await?;
+            Ok(body)
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn get_workflow(
+      &self,
+      workflow_id: Uuid,
+      tenant_id: Uuid,
+   ) -> Result<WorkflowResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/{}?tenant_id={}",
+         self.base_url, workflow_id, tenant_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<WorkflowResponse>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
          status => {
             let body = response.text().await.unwrap_or_default();
             Err(CoreServiceError::Unexpected(format!(

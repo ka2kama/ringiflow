@@ -168,6 +168,41 @@ impl CoreServiceClient for StubCoreServiceClient {
       // 認証テストでは未使用
       unimplemented!("submit_workflow is not used in auth tests")
    }
+
+   async fn list_workflow_definitions(
+      &self,
+      _tenant_id: Uuid,
+   ) -> Result<ringiflow_bff::client::WorkflowDefinitionListResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("list_workflow_definitions is not used in auth tests")
+   }
+
+   async fn get_workflow_definition(
+      &self,
+      _definition_id: Uuid,
+      _tenant_id: Uuid,
+   ) -> Result<ringiflow_bff::client::WorkflowDefinitionResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("get_workflow_definition is not used in auth tests")
+   }
+
+   async fn list_my_workflows(
+      &self,
+      _tenant_id: Uuid,
+      _user_id: Uuid,
+   ) -> Result<ringiflow_bff::client::WorkflowListResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("list_my_workflows is not used in auth tests")
+   }
+
+   async fn get_workflow(
+      &self,
+      _workflow_id: Uuid,
+      _tenant_id: Uuid,
+   ) -> Result<WorkflowResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("get_workflow is not used in auth tests")
+   }
 }
 
 // --- Auth Service スタブ ---
