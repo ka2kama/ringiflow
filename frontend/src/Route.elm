@@ -47,7 +47,7 @@ Route 型
 -}
 
 import Url exposing (Url)
-import Url.Parser as Parser exposing (Parser, oneOf, top)
+import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, top)
 
 
 {-| アプリケーションのルート（画面）を表す型
@@ -66,22 +66,13 @@ Route はカスタム型（Tagged Union / Sum Type）として定義。
 ## 現在のルート
 
   - `Home`: トップページ（`/`）
+  - `WorkflowNew`: 新規申請（`/workflows/new`）
   - `NotFound`: 存在しないパス
-
-
-## 将来の拡張例
-
-    type Route
-        = Home
-        | Workflows
-        | WorkflowDetail WorkflowId
-        | WorkflowEdit WorkflowId
-        | Settings
-        | NotFound
 
 -}
 type Route
     = Home
+    | WorkflowNew
     | NotFound
 
 
@@ -126,6 +117,7 @@ parser : Parser (Route -> a) a
 parser =
     oneOf
         [ Parser.map Home top
+        , Parser.map WorkflowNew (s "workflows" </> s "new")
         ]
 
 
@@ -176,6 +168,9 @@ toString route =
     case route of
         Home ->
             "/"
+
+        WorkflowNew ->
+            "/workflows/new"
 
         NotFound ->
             "/not-found"

@@ -21,6 +21,8 @@ config =
       NoUnused.Variables.rule
     , -- 未使用のカスタム型コンストラクタ
       NoUnused.CustomTypeConstructors.rule []
+        -- TODO: Phase 2 骨格段階。後続 Sub-Phase で使用予定
+        |> Rule.ignoreErrorsForFiles [ "src/Page/Workflow/New.elm" ]
     , -- 未使用のコンストラクタ引数
       NoUnused.CustomTypeConstructorArgs.rule
         -- TODO: Phase 1 で作成した API/Data モジュール。Phase 2 で UI 実装後に除外設定を削除する
@@ -28,6 +30,8 @@ config =
             [ "src/Api/Http.elm"
             , "src/Data/FormField.elm"
             ]
+        -- TODO: Phase 2 骨格段階。後続 Sub-Phase で使用予定
+        |> Rule.ignoreErrorsForFiles [ "src/Page/Workflow/New.elm" ]
     , -- 未使用の依存関係
       NoUnused.Dependencies.rule
     , -- 未使用のエクスポート
@@ -62,6 +66,8 @@ config =
       NoUnused.Parameters.rule
         -- TODO: Session.elm の extractTenantId は User 型拡張後に修正予定
         |> Rule.ignoreErrorsForFiles [ "src/Session.elm" ]
+        -- TODO: Phase 2 骨格段階。後続 Sub-Phase で使用予定
+        |> Rule.ignoreErrorsForFiles [ "src/Page/Workflow/New.elm" ]
     , -- 未使用のパターン
       NoUnused.Patterns.rule
     , -- コード簡略化

@@ -12,6 +12,9 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Page.Home
+import Page.NotFound
+import Page.Workflow.New as WorkflowNew
 import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
@@ -51,10 +54,21 @@ type alias Flags =
 -- MODEL
 
 
+{-| 現在のページ状態
+
+Nested TEA パターンにより、各ページの Model を Page 型で保持する。
+状態を持たないページ（Home, NotFound）は専用のコンストラクタを使用。
+
+-}
+type Page
+    = HomePage
+    | WorkflowNewPage WorkflowNew.Model
+    | NotFoundPage
+
+
 {-| アプリケーションの状態
 
 グローバル状態（Session）と現在のページ状態を保持する。
-Nested TEA パターンにより、各ページの状態は Page 型で管理。
 
 -}
 type alias Model =
@@ -62,12 +76,13 @@ type alias Model =
     , url : Url
     , route : Route
     , session : Session
+    , page : Page
     }
 
 
 {-| アプリケーションの初期化
 
-Session を初期化し、初期ルートを設定する。
+Session を初期化し、初期ルートに対応するページを初期化する。
 将来的には GET /auth/me でユーザー情報を取得する。
 
 -}
@@ -79,14 +94,37 @@ init flags url key =
 
         session =
             Session.init { apiBaseUrl = flags.apiBaseUrl }
+
+        ( page, pageCmd ) =
+            initPage route session
     in
     ( { key = key
       , url = url
       , route = route
       , session = session
+      , page = page
       }
-    , Cmd.none
+    , pageCmd
     )
+
+
+{-| ルートに応じたページを初期化
+-}
+initPage : Route -> Session -> ( Page, Cmd Msg )
+initPage route session =
+    case route of
+        Route.Home ->
+            ( HomePage, Cmd.none )
+
+        Route.WorkflowNew ->
+            let
+                ( model, cmd ) =
+                    WorkflowNew.init session
+            in
+            ( WorkflowNewPage model, Cmd.map WorkflowNewMsg cmd )
+
+        Route.NotFound ->
+            ( NotFoundPage, Cmd.none )
 
 
 
@@ -94,10 +132,14 @@ init flags url key =
 
 
 {-| アプリケーションで発生するメッセージ
+
+グローバルメッセージと、各ページのメッセージをラップした形式。
+
 -}
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
+    | WorkflowNewMsg WorkflowNew.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -114,9 +156,31 @@ update msg model =
                     ( model, Nav.load href )
 
         UrlChanged url ->
-            ( { model | url = url, route = Route.fromUrl url }
-            , Cmd.none
+            let
+                route =
+                    Route.fromUrl url
+
+                ( page, pageCmd ) =
+                    initPage route model.session
+            in
+            ( { model | url = url, route = route, page = page }
+            , pageCmd
             )
+
+        WorkflowNewMsg subMsg ->
+            case model.page of
+                WorkflowNewPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowNew.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowNewPage newSubModel }
+                    , Cmd.map WorkflowNewMsg subCmd
+                    )
+
+                _ ->
+                    -- 現在のページと一致しないメッセージは無視
+                    ( model, Cmd.none )
 
 
 
@@ -166,6 +230,10 @@ viewHeader =
 
 
 {-| メインコンテンツ部分の描画
+
+Page に応じて対応するページモジュールの view を呼び出す。
+Nested TEA パターンにより、ページの Msg は Main の Msg にマップされる。
+
 -}
 viewMain : Model -> Html Msg
 viewMain model =
@@ -174,45 +242,16 @@ viewMain model =
         , style "max-width" "1200px"
         , style "margin" "0 auto"
         ]
-        [ case model.route of
-            Route.Home ->
-                viewHome
+        [ case model.page of
+            HomePage ->
+                Page.Home.view
 
-            Route.NotFound ->
-                viewNotFound
-        ]
+            WorkflowNewPage subModel ->
+                WorkflowNew.view subModel
+                    |> Html.map WorkflowNewMsg
 
-
-{-| ホームページの描画
--}
-viewHome : Html Msg
-viewHome =
-    div []
-        [ h2 [] [ text "ようこそ RingiFlow へ" ]
-        , p [] [ text "ワークフロー管理システムです。" ]
-        , div
-            [ style "background-color" "white"
-            , style "padding" "1.5rem"
-            , style "border-radius" "8px"
-            , style "box-shadow" "0 2px 4px rgba(0,0,0,0.1)"
-            , style "margin-top" "1rem"
-            ]
-            [ h3 [] [ text "Phase 0 完了" ]
-            , p [] [ text "Elm フロントエンドが正常に動作しています。" ]
-            ]
-        ]
-
-
-{-| 404 ページの描画
--}
-viewNotFound : Html Msg
-viewNotFound =
-    div []
-        [ h2 [] [ text "404 - ページが見つかりません" ]
-        , p []
-            [ text "お探しのページは存在しません。"
-            , a [ href "/" ] [ text "ホームに戻る" ]
-            ]
+            NotFoundPage ->
+                Page.NotFound.view
         ]
 
 
