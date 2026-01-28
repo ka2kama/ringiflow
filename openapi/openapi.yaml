@@ -421,6 +421,178 @@ paths:
                 status: 404
                 detail: ワークフローインスタンスが見つかりません
 
+  /api/v1/workflows/{id}/steps/{stepId}/approve:
+    post:
+      tags:
+        - workflows
+      summary: ワークフローステップ承認
+      description: |
+        指定されたステップを承認する。
+
+        承認には楽観的ロック用の `version` が必要。
+        競合が発生した場合は 409 Conflict を返す。
+
+        MVP では1段階承認のため、ステップ承認 = ワークフロー承認となる。
+      operationId: approveWorkflowStep
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+        - name: id
+          in: path
+          required: true
+          description: ワークフローインスタンス ID
+          schema:
+            type: string
+            format: uuid
+        - name: stepId
+          in: path
+          required: true
+          description: ワークフローステップ ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRejectRequest'
+            example:
+              version: 1
+              comment: "承認します"
+      responses:
+        '200':
+          description: 承認成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '400':
+          description: バリデーションエラー（ステップが承認可能な状態でない等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/invalid-step-status
+                title: Invalid Step Status
+                status: 400
+                detail: このステップは承認できる状態ではありません
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 承認権限がない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/not-assigned
+                title: Not Assigned
+                status: 403
+                detail: このステップの承認権限がありません
+        '404':
+          description: ワークフローまたはステップが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/step-not-found
+                title: Step Not Found
+                status: 404
+                detail: ワークフローステップが見つかりません
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/workflows/{id}/steps/{stepId}/reject:
+    post:
+      tags:
+        - workflows
+      summary: ワークフローステップ却下
+      description: |
+        指定されたステップを却下する。
+
+        却下には楽観的ロック用の `version` が必要。
+        競合が発生した場合は 409 Conflict を返す。
+
+        MVP では1段階承認のため、ステップ却下 = ワークフロー却下となる。
+      operationId: rejectWorkflowStep
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+        - name: id
+          in: path
+          required: true
+          description: ワークフローインスタンス ID
+          schema:
+            type: string
+            format: uuid
+        - name: stepId
+          in: path
+          required: true
+          description: ワークフローステップ ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRejectRequest'
+            example:
+              version: 1
+              comment: "内容に不備があります"
+      responses:
+        '200':
+          description: 却下成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowResponse'
+        '400':
+          description: バリデーションエラー（ステップが却下可能な状態でない等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/invalid-step-status
+                title: Invalid Step Status
+                status: 400
+                detail: このステップは却下できる状態ではありません
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 却下権限がない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/not-assigned
+                title: Not Assigned
+                status: 403
+                detail: このステップの却下権限がありません
+        '404':
+          description: ワークフローまたはステップが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/step-not-found
+                title: Step Not Found
+                status: 404
+                detail: ワークフローステップが見つかりません
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   # ============================================================
   # ヘルスチェック API
   # ============================================================
@@ -529,6 +701,20 @@ components:
           format: uuid
           description: 承認者のユーザー ID
 
+    ApproveRejectRequest:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          description: 楽観的ロック用バージョン番号（競合検出に使用）
+        comment:
+          type: string
+          maxLength: 1000
+          description: コメント（任意）
+
     WorkflowResponse:
       type: object
       required:
@@ -628,6 +814,7 @@ components:
         - title
         - definition_id
         - status
+        - version
         - form_data
         - initiated_by
         - created_at
@@ -655,6 +842,10 @@ components:
             - Approved: 承認済み
             - Rejected: 却下
             - Cancelled: キャンセル
+        version:
+          type: integer
+          minimum: 1
+          description: 楽観的ロック用バージョン番号（更新操作時に競合検出に使用）
         form_data:
           type: object
           description: フォームデータ
@@ -668,12 +859,110 @@ components:
             - string
             - 'null'
           description: 現在の承認ステップ ID
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowStep'
+          description: 承認ステップ一覧
         submitted_at:
           type:
             - string
             - 'null'
           format: date-time
           description: 申請日時
+        completed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 完了日時（承認/却下/キャンセル時）
+        created_at:
+          type: string
+          format: date-time
+          description: 作成日時
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新日時
+
+    WorkflowStep:
+      type: object
+      required:
+        - id
+        - step_id
+        - step_name
+        - step_type
+        - status
+        - version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ステップインスタンス ID
+        step_id:
+          type: string
+          description: ステップ定義 ID（定義内での識別子）
+        step_name:
+          type: string
+          description: ステップ名
+        step_type:
+          type: string
+          enum: [Approval, Notification, Task]
+          description: ステップ種別
+        status:
+          type: string
+          enum: [Pending, Active, Completed, Skipped]
+          description: |
+            ステップの状態:
+            - Pending: 待機中
+            - Active: 処理中（承認待ち）
+            - Completed: 完了
+            - Skipped: スキップ
+        version:
+          type: integer
+          minimum: 1
+          description: 楽観的ロック用バージョン番号
+        assigned_to:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: 担当者のユーザー ID
+        decision:
+          type:
+            - string
+            - 'null'
+          enum: [Approved, Rejected, RequestChanges, null]
+          description: |
+            決定結果:
+            - Approved: 承認
+            - Rejected: 却下
+            - RequestChanges: 差し戻し
+        comment:
+          type:
+            - string
+            - 'null'
+          description: コメント
+        due_date:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 期限
+        started_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 処理開始日時
+        completed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 完了日時
         created_at:
           type: string
           format: date-time
@@ -985,3 +1274,22 @@ components:
             title: Not Found
             status: 404
             detail: リソースが見つかりません
+
+    Conflict:
+      description: 競合が発生（楽観的ロック失敗）
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ProblemDetails'
+              - type: object
+                properties:
+                  current_version:
+                    type: integer
+                    description: 現在のバージョン番号
+          example:
+            type: https://ringiflow.example.com/errors/conflict
+            title: Conflict
+            status: 409
+            detail: このリソースは既に更新されています。最新の状態を取得してください。
+            current_version: 2
