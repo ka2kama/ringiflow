@@ -3,6 +3,7 @@ module Page.Workflow.New exposing
     , Msg
     , init
     , update
+    , updateSession
     , view
     )
 
@@ -121,6 +122,16 @@ fetchDefinitions session =
         { config = Session.toRequestConfig session
         , toMsg = GotDefinitions
         }
+
+
+{-| セッションを更新
+
+Main.elm から新しいセッション（CSRF トークン取得後など）を受け取る。
+
+-}
+updateSession : Session -> Model -> Model
+updateSession session model =
+    { model | session = session }
 
 
 
