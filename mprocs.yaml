@@ -1,0 +1,9 @@
+procs:
+  bff:
+    shell: "just dev-bff"
+  core-service:
+    shell: "just dev-core-service"
+  auth-service:
+    shell: "just dev-auth-service"
+  web:
+    shell: "just dev-web"

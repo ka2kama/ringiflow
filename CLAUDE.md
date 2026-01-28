@@ -31,6 +31,16 @@ just fmt                # 全体フォーマット
 開発サーバーは必ず `just` コマンドで起動する。直接 `pnpm run dev` や `cargo run` を実行してはいけない。
 
 ```bash
+just dev-all            # 全サーバー一括起動（推奨）
+```
+
+`dev-all` は依存サービス（PostgreSQL, Redis）を起動した後、mprocs（TUI プロセスマネージャー）で BFF・Core Service・Auth Service・Web を一括起動する。
+
+#### 個別起動
+
+特定のサーバーだけ起動したい場合:
+
+```bash
 just dev-deps           # PostgreSQL, Redis を起動（先に実行）
 just dev-bff            # BFF
 just dev-core-service   # Core Service

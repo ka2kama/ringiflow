@@ -18,6 +18,7 @@ default:
 setup: check-tools setup-env setup-hooks dev-deps setup-db setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
+    @echo "  - just dev-all         : 全サーバー一括起動（推奨）"
     @echo "  - just dev-bff         : BFF 起動"
     @echo "  - just dev-core-service: Core Service 起動"
     @echo "  - just dev-auth-service: Auth Service 起動"
@@ -38,6 +39,7 @@ check-tools:
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
+    @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
@@ -126,6 +128,10 @@ dev-auth-service:
 # フロントエンド開発サーバーを起動
 dev-web:
     cd frontend && pnpm run dev
+
+# 全開発サーバーを一括起動（依存サービス + mprocs）
+dev-all: dev-deps
+    mprocs
 
 # =============================================================================
 # フォーマット
