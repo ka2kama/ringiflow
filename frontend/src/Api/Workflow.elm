@@ -1,7 +1,10 @@
 module Api.Workflow exposing
-    ( createWorkflow
+    ( ApproveRejectRequest
+    , approveStep
+    , createWorkflow
     , getWorkflow
     , listMyWorkflows
+    , rejectStep
     , submitWorkflow
     )
 
@@ -130,6 +133,58 @@ submitWorkflow { config, id, body, toMsg } =
         }
 
 
+{-| ステップを承認
+
+`POST /api/v1/workflows/{id}/steps/{stepId}/approve`
+
+指定されたステップを承認する。
+楽観的ロックにより、バージョン不一致の場合は 409 Conflict が返る。
+
+-}
+approveStep :
+    { config : RequestConfig
+    , workflowId : String
+    , stepId : String
+    , body : ApproveRejectRequest
+    , toMsg : Result ApiError WorkflowInstance -> msg
+    }
+    -> Cmd msg
+approveStep { config, workflowId, stepId, body, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/workflows/" ++ workflowId ++ "/steps/" ++ stepId ++ "/approve"
+        , body = Http.jsonBody (encodeApproveRejectRequest body)
+        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , toMsg = toMsg
+        }
+
+
+{-| ステップを却下
+
+`POST /api/v1/workflows/{id}/steps/{stepId}/reject`
+
+指定されたステップを却下する。
+楽観的ロックにより、バージョン不一致の場合は 409 Conflict が返る。
+
+-}
+rejectStep :
+    { config : RequestConfig
+    , workflowId : String
+    , stepId : String
+    , body : ApproveRejectRequest
+    , toMsg : Result ApiError WorkflowInstance -> msg
+    }
+    -> Cmd msg
+rejectStep { config, workflowId, stepId, body, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/workflows/" ++ workflowId ++ "/steps/" ++ stepId ++ "/reject"
+        , body = Http.jsonBody (encodeApproveRejectRequest body)
+        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , toMsg = toMsg
+        }
+
+
 
 -- REQUEST/RESPONSE TYPES
 
@@ -147,6 +202,14 @@ type alias CreateWorkflowRequest =
 -}
 type alias SubmitWorkflowRequest =
     { assignedTo : String
+    }
+
+
+{-| 承認/却下リクエスト
+-}
+type alias ApproveRejectRequest =
+    { version : Int
+    , comment : Maybe String
     }
 
 
@@ -168,6 +231,23 @@ encodeSubmitRequest req =
     Encode.object
         [ ( "assigned_to", Encode.string req.assignedTo )
         ]
+
+
+encodeApproveRejectRequest : ApproveRejectRequest -> Encode.Value
+encodeApproveRejectRequest req =
+    let
+        baseFields =
+            [ ( "version", Encode.int req.version ) ]
+
+        commentField =
+            case req.comment of
+                Just comment ->
+                    [ ( "comment", Encode.string comment ) ]
+
+                Nothing ->
+                    []
+    in
+    Encode.object (baseFields ++ commentField)
 
 
 

@@ -1030,6 +1030,7 @@ mod tests {
    // WorkflowInstance のテスト
    // =========================================================================
 
+   #[allow(non_snake_case)]
    mod workflow_instance {
       use super::*;
 
@@ -1116,6 +1117,7 @@ mod tests {
    // WorkflowStep のテスト
    // =========================================================================
 
+   #[allow(non_snake_case)]
    mod workflow_step {
       use super::*;
 

@@ -54,6 +54,7 @@ type ApiError
     | Unauthorized
     | Forbidden ProblemDetails
     | NotFound ProblemDetails
+    | Conflict ProblemDetails
     | ServerError ProblemDetails
     | NetworkError
     | Timeout
@@ -312,6 +313,9 @@ handleErrorStatus statusCode body =
 
         404 ->
             NotFound problem
+
+        409 ->
+            Conflict problem
 
         _ ->
             if statusCode >= 500 then

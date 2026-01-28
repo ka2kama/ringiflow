@@ -1,6 +1,7 @@
 module Session exposing
     ( Session
     , User
+    , getUserId
     , init
     , toRequestConfig
     , withCsrfToken
@@ -129,3 +130,13 @@ toRequestConfig session =
     , tenantId = Just session.tenantId
     , csrfToken = session.csrfToken
     }
+
+
+{-| ログイン中のユーザー ID を取得
+
+未ログイン時は Nothing を返す。
+
+-}
+getUserId : Session -> Maybe String
+getUserId session =
+    session.user |> Maybe.map .id

@@ -76,6 +76,9 @@ pub struct ApproveRejectRequest {
 #[derive(Debug, Deserialize)]
 pub struct StepPathParams {
    /// ワークフローインスタンス ID
+   /// 注: 現在の実装では step_id のみで検索するため未使用だが、
+   /// 将来的に所属関係のバリデーションに使用する可能性あり
+   #[allow(dead_code)]
    pub id:      Uuid,
    /// ステップ ID
    pub step_id: Uuid,
