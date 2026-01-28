@@ -8,6 +8,8 @@ TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
 
 -}
 
+import Api.Auth as AuthApi
+import Api.Http exposing (ApiError)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
@@ -87,7 +89,7 @@ type alias Model =
 {-| アプリケーションの初期化
 
 Session を初期化し、初期ルートに対応するページを初期化する。
-将来的には GET /auth/me でユーザー情報を取得する。
+起動時に CSRF トークンを取得して Session に設定する。
 
 -}
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -101,6 +103,9 @@ init flags url key =
 
         ( page, pageCmd ) =
             initPage route session
+
+        csrfCmd =
+            fetchCsrfToken session
     in
     ( { key = key
       , url = url
@@ -108,8 +113,22 @@ init flags url key =
       , session = session
       , page = page
       }
-    , pageCmd
+    , Cmd.batch [ pageCmd, csrfCmd ]
     )
+
+
+{-| CSRF トークンを取得
+
+セッションが存在しない場合は 401 が返されるが、無視する。
+ログイン後に再度取得される。
+
+-}
+fetchCsrfToken : Session -> Cmd Msg
+fetchCsrfToken session =
+    AuthApi.getCsrfToken
+        { config = Session.toRequestConfig session
+        , toMsg = GotCsrfToken
+        }
 
 
 {-| ルートに応じたページを初期化
@@ -145,6 +164,31 @@ initPage route session =
             ( NotFoundPage, Cmd.none )
 
 
+{-| ページの Session を更新
+
+CSRF トークン取得後など、グローバルな Session が更新されたときに
+各ページの Session も同期する。
+
+-}
+updatePageSession : Session -> Page -> Page
+updatePageSession session page =
+    case page of
+        HomePage ->
+            HomePage
+
+        WorkflowsPage subModel ->
+            WorkflowsPage (WorkflowList.updateSession session subModel)
+
+        WorkflowNewPage subModel ->
+            WorkflowNewPage (WorkflowNew.updateSession session subModel)
+
+        WorkflowDetailPage subModel ->
+            WorkflowDetailPage (WorkflowDetail.updateSession session subModel)
+
+        NotFoundPage ->
+            NotFoundPage
+
+
 
 -- UPDATE
 
@@ -157,6 +201,7 @@ initPage route session =
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
+    | GotCsrfToken (Result ApiError String)
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
     | WorkflowDetailMsg WorkflowDetail.Msg
@@ -186,6 +231,25 @@ update msg model =
             ( { model | url = url, route = route, page = page }
             , pageCmd
             )
+
+        GotCsrfToken result ->
+            case result of
+                Ok token ->
+                    let
+                        newSession =
+                            Session.withCsrfToken token model.session
+
+                        newPage =
+                            updatePageSession newSession model.page
+                    in
+                    ( { model | session = newSession, page = newPage }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    -- 未認証の場合は 401 が返されるが、無視する
+                    -- ログイン後に再度取得される
+                    ( model, Cmd.none )
 
         WorkflowsMsg subMsg ->
             case model.page of

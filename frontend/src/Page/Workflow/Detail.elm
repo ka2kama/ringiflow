@@ -3,6 +3,7 @@ module Page.Workflow.Detail exposing
     , Msg
     , init
     , update
+    , updateSession
     , view
     )
 
@@ -82,6 +83,16 @@ init session workflowId =
         , toMsg = GotWorkflow
         }
     )
+
+
+{-| セッションを更新
+
+Main.elm から新しいセッション（CSRF トークン取得後など）を受け取る。
+
+-}
+updateSession : Session -> Model -> Model
+updateSession session model =
+    { model | session = session }
 
 
 
