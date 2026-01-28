@@ -12,6 +12,7 @@ pub use auth_service::{
    VerifyResponse,
 };
 pub use core_service::{
+   ApproveRejectRequest,
    CoreServiceClient,
    CoreServiceClientImpl,
    CoreServiceError,

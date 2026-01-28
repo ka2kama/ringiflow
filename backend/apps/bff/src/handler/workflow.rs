@@ -99,6 +99,24 @@ pub struct SubmitWorkflowRequest {
    pub assigned_to: Uuid,
 }
 
+/// ステップ承認/却下リクエスト（BFF 公開 API）
+#[derive(Debug, Deserialize)]
+pub struct ApproveRejectRequest {
+   /// 楽観的ロック用バージョン
+   pub version: i32,
+   /// コメント（任意）
+   pub comment: Option<String>,
+}
+
+/// ステップパスパラメータ
+#[derive(Debug, Deserialize)]
+pub struct StepPathParams {
+   /// ワークフローインスタンス ID
+   pub id:      Uuid,
+   /// ステップ ID
+   pub step_id: Uuid,
+}
+
 /// ワークフローレスポンス
 #[derive(Debug, Serialize)]
 pub struct WorkflowResponse {
@@ -415,6 +433,34 @@ fn validation_error_response(detail: &str) -> Response {
       .into_response()
 }
 
+/// 403 Forbidden レスポンス
+fn forbidden_response(detail: &str) -> Response {
+   (
+      StatusCode::FORBIDDEN,
+      Json(ErrorResponse {
+         error_type: "https://ringiflow.example.com/errors/forbidden".to_string(),
+         title:      "Forbidden".to_string(),
+         status:     403,
+         detail:     detail.to_string(),
+      }),
+   )
+      .into_response()
+}
+
+/// 409 Conflict レスポンス
+fn conflict_response(detail: &str) -> Response {
+   (
+      StatusCode::CONFLICT,
+      Json(ErrorResponse {
+         error_type: "https://ringiflow.example.com/errors/conflict".to_string(),
+         title:      "Conflict".to_string(),
+         status:     409,
+         detail:     detail.to_string(),
+      }),
+   )
+      .into_response()
+}
+
 // ===== GET ハンドラ =====
 
 /// GET /api/v1/workflow-definitions
@@ -631,6 +677,130 @@ where
       ),
       Err(e) => {
          tracing::error!("ワークフロー取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+// ===== 承認/却下ハンドラ =====
+
+/// POST /api/v1/workflows/{id}/steps/{step_id}/approve
+///
+/// ワークフローステップを承認する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id`, `user_id` を取得
+/// 2. Core Service の `POST /internal/workflows/{id}/steps/{step_id}/approve` を呼び出し
+/// 3. 204 No Content を返す
+pub async fn approve_step<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   let core_req = crate::client::ApproveRejectRequest {
+      version:   req.version,
+      comment:   req.comment,
+      tenant_id: *session_data.tenant_id().as_uuid(),
+      user_id:   *session_data.user_id().as_uuid(),
+   };
+
+   match state
+      .core_service_client
+      .approve_step(params.id, params.step_id, core_req)
+      .await
+   {
+      Ok(()) => StatusCode::NO_CONTENT.into_response(),
+      Err(CoreServiceError::StepNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/step-not-found",
+         "Step Not Found",
+         "ステップが見つかりません",
+      ),
+      Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
+      Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
+      Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
+      Err(e) => {
+         tracing::error!("ステップ承認で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+/// POST /api/v1/workflows/{id}/steps/{step_id}/reject
+///
+/// ワークフローステップを却下する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id`, `user_id` を取得
+/// 2. Core Service の `POST /internal/workflows/{id}/steps/{step_id}/reject` を呼び出し
+/// 3. 204 No Content を返す
+pub async fn reject_step<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   let core_req = crate::client::ApproveRejectRequest {
+      version:   req.version,
+      comment:   req.comment,
+      tenant_id: *session_data.tenant_id().as_uuid(),
+      user_id:   *session_data.user_id().as_uuid(),
+   };
+
+   match state
+      .core_service_client
+      .reject_step(params.id, params.step_id, core_req)
+      .await
+   {
+      Ok(()) => StatusCode::NO_CONTENT.into_response(),
+      Err(CoreServiceError::StepNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/step-not-found",
+         "Step Not Found",
+         "ステップが見つかりません",
+      ),
+      Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
+      Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
+      Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
+      Err(e) => {
+         tracing::error!("ステップ却下で内部エラー: {}", e);
          internal_error_response()
       }
    }

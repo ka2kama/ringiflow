@@ -707,6 +707,26 @@ mod tests {
          // テストスタブでは未使用
          unimplemented!("get_workflow is not used in auth tests")
       }
+
+      async fn approve_step(
+         &self,
+         _workflow_id: Uuid,
+         _step_id: Uuid,
+         _req: crate::client::ApproveRejectRequest,
+      ) -> Result<(), CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("approve_step is not used in auth tests")
+      }
+
+      async fn reject_step(
+         &self,
+         _workflow_id: Uuid,
+         _step_id: Uuid,
+         _req: crate::client::ApproveRejectRequest,
+      ) -> Result<(), CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("reject_step is not used in auth tests")
+      }
    }
 
    struct StubAuthServiceClient {

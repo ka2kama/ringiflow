@@ -13,7 +13,14 @@ use axum::{
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   workflow::{WorkflowDefinition, WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId},
+   value_objects::Version,
+   workflow::{
+      WorkflowDefinition,
+      WorkflowDefinitionId,
+      WorkflowInstance,
+      WorkflowInstanceId,
+      WorkflowStepId,
+   },
 };
 use ringiflow_infra::repository::{
    WorkflowDefinitionRepository,
@@ -25,7 +32,7 @@ use uuid::Uuid;
 
 use crate::{
    error::CoreError,
-   usecase::{CreateWorkflowInput, SubmitWorkflowInput, WorkflowUseCaseImpl},
+   usecase::{ApproveRejectInput, CreateWorkflowInput, SubmitWorkflowInput, WorkflowUseCaseImpl},
 };
 
 /// ワークフロー作成リクエスト
@@ -50,6 +57,28 @@ pub struct SubmitWorkflowRequest {
    pub assigned_to: Uuid,
    /// テナント ID (内部 API 用)
    pub tenant_id:   Uuid,
+}
+
+/// ステップ承認/却下リクエスト
+#[derive(Debug, Deserialize)]
+pub struct ApproveRejectRequest {
+   /// 楽観的ロック用バージョン
+   pub version:   i32,
+   /// コメント（任意）
+   pub comment:   Option<String>,
+   /// テナント ID (内部 API 用)
+   pub tenant_id: Uuid,
+   /// 操作するユーザー ID (内部 API 用)
+   pub user_id:   Uuid,
+}
+
+/// ステップパスパラメータ
+#[derive(Debug, Deserialize)]
+pub struct StepPathParams {
+   /// ワークフローインスタンス ID
+   pub id:      Uuid,
+   /// ステップ ID
+   pub step_id: Uuid,
 }
 
 /// テナント指定クエリパラメータ（GET リクエスト用）
@@ -375,4 +404,84 @@ where
    };
 
    Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+// ===== 承認/却下ハンドラ =====
+
+/// ワークフローステップを承認する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/{id}/steps/{step_id}/approve
+///
+/// ## 処理フロー
+/// 1. パスパラメータから ID を取得
+/// 2. リクエストをパース
+/// 3. ユースケースを呼び出し
+/// 4. 204 No Content を返す
+pub async fn approve_step<D, I, S>(
+   State(state): State<Arc<WorkflowState<D, I, S>>>,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   let step_id = WorkflowStepId::from_uuid(params.step_id);
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ApproveRejectInput {
+      version,
+      comment: req.comment,
+   };
+
+   state
+      .usecase
+      .approve_step(input, step_id, tenant_id, user_id)
+      .await?;
+
+   Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+/// ワークフローステップを却下する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/{id}/steps/{step_id}/reject
+///
+/// ## 処理フロー
+/// 1. パスパラメータから ID を取得
+/// 2. リクエストをパース
+/// 3. ユースケースを呼び出し
+/// 4. 204 No Content を返す
+pub async fn reject_step<D, I, S>(
+   State(state): State<Arc<WorkflowState<D, I, S>>>,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   let step_id = WorkflowStepId::from_uuid(params.step_id);
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ApproveRejectInput {
+      version,
+      comment: req.comment,
+   };
+
+   state
+      .usecase
+      .reject_step(input, step_id, tenant_id, user_id)
+      .await?;
+
+   Ok(StatusCode::NO_CONTENT.into_response())
 }
