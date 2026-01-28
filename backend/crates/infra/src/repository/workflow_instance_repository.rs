@@ -109,15 +109,16 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             INSERT INTO workflow_instances (
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (id) DO UPDATE SET
                 title = EXCLUDED.title,
                 form_data = EXCLUDED.form_data,
                 status = EXCLUDED.status,
+                version = EXCLUDED.version,
                 current_step_id = EXCLUDED.current_step_id,
                 submitted_at = EXCLUDED.submitted_at,
                 completed_at = EXCLUDED.completed_at,
@@ -130,6 +131,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          instance.title(),
          instance.form_data(),
          instance.status().as_str(),
+         instance.version().as_i32(),
          instance.current_step_id(),
          instance.initiated_by().as_uuid(),
          instance.submitted_at(),
@@ -152,7 +154,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             FROM workflow_instances
@@ -179,6 +181,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          row.status
             .parse::<WorkflowInstanceStatus>()
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         Version::new(row.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.current_step_id,
          UserId::from_uuid(row.initiated_by),
          row.submitted_at,
@@ -198,7 +201,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             FROM workflow_instances
@@ -224,6 +227,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                row.status
                   .parse::<WorkflowInstanceStatus>()
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               Version::new(row.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.current_step_id,
                UserId::from_uuid(row.initiated_by),
                row.submitted_at,
@@ -246,7 +251,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             FROM workflow_instances
@@ -272,6 +277,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                row.form_data,
                row.status
                   .parse::<WorkflowInstanceStatus>()
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               Version::new(row.version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.current_step_id,
                UserId::from_uuid(row.initiated_by),

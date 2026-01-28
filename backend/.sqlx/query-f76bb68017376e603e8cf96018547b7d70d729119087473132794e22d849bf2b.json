@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n         SELECT\n            s.id, s.instance_id, s.step_id, s.step_name, s.step_type,\n            s.status, s.assigned_to, s.decision, s.comment,\n            s.due_date, s.started_at, s.completed_at,\n            s.created_at, s.updated_at\n         FROM workflow_steps s\n         INNER JOIN workflow_instances i ON s.instance_id = i.id\n         WHERE s.instance_id = $1 AND i.tenant_id = $2\n         ORDER BY s.created_at ASC\n         ",
+  "query": "\n         SELECT\n            s.id, s.instance_id, s.step_id, s.step_name, s.step_type,\n            s.status, s.version, s.assigned_to, s.decision, s.comment,\n            s.due_date, s.started_at, s.completed_at,\n            s.created_at, s.updated_at\n         FROM workflow_steps s\n         INNER JOIN workflow_instances i ON s.instance_id = i.id\n         WHERE s.instance_id = $1 AND i.tenant_id = $2\n         ORDER BY s.created_at ASC\n         ",
   "describe": {
     "columns": [
       {
@@ -35,41 +35,46 @@
       },
       {
         "ordinal": 6,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
         "name": "assigned_to",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "decision",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "comment",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "due_date",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "started_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "completed_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -87,6 +92,7 @@
       false,
       false,
       false,
+      false,
       true,
       true,
       true,
@@ -97,5 +103,5 @@
       false
     ]
   },
-  "hash": "878c42d4ecdae6db12d418789d21ed3ffb22b21ccd48e211367578cb8c3c2431"
+  "hash": "f76bb68017376e603e8cf96018547b7d70d729119087473132794e22d849bf2b"
 }

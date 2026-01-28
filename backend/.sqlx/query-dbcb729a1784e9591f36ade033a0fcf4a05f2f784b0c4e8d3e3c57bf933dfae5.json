@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO workflow_instances (\n                id, tenant_id, definition_id, definition_version,\n                title, form_data, status, version, current_step_id,\n                initiated_by, submitted_at, completed_at,\n                created_at, updated_at\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)\n            ON CONFLICT (id) DO UPDATE SET\n                title = EXCLUDED.title,\n                form_data = EXCLUDED.form_data,\n                status = EXCLUDED.status,\n                version = EXCLUDED.version,\n                current_step_id = EXCLUDED.current_step_id,\n                submitted_at = EXCLUDED.submitted_at,\n                completed_at = EXCLUDED.completed_at,\n                updated_at = EXCLUDED.updated_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Varchar",
+        "Jsonb",
+        "Varchar",
+        "Int4",
+        "Varchar",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dbcb729a1784e9591f36ade033a0fcf4a05f2f784b0c4e8d3e3c57bf933dfae5"
+}

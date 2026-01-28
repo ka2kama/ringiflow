@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                title, form_data, status, current_step_id,\n                initiated_by, submitted_at, completed_at,\n                created_at, updated_at\n            FROM workflow_instances\n            WHERE tenant_id = $1 AND initiated_by = $2\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                title, form_data, status, version, current_step_id,\n                initiated_by, submitted_at, completed_at,\n                created_at, updated_at\n            FROM workflow_instances\n            WHERE tenant_id = $1 AND initiated_by = $2\n            ORDER BY created_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -40,31 +40,36 @@
       },
       {
         "ordinal": 7,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
         "name": "current_step_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "initiated_by",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "submitted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "completed_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -83,6 +88,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       true,
@@ -91,5 +97,5 @@
       false
     ]
   },
-  "hash": "46af2bd712f489651f5e2d1749a5b5d1fe9475612fedc0e88a389718fb568106"
+  "hash": "68c08b51468ef50231408dc5ca45f4d532be790500d87c57a8a7eccf82890ceb"
 }

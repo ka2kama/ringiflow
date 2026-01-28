@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
+   value_objects::Version,
    workflow::{StepDecision, WorkflowInstanceId, WorkflowStep, WorkflowStepId, WorkflowStepStatus},
 };
 use sqlx::PgPool;
@@ -60,13 +61,14 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          r#"
          INSERT INTO workflow_steps (
             id, instance_id, step_id, step_name, step_type,
-            status, assigned_to, decision, comment,
+            status, version, assigned_to, decision, comment,
             due_date, started_at, completed_at,
             created_at, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (id) DO UPDATE SET
             status = EXCLUDED.status,
+            version = EXCLUDED.version,
             decision = EXCLUDED.decision,
             comment = EXCLUDED.comment,
             started_at = EXCLUDED.started_at,
@@ -79,6 +81,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          step.step_name(),
          step.step_type(),
          step.status().as_str(),
+         step.version().as_i32(),
          step.assigned_to().map(|u| u.as_uuid()),
          step.decision().map(|d| d.as_str()),
          step.comment(),
@@ -103,7 +106,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          r#"
          SELECT
             s.id, s.instance_id, s.step_id, s.step_name, s.step_type,
-            s.status, s.assigned_to, s.decision, s.comment,
+            s.status, s.version, s.assigned_to, s.decision, s.comment,
             s.due_date, s.started_at, s.completed_at,
             s.created_at, s.updated_at
          FROM workflow_steps s
@@ -128,6 +131,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          r.step_type,
          WorkflowStepStatus::from_str(&r.status)
             .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+         Version::new(r.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          r.assigned_to.map(UserId::from_uuid),
          r.decision
             .as_deref()
@@ -154,7 +158,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          r#"
          SELECT
             s.id, s.instance_id, s.step_id, s.step_name, s.step_type,
-            s.status, s.assigned_to, s.decision, s.comment,
+            s.status, s.version, s.assigned_to, s.decision, s.comment,
             s.due_date, s.started_at, s.completed_at,
             s.created_at, s.updated_at
          FROM workflow_steps s
@@ -179,6 +183,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
                r.step_type,
                WorkflowStepStatus::from_str(&r.status)
                   .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+               Version::new(r.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
                r.assigned_to.map(UserId::from_uuid),
                r.decision
                   .as_deref()
@@ -205,7 +210,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          r#"
          SELECT
             s.id, s.instance_id, s.step_id, s.step_name, s.step_type,
-            s.status, s.assigned_to, s.decision, s.comment,
+            s.status, s.version, s.assigned_to, s.decision, s.comment,
             s.due_date, s.started_at, s.completed_at,
             s.created_at, s.updated_at
          FROM workflow_steps s
@@ -230,6 +235,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
                r.step_type,
                WorkflowStepStatus::from_str(&r.status)
                   .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+               Version::new(r.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
                r.assigned_to.map(UserId::from_uuid),
                r.decision
                   .as_deref()
