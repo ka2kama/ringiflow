@@ -133,6 +133,12 @@ dev-web:
 dev-all: dev-deps
     mprocs
 
+# 依存サービス（PostgreSQL, Redis）を停止
+dev-down:
+    #!/usr/bin/env bash
+    PROJECT_NAME=$(basename "$(pwd)")
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down
+
 # =============================================================================
 # フォーマット
 # =============================================================================

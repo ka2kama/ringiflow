@@ -32,6 +32,7 @@ just fmt                # 全体フォーマット
 
 ```bash
 just dev-all            # 全サーバー一括起動（推奨）
+just dev-down           # 依存サービス（PostgreSQL, Redis）を停止
 ```
 
 `dev-all` は依存サービス（PostgreSQL, Redis）を起動した後、mprocs（TUI プロセスマネージャー）で BFF・Core Service・Auth Service・Web を一括起動する。
