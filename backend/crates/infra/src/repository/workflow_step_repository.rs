@@ -18,8 +18,18 @@ use crate::error::InfraError;
 /// WorkflowStepRepository トレイト
 #[async_trait]
 pub trait WorkflowStepRepository: Send + Sync {
-   /// ステップを保存する（新規作成または更新）
-   async fn save(&self, step: &WorkflowStep) -> Result<(), InfraError>;
+   /// 新規ステップを作成する
+   async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError>;
+
+   /// 楽観的ロック付きでステップを更新する
+   ///
+   /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
+   /// 不一致の場合は `InfraError::Conflict` を返す。
+   async fn update_with_version_check(
+      &self,
+      step: &WorkflowStep,
+      expected_version: Version,
+   ) -> Result<(), InfraError>;
 
    /// ID でステップを検索する
    async fn find_by_id(
@@ -56,7 +66,7 @@ impl PostgresWorkflowStepRepository {
 
 #[async_trait]
 impl WorkflowStepRepository for PostgresWorkflowStepRepository {
-   async fn save(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+   async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
       sqlx::query!(
          r#"
          INSERT INTO workflow_steps (
@@ -66,14 +76,6 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
             created_at, updated_at
          )
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-         ON CONFLICT (id) DO UPDATE SET
-            status = EXCLUDED.status,
-            version = EXCLUDED.version,
-            decision = EXCLUDED.decision,
-            comment = EXCLUDED.comment,
-            started_at = EXCLUDED.started_at,
-            completed_at = EXCLUDED.completed_at,
-            updated_at = EXCLUDED.updated_at
          "#,
          step.id().as_uuid(),
          step.instance_id().as_uuid(),
@@ -93,6 +95,46 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       )
       .execute(&self.pool)
       .await?;
+
+      Ok(())
+   }
+
+   async fn update_with_version_check(
+      &self,
+      step: &WorkflowStep,
+      expected_version: Version,
+   ) -> Result<(), InfraError> {
+      let result = sqlx::query!(
+         r#"
+         UPDATE workflow_steps SET
+            status = $1,
+            version = $2,
+            decision = $3,
+            comment = $4,
+            started_at = $5,
+            completed_at = $6,
+            updated_at = $7
+         WHERE id = $8 AND version = $9
+         "#,
+         step.status().as_str(),
+         step.version().as_i32(),
+         step.decision().map(|d| d.as_str()),
+         step.comment(),
+         step.started_at(),
+         step.completed_at(),
+         step.updated_at(),
+         step.id().as_uuid(),
+         expected_version.as_i32(),
+      )
+      .execute(&self.pool)
+      .await?;
+
+      if result.rows_affected() == 0 {
+         return Err(InfraError::Conflict {
+            entity: "WorkflowStep".to_string(),
+            id:     step.id().as_uuid().to_string(),
+         });
+      }
 
       Ok(())
    }

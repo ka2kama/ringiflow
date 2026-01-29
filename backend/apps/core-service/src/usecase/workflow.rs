@@ -16,10 +16,9 @@ use ringiflow_domain::{
       WorkflowStepId,
    },
 };
-use ringiflow_infra::repository::{
-   WorkflowDefinitionRepository,
-   WorkflowInstanceRepository,
-   WorkflowStepRepository,
+use ringiflow_infra::{
+   InfraError,
+   repository::{WorkflowDefinitionRepository, WorkflowInstanceRepository, WorkflowStepRepository},
 };
 use serde_json::Value as JsonValue;
 
@@ -134,7 +133,7 @@ where
       // 4. リポジトリに保存
       self
          .instance_repo
-         .save(&instance)
+         .insert(&instance)
          .await
          .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
 
@@ -205,6 +204,7 @@ where
       let active_step = step.activated();
 
       // 6. ワークフローインスタンスを申請済みに遷移
+      let expected_version = instance.version();
       let submitted_instance = instance
          .submitted()
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
@@ -215,13 +215,18 @@ where
       // 8. インスタンスとステップを保存
       self
          .instance_repo
-         .save(&in_progress_instance)
+         .update_with_version_check(&in_progress_instance, expected_version)
          .await
-         .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "インスタンスは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+         })?;
 
       self
          .step_repo
-         .save(&active_step)
+         .insert(&active_step)
          .await
          .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
 
@@ -269,7 +274,7 @@ where
          ));
       }
 
-      // 3. 楽観的ロック（バージョン一致チェック）
+      // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
       if step.version() != input.version {
          return Err(CoreError::Conflict(
             "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
@@ -277,6 +282,7 @@ where
       }
 
       // 4. ステップを承認
+      let step_expected_version = step.version();
       let approved_step = step
          .approve(input.comment)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
@@ -289,22 +295,33 @@ where
          .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
          .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
 
+      let instance_expected_version = instance.version();
       let completed_instance = instance
          .complete_with_approval()
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 6. 保存
+      // 6. 楽観的ロック付きで保存
       self
          .step_repo
-         .save(&approved_step)
+         .update_with_version_check(&approved_step, step_expected_version)
          .await
-         .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+         })?;
 
       self
          .instance_repo
-         .save(&completed_instance)
+         .update_with_version_check(&completed_instance, instance_expected_version)
          .await
-         .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "インスタンスは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+         })?;
 
       // 7. 保存後のステップ一覧を取得して返却
       let steps = self
@@ -353,7 +370,7 @@ where
          ));
       }
 
-      // 3. 楽観的ロック（バージョン一致チェック）
+      // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
       if step.version() != input.version {
          return Err(CoreError::Conflict(
             "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
@@ -361,6 +378,7 @@ where
       }
 
       // 4. ステップを却下
+      let step_expected_version = step.version();
       let rejected_step = step
          .reject(input.comment)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
@@ -373,22 +391,33 @@ where
          .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
          .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
 
+      let instance_expected_version = instance.version();
       let completed_instance = instance
          .complete_with_rejection()
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 6. 保存
+      // 6. 楽観的ロック付きで保存
       self
          .step_repo
-         .save(&rejected_step)
+         .update_with_version_check(&rejected_step, step_expected_version)
          .await
-         .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+         })?;
 
       self
          .instance_repo
-         .save(&completed_instance)
+         .update_with_version_check(&completed_instance, instance_expected_version)
          .await
-         .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "インスタンスは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+         })?;
 
       // 7. 保存後のステップ一覧を取得して返却
       let steps = self
@@ -600,12 +629,26 @@ mod tests {
 
    #[async_trait::async_trait]
    impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
-      async fn save(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+      async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+         let mut instances = self.instances.lock().unwrap();
+         instances.push(instance.clone());
+         Ok(())
+      }
+
+      async fn update_with_version_check(
+         &self,
+         instance: &WorkflowInstance,
+         expected_version: Version,
+      ) -> Result<(), InfraError> {
          let mut instances = self.instances.lock().unwrap();
          if let Some(pos) = instances.iter().position(|i| i.id() == instance.id()) {
+            if instances[pos].version() != expected_version {
+               return Err(InfraError::Conflict {
+                  entity: "WorkflowInstance".to_string(),
+                  id:     instance.id().as_uuid().to_string(),
+               });
+            }
             instances[pos] = instance.clone();
-         } else {
-            instances.push(instance.clone());
          }
          Ok(())
       }
@@ -669,12 +712,26 @@ mod tests {
 
    #[async_trait::async_trait]
    impl WorkflowStepRepository for MockWorkflowStepRepository {
-      async fn save(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+      async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+         let mut steps = self.steps.lock().unwrap();
+         steps.push(step.clone());
+         Ok(())
+      }
+
+      async fn update_with_version_check(
+         &self,
+         step: &WorkflowStep,
+         expected_version: Version,
+      ) -> Result<(), InfraError> {
          let mut steps = self.steps.lock().unwrap();
          if let Some(pos) = steps.iter().position(|s| s.id() == step.id()) {
+            if steps[pos].version() != expected_version {
+               return Err(InfraError::Conflict {
+                  entity: "WorkflowStep".to_string(),
+                  id:     step.id().as_uuid().to_string(),
+               });
+            }
             steps[pos] = step.clone();
-         } else {
-            steps.push(step.clone());
          }
          Ok(())
       }
@@ -824,7 +881,7 @@ mod tests {
       .submitted()
       .unwrap()
       .with_current_step("approval".to_string());
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       // Active なステップを作成
       let step = WorkflowStep::new(
@@ -835,7 +892,7 @@ mod tests {
          Some(approver_id.clone()),
       )
       .activated();
-      step_repo.save(&step).await.unwrap();
+      step_repo.insert(&step).await.unwrap();
 
       let usecase =
          WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
@@ -900,7 +957,7 @@ mod tests {
       .submitted()
       .unwrap()
       .with_current_step("approval".to_string());
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
          instance.id().clone(),
@@ -910,7 +967,7 @@ mod tests {
          Some(approver_id.clone()), // approver_id に割り当て
       )
       .activated();
-      step_repo.save(&step).await.unwrap();
+      step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
 
@@ -950,7 +1007,7 @@ mod tests {
       .submitted()
       .unwrap()
       .with_current_step("approval".to_string());
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       // Pending 状態のステップ（Active ではない）
       let step = WorkflowStep::new(
@@ -961,7 +1018,7 @@ mod tests {
          Some(approver_id.clone()),
       );
       // activated() を呼ばないので Pending のまま
-      step_repo.save(&step).await.unwrap();
+      step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
 
@@ -1001,7 +1058,7 @@ mod tests {
       .submitted()
       .unwrap()
       .with_current_step("approval".to_string());
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
          instance.id().clone(),
@@ -1011,7 +1068,7 @@ mod tests {
          Some(approver_id.clone()),
       )
       .activated();
-      step_repo.save(&step).await.unwrap();
+      step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
 
@@ -1055,7 +1112,7 @@ mod tests {
       .submitted()
       .unwrap()
       .with_current_step("approval".to_string());
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
          instance.id().clone(),
@@ -1065,7 +1122,7 @@ mod tests {
          Some(approver_id.clone()),
       )
       .activated();
-      step_repo.save(&step).await.unwrap();
+      step_repo.insert(&step).await.unwrap();
 
       let usecase =
          WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
@@ -1138,7 +1195,7 @@ mod tests {
          serde_json::json!({}),
          user_id.clone(),
       );
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       let usecase =
          WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
