@@ -713,7 +713,7 @@ mod tests {
          _workflow_id: Uuid,
          _step_id: Uuid,
          _req: crate::client::ApproveRejectRequest,
-      ) -> Result<(), CoreServiceError> {
+      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("approve_step is not used in auth tests")
       }
@@ -723,7 +723,7 @@ mod tests {
          _workflow_id: Uuid,
          _step_id: Uuid,
          _req: crate::client::ApproveRejectRequest,
-      ) -> Result<(), CoreServiceError> {
+      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("reject_step is not used in auth tests")
       }

@@ -25,6 +25,7 @@ pub use workflow::{
    CreateWorkflowInput,
    SubmitWorkflowInput,
    WorkflowUseCaseImpl,
+   WorkflowWithSteps,
 };
 
 use crate::error::CoreError;

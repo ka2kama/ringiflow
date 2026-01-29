@@ -27,4 +27,5 @@ pub use core_service::{
    WorkflowInstanceDto,
    WorkflowListResponse,
    WorkflowResponse,
+   WorkflowStepDto,
 };

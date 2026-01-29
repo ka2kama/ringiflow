@@ -116,6 +116,25 @@ pub struct ApproveRejectRequest {
    pub user_id:   Uuid,
 }
 
+/// ワークフローステップ DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowStepDto {
+   pub id:           String,
+   pub step_id:      String,
+   pub step_name:    String,
+   pub step_type:    String,
+   pub status:       String,
+   pub version:      i32,
+   pub assigned_to:  Option<String>,
+   pub decision:     Option<String>,
+   pub comment:      Option<String>,
+   pub due_date:     Option<String>,
+   pub started_at:   Option<String>,
+   pub completed_at: Option<String>,
+   pub created_at:   String,
+   pub updated_at:   String,
+}
+
 /// ワークフローインスタンス DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowInstanceDto {
@@ -123,10 +142,14 @@ pub struct WorkflowInstanceDto {
    pub title: String,
    pub definition_id: String,
    pub status: String,
+   pub version: i32,
    pub form_data: serde_json::Value,
    pub initiated_by: String,
    pub current_step_id: Option<String>,
+   #[serde(default)]
+   pub steps: Vec<WorkflowStepDto>,
    pub submitted_at: Option<String>,
+   pub completed_at: Option<String>,
    pub created_at: String,
    pub updated_at: String,
 }
@@ -326,13 +349,13 @@ pub trait CoreServiceClient: Send + Sync {
    ///
    /// # 戻り値
    ///
-   /// 成功時は `Ok(())`
+   /// 更新されたワークフローインスタンス（ステップ情報含む）
    async fn approve_step(
       &self,
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<(), CoreServiceError>;
+   ) -> Result<WorkflowResponse, CoreServiceError>;
 
    /// ワークフローステップを却下する
    ///
@@ -346,13 +369,13 @@ pub trait CoreServiceClient: Send + Sync {
    ///
    /// # 戻り値
    ///
-   /// 成功時は `Ok(())`
+   /// 更新されたワークフローインスタンス（ステップ情報含む）
    async fn reject_step(
       &self,
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<(), CoreServiceError>;
+   ) -> Result<WorkflowResponse, CoreServiceError>;
 }
 
 /// Core Service クライアント実装
@@ -610,7 +633,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<(), CoreServiceError> {
+   ) -> Result<WorkflowResponse, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows/{}/steps/{}/approve",
          self.base_url, workflow_id, step_id
@@ -619,7 +642,10 @@ impl CoreServiceClient for CoreServiceClientImpl {
       let response = self.client.post(&url).json(&req).send().await?;
 
       match response.status() {
-         status if status.is_success() => Ok(()),
+         status if status.is_success() => {
+            let body = response.json::<WorkflowResponse>().await?;
+            Ok(body)
+         }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
          reqwest::StatusCode::BAD_REQUEST => {
             let body = response.text().await.unwrap_or_default();
@@ -648,7 +674,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<(), CoreServiceError> {
+   ) -> Result<WorkflowResponse, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows/{}/steps/{}/reject",
          self.base_url, workflow_id, step_id
@@ -657,7 +683,10 @@ impl CoreServiceClient for CoreServiceClientImpl {
       let response = self.client.post(&url).json(&req).send().await?;
 
       match response.status() {
-         status if status.is_success() => Ok(()),
+         status if status.is_success() => {
+            let body = response.json::<WorkflowResponse>().await?;
+            Ok(body)
+         }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
          reqwest::StatusCode::BAD_REQUEST => {
             let body = response.text().await.unwrap_or_default();

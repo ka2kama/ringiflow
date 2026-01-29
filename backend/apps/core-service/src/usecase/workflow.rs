@@ -25,6 +25,16 @@ use serde_json::Value as JsonValue;
 
 use crate::error::CoreError;
 
+/// ユースケースの出力: ワークフローインスタンスとステップの集約
+///
+/// ドメインモデル (`WorkflowInstance`, `WorkflowStep`) を変更せず、
+/// ユースケースの出力として集約する。詳細取得や承認/却下の結果を
+/// ハンドラに返す際に使用する。
+pub struct WorkflowWithSteps {
+   pub instance: WorkflowInstance,
+   pub steps:    Vec<WorkflowStep>,
+}
+
 /// ワークフロー作成入力
 #[derive(Debug, Clone)]
 pub struct CreateWorkflowInput {
@@ -243,7 +253,7 @@ where
       step_id: WorkflowStepId,
       tenant_id: TenantId,
       user_id: UserId,
-   ) -> Result<(), CoreError> {
+   ) -> Result<WorkflowWithSteps, CoreError> {
       // 1. ステップを取得
       let step = self
          .step_repo
@@ -296,7 +306,17 @@ where
          .await
          .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
 
-      Ok(())
+      // 7. 保存後のステップ一覧を取得して返却
+      let steps = self
+         .step_repo
+         .find_by_instance(completed_instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps {
+         instance: completed_instance,
+         steps,
+      })
    }
 
    /// ワークフローステップを却下する
@@ -317,7 +337,7 @@ where
       step_id: WorkflowStepId,
       tenant_id: TenantId,
       user_id: UserId,
-   ) -> Result<(), CoreError> {
+   ) -> Result<WorkflowWithSteps, CoreError> {
       // 1. ステップを取得
       let step = self
          .step_repo
@@ -370,7 +390,17 @@ where
          .await
          .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
 
-      Ok(())
+      // 7. 保存後のステップ一覧を取得して返却
+      let steps = self
+         .step_repo
+         .find_by_instance(completed_instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps {
+         instance: completed_instance,
+         steps,
+      })
    }
 
    // ===== GET 系メソッド =====
@@ -471,13 +501,23 @@ where
       &self,
       id: WorkflowInstanceId,
       tenant_id: TenantId,
-   ) -> Result<WorkflowInstance, CoreError> {
-      self
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      let instance = self
          .instance_repo
          .find_by_id(&id, &tenant_id)
          .await
          .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-         .ok_or_else(|| CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string()))
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      let steps = self
+         .step_repo
+         .find_by_instance(&id, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps { instance, steps })
    }
 }
 
@@ -817,29 +857,24 @@ mod tests {
 
       // Assert
       assert!(result.is_ok());
+      let workflow_with_steps = result.unwrap();
 
-      // ステップが Completed (Approved) になっていることを確認
-      let updated_step = step_repo
-         .find_by_id(step.id(), &tenant_id)
-         .await
-         .unwrap()
-         .unwrap();
+      // 返却されたインスタンスが Approved になっていることを確認
       assert_eq!(
-         updated_step.status(),
+         workflow_with_steps.instance.status(),
+         WorkflowInstanceStatus::Approved
+      );
+
+      // 返却されたステップが Completed (Approved) になっていることを確認
+      assert_eq!(workflow_with_steps.steps.len(), 1);
+      assert_eq!(
+         workflow_with_steps.steps[0].status(),
          ringiflow_domain::workflow::WorkflowStepStatus::Completed
       );
       assert_eq!(
-         updated_step.decision(),
+         workflow_with_steps.steps[0].decision(),
          Some(ringiflow_domain::workflow::StepDecision::Approved)
       );
-
-      // インスタンスが Approved になっていることを確認
-      let updated_instance = instance_repo
-         .find_by_id(instance.id(), &tenant_id)
-         .await
-         .unwrap()
-         .unwrap();
-      assert_eq!(updated_instance.status(), WorkflowInstanceStatus::Approved);
    }
 
    #[tokio::test]
@@ -1052,29 +1087,24 @@ mod tests {
 
       // Assert
       assert!(result.is_ok());
+      let workflow_with_steps = result.unwrap();
 
-      // ステップが Completed (Rejected) になっていることを確認
-      let updated_step = step_repo
-         .find_by_id(step.id(), &tenant_id)
-         .await
-         .unwrap()
-         .unwrap();
+      // 返却されたインスタンスが Rejected になっていることを確認
       assert_eq!(
-         updated_step.status(),
+         workflow_with_steps.instance.status(),
+         WorkflowInstanceStatus::Rejected
+      );
+
+      // 返却されたステップが Completed (Rejected) になっていることを確認
+      assert_eq!(workflow_with_steps.steps.len(), 1);
+      assert_eq!(
+         workflow_with_steps.steps[0].status(),
          ringiflow_domain::workflow::WorkflowStepStatus::Completed
       );
       assert_eq!(
-         updated_step.decision(),
+         workflow_with_steps.steps[0].decision(),
          Some(ringiflow_domain::workflow::StepDecision::Rejected)
       );
-
-      // インスタンスが Rejected になっていることを確認
-      let updated_instance = instance_repo
-         .find_by_id(instance.id(), &tenant_id)
-         .await
-         .unwrap()
-         .unwrap();
-      assert_eq!(updated_instance.status(), WorkflowInstanceStatus::Rejected);
    }
 
    #[tokio::test]
