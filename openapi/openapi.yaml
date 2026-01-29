@@ -421,7 +421,7 @@ paths:
                 status: 404
                 detail: ワークフローインスタンスが見つかりません
 
-  /api/v1/workflows/{id}/steps/{stepId}/approve:
+  /api/v1/workflows/{id}/steps/{step_id}/approve:
     post:
       tags:
         - workflows
@@ -446,7 +446,7 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: stepId
+        - name: step_id
           in: path
           required: true
           description: ワークフローステップ ID
@@ -507,7 +507,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /api/v1/workflows/{id}/steps/{stepId}/reject:
+  /api/v1/workflows/{id}/steps/{step_id}/reject:
     post:
       tags:
         - workflows
@@ -532,7 +532,7 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: stepId
+        - name: step_id
           in: path
           required: true
           description: ワークフローステップ ID
