@@ -54,7 +54,7 @@ WARN     本番環境では絶対に有効にしないでください
 WARN  ========================================
 INFO  DevAuth: 開発用セッションを作成しました
 INFO    Tenant ID: 00000000-0000-0000-0000-000000000001
-INFO    User ID: 00000000-0000-0000-0000-000000000002
+INFO    User ID: 00000000-0000-0000-0000-000000000001
 INFO    Session ID: dev-session
 INFO    CSRF Token: <64文字のトークン>
 ```
@@ -84,10 +84,10 @@ X-Tenant-ID: 00000000-0000-0000-0000-000000000001
 | 項目 | 値 |
 |------|-----|
 | Tenant ID | `00000000-0000-0000-0000-000000000001` |
-| User ID | `00000000-0000-0000-0000-000000000002` |
-| Email | `dev@example.com` |
-| Name | `Development User` |
-| Roles | `["admin"]` |
+| User ID | `00000000-0000-0000-0000-000000000001` |
+| Email | `admin@example.com` |
+| Name | `管理者` |
+| Roles | `["tenant_admin"]` |
 | Session ID | `dev-session` |
 
 ## 安全策
