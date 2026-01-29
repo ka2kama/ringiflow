@@ -34,6 +34,18 @@ pub enum InfraError {
    #[error("シリアライズエラー: {0}")]
    Serialization(#[from] serde_json::Error),
 
+   /// 楽観的ロック競合（バージョン不一致）
+   ///
+   /// UPDATE 時に期待したバージョンと DB 上のバージョンが一致しなかった場合。
+   /// ユースケース層で適切なエラーメッセージに変換して返す。
+   #[error("競合が発生しました: {entity}(id={id})")]
+   Conflict {
+      /// エンティティ名（例: "WorkflowInstance"）
+      entity: String,
+      /// エンティティの ID
+      id:     String,
+   },
+
    /// 予期しないエラー
    ///
    /// 上記に分類できない予期しないエラー。

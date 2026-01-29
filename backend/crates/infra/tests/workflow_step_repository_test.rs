@@ -32,7 +32,7 @@ use serde_json::json;
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn test_save_で新規ステップを作成できる(pool: PgPool) {
+async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let step_repo = PostgresWorkflowStepRepository::new(pool);
 
@@ -50,7 +50,7 @@ async fn test_save_で新規ステップを作成できる(pool: PgPool) {
       json!({}),
       user_id.clone(),
    );
-   instance_repo.save(&instance).await.unwrap();
+   instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
    let step = WorkflowStep::new(
@@ -61,7 +61,7 @@ async fn test_save_で新規ステップを作成できる(pool: PgPool) {
       Some(user_id),
    );
 
-   let result = step_repo.save(&step).await;
+   let result = step_repo.insert(&step).await;
 
    assert!(result.is_ok());
 }
@@ -85,7 +85,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
       json!({}),
       user_id.clone(),
    );
-   instance_repo.save(&instance).await.unwrap();
+   instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
    let step = WorkflowStep::new(
@@ -96,7 +96,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
       Some(user_id),
    );
    let step_id = step.id().clone();
-   step_repo.save(&step).await.unwrap();
+   step_repo.insert(&step).await.unwrap();
 
    // 検索
    let result = step_repo.find_by_id(&step_id, &tenant_id).await;
@@ -145,7 +145,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
       user_id.clone(),
    );
    let instance_id = instance.id().clone();
-   instance_repo.save(&instance).await.unwrap();
+   instance_repo.insert(&instance).await.unwrap();
 
    // 複数のステップを作成
    let step1 = WorkflowStep::new(
@@ -162,8 +162,8 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
       "approval".to_string(),
       Some(user_id),
    );
-   step_repo.save(&step1).await.unwrap();
-   step_repo.save(&step2).await.unwrap();
+   step_repo.insert(&step1).await.unwrap();
+   step_repo.insert(&step2).await.unwrap();
 
    // 検索
    let result = step_repo.find_by_instance(&instance_id, &tenant_id).await;
@@ -208,7 +208,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
       json!({}),
       user_id.clone(),
    );
-   instance_repo.save(&instance).await.unwrap();
+   instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
    let step = WorkflowStep::new(
@@ -218,7 +218,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
       "approval".to_string(),
       Some(user_id.clone()),
    );
-   step_repo.save(&step).await.unwrap();
+   step_repo.insert(&step).await.unwrap();
 
    // 検索
    let result = step_repo.find_by_assigned_to(&tenant_id, &user_id).await;
@@ -229,7 +229,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn test_save_で既存ステップを更新できる(pool: PgPool) {
+async fn test_update_with_version_check_バージョン一致で更新できる(pool: PgPool) {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let step_repo = PostgresWorkflowStepRepository::new(pool);
 
@@ -247,9 +247,9 @@ async fn test_save_で既存ステップを更新できる(pool: PgPool) {
       json!({}),
       user_id.clone(),
    );
-   instance_repo.save(&instance).await.unwrap();
+   instance_repo.insert(&instance).await.unwrap();
 
-   // ステップを作成
+   // ステップを作成して INSERT
    let step = WorkflowStep::new(
       instance.id().clone(),
       "step1".to_string(),
@@ -258,17 +258,77 @@ async fn test_save_で既存ステップを更新できる(pool: PgPool) {
       Some(user_id),
    );
    let step_id = step.id().clone();
-   step_repo.save(&step).await.unwrap();
+   let expected_version = step.version();
+   step_repo.insert(&step).await.unwrap();
 
-   // ステップをアクティブ化
+   // アクティブ化（バージョンインクリメント）
    let activated_step = step.activated();
-   step_repo.save(&activated_step).await.unwrap();
 
-   // 確認
-   let result = step_repo.find_by_id(&step_id, &tenant_id).await;
+   // バージョン一致で更新
+   let result = step_repo
+      .update_with_version_check(&activated_step, expected_version)
+      .await;
+
    assert!(result.is_ok());
-   let found = result.unwrap().unwrap();
+
+   // 更新結果を確認
+   let found = step_repo
+      .find_by_id(&step_id, &tenant_id)
+      .await
+      .unwrap()
+      .unwrap();
    assert!(found.started_at().is_some());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_update_with_version_check_バージョン不一致でconflictエラーを返す(
+   pool: PgPool,
+) {
+   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let step_repo = PostgresWorkflowStepRepository::new(pool);
+
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+
+   // インスタンスを作成
+   let instance = WorkflowInstance::new(
+      tenant_id.clone(),
+      definition_id,
+      Version::initial(),
+      "テスト申請".to_string(),
+      json!({}),
+      user_id.clone(),
+   );
+   instance_repo.insert(&instance).await.unwrap();
+
+   // ステップを作成して INSERT
+   let step = WorkflowStep::new(
+      instance.id().clone(),
+      "step1".to_string(),
+      "承認".to_string(),
+      "approval".to_string(),
+      Some(user_id),
+   );
+   step_repo.insert(&step).await.unwrap();
+
+   // アクティブ化（バージョンインクリメント）
+   let activated_step = step.activated();
+
+   // 不一致バージョン（version 2）で更新を試みる
+   let wrong_version = Version::initial().next();
+   let result = step_repo
+      .update_with_version_check(&activated_step, wrong_version)
+      .await;
+
+   assert!(result.is_err());
+   let err = result.unwrap_err();
+   assert!(
+      matches!(err, ringiflow_infra::InfraError::Conflict { .. }),
+      "InfraError::Conflict を期待したが {:?} が返った",
+      err
+   );
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -290,25 +350,36 @@ async fn test_ステップを完了できる(pool: PgPool) {
       json!({}),
       user_id.clone(),
    );
-   instance_repo.save(&instance).await.unwrap();
+   instance_repo.insert(&instance).await.unwrap();
 
-   // ステップを作成してアクティブ化
+   // ステップを作成
    let step = WorkflowStep::new(
       instance.id().clone(),
       "step1".to_string(),
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id),
-   )
-   .activated();
+   );
    let step_id = step.id().clone();
-   step_repo.save(&step).await.unwrap();
+   let v1 = step.version();
+   step_repo.insert(&step).await.unwrap();
+
+   // ステップをアクティブ化
+   let active_step = step.activated();
+   let v2 = active_step.version();
+   step_repo
+      .update_with_version_check(&active_step, v1)
+      .await
+      .unwrap();
 
    // ステップを完了
-   let completed_step = step
+   let completed_step = active_step
       .completed(StepDecision::Approved, Some("承認します".to_string()))
       .unwrap();
-   step_repo.save(&completed_step).await.unwrap();
+   step_repo
+      .update_with_version_check(&completed_step, v2)
+      .await
+      .unwrap();
 
    // 確認
    let result = step_repo.find_by_id(&step_id, &tenant_id).await;
