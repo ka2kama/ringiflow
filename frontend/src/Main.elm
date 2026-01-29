@@ -106,6 +106,9 @@ init flags url key =
 
         csrfCmd =
             fetchCsrfToken session
+
+        userCmd =
+            fetchUser session
     in
     ( { key = key
       , url = url
@@ -113,7 +116,7 @@ init flags url key =
       , session = session
       , page = page
       }
-    , Cmd.batch [ pageCmd, csrfCmd ]
+    , Cmd.batch [ pageCmd, csrfCmd, userCmd ]
     )
 
 
@@ -128,6 +131,20 @@ fetchCsrfToken session =
     AuthApi.getCsrfToken
         { config = Session.toRequestConfig session
         , toMsg = GotCsrfToken
+        }
+
+
+{-| ユーザー情報を取得
+
+セッションが有効な場合、ユーザー情報を取得して Session に設定する。
+未認証の場合は 401 が返されるが、無視する。
+
+-}
+fetchUser : Session -> Cmd Msg
+fetchUser session =
+    AuthApi.getMe
+        { config = Session.toRequestConfig session
+        , toMsg = GotUser
         }
 
 
@@ -202,6 +219,7 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
     | GotCsrfToken (Result ApiError String)
+    | GotUser (Result ApiError Session.User)
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
     | WorkflowDetailMsg WorkflowDetail.Msg
@@ -249,6 +267,24 @@ update msg model =
                 Err _ ->
                     -- 未認証の場合は 401 が返されるが、無視する
                     -- ログイン後に再度取得される
+                    ( model, Cmd.none )
+
+        GotUser result ->
+            case result of
+                Ok user ->
+                    let
+                        newSession =
+                            Session.withUser user model.session
+
+                        newPage =
+                            updatePageSession newSession model.page
+                    in
+                    ( { model | session = newSession, page = newPage }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    -- 未認証の場合は 401 が返されるが、無視する
                     ( model, Cmd.none )
 
         WorkflowsMsg subMsg ->

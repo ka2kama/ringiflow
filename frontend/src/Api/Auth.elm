@@ -1,4 +1,4 @@
-module Api.Auth exposing (getCsrfToken)
+module Api.Auth exposing (getCsrfToken, getMe)
 
 {-| 認証 API クライアント
 
@@ -15,10 +15,17 @@ BFF の `/auth` エンドポイントへのアクセスを提供。
         , toMsg = GotCsrfToken
         }
 
+    -- ユーザー情報を取得
+    AuthApi.getMe
+        { config = requestConfig
+        , toMsg = GotUser
+        }
+
 -}
 
 import Api.Http as Api exposing (ApiError, RequestConfig)
 import Json.Decode as Decode exposing (Decoder)
+import Session exposing (User)
 
 
 {-| CSRF トークンを取得
@@ -43,6 +50,28 @@ getCsrfToken { config, toMsg } =
         }
 
 
+{-| 現在のユーザー情報を取得
+
+`GET /auth/me`
+
+セッションが有効な場合、ユーザー情報（ID、メール、名前、ロール）を返す。
+未認証の場合は 401 Unauthorized が返される。
+
+-}
+getMe :
+    { config : RequestConfig
+    , toMsg : Result ApiError User -> msg
+    }
+    -> Cmd msg
+getMe { config, toMsg } =
+    Api.get
+        { config = config
+        , url = "/auth/me"
+        , decoder = userDecoder
+        , toMsg = toMsg
+        }
+
+
 
 -- DECODERS
 
@@ -55,3 +84,19 @@ getCsrfToken { config, toMsg } =
 csrfTokenDecoder : Decoder String
 csrfTokenDecoder =
     Decode.at [ "data", "token" ] Decode.string
+
+
+{-| ユーザー情報レスポンスのデコーダー
+
+レスポンス形式: `{ "data": { "id": "...", "email": "...", "name": "...", "roles": [...] } }`
+
+-}
+userDecoder : Decoder User
+userDecoder =
+    Decode.field "data"
+        (Decode.map4 User
+            (Decode.field "id" Decode.string)
+            (Decode.field "email" Decode.string)
+            (Decode.field "name" Decode.string)
+            (Decode.field "roles" (Decode.list Decode.string))
+        )
