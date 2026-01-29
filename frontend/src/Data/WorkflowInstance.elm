@@ -1,13 +1,18 @@
 module Data.WorkflowInstance exposing
-    ( Status(..)
+    ( Decision(..)
+    , Status(..)
+    , StepStatus(..)
     , WorkflowInstance
     , WorkflowInstanceId
+    , WorkflowStep
+    , decisionToJapanese
     , decoder
     , listDecoder
     , statusFromString
     , statusToCssClass
     , statusToJapanese
     , statusToString
+    , stepStatusToJapanese
     )
 
 {-| ワークフローインスタンスのデータ型
@@ -41,6 +46,38 @@ type alias WorkflowInstanceId =
     String
 
 
+{-| ワークフローステップ
+
+承認フローの各ステップを表す。
+
+-}
+type alias WorkflowStep =
+    { id : String
+    , stepName : String
+    , status : StepStatus
+    , decision : Maybe Decision
+    , assignedTo : Maybe String
+    , comment : Maybe String
+    , version : Int
+    }
+
+
+{-| ステップのステータス
+-}
+type StepStatus
+    = StepPending
+    | StepActive
+    | StepCompleted
+    | StepSkipped
+
+
+{-| 承認/却下の判定結果
+-}
+type Decision
+    = DecisionApproved
+    | DecisionRejected
+
+
 {-| ワークフローのステータス
 
 ワークフローのライフサイクルを表すカスタム型。
@@ -66,9 +103,11 @@ type alias WorkflowInstance =
     , title : String
     , definitionId : String
     , status : Status
+    , version : Int
     , formData : Encode.Value
     , initiatedBy : String
     , currentStepId : Maybe String
+    , steps : List WorkflowStep
     , submittedAt : Maybe String
     , createdAt : String
     , updatedAt : String
@@ -178,6 +217,36 @@ statusToCssClass status =
             "status-cancelled"
 
 
+{-| ステップステータスを日本語に変換
+-}
+stepStatusToJapanese : StepStatus -> String
+stepStatusToJapanese status =
+    case status of
+        StepPending ->
+            "待機中"
+
+        StepActive ->
+            "承認待ち"
+
+        StepCompleted ->
+            "完了"
+
+        StepSkipped ->
+            "スキップ"
+
+
+{-| 判定結果を日本語に変換
+-}
+decisionToJapanese : Decision -> String
+decisionToJapanese decision =
+    case decision of
+        DecisionApproved ->
+            "承認"
+
+        DecisionRejected ->
+            "却下"
+
+
 
 -- DECODERS
 
@@ -198,6 +267,64 @@ statusDecoder =
             )
 
 
+{-| ステップステータスをデコード
+-}
+stepStatusDecoder : Decoder StepStatus
+stepStatusDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "Pending" ->
+                        Decode.succeed StepPending
+
+                    "Active" ->
+                        Decode.succeed StepActive
+
+                    "Completed" ->
+                        Decode.succeed StepCompleted
+
+                    "Skipped" ->
+                        Decode.succeed StepSkipped
+
+                    _ ->
+                        Decode.fail ("Unknown step status: " ++ str)
+            )
+
+
+{-| 判定結果をデコード
+-}
+decisionDecoder : Decoder Decision
+decisionDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "Approved" ->
+                        Decode.succeed DecisionApproved
+
+                    "Rejected" ->
+                        Decode.succeed DecisionRejected
+
+                    _ ->
+                        Decode.fail ("Unknown decision: " ++ str)
+            )
+
+
+{-| ワークフローステップをデコード
+-}
+stepDecoder : Decoder WorkflowStep
+stepDecoder =
+    Decode.succeed WorkflowStep
+        |> required "id" Decode.string
+        |> required "step_name" Decode.string
+        |> required "status" stepStatusDecoder
+        |> optional "decision" (Decode.nullable decisionDecoder) Nothing
+        |> optional "assigned_to" (Decode.nullable Decode.string) Nothing
+        |> optional "comment" (Decode.nullable Decode.string) Nothing
+        |> optional "version" Decode.int 1
+
+
 {-| 単一のワークフローインスタンスをデコード
 -}
 decoder : Decoder WorkflowInstance
@@ -207,9 +334,11 @@ decoder =
         |> required "title" Decode.string
         |> required "definition_id" Decode.string
         |> required "status" statusDecoder
+        |> optional "version" Decode.int 1
         |> required "form_data" Decode.value
         |> required "initiated_by" Decode.string
         |> optional "current_step_id" (Decode.nullable Decode.string) Nothing
+        |> optional "steps" (Decode.list stepDecoder) []
         |> optional "submitted_at" (Decode.nullable Decode.string) Nothing
         |> required "created_at" Decode.string
         |> required "updated_at" Decode.string

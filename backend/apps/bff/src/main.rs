@@ -70,6 +70,7 @@ use config::BffConfig;
 use handler::{
    AuthState,
    WorkflowState,
+   approve_step,
    create_workflow,
    csrf,
    get_workflow,
@@ -80,6 +81,7 @@ use handler::{
    login,
    logout,
    me,
+   reject_step,
    submit_workflow,
 };
 use middleware::{CsrfState, csrf_middleware};
@@ -207,6 +209,14 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/api/v1/workflows/{id}/submit",
          post(submit_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/api/v1/workflows/{id}/steps/{step_id}/approve",
+         post(approve_step::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/api/v1/workflows/{id}/steps/{step_id}/reject",
+         post(reject_step::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .with_state(workflow_state)
       .layer(from_fn_with_state(

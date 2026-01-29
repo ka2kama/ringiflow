@@ -31,6 +31,14 @@ pub enum CoreError {
    #[error("不正なリクエスト: {0}")]
    BadRequest(String),
 
+   /// 権限不足
+   #[error("権限がありません: {0}")]
+   Forbidden(String),
+
+   /// 競合（楽観的ロック失敗）
+   #[error("競合が発生しました: {0}")]
+   Conflict(String),
+
    /// データベースエラー
    #[error("データベースエラー: {0}")]
    Database(#[from] ringiflow_infra::InfraError),
@@ -53,6 +61,18 @@ impl IntoResponse for CoreError {
             StatusCode::BAD_REQUEST,
             "https://ringiflow.example.com/errors/bad-request",
             "Bad Request",
+            msg.clone(),
+         ),
+         CoreError::Forbidden(msg) => (
+            StatusCode::FORBIDDEN,
+            "https://ringiflow.example.com/errors/forbidden",
+            "Forbidden",
+            msg.clone(),
+         ),
+         CoreError::Conflict(msg) => (
+            StatusCode::CONFLICT,
+            "https://ringiflow.example.com/errors/conflict",
+            "Conflict",
             msg.clone(),
          ),
          CoreError::Database(e) => {

@@ -342,6 +342,12 @@ impl std::str::FromStr for WorkflowInstanceStatus {
 ///
 /// 定義から生成された実行中の申請案件。
 /// フォームデータと進捗状態を保持する。
+///
+/// ## 楽観的ロック
+///
+/// `version` フィールドにより、並行更新時の競合を検出する。
+/// 更新操作時はリクエストの version と DB の version を比較し、
+/// 一致しない場合は競合エラー（409 Conflict）を返す。
 #[derive(Debug, Clone)]
 pub struct WorkflowInstance {
    id: WorkflowInstanceId,
@@ -351,6 +357,7 @@ pub struct WorkflowInstance {
    title: String,
    form_data: JsonValue,
    status: WorkflowInstanceStatus,
+   version: Version,
    current_step_id: Option<String>,
    initiated_by: UserId,
    submitted_at: Option<DateTime<Utc>>,
@@ -378,6 +385,7 @@ impl WorkflowInstance {
          title,
          form_data,
          status: WorkflowInstanceStatus::Draft,
+         version: Version::initial(),
          current_step_id: None,
          initiated_by,
          submitted_at: None,
@@ -397,6 +405,7 @@ impl WorkflowInstance {
       title: String,
       form_data: JsonValue,
       status: WorkflowInstanceStatus,
+      version: Version,
       current_step_id: Option<String>,
       initiated_by: UserId,
       submitted_at: Option<DateTime<Utc>>,
@@ -412,6 +421,7 @@ impl WorkflowInstance {
          title,
          form_data,
          status,
+         version,
          current_step_id,
          initiated_by,
          submitted_at,
@@ -437,6 +447,10 @@ impl WorkflowInstance {
 
    pub fn definition_version(&self) -> Version {
       self.definition_version
+   }
+
+   pub fn version(&self) -> Version {
+      self.version
    }
 
    pub fn title(&self) -> &str {
@@ -549,9 +563,60 @@ impl WorkflowInstance {
       Self {
          current_step_id: Some(step_id),
          status: WorkflowInstanceStatus::InProgress,
+         version: self.version.next(),
          updated_at: Utc::now(),
          ..self
       }
+   }
+
+   /// ステップ承認による完了処理
+   ///
+   /// InProgress 状態のインスタンスを Approved に遷移させる。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: InProgress 以外の状態で呼び出した場合
+   pub fn complete_with_approval(self) -> Result<Self, DomainError> {
+      if self.status != WorkflowInstanceStatus::InProgress {
+         return Err(DomainError::Validation(format!(
+            "承認完了は処理中状態でのみ可能です（現在: {}）",
+            self.status.as_str()
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowInstanceStatus::Approved,
+         version: self.version.next(),
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
+   /// ステップ却下による完了処理
+   ///
+   /// InProgress 状態のインスタンスを Rejected に遷移させる。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: InProgress 以外の状態で呼び出した場合
+   pub fn complete_with_rejection(self) -> Result<Self, DomainError> {
+      if self.status != WorkflowInstanceStatus::InProgress {
+         return Err(DomainError::Validation(format!(
+            "却下完了は処理中状態でのみ可能です（現在: {}）",
+            self.status.as_str()
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowInstanceStatus::Rejected,
+         version: self.version.next(),
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
    }
 }
 
@@ -681,6 +746,7 @@ pub struct WorkflowStep {
    step_name:    String,
    step_type:    String,
    status:       WorkflowStepStatus,
+   version:      Version,
    assigned_to:  Option<UserId>,
    decision:     Option<StepDecision>,
    comment:      Option<String>,
@@ -708,6 +774,7 @@ impl WorkflowStep {
          step_name,
          step_type,
          status: WorkflowStepStatus::Pending,
+         version: Version::initial(),
          assigned_to,
          decision: None,
          comment: None,
@@ -728,6 +795,7 @@ impl WorkflowStep {
       step_name: String,
       step_type: String,
       status: WorkflowStepStatus,
+      version: Version,
       assigned_to: Option<UserId>,
       decision: Option<StepDecision>,
       comment: Option<String>,
@@ -744,6 +812,7 @@ impl WorkflowStep {
          step_name,
          step_type,
          status,
+         version,
          assigned_to,
          decision,
          comment,
@@ -779,6 +848,10 @@ impl WorkflowStep {
 
    pub fn status(&self) -> WorkflowStepStatus {
       self.status
+   }
+
+   pub fn version(&self) -> Version {
+      self.version
    }
 
    pub fn assigned_to(&self) -> Option<&UserId> {
@@ -856,6 +929,60 @@ impl WorkflowStep {
       }
    }
 
+   /// ステップを承認する
+   ///
+   /// Active 状態のステップを Completed (Approved) に遷移させる。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
+   pub fn approve(self, comment: Option<String>) -> Result<Self, DomainError> {
+      if self.status != WorkflowStepStatus::Active {
+         return Err(DomainError::Validation(format!(
+            "承認はアクティブ状態でのみ可能です（現在: {}）",
+            self.status.as_str()
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowStepStatus::Completed,
+         version: self.version.next(),
+         decision: Some(StepDecision::Approved),
+         comment,
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
+   /// ステップを却下する
+   ///
+   /// Active 状態のステップを Completed (Rejected) に遷移させる。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
+   pub fn reject(self, comment: Option<String>) -> Result<Self, DomainError> {
+      if self.status != WorkflowStepStatus::Active {
+         return Err(DomainError::Validation(format!(
+            "却下はアクティブ状態でのみ可能です（現在: {}）",
+            self.status.as_str()
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowStepStatus::Completed,
+         version: self.version.next(),
+         decision: Some(StepDecision::Rejected),
+         comment,
+         completed_at: Some(Utc::now()),
+         updated_at: Utc::now(),
+         ..self
+      })
+   }
+
    /// ステップが期限切れかチェックする
    pub fn is_overdue(&self) -> bool {
       if let Some(due) = self.due_date
@@ -864,5 +991,211 @@ impl WorkflowStep {
          return Utc::now() > due;
       }
       false
+   }
+}
+
+// =========================================================================
+// Tests
+// =========================================================================
+
+#[cfg(test)]
+mod tests {
+   use serde_json::json;
+
+   use super::*;
+
+   // ヘルパー関数
+   fn create_test_instance() -> WorkflowInstance {
+      WorkflowInstance::new(
+         TenantId::new(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         json!({"field": "value"}),
+         UserId::new(),
+      )
+   }
+
+   fn create_test_step(instance_id: WorkflowInstanceId) -> WorkflowStep {
+      WorkflowStep::new(
+         instance_id,
+         "step_1".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(UserId::new()),
+      )
+   }
+
+   // =========================================================================
+   // WorkflowInstance のテスト
+   // =========================================================================
+
+   #[allow(non_snake_case)]
+   mod workflow_instance {
+      use super::*;
+
+      #[test]
+      fn test_新規作成時にversionは1() {
+         let instance = create_test_instance();
+         assert_eq!(instance.version().as_u32(), 1);
+      }
+
+      #[test]
+      fn test_承認完了でステータスがApprovedになる() {
+         let instance = create_test_instance()
+            .submitted()
+            .unwrap()
+            .with_current_step("step_1".to_string());
+
+         let result = instance.complete_with_approval();
+
+         assert!(result.is_ok());
+         let approved = result.unwrap();
+         assert_eq!(approved.status(), WorkflowInstanceStatus::Approved);
+      }
+
+      #[test]
+      fn test_承認完了でversionがインクリメントされる() {
+         let instance = create_test_instance()
+            .submitted()
+            .unwrap()
+            .with_current_step("step_1".to_string());
+         let original_version = instance.version();
+
+         let approved = instance.complete_with_approval().unwrap();
+
+         assert_eq!(approved.version().as_u32(), original_version.as_u32() + 1);
+      }
+
+      #[test]
+      fn test_却下完了でステータスがRejectedになる() {
+         let instance = create_test_instance()
+            .submitted()
+            .unwrap()
+            .with_current_step("step_1".to_string());
+
+         let result = instance.complete_with_rejection();
+
+         assert!(result.is_ok());
+         let rejected = result.unwrap();
+         assert_eq!(rejected.status(), WorkflowInstanceStatus::Rejected);
+      }
+
+      #[test]
+      fn test_却下完了でversionがインクリメントされる() {
+         let instance = create_test_instance()
+            .submitted()
+            .unwrap()
+            .with_current_step("step_1".to_string());
+         let original_version = instance.version();
+
+         let rejected = instance.complete_with_rejection().unwrap();
+
+         assert_eq!(rejected.version().as_u32(), original_version.as_u32() + 1);
+      }
+
+      #[test]
+      fn test_InProgress以外で承認完了するとエラー() {
+         let instance = create_test_instance(); // Draft 状態
+
+         let result = instance.complete_with_approval();
+
+         assert!(result.is_err());
+      }
+
+      #[test]
+      fn test_InProgress以外で却下完了するとエラー() {
+         let instance = create_test_instance(); // Draft 状態
+
+         let result = instance.complete_with_rejection();
+
+         assert!(result.is_err());
+      }
+   }
+
+   // =========================================================================
+   // WorkflowStep のテスト
+   // =========================================================================
+
+   #[allow(non_snake_case)]
+   mod workflow_step {
+      use super::*;
+
+      #[test]
+      fn test_新規作成時にversionは1() {
+         let step = create_test_step(WorkflowInstanceId::new());
+         assert_eq!(step.version().as_u32(), 1);
+      }
+
+      #[test]
+      fn test_approveでCompletedとApprovedになる() {
+         let step = create_test_step(WorkflowInstanceId::new()).activated();
+
+         let result = step.approve(None);
+
+         assert!(result.is_ok());
+         let approved = result.unwrap();
+         assert_eq!(approved.status(), WorkflowStepStatus::Completed);
+         assert_eq!(approved.decision(), Some(StepDecision::Approved));
+      }
+
+      #[test]
+      fn test_approveでversionがインクリメントされる() {
+         let step = create_test_step(WorkflowInstanceId::new()).activated();
+         let original_version = step.version();
+
+         let approved = step.approve(None).unwrap();
+
+         assert_eq!(approved.version().as_u32(), original_version.as_u32() + 1);
+      }
+
+      #[test]
+      fn test_approveでコメントが設定される() {
+         let step = create_test_step(WorkflowInstanceId::new()).activated();
+
+         let approved = step.approve(Some("承認します".to_string())).unwrap();
+
+         assert_eq!(approved.comment(), Some("承認します"));
+      }
+
+      #[test]
+      fn test_rejectでCompletedとRejectedになる() {
+         let step = create_test_step(WorkflowInstanceId::new()).activated();
+
+         let result = step.reject(None);
+
+         assert!(result.is_ok());
+         let rejected = result.unwrap();
+         assert_eq!(rejected.status(), WorkflowStepStatus::Completed);
+         assert_eq!(rejected.decision(), Some(StepDecision::Rejected));
+      }
+
+      #[test]
+      fn test_rejectでversionがインクリメントされる() {
+         let step = create_test_step(WorkflowInstanceId::new()).activated();
+         let original_version = step.version();
+
+         let rejected = step.reject(None).unwrap();
+
+         assert_eq!(rejected.version().as_u32(), original_version.as_u32() + 1);
+      }
+
+      #[test]
+      fn test_Active以外でapproveするとエラー() {
+         let step = create_test_step(WorkflowInstanceId::new()); // Pending 状態
+
+         let result = step.approve(None);
+
+         assert!(result.is_err());
+      }
+
+      #[test]
+      fn test_Active以外でrejectするとエラー() {
+         let step = create_test_step(WorkflowInstanceId::new()); // Pending 状態
+
+         let result = step.reject(None);
+
+         assert!(result.is_err());
+      }
    }
 }

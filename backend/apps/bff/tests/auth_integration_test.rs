@@ -203,6 +203,26 @@ impl CoreServiceClient for StubCoreServiceClient {
       // 認証テストでは未使用
       unimplemented!("get_workflow is not used in auth tests")
    }
+
+   async fn approve_step(
+      &self,
+      _workflow_id: Uuid,
+      _step_id: Uuid,
+      _req: ringiflow_bff::client::ApproveRejectRequest,
+   ) -> Result<ringiflow_bff::client::WorkflowResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("approve_step is not used in auth tests")
+   }
+
+   async fn reject_step(
+      &self,
+      _workflow_id: Uuid,
+      _step_id: Uuid,
+      _req: ringiflow_bff::client::ApproveRejectRequest,
+   ) -> Result<ringiflow_bff::client::WorkflowResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("reject_step is not used in auth tests")
+   }
 }
 
 // --- Auth Service スタブ ---

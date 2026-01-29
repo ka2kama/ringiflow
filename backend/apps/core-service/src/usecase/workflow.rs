@@ -5,6 +5,7 @@
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
+   value_objects::Version,
    workflow::{
       WorkflowDefinition,
       WorkflowDefinitionId,
@@ -12,16 +13,26 @@ use ringiflow_domain::{
       WorkflowInstanceId,
       WorkflowInstanceStatus,
       WorkflowStep,
+      WorkflowStepId,
    },
 };
-use ringiflow_infra::repository::{
-   WorkflowDefinitionRepository,
-   WorkflowInstanceRepository,
-   WorkflowStepRepository,
+use ringiflow_infra::{
+   InfraError,
+   repository::{WorkflowDefinitionRepository, WorkflowInstanceRepository, WorkflowStepRepository},
 };
 use serde_json::Value as JsonValue;
 
 use crate::error::CoreError;
+
+/// ユースケースの出力: ワークフローインスタンスとステップの集約
+///
+/// ドメインモデル (`WorkflowInstance`, `WorkflowStep`) を変更せず、
+/// ユースケースの出力として集約する。詳細取得や承認/却下の結果を
+/// ハンドラに返す際に使用する。
+pub struct WorkflowWithSteps {
+   pub instance: WorkflowInstance,
+   pub steps:    Vec<WorkflowStep>,
+}
 
 /// ワークフロー作成入力
 #[derive(Debug, Clone)]
@@ -39,6 +50,15 @@ pub struct CreateWorkflowInput {
 pub struct SubmitWorkflowInput {
    /// 承認者のユーザー ID
    pub assigned_to: UserId,
+}
+
+/// ステップ承認/却下入力
+#[derive(Debug, Clone)]
+pub struct ApproveRejectInput {
+   /// 楽観的ロック用バージョン
+   pub version: Version,
+   /// コメント（任意）
+   pub comment: Option<String>,
 }
 
 /// ワークフローユースケース実装
@@ -113,7 +133,7 @@ where
       // 4. リポジトリに保存
       self
          .instance_repo
-         .save(&instance)
+         .insert(&instance)
          .await
          .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
 
@@ -184,6 +204,7 @@ where
       let active_step = step.activated();
 
       // 6. ワークフローインスタンスを申請済みに遷移
+      let expected_version = instance.version();
       let submitted_instance = instance
          .submitted()
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
@@ -194,17 +215,221 @@ where
       // 8. インスタンスとステップを保存
       self
          .instance_repo
-         .save(&in_progress_instance)
+         .update_with_version_check(&in_progress_instance, expected_version)
          .await
-         .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "インスタンスは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+         })?;
 
       self
          .step_repo
-         .save(&active_step)
+         .insert(&active_step)
          .await
          .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
 
       Ok(in_progress_instance)
+   }
+
+   // ===== 承認/却下系メソッド =====
+
+   /// ワークフローステップを承認する
+   ///
+   /// ## 処理フロー
+   ///
+   /// 1. ステップを取得
+   /// 2. 権限チェック（担当者のみ承認可能）
+   /// 3. 楽観的ロック（バージョン一致チェック）
+   /// 4. ステップを承認
+   /// 5. インスタンスを完了に遷移
+   /// 6. 保存
+   ///
+   /// ## エラー
+   ///
+   /// - ステップが見つからない場合: 404
+   /// - 権限がない場合: 403
+   /// - Active 以外の場合: 400
+   /// - バージョン不一致の場合: 409
+   pub async fn approve_step(
+      &self,
+      input: ApproveRejectInput,
+      step_id: WorkflowStepId,
+      tenant_id: TenantId,
+      user_id: UserId,
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      // 1. ステップを取得
+      let step = self
+         .step_repo
+         .find_by_id(&step_id, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+
+      // 2. 権限チェック
+      if step.assigned_to() != Some(&user_id) {
+         return Err(CoreError::Forbidden(
+            "このステップを承認する権限がありません".to_string(),
+         ));
+      }
+
+      // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
+      if step.version() != input.version {
+         return Err(CoreError::Conflict(
+            "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+         ));
+      }
+
+      // 4. ステップを承認
+      let step_expected_version = step.version();
+      let approved_step = step
+         .approve(input.comment)
+         .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+
+      // 5. インスタンスを取得して完了に遷移
+      let instance = self
+         .instance_repo
+         .find_by_id(approved_step.instance_id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
+
+      let instance_expected_version = instance.version();
+      let completed_instance = instance
+         .complete_with_approval()
+         .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+
+      // 6. 楽観的ロック付きで保存
+      self
+         .step_repo
+         .update_with_version_check(&approved_step, step_expected_version)
+         .await
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+         })?;
+
+      self
+         .instance_repo
+         .update_with_version_check(&completed_instance, instance_expected_version)
+         .await
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "インスタンスは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+         })?;
+
+      // 7. 保存後のステップ一覧を取得して返却
+      let steps = self
+         .step_repo
+         .find_by_instance(completed_instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps {
+         instance: completed_instance,
+         steps,
+      })
+   }
+
+   /// ワークフローステップを却下する
+   ///
+   /// ## 処理フロー
+   ///
+   /// approve_step と同様だが、却下判定で完了する。
+   ///
+   /// ## エラー
+   ///
+   /// - ステップが見つからない場合: 404
+   /// - 権限がない場合: 403
+   /// - Active 以外の場合: 400
+   /// - バージョン不一致の場合: 409
+   pub async fn reject_step(
+      &self,
+      input: ApproveRejectInput,
+      step_id: WorkflowStepId,
+      tenant_id: TenantId,
+      user_id: UserId,
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      // 1. ステップを取得
+      let step = self
+         .step_repo
+         .find_by_id(&step_id, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+
+      // 2. 権限チェック
+      if step.assigned_to() != Some(&user_id) {
+         return Err(CoreError::Forbidden(
+            "このステップを却下する権限がありません".to_string(),
+         ));
+      }
+
+      // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
+      if step.version() != input.version {
+         return Err(CoreError::Conflict(
+            "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+         ));
+      }
+
+      // 4. ステップを却下
+      let step_expected_version = step.version();
+      let rejected_step = step
+         .reject(input.comment)
+         .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+
+      // 5. インスタンスを取得して却下完了に遷移
+      let instance = self
+         .instance_repo
+         .find_by_id(rejected_step.instance_id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
+
+      let instance_expected_version = instance.version();
+      let completed_instance = instance
+         .complete_with_rejection()
+         .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+
+      // 6. 楽観的ロック付きで保存
+      self
+         .step_repo
+         .update_with_version_check(&rejected_step, step_expected_version)
+         .await
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+         })?;
+
+      self
+         .instance_repo
+         .update_with_version_check(&completed_instance, instance_expected_version)
+         .await
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "インスタンスは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+         })?;
+
+      // 7. 保存後のステップ一覧を取得して返却
+      let steps = self
+         .step_repo
+         .find_by_instance(completed_instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps {
+         instance: completed_instance,
+         steps,
+      })
    }
 
    // ===== GET 系メソッド =====
@@ -305,13 +530,23 @@ where
       &self,
       id: WorkflowInstanceId,
       tenant_id: TenantId,
-   ) -> Result<WorkflowInstance, CoreError> {
-      self
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      let instance = self
          .instance_repo
          .find_by_id(&id, &tenant_id)
          .await
          .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-         .ok_or_else(|| CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string()))
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      let steps = self
+         .step_repo
+         .find_by_instance(&id, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps { instance, steps })
    }
 }
 
@@ -394,12 +629,26 @@ mod tests {
 
    #[async_trait::async_trait]
    impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
-      async fn save(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+      async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+         let mut instances = self.instances.lock().unwrap();
+         instances.push(instance.clone());
+         Ok(())
+      }
+
+      async fn update_with_version_check(
+         &self,
+         instance: &WorkflowInstance,
+         expected_version: Version,
+      ) -> Result<(), InfraError> {
          let mut instances = self.instances.lock().unwrap();
          if let Some(pos) = instances.iter().position(|i| i.id() == instance.id()) {
+            if instances[pos].version() != expected_version {
+               return Err(InfraError::Conflict {
+                  entity: "WorkflowInstance".to_string(),
+                  id:     instance.id().as_uuid().to_string(),
+               });
+            }
             instances[pos] = instance.clone();
-         } else {
-            instances.push(instance.clone());
          }
          Ok(())
       }
@@ -463,12 +712,26 @@ mod tests {
 
    #[async_trait::async_trait]
    impl WorkflowStepRepository for MockWorkflowStepRepository {
-      async fn save(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+      async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+         let mut steps = self.steps.lock().unwrap();
+         steps.push(step.clone());
+         Ok(())
+      }
+
+      async fn update_with_version_check(
+         &self,
+         step: &WorkflowStep,
+         expected_version: Version,
+      ) -> Result<(), InfraError> {
          let mut steps = self.steps.lock().unwrap();
          if let Some(pos) = steps.iter().position(|s| s.id() == step.id()) {
+            if steps[pos].version() != expected_version {
+               return Err(InfraError::Conflict {
+                  entity: "WorkflowStep".to_string(),
+                  id:     step.id().as_uuid().to_string(),
+               });
+            }
             steps[pos] = step.clone();
-         } else {
-            steps.push(step.clone());
          }
          Ok(())
       }
@@ -593,6 +856,314 @@ mod tests {
       assert!(matches!(result, Err(CoreError::NotFound(_))));
    }
 
+   // ===== approve_step テスト =====
+
+   #[tokio::test]
+   async fn test_approve_step_正常系() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      // InProgress のインスタンスを作成
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      // Active なステップを作成
+      let step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      )
+      .activated();
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase =
+         WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
+
+      let input = ApproveRejectInput {
+         version: step.version(),
+         comment: Some("承認しました".to_string()),
+      };
+
+      // Act
+      let result = usecase
+         .approve_step(
+            input,
+            step.id().clone(),
+            tenant_id.clone(),
+            approver_id.clone(),
+         )
+         .await;
+
+      // Assert
+      assert!(result.is_ok());
+      let workflow_with_steps = result.unwrap();
+
+      // 返却されたインスタンスが Approved になっていることを確認
+      assert_eq!(
+         workflow_with_steps.instance.status(),
+         WorkflowInstanceStatus::Approved
+      );
+
+      // 返却されたステップが Completed (Approved) になっていることを確認
+      assert_eq!(workflow_with_steps.steps.len(), 1);
+      assert_eq!(
+         workflow_with_steps.steps[0].status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Completed
+      );
+      assert_eq!(
+         workflow_with_steps.steps[0].decision(),
+         Some(ringiflow_domain::workflow::StepDecision::Approved)
+      );
+   }
+
+   #[tokio::test]
+   async fn test_approve_step_未割り当てユーザーは403() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+      let other_user_id = UserId::new(); // 別のユーザー
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()), // approver_id に割り当て
+      )
+      .activated();
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+
+      let input = ApproveRejectInput {
+         version: step.version(),
+         comment: None,
+      };
+
+      // Act: 別のユーザーで承認を試みる
+      let result = usecase
+         .approve_step(input, step.id().clone(), tenant_id, other_user_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::Forbidden(_))));
+   }
+
+   #[tokio::test]
+   async fn test_approve_step_active以外は400() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      // Pending 状態のステップ（Active ではない）
+      let step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      );
+      // activated() を呼ばないので Pending のまま
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+
+      let input = ApproveRejectInput {
+         version: step.version(),
+         comment: None,
+      };
+
+      // Act
+      let result = usecase
+         .approve_step(input, step.id().clone(), tenant_id, approver_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::BadRequest(_))));
+   }
+
+   #[tokio::test]
+   async fn test_approve_step_バージョン不一致で409() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      )
+      .activated();
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+
+      // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
+      let wrong_version = Version::initial().next();
+      let input = ApproveRejectInput {
+         version: wrong_version,
+         comment: None,
+      };
+
+      // Act
+      let result = usecase
+         .approve_step(input, step.id().clone(), tenant_id, approver_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::Conflict(_))));
+   }
+
+   // ===== reject_step テスト =====
+
+   #[tokio::test]
+   async fn test_reject_step_正常系() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      )
+      .activated();
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase =
+         WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
+
+      let input = ApproveRejectInput {
+         version: step.version(),
+         comment: Some("却下理由".to_string()),
+      };
+
+      // Act
+      let result = usecase
+         .reject_step(
+            input,
+            step.id().clone(),
+            tenant_id.clone(),
+            approver_id.clone(),
+         )
+         .await;
+
+      // Assert
+      assert!(result.is_ok());
+      let workflow_with_steps = result.unwrap();
+
+      // 返却されたインスタンスが Rejected になっていることを確認
+      assert_eq!(
+         workflow_with_steps.instance.status(),
+         WorkflowInstanceStatus::Rejected
+      );
+
+      // 返却されたステップが Completed (Rejected) になっていることを確認
+      assert_eq!(workflow_with_steps.steps.len(), 1);
+      assert_eq!(
+         workflow_with_steps.steps[0].status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Completed
+      );
+      assert_eq!(
+         workflow_with_steps.steps[0].decision(),
+         Some(ringiflow_domain::workflow::StepDecision::Rejected)
+      );
+   }
+
    #[tokio::test]
    async fn test_submit_workflow_正常系() {
       // Arrange
@@ -624,7 +1195,7 @@ mod tests {
          serde_json::json!({}),
          user_id.clone(),
       );
-      instance_repo.save(&instance).await.unwrap();
+      instance_repo.insert(&instance).await.unwrap();
 
       let usecase =
          WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());

@@ -25,12 +25,12 @@ module Page.Workflow.Detail exposing
 
 -}
 
-import Api.Http exposing (ApiError)
+import Api.Http exposing (ApiError(..))
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Data.FormField exposing (FormField)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
-import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance)
+import Data.WorkflowInstance as WorkflowInstance exposing (StepStatus(..), WorkflowInstance, WorkflowStep)
 import Form.DynamicForm as DynamicForm
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -56,6 +56,11 @@ type alias Model =
     -- API データ
     , workflow : RemoteData WorkflowInstance
     , definition : RemoteData WorkflowDefinition
+
+    -- 承認/却下の状態
+    , isSubmitting : Bool
+    , errorMessage : Maybe String
+    , successMessage : Maybe String
     }
 
 
@@ -76,6 +81,9 @@ init session workflowId =
       , workflowId = workflowId
       , workflow = Loading
       , definition = NotAsked
+      , isSubmitting = False
+      , errorMessage = Nothing
+      , successMessage = Nothing
       }
     , WorkflowApi.getWorkflow
         { config = Session.toRequestConfig session
@@ -105,6 +113,11 @@ type Msg
     = GotWorkflow (Result ApiError WorkflowInstance)
     | GotDefinition (Result ApiError WorkflowDefinition)
     | Refresh
+    | ClickApprove WorkflowStep
+    | ClickReject WorkflowStep
+    | GotApproveResult (Result ApiError WorkflowInstance)
+    | GotRejectResult (Result ApiError WorkflowInstance)
+    | DismissMessage
 
 
 {-| 状態更新
@@ -141,13 +154,108 @@ update msg model =
                     )
 
         Refresh ->
-            ( { model | workflow = Loading, definition = NotAsked }
+            ( { model
+                | workflow = Loading
+                , definition = NotAsked
+                , errorMessage = Nothing
+                , successMessage = Nothing
+              }
             , WorkflowApi.getWorkflow
                 { config = Session.toRequestConfig model.session
                 , id = model.workflowId
                 , toMsg = GotWorkflow
                 }
             )
+
+        ClickApprove step ->
+            ( { model | isSubmitting = True, errorMessage = Nothing }
+            , WorkflowApi.approveStep
+                { config = Session.toRequestConfig model.session
+                , workflowId = model.workflowId
+                , stepId = step.id
+                , body = { version = step.version, comment = Nothing }
+                , toMsg = GotApproveResult
+                }
+            )
+
+        ClickReject step ->
+            ( { model | isSubmitting = True, errorMessage = Nothing }
+            , WorkflowApi.rejectStep
+                { config = Session.toRequestConfig model.session
+                , workflowId = model.workflowId
+                , stepId = step.id
+                , body = { version = step.version, comment = Nothing }
+                , toMsg = GotRejectResult
+                }
+            )
+
+        GotApproveResult result ->
+            handleApprovalResult "承認しました" result model
+
+        GotRejectResult result ->
+            handleApprovalResult "却下しました" result model
+
+        DismissMessage ->
+            ( { model | errorMessage = Nothing, successMessage = Nothing }
+            , Cmd.none
+            )
+
+
+{-| 承認/却下結果のハンドリング
+-}
+handleApprovalResult : String -> Result ApiError WorkflowInstance -> Model -> ( Model, Cmd Msg )
+handleApprovalResult successMsg result model =
+    case result of
+        Ok workflow ->
+            ( { model
+                | workflow = Success workflow
+                , isSubmitting = False
+                , successMessage = Just successMsg
+                , errorMessage = Nothing
+              }
+            , Cmd.none
+            )
+
+        Err error ->
+            ( { model
+                | isSubmitting = False
+                , errorMessage = Just (apiErrorToMessage error)
+              }
+            , Cmd.none
+            )
+
+
+{-| API エラーをユーザー向けメッセージに変換
+-}
+apiErrorToMessage : ApiError -> String
+apiErrorToMessage error =
+    case error of
+        Conflict problem ->
+            "このワークフローは既に更新されています。最新の状態を取得してください。（" ++ problem.detail ++ "）"
+
+        Forbidden problem ->
+            "この操作を実行する権限がありません。（" ++ problem.detail ++ "）"
+
+        BadRequest problem ->
+            problem.detail
+
+        NotFound _ ->
+            "ワークフローが見つかりません。"
+
+        Unauthorized ->
+            "ログインが必要です。"
+
+        ServerError _ ->
+            "サーバーエラーが発生しました。"
+
+        NetworkError ->
+            "ネットワークエラーが発生しました。"
+
+        Timeout ->
+            "リクエストがタイムアウトしました。"
+
+        DecodeError _ ->
+            "データの処理中にエラーが発生しました。"
 
 
 
@@ -160,6 +268,7 @@ view : Model -> Html Msg
 view model =
     div [ class "workflow-detail-page" ]
         [ viewHeader
+        , viewMessages model
         , viewContent model
         ]
 
@@ -169,6 +278,30 @@ viewHeader =
     div [ class "page-header" ]
         [ a [ href (Route.toString Route.Workflows), class "back-link" ]
             [ text "← 一覧に戻る" ]
+        ]
+
+
+viewMessages : Model -> Html Msg
+viewMessages model =
+    div [ class "messages" ]
+        [ case model.successMessage of
+            Just msg ->
+                div [ class "alert alert-success" ]
+                    [ text msg
+                    , button [ class "alert-dismiss", onClick DismissMessage ] [ text "×" ]
+                    ]
+
+            Nothing ->
+                text ""
+        , case model.errorMessage of
+            Just msg ->
+                div [ class "alert alert-error" ]
+                    [ text msg
+                    , button [ class "alert-dismiss", onClick DismissMessage ] [ text "×" ]
+                    ]
+
+            Nothing ->
+                text ""
         ]
 
 
@@ -185,7 +318,7 @@ viewContent model =
             viewError
 
         Success workflow ->
-            viewWorkflowDetail workflow model.definition
+            viewWorkflowDetail workflow model.definition model.isSubmitting model.session
 
 
 viewError : Html Msg
@@ -197,11 +330,14 @@ viewError =
         ]
 
 
-viewWorkflowDetail : WorkflowInstance -> RemoteData WorkflowDefinition -> Html Msg
-viewWorkflowDetail workflow maybeDefinition =
+viewWorkflowDetail : WorkflowInstance -> RemoteData WorkflowDefinition -> Bool -> Session -> Html Msg
+viewWorkflowDetail workflow maybeDefinition isSubmitting session =
     div [ class "workflow-detail" ]
         [ viewTitle workflow
         , viewStatus workflow
+        , viewApprovalButtons workflow isSubmitting session
+        , hr [] []
+        , viewSteps workflow
         , hr [] []
         , viewBasicInfo workflow
         , hr [] []
@@ -311,3 +447,131 @@ formatDateTime maybeDateTime =
             -- ISO 8601 から日付と時刻を抽出（簡易実装）
             String.left 16 dateTime
                 |> String.replace "T" " "
+
+
+
+-- APPROVAL VIEWS
+
+
+{-| 承認/却下ボタンを表示
+
+現在のユーザーが担当者に割り当てられているアクティブなステップがある場合のみ表示。
+
+-}
+viewApprovalButtons : WorkflowInstance -> Bool -> Session -> Html Msg
+viewApprovalButtons workflow isSubmitting session =
+    let
+        currentUserId =
+            Session.getUserId session
+    in
+    case findActiveStepForUser workflow.steps currentUserId of
+        Just step ->
+            div [ class "approval-buttons" ]
+                [ button
+                    [ class "btn btn-success"
+                    , onClick (ClickApprove step)
+                    , disabled isSubmitting
+                    ]
+                    [ text
+                        (if isSubmitting then
+                            "処理中..."
+
+                         else
+                            "承認"
+                        )
+                    ]
+                , button
+                    [ class "btn btn-danger"
+                    , onClick (ClickReject step)
+                    , disabled isSubmitting
+                    ]
+                    [ text
+                        (if isSubmitting then
+                            "処理中..."
+
+                         else
+                            "却下"
+                        )
+                    ]
+                ]
+
+        Nothing ->
+            text ""
+
+
+{-| 現在のユーザーが担当のアクティブなステップを探す
+-}
+findActiveStepForUser : List WorkflowStep -> Maybe String -> Maybe WorkflowStep
+findActiveStepForUser steps maybeUserId =
+    case maybeUserId of
+        Nothing ->
+            Nothing
+
+        Just userId ->
+            steps
+                |> List.filter
+                    (\step ->
+                        step.status == WorkflowInstance.StepActive && step.assignedTo == Just userId
+                    )
+                |> List.head
+
+
+{-| ワークフローステップの一覧を表示
+-}
+viewSteps : WorkflowInstance -> Html Msg
+viewSteps workflow =
+    if List.isEmpty workflow.steps then
+        text ""
+
+    else
+        div [ class "workflow-steps" ]
+            [ h2 [] [ text "承認ステップ" ]
+            , ul [ class "step-list" ]
+                (List.map viewStep workflow.steps)
+            ]
+
+
+viewStep : WorkflowStep -> Html Msg
+viewStep step =
+    li [ class ("step-item step-" ++ stepStatusToCssClass step.status) ]
+        [ div [ class "step-header" ]
+            [ span [ class "step-name" ] [ text step.stepName ]
+            , span [ class "step-status" ] [ text (WorkflowInstance.stepStatusToJapanese step.status) ]
+            ]
+        , div [ class "step-details" ]
+            [ case step.assignedTo of
+                Just assignee ->
+                    span [ class "step-assignee" ] [ text ("担当: " ++ assignee) ]
+
+                Nothing ->
+                    text ""
+            , case step.decision of
+                Just decision ->
+                    span [ class "step-decision" ] [ text (WorkflowInstance.decisionToJapanese decision) ]
+
+                Nothing ->
+                    text ""
+            , case step.comment of
+                Just comment ->
+                    span [ class "step-comment" ] [ text ("コメント: " ++ comment) ]
+
+                Nothing ->
+                    text ""
+            ]
+        ]
+
+
+stepStatusToCssClass : StepStatus -> String
+stepStatusToCssClass status =
+    case status of
+        StepPending ->
+            "pending"
+
+        StepActive ->
+            "active"
+
+        StepCompleted ->
+            "completed"
+
+        StepSkipped ->
+            "skipped"

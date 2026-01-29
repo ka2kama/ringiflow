@@ -69,6 +69,7 @@ use config::CoreConfig;
 use handler::{
    UserState,
    WorkflowState,
+   approve_step,
    create_workflow,
    get_user,
    get_user_by_email,
@@ -77,6 +78,7 @@ use handler::{
    health_check,
    list_my_workflows,
    list_workflow_definitions,
+   reject_step,
    submit_workflow,
 };
 use ringiflow_infra::{
@@ -203,6 +205,26 @@ async fn main() -> anyhow::Result<()> {
          "/internal/workflows/{id}/submit",
          post(
             submit_workflow::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/approve",
+         post(
+            approve_step::<
+               PostgresWorkflowDefinitionRepository,
+               PostgresWorkflowInstanceRepository,
+               PostgresWorkflowStepRepository,
+            >,
+         ),
+      )
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/reject",
+         post(
+            reject_step::<
                PostgresWorkflowDefinitionRepository,
                PostgresWorkflowInstanceRepository,
                PostgresWorkflowStepRepository,

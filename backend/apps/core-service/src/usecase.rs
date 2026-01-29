@@ -20,7 +20,13 @@ use ringiflow_domain::{
    user::UserId,
    workflow::{WorkflowInstance, WorkflowInstanceId},
 };
-pub use workflow::{CreateWorkflowInput, SubmitWorkflowInput, WorkflowUseCaseImpl};
+pub use workflow::{
+   ApproveRejectInput,
+   CreateWorkflowInput,
+   SubmitWorkflowInput,
+   WorkflowUseCaseImpl,
+   WorkflowWithSteps,
+};
 
 use crate::error::CoreError;
 

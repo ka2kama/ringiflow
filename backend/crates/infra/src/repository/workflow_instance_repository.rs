@@ -26,7 +26,7 @@ use crate::error::InfraError;
 /// ワークフローインスタンスの永続化操作を定義する。
 #[async_trait]
 pub trait WorkflowInstanceRepository: Send + Sync {
-   /// インスタンスを保存（新規作成または更新）
+   /// 新規インスタンスを作成する
    ///
    /// # 引数
    ///
@@ -34,9 +34,29 @@ pub trait WorkflowInstanceRepository: Send + Sync {
    ///
    /// # 戻り値
    ///
-   /// - `Ok(())`: 保存成功
-   /// - `Err(_)`: データベースエラー
-   async fn save(&self, instance: &WorkflowInstance) -> Result<(), InfraError>;
+   /// - `Ok(())`: 作成成功
+   /// - `Err(_)`: データベースエラー（重複 ID の場合を含む）
+   async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError>;
+
+   /// 楽観的ロック付きでインスタンスを更新する
+   ///
+   /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
+   /// 不一致の場合は `InfraError::Conflict` を返す。
+   ///
+   /// # 引数
+   ///
+   /// - `instance`: 更新後のワークフローインスタンス
+   /// - `expected_version`: 読み取り時のバージョン（DB 上の現在値と一致すべき値）
+   ///
+   /// # エラー
+   ///
+   /// - `InfraError::Conflict`: バージョン不一致（別のリクエストが先に更新済み）
+   /// - `InfraError::Database`: データベースエラー
+   async fn update_with_version_check(
+      &self,
+      instance: &WorkflowInstance,
+      expected_version: Version,
+   ) -> Result<(), InfraError>;
 
    /// ID でインスタンスを取得
    ///
@@ -104,24 +124,16 @@ impl PostgresWorkflowInstanceRepository {
 
 #[async_trait]
 impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
-   async fn save(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+   async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
       sqlx::query!(
          r#"
             INSERT INTO workflow_instances (
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-            ON CONFLICT (id) DO UPDATE SET
-                title = EXCLUDED.title,
-                form_data = EXCLUDED.form_data,
-                status = EXCLUDED.status,
-                current_step_id = EXCLUDED.current_step_id,
-                submitted_at = EXCLUDED.submitted_at,
-                completed_at = EXCLUDED.completed_at,
-                updated_at = EXCLUDED.updated_at
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             "#,
          instance.id().as_uuid(),
          instance.tenant_id().as_uuid(),
@@ -130,6 +142,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          instance.title(),
          instance.form_data(),
          instance.status().as_str(),
+         instance.version().as_i32(),
          instance.current_step_id(),
          instance.initiated_by().as_uuid(),
          instance.submitted_at(),
@@ -143,6 +156,48 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       Ok(())
    }
 
+   async fn update_with_version_check(
+      &self,
+      instance: &WorkflowInstance,
+      expected_version: Version,
+   ) -> Result<(), InfraError> {
+      let result = sqlx::query!(
+         r#"
+            UPDATE workflow_instances SET
+                title = $1,
+                form_data = $2,
+                status = $3,
+                version = $4,
+                current_step_id = $5,
+                submitted_at = $6,
+                completed_at = $7,
+                updated_at = $8
+            WHERE id = $9 AND version = $10
+            "#,
+         instance.title(),
+         instance.form_data(),
+         instance.status().as_str(),
+         instance.version().as_i32(),
+         instance.current_step_id(),
+         instance.submitted_at(),
+         instance.completed_at(),
+         instance.updated_at(),
+         instance.id().as_uuid(),
+         expected_version.as_i32(),
+      )
+      .execute(&self.pool)
+      .await?;
+
+      if result.rows_affected() == 0 {
+         return Err(InfraError::Conflict {
+            entity: "WorkflowInstance".to_string(),
+            id:     instance.id().as_uuid().to_string(),
+         });
+      }
+
+      Ok(())
+   }
+
    async fn find_by_id(
       &self,
       id: &WorkflowInstanceId,
@@ -152,7 +207,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             FROM workflow_instances
@@ -179,6 +234,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          row.status
             .parse::<WorkflowInstanceStatus>()
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         Version::new(row.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.current_step_id,
          UserId::from_uuid(row.initiated_by),
          row.submitted_at,
@@ -198,7 +254,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             FROM workflow_instances
@@ -224,6 +280,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                row.status
                   .parse::<WorkflowInstanceStatus>()
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               Version::new(row.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.current_step_id,
                UserId::from_uuid(row.initiated_by),
                row.submitted_at,
@@ -246,7 +304,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, current_step_id,
+                title, form_data, status, version, current_step_id,
                 initiated_by, submitted_at, completed_at,
                 created_at, updated_at
             FROM workflow_instances
@@ -272,6 +330,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                row.form_data,
                row.status
                   .parse::<WorkflowInstanceStatus>()
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               Version::new(row.version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.current_step_id,
                UserId::from_uuid(row.initiated_by),

@@ -27,7 +27,11 @@ use uuid::Uuid;
 pub const DEV_TENANT_ID: Uuid = Uuid::from_u128(0x00000000_0000_0000_0000_000000000001);
 
 /// 開発用ユーザー ID
-pub const DEV_USER_ID: Uuid = Uuid::from_u128(0x00000000_0000_0000_0000_000000000002);
+///
+/// シードデータの admin ユーザーに対応。
+/// 承認ステップの担当者として設定されているため、
+/// 承認/却下ボタンの動作確認が可能。
+pub const DEV_USER_ID: Uuid = Uuid::from_u128(0x00000000_0000_0000_0000_000000000001);
 
 /// 開発用セッション ID
 ///
@@ -35,13 +39,13 @@ pub const DEV_USER_ID: Uuid = Uuid::from_u128(0x00000000_0000_0000_0000_00000000
 pub const DEV_SESSION_ID: &str = "dev-session";
 
 /// 開発用ユーザーのメールアドレス
-pub const DEV_USER_EMAIL: &str = "dev@example.com";
+pub const DEV_USER_EMAIL: &str = "admin@example.com";
 
 /// 開発用ユーザーの名前
-pub const DEV_USER_NAME: &str = "Development User";
+pub const DEV_USER_NAME: &str = "管理者";
 
 /// 開発用ユーザーのロール
-pub const DEV_USER_ROLES: &[&str] = &["admin"];
+pub const DEV_USER_ROLES: &[&str] = &["tenant_admin"];
 
 /// 開発用セッションをセットアップする
 ///
@@ -99,7 +103,7 @@ mod tests {
    fn test_開発用ユーザーidが固定のuuidである() {
       assert_eq!(
          DEV_USER_ID,
-         Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap()
+         Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
       );
    }
 

@@ -31,9 +31,21 @@ pub enum CoreServiceError {
    #[error("ワークフローインスタンスが見つかりません")]
    WorkflowInstanceNotFound,
 
+   /// ステップが見つからない（404）
+   #[error("ステップが見つかりません")]
+   StepNotFound,
+
    /// バリデーションエラー（400）
    #[error("バリデーションエラー: {0}")]
    ValidationError(String),
+
+   /// 権限不足（403）
+   #[error("権限がありません: {0}")]
+   Forbidden(String),
+
+   /// 競合（409）
+   #[error("競合が発生しました: {0}")]
+   Conflict(String),
 
    /// ネットワークエラー
    #[error("ネットワークエラー: {0}")]
@@ -95,6 +107,34 @@ pub struct SubmitWorkflowRequest {
    pub tenant_id:   Uuid,
 }
 
+/// ステップ承認/却下リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct ApproveRejectRequest {
+   pub version:   i32,
+   pub comment:   Option<String>,
+   pub tenant_id: Uuid,
+   pub user_id:   Uuid,
+}
+
+/// ワークフローステップ DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowStepDto {
+   pub id:           String,
+   pub step_id:      String,
+   pub step_name:    String,
+   pub step_type:    String,
+   pub status:       String,
+   pub version:      i32,
+   pub assigned_to:  Option<String>,
+   pub decision:     Option<String>,
+   pub comment:      Option<String>,
+   pub due_date:     Option<String>,
+   pub started_at:   Option<String>,
+   pub completed_at: Option<String>,
+   pub created_at:   String,
+   pub updated_at:   String,
+}
+
 /// ワークフローインスタンス DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowInstanceDto {
@@ -102,10 +142,14 @@ pub struct WorkflowInstanceDto {
    pub title: String,
    pub definition_id: String,
    pub status: String,
+   pub version: i32,
    pub form_data: serde_json::Value,
    pub initiated_by: String,
    pub current_step_id: Option<String>,
+   #[serde(default)]
+   pub steps: Vec<WorkflowStepDto>,
    pub submitted_at: Option<String>,
+   pub completed_at: Option<String>,
    pub created_at: String,
    pub updated_at: String,
 }
@@ -289,6 +333,48 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       workflow_id: Uuid,
       tenant_id: Uuid,
+   ) -> Result<WorkflowResponse, CoreServiceError>;
+
+   // ===== 承認/却下系メソッド =====
+
+   /// ワークフローステップを承認する
+   ///
+   /// Core Service の `POST /internal/workflows/{id}/steps/{step_id}/approve` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `workflow_id`: ワークフローインスタンス ID
+   /// - `step_id`: ステップ ID
+   /// - `req`: 承認リクエスト
+   ///
+   /// # 戻り値
+   ///
+   /// 更新されたワークフローインスタンス（ステップ情報含む）
+   async fn approve_step(
+      &self,
+      workflow_id: Uuid,
+      step_id: Uuid,
+      req: ApproveRejectRequest,
+   ) -> Result<WorkflowResponse, CoreServiceError>;
+
+   /// ワークフローステップを却下する
+   ///
+   /// Core Service の `POST /internal/workflows/{id}/steps/{step_id}/reject` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `workflow_id`: ワークフローインスタンス ID
+   /// - `step_id`: ステップ ID
+   /// - `req`: 却下リクエスト
+   ///
+   /// # 戻り値
+   ///
+   /// 更新されたワークフローインスタンス（ステップ情報含む）
+   async fn reject_step(
+      &self,
+      workflow_id: Uuid,
+      step_id: Uuid,
+      req: ApproveRejectRequest,
    ) -> Result<WorkflowResponse, CoreServiceError>;
 }
 
@@ -530,6 +616,90 @@ impl CoreServiceClient for CoreServiceClientImpl {
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   // ===== 承認/却下系メソッドの実装 =====
+
+   async fn approve_step(
+      &self,
+      workflow_id: Uuid,
+      step_id: Uuid,
+      req: ApproveRejectRequest,
+   ) -> Result<WorkflowResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/{}/steps/{}/approve",
+         self.base_url, workflow_id, step_id
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<WorkflowResponse>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::ValidationError(body))
+         }
+         reqwest::StatusCode::FORBIDDEN => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Forbidden(body))
+         }
+         reqwest::StatusCode::CONFLICT => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Conflict(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn reject_step(
+      &self,
+      workflow_id: Uuid,
+      step_id: Uuid,
+      req: ApproveRejectRequest,
+   ) -> Result<WorkflowResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/{}/steps/{}/reject",
+         self.base_url, workflow_id, step_id
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<WorkflowResponse>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::ValidationError(body))
+         }
+         reqwest::StatusCode::FORBIDDEN => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Forbidden(body))
+         }
+         reqwest::StatusCode::CONFLICT => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Conflict(body))
+         }
          status => {
             let body = response.text().await.unwrap_or_default();
             Err(CoreServiceError::Unexpected(format!(

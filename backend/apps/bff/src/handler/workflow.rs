@@ -99,10 +99,68 @@ pub struct SubmitWorkflowRequest {
    pub assigned_to: Uuid,
 }
 
+/// ステップ承認/却下リクエスト（BFF 公開 API）
+#[derive(Debug, Deserialize)]
+pub struct ApproveRejectRequest {
+   /// 楽観的ロック用バージョン
+   pub version: i32,
+   /// コメント（任意）
+   pub comment: Option<String>,
+}
+
+/// ステップパスパラメータ
+#[derive(Debug, Deserialize)]
+pub struct StepPathParams {
+   /// ワークフローインスタンス ID
+   pub id:      Uuid,
+   /// ステップ ID
+   pub step_id: Uuid,
+}
+
 /// ワークフローレスポンス
 #[derive(Debug, Serialize)]
 pub struct WorkflowResponse {
    pub data: WorkflowData,
+}
+
+/// ワークフローステップデータ
+#[derive(Debug, Serialize)]
+pub struct WorkflowStepData {
+   pub id:           String,
+   pub step_id:      String,
+   pub step_name:    String,
+   pub step_type:    String,
+   pub status:       String,
+   pub version:      i32,
+   pub assigned_to:  Option<String>,
+   pub decision:     Option<String>,
+   pub comment:      Option<String>,
+   pub due_date:     Option<String>,
+   pub started_at:   Option<String>,
+   pub completed_at: Option<String>,
+   pub created_at:   String,
+   pub updated_at:   String,
+}
+
+impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
+   fn from(dto: crate::client::WorkflowStepDto) -> Self {
+      Self {
+         id:           dto.id,
+         step_id:      dto.step_id,
+         step_name:    dto.step_name,
+         step_type:    dto.step_type,
+         status:       dto.status,
+         version:      dto.version,
+         assigned_to:  dto.assigned_to,
+         decision:     dto.decision,
+         comment:      dto.comment,
+         due_date:     dto.due_date,
+         started_at:   dto.started_at,
+         completed_at: dto.completed_at,
+         created_at:   dto.created_at,
+         updated_at:   dto.updated_at,
+      }
+   }
 }
 
 /// ワークフローデータ
@@ -112,10 +170,13 @@ pub struct WorkflowData {
    pub title: String,
    pub definition_id: String,
    pub status: String,
+   pub version: i32,
    pub form_data: serde_json::Value,
    pub initiated_by: String,
    pub current_step_id: Option<String>,
+   pub steps: Vec<WorkflowStepData>,
    pub submitted_at: Option<String>,
+   pub completed_at: Option<String>,
    pub created_at: String,
    pub updated_at: String,
 }
@@ -137,10 +198,13 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
          title: dto.title,
          definition_id: dto.definition_id,
          status: dto.status,
+         version: dto.version,
          form_data: dto.form_data,
          initiated_by: dto.initiated_by,
          current_step_id: dto.current_step_id,
+         steps: dto.steps.into_iter().map(WorkflowStepData::from).collect(),
          submitted_at: dto.submitted_at,
+         completed_at: dto.completed_at,
          created_at: dto.created_at,
          updated_at: dto.updated_at,
       }
@@ -415,6 +479,34 @@ fn validation_error_response(detail: &str) -> Response {
       .into_response()
 }
 
+/// 403 Forbidden レスポンス
+fn forbidden_response(detail: &str) -> Response {
+   (
+      StatusCode::FORBIDDEN,
+      Json(ErrorResponse {
+         error_type: "https://ringiflow.example.com/errors/forbidden".to_string(),
+         title:      "Forbidden".to_string(),
+         status:     403,
+         detail:     detail.to_string(),
+      }),
+   )
+      .into_response()
+}
+
+/// 409 Conflict レスポンス
+fn conflict_response(detail: &str) -> Response {
+   (
+      StatusCode::CONFLICT,
+      Json(ErrorResponse {
+         error_type: "https://ringiflow.example.com/errors/conflict".to_string(),
+         title:      "Conflict".to_string(),
+         status:     409,
+         detail:     detail.to_string(),
+      }),
+   )
+      .into_response()
+}
+
 // ===== GET ハンドラ =====
 
 /// GET /api/v1/workflow-definitions
@@ -631,6 +723,140 @@ where
       ),
       Err(e) => {
          tracing::error!("ワークフロー取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+// ===== 承認/却下ハンドラ =====
+
+/// POST /api/v1/workflows/{id}/steps/{step_id}/approve
+///
+/// ワークフローステップを承認する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id`, `user_id` を取得
+/// 2. Core Service の `POST /internal/workflows/{id}/steps/{step_id}/approve` を呼び出し
+/// 3. 200 OK + 更新されたワークフローを返す
+pub async fn approve_step<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   let core_req = crate::client::ApproveRejectRequest {
+      version:   req.version,
+      comment:   req.comment,
+      tenant_id: *session_data.tenant_id().as_uuid(),
+      user_id:   *session_data.user_id().as_uuid(),
+   };
+
+   match state
+      .core_service_client
+      .approve_step(params.id, params.step_id, core_req)
+      .await
+   {
+      Ok(core_response) => {
+         let response = WorkflowResponse {
+            data: core_response.data.into(),
+         };
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(CoreServiceError::StepNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/step-not-found",
+         "Step Not Found",
+         "ステップが見つかりません",
+      ),
+      Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
+      Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
+      Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
+      Err(e) => {
+         tracing::error!("ステップ承認で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+/// POST /api/v1/workflows/{id}/steps/{step_id}/reject
+///
+/// ワークフローステップを却下する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id`, `user_id` を取得
+/// 2. Core Service の `POST /internal/workflows/{id}/steps/{step_id}/reject` を呼び出し
+/// 3. 200 OK + 更新されたワークフローを返す
+pub async fn reject_step<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   let core_req = crate::client::ApproveRejectRequest {
+      version:   req.version,
+      comment:   req.comment,
+      tenant_id: *session_data.tenant_id().as_uuid(),
+      user_id:   *session_data.user_id().as_uuid(),
+   };
+
+   match state
+      .core_service_client
+      .reject_step(params.id, params.step_id, core_req)
+      .await
+   {
+      Ok(core_response) => {
+         let response = WorkflowResponse {
+            data: core_response.data.into(),
+         };
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(CoreServiceError::StepNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/step-not-found",
+         "Step Not Found",
+         "ステップが見つかりません",
+      ),
+      Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
+      Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
+      Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
+      Err(e) => {
+         tracing::error!("ステップ却下で内部エラー: {}", e);
          internal_error_response()
       }
    }
