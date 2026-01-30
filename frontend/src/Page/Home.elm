@@ -8,7 +8,7 @@ KPI 統計情報（承認待ち、申請中、本日完了）とクイックア�
 -}
 
 import Api.Dashboard as DashboardApi
-import Api.Http exposing (ApiError(..))
+import Api.Http exposing (ApiError)
 import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -129,8 +129,45 @@ viewStats remoteStats =
 -}
 viewStatsCards : DashboardStats -> Html Msg
 viewStatsCards stats =
-    -- TODO(human): 実装してください
-    div [] []
+    -- TODO(human): KPI カードのデザインを実装してください
+    -- 現在はプレースホルダーとして数値のみ表示
+    div
+        [ style "display" "flex"
+        , style "gap" "1rem"
+        , style "margin-top" "1rem"
+        ]
+        [ viewStatCard "承認待ちタスク" stats.pendingTasks "#e8f0fe" "#1a73e8"
+        , viewStatCard "申請中" stats.myWorkflowsInProgress "#fef7e0" "#ea8600"
+        , viewStatCard "本日完了" stats.completedToday "#e6f4ea" "#34a853"
+        ]
+
+
+{-| 統計カード（単体）
+
+TODO(human): カードのデザインを改善してください
+
+-}
+viewStatCard : String -> Int -> String -> String -> Html Msg
+viewStatCard label value bgColor textColor =
+    div
+        [ style "flex" "1"
+        , style "padding" "1.5rem"
+        , style "background-color" bgColor
+        , style "border-radius" "8px"
+        , style "text-align" "center"
+        ]
+        [ div
+            [ style "font-size" "2rem"
+            , style "font-weight" "bold"
+            , style "color" textColor
+            ]
+            [ text (String.fromInt value) ]
+        , div
+            [ style "margin-top" "0.5rem"
+            , style "color" "#5f6368"
+            ]
+            [ text label ]
+        ]
 
 
 {-| クイックアクションエリア

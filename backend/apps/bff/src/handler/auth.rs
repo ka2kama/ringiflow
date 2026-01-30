@@ -746,6 +746,15 @@ mod tests {
          // テストスタブでは未使用
          unimplemented!("get_task is not used in auth tests")
       }
+
+      async fn get_dashboard_stats(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<crate::client::DashboardStatsResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("get_dashboard_stats is not used in auth tests")
+      }
    }
 
    struct StubAuthServiceClient {

@@ -242,6 +242,15 @@ impl CoreServiceClient for StubCoreServiceClient {
       // 認証テストでは未使用
       unimplemented!("get_task is not used in auth tests")
    }
+
+   async fn get_dashboard_stats(
+      &self,
+      _tenant_id: Uuid,
+      _user_id: Uuid,
+   ) -> Result<ringiflow_bff::client::DashboardStatsResponse, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("get_dashboard_stats is not used in auth tests")
+   }
 }
 
 // --- Auth Service スタブ ---
