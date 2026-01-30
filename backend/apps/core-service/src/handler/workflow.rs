@@ -28,6 +28,7 @@ use ringiflow_infra::repository::{
    WorkflowInstanceRepository,
    WorkflowStepRepository,
 };
+use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -105,30 +106,6 @@ pub struct UserQuery {
    pub tenant_id: Uuid,
    /// ユーザー ID
    pub user_id:   Uuid,
-}
-
-/// ワークフローレスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowResponse {
-   pub data: WorkflowInstanceDto,
-}
-
-/// ワークフロー一覧レスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowListResponse {
-   pub data: Vec<WorkflowInstanceDto>,
-}
-
-/// ワークフロー定義レスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowDefinitionResponse {
-   pub data: WorkflowDefinitionDto,
-}
-
-/// ワークフロー定義一覧レスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowDefinitionListResponse {
-   pub data: Vec<WorkflowDefinitionDto>,
 }
 
 /// ワークフロー定義 DTO
@@ -303,9 +280,7 @@ where
       .await?;
 
    // レスポンスを返す
-   let response = WorkflowResponse {
-      data: WorkflowInstanceDto::from(instance),
-   };
+   let response = ApiResponse::new(WorkflowInstanceDto::from(instance));
 
    Ok((StatusCode::CREATED, Json(response)).into_response())
 }
@@ -344,9 +319,7 @@ where
       .await?;
 
    // レスポンスを返す
-   let response = WorkflowResponse {
-      data: WorkflowInstanceDto::from(instance),
-   };
+   let response = ApiResponse::new(WorkflowInstanceDto::from(instance));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -375,12 +348,12 @@ where
 
    let definitions = state.usecase.list_workflow_definitions(tenant_id).await?;
 
-   let response = WorkflowDefinitionListResponse {
-      data: definitions
+   let response = ApiResponse::new(
+      definitions
          .into_iter()
          .map(WorkflowDefinitionDto::from)
-         .collect(),
-   };
+         .collect::<Vec<_>>(),
+   );
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -413,9 +386,7 @@ where
       .get_workflow_definition(definition_id, tenant_id)
       .await?;
 
-   let response = WorkflowDefinitionResponse {
-      data: WorkflowDefinitionDto::from(definition),
-   };
+   let response = ApiResponse::new(WorkflowDefinitionDto::from(definition));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -443,12 +414,12 @@ where
 
    let workflows = state.usecase.list_my_workflows(tenant_id, user_id).await?;
 
-   let response = WorkflowListResponse {
-      data: workflows
+   let response = ApiResponse::new(
+      workflows
          .into_iter()
          .map(WorkflowInstanceDto::from)
-         .collect(),
-   };
+         .collect::<Vec<_>>(),
+   );
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -478,9 +449,7 @@ where
 
    let workflow_with_steps = state.usecase.get_workflow(instance_id, tenant_id).await?;
 
-   let response = WorkflowResponse {
-      data: WorkflowInstanceDto::from(workflow_with_steps),
-   };
+   let response = ApiResponse::new(WorkflowInstanceDto::from(workflow_with_steps));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -523,9 +492,7 @@ where
       .approve_step(input, step_id, tenant_id, user_id)
       .await?;
 
-   let response = WorkflowResponse {
-      data: WorkflowInstanceDto::from(workflow_with_steps),
-   };
+   let response = ApiResponse::new(WorkflowInstanceDto::from(workflow_with_steps));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -566,9 +533,7 @@ where
       .reject_step(input, step_id, tenant_id, user_id)
       .await?;
 
-   let response = WorkflowResponse {
-      data: WorkflowInstanceDto::from(workflow_with_steps),
-   };
+   let response = ApiResponse::new(WorkflowInstanceDto::from(workflow_with_steps));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }

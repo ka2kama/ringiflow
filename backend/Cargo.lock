@@ -1682,6 +1682,7 @@ dependencies = [
  "reqwest",
  "ringiflow-domain",
  "ringiflow-infra",
+ "ringiflow-shared",
  "serde",
  "serde_json",
  "subtle",
@@ -1709,6 +1710,7 @@ dependencies = [
  "pretty_assertions",
  "ringiflow-domain",
  "ringiflow-infra",
+ "ringiflow-shared",
  "serde",
  "serde_json",
  "sqlx",
@@ -1759,6 +1761,10 @@ dependencies = [
 [[package]]
 name = "ringiflow-shared"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "rsa"

@@ -21,6 +21,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::{SessionData, SessionManager};
+use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -29,7 +30,7 @@ use crate::client::{
    AuthServiceError,
    CoreServiceClient,
    CoreServiceError,
-   UserWithPermissionsResponse,
+   UserWithPermissionsData,
 };
 
 /// Cookie 名
@@ -89,12 +90,6 @@ pub struct LoginRequest {
    pub password: String,
 }
 
-/// ログインレスポンス
-#[derive(Debug, Serialize)]
-pub struct LoginResponse {
-   pub data: LoginResponseData,
-}
-
 /// ログインレスポンスデータ
 #[derive(Debug, Serialize)]
 pub struct LoginResponseData {
@@ -111,12 +106,6 @@ pub struct LoginUserResponse {
    pub roles:     Vec<String>,
 }
 
-/// 現在のユーザー情報レスポンス
-#[derive(Debug, Serialize)]
-pub struct MeResponse {
-   pub data: MeResponseData,
-}
-
 /// 現在のユーザー情報データ
 #[derive(Debug, Serialize)]
 pub struct MeResponseData {
@@ -129,8 +118,8 @@ pub struct MeResponseData {
    pub permissions: Vec<String>,
 }
 
-impl From<UserWithPermissionsResponse> for MeResponseData {
-   fn from(res: UserWithPermissionsResponse) -> Self {
+impl From<UserWithPermissionsData> for MeResponseData {
+   fn from(res: UserWithPermissionsData) -> Self {
       Self {
          id:          res.user.id,
          email:       res.user.email,
@@ -142,12 +131,6 @@ impl From<UserWithPermissionsResponse> for MeResponseData {
          permissions: res.permissions,
       }
    }
-}
-
-/// CSRF トークンレスポンス
-#[derive(Debug, Serialize)]
-pub struct CsrfResponse {
-   pub data: CsrfResponseData,
 }
 
 /// CSRF トークンデータ
@@ -220,7 +203,7 @@ where
 
    match user_result {
       Ok(user_response) => {
-         let user = &user_response.user;
+         let user = &user_response.data;
 
          // Step 2: Auth Service でパスワードを検証
          let verify_result = state
@@ -245,7 +228,7 @@ where
                   TenantId::from_uuid(user.tenant_id),
                   user.email.clone(),
                   user.name.clone(),
-                  user_with_roles.roles.clone(),
+                  user_with_roles.data.roles.clone(),
                );
 
                match state.session_manager.create(&session_data).await {
@@ -266,17 +249,15 @@ where
                      let jar = jar.add(cookie);
 
                      // レスポンスを返す
-                     let response = LoginResponse {
-                        data: LoginResponseData {
-                           user: LoginUserResponse {
-                              id:        user.id,
-                              email:     user.email.clone(),
-                              name:      user.name.clone(),
-                              tenant_id: user.tenant_id,
-                              roles:     user_with_roles.roles,
-                           },
+                     let response = ApiResponse::new(LoginResponseData {
+                        user: LoginUserResponse {
+                           id:        user.id,
+                           email:     user.email.clone(),
+                           name:      user.name.clone(),
+                           tenant_id: user.tenant_id,
+                           roles:     user_with_roles.data.roles,
                         },
-                     };
+                     });
 
                      (jar, Json(response)).into_response()
                   }
@@ -392,9 +373,7 @@ where
          let user_id = *session_data.user_id().as_uuid();
          match state.core_service_client.get_user(user_id).await {
             Ok(user_info) => {
-               let response = MeResponse {
-                  data: MeResponseData::from(user_info),
-               };
+               let response = ApiResponse::new(MeResponseData::from(user_info.data));
                (StatusCode::OK, Json(response)).into_response()
             }
             Err(CoreServiceError::UserNotFound) => {
@@ -473,9 +452,7 @@ where
             }
          };
 
-         let response = CsrfResponse {
-            data: CsrfResponseData { token },
-         };
+         let response = ApiResponse::new(CsrfResponseData { token });
          (StatusCode::OK, Json(response)).into_response()
       }
       Ok(None) => unauthorized_response(),
@@ -603,13 +580,13 @@ mod tests {
    use uuid::Uuid;
 
    use super::*;
-   use crate::client::{GetUserByEmailResponse, UserResponse, VerifyResponse};
+   use crate::client::{UserResponse, VerifyResponse};
 
    // テスト用スタブ
 
    struct StubCoreServiceClient {
-      user_by_email_result: Result<GetUserByEmailResponse, CoreServiceError>,
-      get_user_result:      Result<UserWithPermissionsResponse, CoreServiceError>,
+      user_by_email_result: Result<ApiResponse<UserResponse>, CoreServiceError>,
+      get_user_result:      Result<ApiResponse<UserWithPermissionsData>, CoreServiceError>,
    }
 
    impl StubCoreServiceClient {
@@ -622,12 +599,12 @@ mod tests {
             status:    "active".to_string(),
          };
          Self {
-            user_by_email_result: Ok(GetUserByEmailResponse { user: user.clone() }),
-            get_user_result:      Ok(UserWithPermissionsResponse {
+            user_by_email_result: Ok(ApiResponse::new(user.clone())),
+            get_user_result:      Ok(ApiResponse::new(UserWithPermissionsData {
                user,
                roles: vec!["user".to_string()],
                permissions: vec!["workflow:read".to_string()],
-            }),
+            })),
          }
       }
 
@@ -645,21 +622,21 @@ mod tests {
          &self,
          _tenant_id: Uuid,
          _email: &str,
-      ) -> Result<GetUserByEmailResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
          self.user_by_email_result.clone()
       }
 
       async fn get_user(
          &self,
          _user_id: Uuid,
-      ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
          self.get_user_result.clone()
       }
 
       async fn create_workflow(
          &self,
          _req: crate::client::CreateWorkflowRequest,
-      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("create_workflow is not used in auth tests")
       }
@@ -668,7 +645,7 @@ mod tests {
          &self,
          _workflow_id: Uuid,
          _req: crate::client::SubmitWorkflowRequest,
-      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("submit_workflow is not used in auth tests")
       }
@@ -676,7 +653,7 @@ mod tests {
       async fn list_workflow_definitions(
          &self,
          _tenant_id: Uuid,
-      ) -> Result<crate::client::WorkflowDefinitionListResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<Vec<crate::client::WorkflowDefinitionDto>>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("list_workflow_definitions is not used in auth tests")
       }
@@ -685,7 +662,7 @@ mod tests {
          &self,
          _definition_id: Uuid,
          _tenant_id: Uuid,
-      ) -> Result<crate::client::WorkflowDefinitionResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::WorkflowDefinitionDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("get_workflow_definition is not used in auth tests")
       }
@@ -694,7 +671,7 @@ mod tests {
          &self,
          _tenant_id: Uuid,
          _user_id: Uuid,
-      ) -> Result<crate::client::WorkflowListResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<Vec<crate::client::WorkflowInstanceDto>>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("list_my_workflows is not used in auth tests")
       }
@@ -703,7 +680,7 @@ mod tests {
          &self,
          _workflow_id: Uuid,
          _tenant_id: Uuid,
-      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("get_workflow is not used in auth tests")
       }
@@ -713,7 +690,7 @@ mod tests {
          _workflow_id: Uuid,
          _step_id: Uuid,
          _req: crate::client::ApproveRejectRequest,
-      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("approve_step is not used in auth tests")
       }
@@ -723,7 +700,7 @@ mod tests {
          _workflow_id: Uuid,
          _step_id: Uuid,
          _req: crate::client::ApproveRejectRequest,
-      ) -> Result<crate::client::WorkflowResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("reject_step is not used in auth tests")
       }
@@ -732,7 +709,7 @@ mod tests {
          &self,
          _tenant_id: Uuid,
          _user_id: Uuid,
-      ) -> Result<crate::client::TaskListResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<Vec<crate::client::TaskItemDto>>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("list_my_tasks is not used in auth tests")
       }
@@ -742,7 +719,7 @@ mod tests {
          _task_id: Uuid,
          _tenant_id: Uuid,
          _user_id: Uuid,
-      ) -> Result<crate::client::TaskDetailResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("get_task is not used in auth tests")
       }
@@ -751,7 +728,7 @@ mod tests {
          &self,
          _tenant_id: Uuid,
          _user_id: Uuid,
-      ) -> Result<crate::client::DashboardStatsResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<crate::client::DashboardStatsDto>, CoreServiceError> {
          // テストスタブでは未使用
          unimplemented!("get_dashboard_stats is not used in auth tests")
       }

@@ -16,6 +16,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_infra::SessionManager;
+use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 
 use super::workflow::{WorkflowState, extract_tenant_id, get_session, internal_error_response};
@@ -39,12 +40,6 @@ impl From<DashboardStatsDto> for DashboardStatsData {
          completed_today: dto.completed_today,
       }
    }
-}
-
-/// ダッシュボード統計レスポンス
-#[derive(Debug, Serialize)]
-pub struct DashboardStatsResponse {
-   pub data: DashboardStatsData,
 }
 
 // --- ハンドラ ---
@@ -80,9 +75,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = DashboardStatsResponse {
-            data: DashboardStatsData::from(core_response.data),
-         };
+         let response = ApiResponse::new(DashboardStatsData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(e) => {

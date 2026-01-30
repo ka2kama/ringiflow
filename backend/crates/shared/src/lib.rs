@@ -7,3 +7,7 @@
 //! - 他のすべてのクレート（domain, infra, api）から依存される
 //! - ビジネスロジックを含まない純粋なユーティリティのみを配置
 //! - 外部クレートへの依存は最小限に抑える
+
+pub mod api_response;
+
+pub use api_response::ApiResponse;
