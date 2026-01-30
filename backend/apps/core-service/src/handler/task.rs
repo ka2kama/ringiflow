@@ -16,6 +16,7 @@ use ringiflow_domain::{
    workflow::{WorkflowInstance, WorkflowStepId},
 };
 use ringiflow_infra::repository::{WorkflowInstanceRepository, WorkflowStepRepository};
+use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -28,12 +29,6 @@ use crate::{
 /// タスクハンドラーの State
 pub struct TaskState<I, S> {
    pub usecase: TaskUseCaseImpl<I, S>,
-}
-
-/// タスク一覧レスポンス
-#[derive(Debug, Serialize)]
-pub struct TaskListResponse {
-   pub data: Vec<TaskItemDto>,
 }
 
 /// タスク一覧の要素 DTO
@@ -88,12 +83,6 @@ impl From<TaskItem> for TaskItemDto {
    }
 }
 
-/// タスク詳細レスポンス
-#[derive(Debug, Serialize)]
-pub struct TaskDetailResponse {
-   pub data: TaskDetailDto,
-}
-
 /// タスク詳細 DTO
 #[derive(Debug, Serialize)]
 pub struct TaskDetailDto {
@@ -133,9 +122,7 @@ where
 
    let tasks = state.usecase.list_my_tasks(tenant_id, user_id).await?;
 
-   let response = TaskListResponse {
-      data: tasks.into_iter().map(TaskItemDto::from).collect(),
-   };
+   let response = ApiResponse::new(tasks.into_iter().map(TaskItemDto::from).collect::<Vec<_>>());
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -159,9 +146,7 @@ where
 
    let detail = state.usecase.get_task(step_id, tenant_id, user_id).await?;
 
-   let response = TaskDetailResponse {
-      data: TaskDetailDto::from(detail),
-   };
+   let response = ApiResponse::new(TaskDetailDto::from(detail));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }

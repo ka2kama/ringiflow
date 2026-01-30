@@ -46,12 +46,12 @@ use ringiflow_bff::{
       UserResponse,
       UserWithPermissionsResponse,
       VerifyResponse,
-      WorkflowResponse,
    },
    handler::{AuthState, csrf, login, logout, me},
    middleware::{CsrfState, csrf_middleware},
 };
 use ringiflow_infra::{RedisSessionManager, SessionManager};
+use ringiflow_shared::ApiResponse;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -155,7 +155,7 @@ impl CoreServiceClient for StubCoreServiceClient {
    async fn create_workflow(
       &self,
       _req: CreateWorkflowRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("create_workflow is not used in auth tests")
    }
@@ -164,7 +164,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _workflow_id: Uuid,
       _req: SubmitWorkflowRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("submit_workflow is not used in auth tests")
    }
@@ -172,7 +172,8 @@ impl CoreServiceClient for StubCoreServiceClient {
    async fn list_workflow_definitions(
       &self,
       _tenant_id: Uuid,
-   ) -> Result<ringiflow_bff::client::WorkflowDefinitionListResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::WorkflowDefinitionDto>>, CoreServiceError>
+   {
       // 認証テストでは未使用
       unimplemented!("list_workflow_definitions is not used in auth tests")
    }
@@ -181,7 +182,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _definition_id: Uuid,
       _tenant_id: Uuid,
-   ) -> Result<ringiflow_bff::client::WorkflowDefinitionResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowDefinitionDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("get_workflow_definition is not used in auth tests")
    }
@@ -190,7 +191,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _tenant_id: Uuid,
       _user_id: Uuid,
-   ) -> Result<ringiflow_bff::client::WorkflowListResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::WorkflowInstanceDto>>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("list_my_workflows is not used in auth tests")
    }
@@ -199,7 +200,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _workflow_id: Uuid,
       _tenant_id: Uuid,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("get_workflow is not used in auth tests")
    }
@@ -209,7 +210,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       _workflow_id: Uuid,
       _step_id: Uuid,
       _req: ringiflow_bff::client::ApproveRejectRequest,
-   ) -> Result<ringiflow_bff::client::WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("approve_step is not used in auth tests")
    }
@@ -219,7 +220,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       _workflow_id: Uuid,
       _step_id: Uuid,
       _req: ringiflow_bff::client::ApproveRejectRequest,
-   ) -> Result<ringiflow_bff::client::WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("reject_step is not used in auth tests")
    }
@@ -228,7 +229,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _tenant_id: Uuid,
       _user_id: Uuid,
-   ) -> Result<ringiflow_bff::client::TaskListResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::TaskItemDto>>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("list_my_tasks is not used in auth tests")
    }
@@ -238,7 +239,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       _task_id: Uuid,
       _tenant_id: Uuid,
       _user_id: Uuid,
-   ) -> Result<ringiflow_bff::client::TaskDetailResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::TaskDetailDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("get_task is not used in auth tests")
    }
@@ -247,7 +248,7 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _tenant_id: Uuid,
       _user_id: Uuid,
-   ) -> Result<ringiflow_bff::client::DashboardStatsResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<ringiflow_bff::client::DashboardStatsDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("get_dashboard_stats is not used in auth tests")
    }

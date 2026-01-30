@@ -31,6 +31,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::SessionManager;
+use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -115,12 +116,6 @@ pub struct StepPathParams {
    pub id:      Uuid,
    /// ステップ ID
    pub step_id: Uuid,
-}
-
-/// ワークフローレスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowResponse {
-   pub data: WorkflowData,
 }
 
 /// ワークフローステップデータ
@@ -211,24 +206,6 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
    }
 }
 
-/// ワークフロー一覧レスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowListResponse {
-   pub data: Vec<WorkflowData>,
-}
-
-/// ワークフロー定義レスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowDefinitionResponse {
-   pub data: WorkflowDefinitionData,
-}
-
-/// ワークフロー定義一覧レスポンス
-#[derive(Debug, Serialize)]
-pub struct WorkflowDefinitionListResponse {
-   pub data: Vec<WorkflowDefinitionData>,
-}
-
 /// ワークフロー定義データ
 #[derive(Debug, Serialize)]
 pub struct WorkflowDefinitionData {
@@ -303,9 +280,7 @@ where
 
    match state.core_service_client.create_workflow(core_req).await {
       Ok(core_response) => {
-         let response = WorkflowResponse {
-            data: core_response.data.into(),
-         };
+         let response = ApiResponse::new(WorkflowData::from(core_response.data));
          (StatusCode::CREATED, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowDefinitionNotFound) => not_found_response(
@@ -365,9 +340,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowResponse {
-            data: core_response.data.into(),
-         };
+         let response = ApiResponse::new(WorkflowData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
@@ -546,13 +519,13 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowDefinitionListResponse {
-            data: core_response
+         let response = ApiResponse::new(
+            core_response
                .data
                .into_iter()
                .map(WorkflowDefinitionData::from)
-               .collect(),
-         };
+               .collect::<Vec<_>>(),
+         );
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(e) => {
@@ -600,9 +573,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowDefinitionResponse {
-            data: WorkflowDefinitionData::from(core_response.data),
-         };
+         let response = ApiResponse::new(WorkflowDefinitionData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowDefinitionNotFound) => not_found_response(
@@ -657,13 +628,13 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowListResponse {
-            data: core_response
+         let response = ApiResponse::new(
+            core_response
                .data
                .into_iter()
                .map(WorkflowData::from)
-               .collect(),
-         };
+               .collect::<Vec<_>>(),
+         );
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(e) => {
@@ -711,9 +682,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowResponse {
-            data: WorkflowData::from(core_response.data),
-         };
+         let response = ApiResponse::new(WorkflowData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
@@ -776,9 +745,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowResponse {
-            data: core_response.data.into(),
-         };
+         let response = ApiResponse::new(WorkflowData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::StepNotFound) => not_found_response(
@@ -842,9 +809,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = WorkflowResponse {
-            data: core_response.data.into(),
-         };
+         let response = ApiResponse::new(WorkflowData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::StepNotFound) => not_found_response(

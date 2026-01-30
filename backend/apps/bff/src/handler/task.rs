@@ -17,6 +17,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_infra::SessionManager;
+use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -86,12 +87,6 @@ impl From<crate::client::TaskItemDto> for TaskItemData {
    }
 }
 
-/// タスク一覧レスポンス
-#[derive(Debug, Serialize)]
-pub struct TaskListResponse {
-   pub data: Vec<TaskItemData>,
-}
-
 /// タスク詳細データ
 #[derive(Debug, Serialize)]
 pub struct TaskDetailData {
@@ -106,12 +101,6 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
          workflow: WorkflowData::from(dto.workflow),
       }
    }
-}
-
-/// タスク詳細レスポンス
-#[derive(Debug, Serialize)]
-pub struct TaskDetailResponse {
-   pub data: TaskDetailData,
 }
 
 // --- ハンドラ ---
@@ -147,13 +136,13 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = TaskListResponse {
-            data: core_response
+         let response = ApiResponse::new(
+            core_response
                .data
                .into_iter()
                .map(TaskItemData::from)
-               .collect(),
-         };
+               .collect::<Vec<_>>(),
+         );
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(e) => {
@@ -196,9 +185,7 @@ where
       .await
    {
       Ok(core_response) => {
-         let response = TaskDetailResponse {
-            data: TaskDetailData::from(core_response.data),
-         };
+         let response = ApiResponse::new(TaskDetailData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::StepNotFound) => not_found_response(

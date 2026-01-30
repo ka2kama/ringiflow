@@ -13,6 +13,7 @@ use axum::{
 use chrono::Utc;
 use ringiflow_domain::{tenant::TenantId, user::UserId};
 use ringiflow_infra::repository::{WorkflowInstanceRepository, WorkflowStepRepository};
+use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 
 use crate::{error::CoreError, handler::workflow::UserQuery, usecase::dashboard::DashboardStats};
@@ -20,12 +21,6 @@ use crate::{error::CoreError, handler::workflow::UserQuery, usecase::dashboard::
 /// ダッシュボードハンドラーの State
 pub struct DashboardState<I, S> {
    pub usecase: crate::usecase::DashboardUseCaseImpl<I, S>,
-}
-
-/// ダッシュボード統計レスポンス
-#[derive(Debug, Serialize)]
-pub struct DashboardStatsResponse {
-   pub data: DashboardStatsDto,
 }
 
 /// ダッシュボード統計 DTO
@@ -66,9 +61,7 @@ where
       .get_stats(tenant_id, user_id, Utc::now())
       .await?;
 
-   let response = DashboardStatsResponse {
-      data: DashboardStatsDto::from(stats),
-   };
+   let response = ApiResponse::new(DashboardStatsDto::from(stats));
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }

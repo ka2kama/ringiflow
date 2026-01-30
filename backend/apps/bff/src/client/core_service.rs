@@ -12,6 +12,7 @@
 //! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 use async_trait::async_trait;
+use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -154,18 +155,6 @@ pub struct WorkflowInstanceDto {
    pub updated_at: String,
 }
 
-/// ワークフローレスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct WorkflowResponse {
-   pub data: WorkflowInstanceDto,
-}
-
-/// ワークフロー一覧レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct WorkflowListResponse {
-   pub data: Vec<WorkflowInstanceDto>,
-}
-
 /// ワークフロー定義 DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowDefinitionDto {
@@ -178,18 +167,6 @@ pub struct WorkflowDefinitionDto {
    pub created_by:  String,
    pub created_at:  String,
    pub updated_at:  String,
-}
-
-/// ワークフロー定義レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct WorkflowDefinitionResponse {
-   pub data: WorkflowDefinitionDto,
-}
-
-/// ワークフロー定義一覧レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct WorkflowDefinitionListResponse {
-   pub data: Vec<WorkflowDefinitionDto>,
 }
 
 // --- タスク関連の型 ---
@@ -218,23 +195,11 @@ pub struct TaskItemDto {
    pub workflow:    TaskWorkflowSummaryDto,
 }
 
-/// タスク一覧レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct TaskListResponse {
-   pub data: Vec<TaskItemDto>,
-}
-
 /// タスク詳細 DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct TaskDetailDto {
    pub step:     WorkflowStepDto,
    pub workflow: WorkflowInstanceDto,
-}
-
-/// タスク詳細レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct TaskDetailResponse {
-   pub data: TaskDetailDto,
 }
 
 // --- ダッシュボード関連の型 ---
@@ -245,12 +210,6 @@ pub struct DashboardStatsDto {
    pub pending_tasks: i64,
    pub my_workflows_in_progress: i64,
    pub completed_today: i64,
-}
-
-/// ダッシュボード統計レスポンス
-#[derive(Debug, Clone, Deserialize)]
-pub struct DashboardStatsResponse {
-   pub data: DashboardStatsDto,
 }
 
 /// Core Service クライアントトレイト
@@ -304,7 +263,7 @@ pub trait CoreServiceClient: Send + Sync {
    async fn create_workflow(
       &self,
       req: CreateWorkflowRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 
    /// ワークフローを申請する
    ///
@@ -322,7 +281,7 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       workflow_id: Uuid,
       req: SubmitWorkflowRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 
    // ===== GET 系メソッド =====
 
@@ -340,7 +299,7 @@ pub trait CoreServiceClient: Send + Sync {
    async fn list_workflow_definitions(
       &self,
       tenant_id: Uuid,
-   ) -> Result<WorkflowDefinitionListResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<Vec<WorkflowDefinitionDto>>, CoreServiceError>;
 
    /// ワークフロー定義の詳細を取得する
    ///
@@ -358,7 +317,7 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       definition_id: Uuid,
       tenant_id: Uuid,
-   ) -> Result<WorkflowDefinitionResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
 
    /// 自分のワークフロー一覧を取得する
    ///
@@ -376,7 +335,7 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<WorkflowListResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<Vec<WorkflowInstanceDto>>, CoreServiceError>;
 
    /// ワークフローの詳細を取得する
    ///
@@ -394,7 +353,7 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       workflow_id: Uuid,
       tenant_id: Uuid,
-   ) -> Result<WorkflowResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 
    // ===== 承認/却下系メソッド =====
 
@@ -416,7 +375,7 @@ pub trait CoreServiceClient: Send + Sync {
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 
    /// ワークフローステップを却下する
    ///
@@ -436,7 +395,7 @@ pub trait CoreServiceClient: Send + Sync {
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 
    // ===== タスク系メソッド =====
 
@@ -447,7 +406,7 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<TaskListResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<Vec<TaskItemDto>>, CoreServiceError>;
 
    /// タスク詳細を取得する
    ///
@@ -457,7 +416,7 @@ pub trait CoreServiceClient: Send + Sync {
       task_id: Uuid,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<TaskDetailResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError>;
 
    // ===== ダッシュボード系メソッド =====
 
@@ -468,7 +427,7 @@ pub trait CoreServiceClient: Send + Sync {
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<DashboardStatsResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<DashboardStatsDto>, CoreServiceError>;
 }
 
 /// Core Service クライアント実装
@@ -551,14 +510,14 @@ impl CoreServiceClient for CoreServiceClientImpl {
    async fn create_workflow(
       &self,
       req: CreateWorkflowRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
       let url = format!("{}/internal/workflows", self.base_url);
 
       let response = self.client.post(&url).json(&req).send().await?;
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowResponse>().await?;
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowDefinitionNotFound),
@@ -580,7 +539,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       workflow_id: Uuid,
       req: SubmitWorkflowRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows/{}/submit",
          self.base_url, workflow_id
@@ -590,7 +549,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowResponse>().await?;
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
@@ -613,7 +572,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
    async fn list_workflow_definitions(
       &self,
       tenant_id: Uuid,
-   ) -> Result<WorkflowDefinitionListResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<Vec<WorkflowDefinitionDto>>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflow-definitions?tenant_id={}",
          self.base_url, tenant_id
@@ -623,7 +582,9 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowDefinitionListResponse>().await?;
+            let body = response
+               .json::<ApiResponse<Vec<WorkflowDefinitionDto>>>()
+               .await?;
             Ok(body)
          }
          status => {
@@ -640,7 +601,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       definition_id: Uuid,
       tenant_id: Uuid,
-   ) -> Result<WorkflowDefinitionResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflow-definitions/{}?tenant_id={}",
          self.base_url, definition_id, tenant_id
@@ -650,7 +611,9 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowDefinitionResponse>().await?;
+            let body = response
+               .json::<ApiResponse<WorkflowDefinitionDto>>()
+               .await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowDefinitionNotFound),
@@ -668,7 +631,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<WorkflowListResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<Vec<WorkflowInstanceDto>>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows?tenant_id={}&user_id={}",
          self.base_url, tenant_id, user_id
@@ -678,7 +641,9 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowListResponse>().await?;
+            let body = response
+               .json::<ApiResponse<Vec<WorkflowInstanceDto>>>()
+               .await?;
             Ok(body)
          }
          status => {
@@ -695,7 +660,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       workflow_id: Uuid,
       tenant_id: Uuid,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows/{}?tenant_id={}",
          self.base_url, workflow_id, tenant_id
@@ -705,7 +670,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowResponse>().await?;
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
@@ -726,7 +691,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows/{}/steps/{}/approve",
          self.base_url, workflow_id, step_id
@@ -736,7 +701,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowResponse>().await?;
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
@@ -767,7 +732,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       workflow_id: Uuid,
       step_id: Uuid,
       req: ApproveRejectRequest,
-   ) -> Result<WorkflowResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/workflows/{}/steps/{}/reject",
          self.base_url, workflow_id, step_id
@@ -777,7 +742,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<WorkflowResponse>().await?;
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
@@ -809,7 +774,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<TaskListResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<Vec<TaskItemDto>>, CoreServiceError> {
       let url = format!(
          "{}/internal/tasks/my?tenant_id={}&user_id={}",
          self.base_url, tenant_id, user_id
@@ -819,7 +784,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<TaskListResponse>().await?;
+            let body = response.json::<ApiResponse<Vec<TaskItemDto>>>().await?;
             Ok(body)
          }
          status => {
@@ -837,7 +802,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       task_id: Uuid,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<TaskDetailResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/tasks/{}?tenant_id={}&user_id={}",
          self.base_url, task_id, tenant_id, user_id
@@ -847,7 +812,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<TaskDetailResponse>().await?;
+            let body = response.json::<ApiResponse<TaskDetailDto>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
@@ -871,7 +836,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
-   ) -> Result<DashboardStatsResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<DashboardStatsDto>, CoreServiceError> {
       let url = format!(
          "{}/internal/dashboard/stats?tenant_id={}&user_id={}",
          self.base_url, tenant_id, user_id
@@ -881,7 +846,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<DashboardStatsResponse>().await?;
+            let body = response.json::<ApiResponse<DashboardStatsDto>>().await?;
             Ok(body)
          }
          status => {
