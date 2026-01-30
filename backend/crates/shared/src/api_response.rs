@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 /// 公開 API の統一レスポンス型
 ///
 /// すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-/// この型は BFF（Serialize）と Core Service（Serialize）、
-/// および BFF クライアント（Deserialize）の両方で使用される。
+/// この型は以下の場所で使用される:
+/// - Core Service ハンドラ（Serialize でレスポンスを返す）
+/// - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+/// - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
 ///
 /// ## 使用例
 ///
