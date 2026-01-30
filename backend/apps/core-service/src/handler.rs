@@ -13,11 +13,13 @@
 //! - `task`: タスク操作
 
 pub mod auth;
+pub mod dashboard;
 pub mod health;
 pub mod task;
 pub mod workflow;
 
 pub use auth::{UserState, get_user, get_user_by_email};
+pub use dashboard::{DashboardState, get_dashboard_stats};
 pub use health::health_check;
 pub use task::{TaskState, get_task, list_my_tasks};
 pub use workflow::{

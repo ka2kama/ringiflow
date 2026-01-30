@@ -12,10 +12,12 @@
 //!
 //! - `workflow`: ワークフロー関連のユースケース
 
+pub mod dashboard;
 pub mod task;
 pub mod workflow;
 
 use async_trait::async_trait;
+pub use dashboard::DashboardUseCaseImpl;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
