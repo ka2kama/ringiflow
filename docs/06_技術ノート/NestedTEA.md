@@ -89,7 +89,7 @@ type alias Model =
     { key : Nav.Key
     , url : Url
     , route : Route
-    , session : Session      -- グローバル状態
+    , shared : Shared      -- グローバル状態
     , page : Page            -- 現在のページ状態
     }
 ```
@@ -135,13 +135,13 @@ update msg model =
 ### ページ初期化
 
 ```elm
-initPage : Route -> Session -> ( Page, Cmd Msg )
-initPage route session =
+initPage : Route -> Shared -> ( Page, Cmd Msg )
+initPage route shared =
     case route of
         Route.Workflows ->
             let
                 ( pageModel, pageCmd ) =
-                    WorkflowList.init session
+                    WorkflowList.init shared
             in
             ( WorkflowsPage pageModel
             , Cmd.map WorkflowsMsg pageCmd
@@ -150,7 +150,7 @@ initPage route session =
         Route.WorkflowNew ->
             let
                 ( pageModel, pageCmd ) =
-                    WorkflowNew.init session
+                    WorkflowNew.init shared
             in
             ( WorkflowNewPage pageModel
             , Cmd.map WorkflowNewMsg pageCmd
@@ -225,12 +225,12 @@ sequenceDiagram
     Model-->>View: ワークフロー一覧を表示
 ```
 
-## Session（グローバル状態）
+## Shared（グローバル状態）
 
-ページ間で共有する状態は Session で管理:
+ページ間で共有する状態は Shared で管理:
 
 ```elm
-type alias Session =
+type alias Shared =
     { user : Maybe User
     , tenantId : String
     , csrfToken : Maybe String
@@ -240,10 +240,10 @@ type alias Session =
 
 使用パターン:
 
-1. Main が Session を保持
-2. ページ init 時に Session を渡す
-3. ページは Session を読み取り専用で使用
-4. Session 変更が必要な場合は Main 経由
+1. Main が Shared を保持
+2. ページ init 時に Shared を渡す
+3. ページは Shared を読み取り専用で使用
+4. Shared 変更が必要な場合は Main 経由
 
 ## 新ページ追加チェックリスト
 
@@ -252,10 +252,10 @@ type alias Session =
 ```elm
 module Page.Workflow.Example exposing (Model, Msg, init, update, view)
 
-type alias Model = { session : Session, ... }
+type alias Model = { shared : Shared, ... }
 type Msg = ...
 
-init : Session -> ( Model, Cmd Msg )
+init : Shared -> ( Model, Cmd Msg )
 update : Msg -> Model -> ( Model, Cmd Msg )
 view : Model -> Html Msg
 ```
@@ -284,7 +284,7 @@ type Msg = ... | WorkflowExampleMsg Example.Msg
 | 分割統治 | 各ページのロジックを独立したモジュールで管理 |
 | 型安全 | 存在しないページ遷移は型エラーで検出 |
 | テスト容易 | ページの update/view を単独でテスト可能 |
-| 状態分離 | グローバル（Session）とローカル（フォーム）を明確に分離 |
+| 状態分離 | グローバル（Shared）とローカル（フォーム）を明確に分離 |
 
 | デメリット | 対策 |
 |-----------|------|
