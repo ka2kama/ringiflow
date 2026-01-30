@@ -174,19 +174,19 @@ async fn main() -> anyhow::Result<()> {
    let app = Router::new()
       .route("/health", get(health_check))
       .route(
-         "/auth/login",
+         "/api/v1/auth/login",
          post(login::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/auth/logout",
+         "/api/v1/auth/logout",
          post(logout::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/auth/me",
+         "/api/v1/auth/me",
          get(me::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/auth/csrf",
+         "/api/v1/auth/csrf",
          get(csrf::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
       )
       .with_state(auth_state)

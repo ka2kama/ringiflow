@@ -20,7 +20,6 @@ graph LR
     end
 
     subgraph BFF["BFF (公開)"]
-        Auth["/auth/*"]
         API["/api/v1/*"]
     end
 
@@ -28,9 +27,7 @@ graph LR
         Internal["内部 API"]
     end
 
-    SPA --> Auth
     SPA --> API
-    Auth --> Internal
     API --> Internal
 ```
 
@@ -67,7 +64,7 @@ API 設計の一般的なパターンはナレッジベースを参照。
 
 ## 認証 API
 
-### POST /auth/login
+### POST /api/v1/auth/login
 
 メール/パスワードでログインする。
 
@@ -111,7 +108,7 @@ Set-Cookie: session_id=xxx; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2880
 
 ---
 
-### POST /auth/logout
+### POST /api/v1/auth/logout
 
 ログアウトする。
 
@@ -126,7 +123,7 @@ Set-Cookie: session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
 
 ---
 
-### GET /auth/me
+### GET /api/v1/auth/me
 
 現在のユーザー情報を取得する。
 
@@ -157,7 +154,7 @@ Set-Cookie: session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
 
 ---
 
-### GET /auth/csrf
+### GET /api/v1/auth/csrf
 
 CSRF トークンを取得する。
 
@@ -694,7 +691,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Redis as Redis
 
-    Browser->>BFF: POST /auth/login
+    Browser->>BFF: POST /api/v1/auth/login
     BFF->>Core: 認証リクエスト
     Core->>DB: ユーザー検証
     DB-->>Core: ユーザー情報
@@ -702,7 +699,7 @@ sequenceDiagram
     BFF->>Redis: セッション保存
     BFF-->>Browser: Set-Cookie: session_id
 
-    Browser->>BFF: GET /auth/csrf
+    Browser->>BFF: GET /api/v1/auth/csrf
     BFF->>Redis: CSRF トークン生成・保存
     BFF-->>Browser: CSRF トークン
 

@@ -12,13 +12,13 @@
 //!
 //! ## テストケース
 //!
-//! - ログイン → /auth/me → ログアウトの一連フロー
-//! - ログアウト後に /auth/me で 401
+//! - ログイン → /api/v1/auth/me → ログアウトの一連フロー
+//! - ログアウト後に /api/v1/auth/me で 401
 //! - 不正なパスワードでログインできない
 //! - 存在しないメールでログインできない
 //! - 非アクティブユーザーはログインできない
 //! - CSRF トークン: ログイン成功時に生成される
-//! - CSRF トークン: GET /auth/csrf で取得できる
+//! - CSRF トークン: GET /api/v1/auth/csrf で取得できる
 //! - CSRF トークン: 正しいトークンで POST リクエストが成功する
 //! - CSRF トークン: トークンなしで POST リクエストが 403 になる
 //! - CSRF トークン: 不正なトークンで POST リクエストが 403 になる
@@ -329,19 +329,19 @@ async fn create_test_app(
 
    let app = Router::new()
       .route(
-         "/auth/login",
+         "/api/v1/auth/login",
          post(login::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .route(
-         "/auth/logout",
+         "/api/v1/auth/logout",
          post(logout::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .route(
-         "/auth/me",
+         "/api/v1/auth/me",
          get(me::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .route(
-         "/auth/csrf",
+         "/api/v1/auth/csrf",
          get(csrf::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
       )
       .with_state(state.clone())
@@ -362,7 +362,7 @@ fn login_request(email: &str, password: &str) -> Request<Body> {
 
    Request::builder()
       .method(Method::POST)
-      .uri("/auth/login")
+      .uri("/api/v1/auth/login")
       .header("content-type", "application/json")
       .header("X-Tenant-ID", test_tenant_id().to_string())
       .body(Body::from(serde_json::to_string(&body).unwrap()))
@@ -373,29 +373,29 @@ fn login_request(email: &str, password: &str) -> Request<Body> {
 fn logout_request(session_cookie: &str) -> Request<Body> {
    Request::builder()
       .method(Method::POST)
-      .uri("/auth/logout")
+      .uri("/api/v1/auth/logout")
       .header("X-Tenant-ID", test_tenant_id().to_string())
       .header("Cookie", format!("session_id={}", session_cookie))
       .body(Body::empty())
       .unwrap()
 }
 
-/// /auth/me リクエストを作成
+/// /api/v1/auth/me リクエストを作成
 fn me_request(session_cookie: &str) -> Request<Body> {
    Request::builder()
       .method(Method::GET)
-      .uri("/auth/me")
+      .uri("/api/v1/auth/me")
       .header("X-Tenant-ID", test_tenant_id().to_string())
       .header("Cookie", format!("session_id={}", session_cookie))
       .body(Body::empty())
       .unwrap()
 }
 
-/// /auth/me リクエストを作成（Cookie なし）
+/// /api/v1/auth/me リクエストを作成（Cookie なし）
 fn me_request_without_cookie() -> Request<Body> {
    Request::builder()
       .method(Method::GET)
-      .uri("/auth/me")
+      .uri("/api/v1/auth/me")
       .header("X-Tenant-ID", test_tenant_id().to_string())
       .body(Body::empty())
       .unwrap()
@@ -442,7 +442,7 @@ async fn test_ログインからログアウトまでの一連フロー() {
    let session_id = extract_session_id(set_cookie).expect("セッション ID が設定されていない");
    assert!(!session_id.is_empty());
 
-   // When: /auth/me でユーザー情報を取得
+   // When: /api/v1/auth/me でユーザー情報を取得
    let me_response = app.clone().oneshot(me_request(&session_id)).await.unwrap();
 
    // Then: ユーザー情報が返る
@@ -530,7 +530,7 @@ async fn test_ログアウト後にauthmeで401() {
       .await
       .unwrap();
 
-   // When: ログアウト後に /auth/me にアクセス
+   // When: ログアウト後に /api/v1/auth/me にアクセス
    let me_response = app.clone().oneshot(me_request(&session_id)).await.unwrap();
 
    // Then: 401 Unauthorized
@@ -609,7 +609,7 @@ async fn test_未認証状態でauthmeにアクセスすると401() {
    )
    .await;
 
-   // When: Cookie なしで /auth/me にアクセス
+   // When: Cookie なしで /api/v1/auth/me にアクセス
    let response = app.oneshot(me_request_without_cookie()).await.unwrap();
 
    // Then
@@ -618,11 +618,11 @@ async fn test_未認証状態でauthmeにアクセスすると401() {
 
 // --- CSRF トークン統合テスト ---
 
-/// /auth/csrf リクエストを作成
+/// /api/v1/auth/csrf リクエストを作成
 fn csrf_request(session_cookie: &str) -> Request<Body> {
    Request::builder()
       .method(Method::GET)
-      .uri("/auth/csrf")
+      .uri("/api/v1/auth/csrf")
       .header("X-Tenant-ID", test_tenant_id().to_string())
       .header("Cookie", format!("session_id={}", session_cookie))
       .body(Body::empty())
@@ -633,7 +633,7 @@ fn csrf_request(session_cookie: &str) -> Request<Body> {
 fn logout_request_with_csrf(session_cookie: &str, csrf_token: &str) -> Request<Body> {
    Request::builder()
       .method(Method::POST)
-      .uri("/auth/logout")
+      .uri("/api/v1/auth/logout")
       .header("X-Tenant-ID", test_tenant_id().to_string())
       .header("Cookie", format!("session_id={}", session_cookie))
       .header("X-CSRF-Token", csrf_token)
@@ -710,7 +710,7 @@ async fn test_csrfトークン_get_auth_csrfで取得できる() {
       .unwrap();
    let session_id = extract_session_id(set_cookie).unwrap();
 
-   // When: GET /auth/csrf でトークンを取得
+   // When: GET /api/v1/auth/csrf でトークンを取得
    let csrf_response = app
       .clone()
       .oneshot(csrf_request(&session_id))

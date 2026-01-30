@@ -26,7 +26,7 @@ const CSRF_HEADER: &str = "X-CSRF-Token";
 const SESSION_COOKIE_NAME: &str = "session_id";
 
 /// CSRF 検証をスキップするパス
-const CSRF_SKIP_PATHS: &[&str] = &["/auth/login", "/auth/csrf", "/health"];
+const CSRF_SKIP_PATHS: &[&str] = &["/api/v1/auth/login", "/api/v1/auth/csrf", "/health"];
 
 /// CSRF 検証の状態
 #[derive(Clone)]
