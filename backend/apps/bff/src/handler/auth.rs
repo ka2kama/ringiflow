@@ -4,9 +4,9 @@
 //!
 //! ## エンドポイント
 //!
-//! - `POST /auth/login` - ログイン
-//! - `POST /auth/logout` - ログアウト
-//! - `GET /auth/me` - 現在のユーザー情報を取得
+//! - `POST /api/v1/auth/login` - ログイン
+//! - `POST /api/v1/auth/logout` - ログアウト
+//! - `GET /api/v1/auth/me` - 現在のユーザー情報を取得
 //!
 //! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
@@ -151,7 +151,7 @@ pub struct ErrorResponse {
 
 // --- ハンドラ ---
 
-/// POST /auth/login
+/// POST /api/v1/auth/login
 ///
 /// メール/パスワードでログインし、セッションを確立する。
 ///
@@ -293,7 +293,7 @@ where
    }
 }
 
-/// POST /auth/logout
+/// POST /api/v1/auth/logout
 ///
 /// セッションを無効化してログアウトする。
 pub async fn logout<C, A, S>(
@@ -339,7 +339,7 @@ where
    (jar, StatusCode::NO_CONTENT).into_response()
 }
 
-/// GET /auth/me
+/// GET /api/v1/auth/me
 ///
 /// 現在のユーザー情報と権限を取得する。
 pub async fn me<C, A, S>(
@@ -394,7 +394,7 @@ where
    }
 }
 
-/// GET /auth/csrf
+/// GET /api/v1/auth/csrf
 ///
 /// CSRF トークンを取得する。
 /// セッションが存在しない場合は新規作成し、存在する場合は既存のトークンを返す。
@@ -873,19 +873,19 @@ mod tests {
 
       Router::new()
          .route(
-            "/auth/login",
+            "/api/v1/auth/login",
             post(login::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
-            "/auth/logout",
+            "/api/v1/auth/logout",
             post(logout::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
-            "/auth/me",
+            "/api/v1/auth/me",
             get(me::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .route(
-            "/auth/csrf",
+            "/api/v1/auth/csrf",
             get(csrf::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
          )
          .with_state(state)
@@ -911,7 +911,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::POST)
-         .uri("/auth/login")
+         .uri("/api/v1/auth/login")
          .header("content-type", "application/json")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .body(Body::from(serde_json::to_string(&body).unwrap()))
@@ -947,7 +947,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::POST)
-         .uri("/auth/login")
+         .uri("/api/v1/auth/login")
          .header("content-type", "application/json")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .body(Body::from(serde_json::to_string(&body).unwrap()))
@@ -985,7 +985,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::POST)
-         .uri("/auth/login")
+         .uri("/api/v1/auth/login")
          .header("content-type", "application/json")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .body(Body::from(serde_json::to_string(&body).unwrap()))
@@ -1014,7 +1014,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::POST)
-         .uri("/auth/login")
+         .uri("/api/v1/auth/login")
          .header("content-type", "application/json")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .body(Body::from(serde_json::to_string(&body).unwrap()))
@@ -1038,7 +1038,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::POST)
-         .uri("/auth/logout")
+         .uri("/api/v1/auth/logout")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .header("Cookie", "session_id=test-session-id")
          .body(Body::empty())
@@ -1071,7 +1071,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::GET)
-         .uri("/auth/me")
+         .uri("/api/v1/auth/me")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .header("Cookie", "session_id=test-session-id")
          .body(Body::empty())
@@ -1105,7 +1105,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::GET)
-         .uri("/auth/me")
+         .uri("/api/v1/auth/me")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          // Cookie なし
          .body(Body::empty())
@@ -1135,7 +1135,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::POST)
-         .uri("/auth/login")
+         .uri("/api/v1/auth/login")
          .header("content-type", "application/json")
          // X-Tenant-ID ヘッダーなし
          .body(Body::from(serde_json::to_string(&body).unwrap()))
@@ -1163,7 +1163,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::GET)
-         .uri("/auth/csrf")
+         .uri("/api/v1/auth/csrf")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          .header("Cookie", "session_id=test-session-id")
          .body(Body::empty())
@@ -1196,7 +1196,7 @@ mod tests {
 
       let request = Request::builder()
          .method(Method::GET)
-         .uri("/auth/csrf")
+         .uri("/api/v1/auth/csrf")
          .header("X-Tenant-ID", TEST_TENANT_ID)
          // Cookie なし
          .body(Body::empty())

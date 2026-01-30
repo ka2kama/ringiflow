@@ -7,7 +7,7 @@
 # 前提: ログインしてワークフローを作成
 # =============================================================================
 
-POST {{bff_url}}/auth/login
+POST {{bff_url}}/api/v1/auth/login
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
@@ -20,7 +20,7 @@ HTTP 200
 session_cookie: cookie "session_id"
 
 # CSRF トークンを取得
-GET {{bff_url}}/auth/csrf
+GET {{bff_url}}/api/v1/auth/csrf
 X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 

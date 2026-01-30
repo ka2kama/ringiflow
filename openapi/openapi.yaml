@@ -45,7 +45,7 @@ paths:
   # ============================================================
   # 認証 API
   # ============================================================
-  /auth/login:
+  /api/v1/auth/login:
     post:
       tags:
         - auth
@@ -96,7 +96,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /auth/logout:
+  /api/v1/auth/logout:
     post:
       tags:
         - auth
@@ -120,7 +120,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /auth/me:
+  /api/v1/auth/me:
     get:
       tags:
         - auth
@@ -139,7 +139,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /auth/csrf:
+  /api/v1/auth/csrf:
     get:
       tags:
         - auth
@@ -769,7 +769,7 @@ components:
       name: X-CSRF-Token
       in: header
       required: true
-      description: CSRF トークン（/auth/csrf で取得）
+      description: CSRF トークン（/api/v1/auth/csrf で取得）
       schema:
         type: string
       example: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

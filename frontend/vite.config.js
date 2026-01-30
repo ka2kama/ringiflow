@@ -22,10 +22,6 @@ export default defineConfig({
         target: `http://localhost:${process.env.BFF_PORT}`,
         changeOrigin: true,
       },
-      "/auth": {
-        target: `http://localhost:${process.env.BFF_PORT}`,
-        changeOrigin: true,
-      },
     },
   },
 

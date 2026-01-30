@@ -2,7 +2,7 @@ module Api.Auth exposing (getCsrfToken, getMe)
 
 {-| 認証 API クライアント
 
-BFF の `/auth` エンドポイントへのアクセスを提供。
+BFF の `/api/v1/auth` エンドポイントへのアクセスを提供。
 
 
 ## 使用例
@@ -30,7 +30,7 @@ import Shared exposing (User)
 
 {-| CSRF トークンを取得
 
-`GET /auth/csrf`
+`GET /api/v1/auth/csrf`
 
 状態変更リクエスト（POST/PUT/DELETE）で必要な CSRF トークンを取得する。
 セッションが存在しない場合は 401 Unauthorized が返される。
@@ -44,7 +44,7 @@ getCsrfToken :
 getCsrfToken { config, toMsg } =
     Api.get
         { config = config
-        , url = "/auth/csrf"
+        , url = "/api/v1/auth/csrf"
         , decoder = csrfTokenDecoder
         , toMsg = toMsg
         }
@@ -52,7 +52,7 @@ getCsrfToken { config, toMsg } =
 
 {-| 現在のユーザー情報を取得
 
-`GET /auth/me`
+`GET /api/v1/auth/me`
 
 セッションが有効な場合、ユーザー情報（ID、メール、名前、ロール）を返す。
 未認証の場合は 401 Unauthorized が返される。
@@ -66,7 +66,7 @@ getMe :
 getMe { config, toMsg } =
     Api.get
         { config = config
-        , url = "/auth/me"
+        , url = "/api/v1/auth/me"
         , decoder = userDecoder
         , toMsg = toMsg
         }

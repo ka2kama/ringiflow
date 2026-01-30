@@ -1,5 +1,5 @@
 # ログイン API テスト
-# POST /auth/login
+# POST /api/v1/auth/login
 #
 # ログイン機能の E2E テスト。BFF → Core API → Auth Service の連携を検証する。
 
@@ -10,7 +10,7 @@
 # When: 正しいメールアドレスとパスワードでログインする
 # Then: ユーザー情報とセッション Cookie が返される
 
-POST {{bff_url}}/auth/login
+POST {{bff_url}}/api/v1/auth/login
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
@@ -38,7 +38,7 @@ header "Set-Cookie" contains "HttpOnly"
 # When: 間違ったパスワードでログインする
 # Then: 401 Unauthorized が返される（セキュリティのためユーザー存在は漏らさない）
 
-POST {{bff_url}}/auth/login
+POST {{bff_url}}/api/v1/auth/login
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
@@ -60,7 +60,7 @@ jsonpath "$.status" == 401
 # When: ログインを試みる
 # Then: 401 Unauthorized が返される（タイミング攻撃対策として同じレスポンス）
 
-POST {{bff_url}}/auth/login
+POST {{bff_url}}/api/v1/auth/login
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
@@ -82,7 +82,7 @@ jsonpath "$.status" == 401
 # When: X-Tenant-ID ヘッダーなしでログインする
 # Then: 400 Bad Request が返される
 
-POST {{bff_url}}/auth/login
+POST {{bff_url}}/api/v1/auth/login
 Content-Type: application/json
 {
     "email": "{{admin_email}}",

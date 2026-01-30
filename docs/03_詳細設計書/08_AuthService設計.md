@@ -300,7 +300,7 @@ Auth Service は内部エンドポイントのみを提供し、BFF からのみ
 
 ### BFF（変更点）
 
-現行の `/auth/login` フローを変更し、Core Service と Auth Service の両方を呼び出す。
+現行の `/api/v1/auth/login` フローを変更し、Core Service と Auth Service の両方を呼び出す。
 
 #### 変更後のログインフロー
 
@@ -313,7 +313,7 @@ sequenceDiagram
     participant Auth as Auth Service
     participant Redis as Redis
 
-    Browser->>BFF: POST /auth/login (email, password)
+    Browser->>BFF: POST /api/v1/auth/login (email, password)
     BFF->>Core: GET /internal/users/by-email?email=xxx&tenant_id=yyy
     Core-->>BFF: User or 404
     alt ユーザー存在

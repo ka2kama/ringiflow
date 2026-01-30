@@ -1,5 +1,5 @@
 # ユーザー情報取得 API テスト（認証済み）
-# GET /auth/me
+# GET /api/v1/auth/me
 #
 # ログイン済みユーザーが自分の情報を取得できることを検証する。
 
@@ -7,7 +7,7 @@
 # 前提: ログインしてセッションを取得
 # =============================================================================
 
-POST {{bff_url}}/auth/login
+POST {{bff_url}}/api/v1/auth/login
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
@@ -24,10 +24,10 @@ session_cookie: cookie "session_id"
 # 正常系: 認証済みユーザーは自分の情報を取得できる
 # =============================================================================
 # Given: ログイン済みのセッションがある
-# When: GET /auth/me にセッション Cookie を送信する
+# When: GET /api/v1/auth/me にセッション Cookie を送信する
 # Then: ユーザー情報（ID、メール、名前、ロール、権限）が返される
 
-GET {{bff_url}}/auth/me
+GET {{bff_url}}/api/v1/auth/me
 X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 
