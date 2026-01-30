@@ -25,7 +25,7 @@ BFF の `/auth` エンドポイントへのアクセスを提供。
 
 import Api.Http as Api exposing (ApiError, RequestConfig)
 import Json.Decode as Decode exposing (Decoder)
-import Session exposing (User)
+import Shared exposing (User)
 
 
 {-| CSRF トークンを取得

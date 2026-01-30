@@ -3,7 +3,7 @@ module Page.Workflow.List exposing
     , Msg
     , init
     , update
-    , updateSession
+    , updateShared
     , view
     )
 
@@ -32,7 +32,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Route
-import Session exposing (Session)
+import Shared exposing (Shared)
 
 
 
@@ -42,8 +42,8 @@ import Session exposing (Session)
 {-| ページの状態
 -}
 type alias Model =
-    { -- セッション（API 呼び出しに必要）
-      session : Session
+    { -- 共有状態（API 呼び出しに必要）
+      shared : Shared
 
     -- API データ
     , workflows : RemoteData (List WorkflowInstance)
@@ -63,27 +63,27 @@ type RemoteData a
 
 {-| 初期化
 -}
-init : Session -> ( Model, Cmd Msg )
-init session =
-    ( { session = session
+init : Shared -> ( Model, Cmd Msg )
+init shared =
+    ( { shared = shared
       , workflows = Loading
       , statusFilter = Nothing
       }
     , WorkflowApi.listMyWorkflows
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , toMsg = GotWorkflows
         }
     )
 
 
-{-| セッションを更新
+{-| 共有状態を更新
 
-Main.elm から新しいセッション（CSRF トークン取得後など）を受け取る。
+Main.elm から新しい共有状態（CSRF トークン取得後など）を受け取る。
 
 -}
-updateSession : Session -> Model -> Model
-updateSession session model =
-    { model | session = session }
+updateShared : Shared -> Model -> Model
+updateShared shared model =
+    { model | shared = shared }
 
 
 
@@ -123,7 +123,7 @@ update msg model =
         Refresh ->
             ( { model | workflows = Loading }
             , WorkflowApi.listMyWorkflows
-                { config = Session.toRequestConfig model.session
+                { config = Shared.toRequestConfig model.shared
                 , toMsg = GotWorkflows
                 }
             )

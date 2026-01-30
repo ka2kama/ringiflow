@@ -1,5 +1,5 @@
-module Session exposing
-    ( Session
+module Shared exposing
+    ( Shared
     , User
     , getUserId
     , init
@@ -8,7 +8,7 @@ module Session exposing
     , withUser
     )
 
-{-| セッション状態モジュール
+{-| 共有状態モジュール
 
 全ページで共有される認証・テナント情報を管理する。
 
@@ -22,8 +22,8 @@ module Session exposing
 
 ## 設計方針
 
-Session は「グローバル状態」として Main.elm で保持し、
-各ページモジュールに渡す。ページモジュールは Session を
+Shared は「グローバル状態」として Main.elm で保持し、
+各ページモジュールに渡す。ページモジュールは Shared を
 直接変更せず、Main.elm 経由で更新する。
 
 -}
@@ -49,13 +49,13 @@ type alias User =
     }
 
 
-{-| セッション状態
+{-| 共有状態
 
 アプリケーション全体で共有される状態。
 未認証時は user が Nothing となる。
 
 -}
-type alias Session =
+type alias Shared =
     { user : Maybe User
     , tenantId : String
     , csrfToken : Maybe String
@@ -67,13 +67,13 @@ type alias Session =
 -- CONSTRUCTORS
 
 
-{-| セッションを初期化
+{-| 共有状態を初期化
 
 開発環境では仮のテナント ID を使用。
 本番環境では GET /auth/me でテナント情報を取得する。
 
 -}
-init : { apiBaseUrl : String } -> Session
+init : { apiBaseUrl : String } -> Shared
 init { apiBaseUrl } =
     { user = Nothing
     , tenantId = "00000000-0000-0000-0000-000000000001" -- 開発用テナント
@@ -84,16 +84,16 @@ init { apiBaseUrl } =
 
 {-| CSRF トークンを設定
 -}
-withCsrfToken : String -> Session -> Session
-withCsrfToken token session =
-    { session | csrfToken = Just token }
+withCsrfToken : String -> Shared -> Shared
+withCsrfToken token shared =
+    { shared | csrfToken = Just token }
 
 
 {-| ユーザー情報を設定
 -}
-withUser : User -> Session -> Session
-withUser user session =
-    { session
+withUser : User -> Shared -> Shared
+withUser user shared =
+    { shared
         | user = Just user
         , tenantId = extractTenantId user
     }
@@ -119,16 +119,16 @@ extractTenantId _ =
 
 Api.Http モジュールの関数で使用する RequestConfig を生成。
 
-    session
-        |> Session.toRequestConfig
+    shared
+        |> Shared.toRequestConfig
         |> Api.Workflow.listMyWorkflows
 
 -}
-toRequestConfig : Session -> RequestConfig
-toRequestConfig session =
-    { baseUrl = session.apiBaseUrl
-    , tenantId = Just session.tenantId
-    , csrfToken = session.csrfToken
+toRequestConfig : Shared -> RequestConfig
+toRequestConfig shared =
+    { baseUrl = shared.apiBaseUrl
+    , tenantId = Just shared.tenantId
+    , csrfToken = shared.csrfToken
     }
 
 
@@ -137,6 +137,6 @@ toRequestConfig session =
 未ログイン時は Nothing を返す。
 
 -}
-getUserId : Session -> Maybe String
-getUserId session =
-    session.user |> Maybe.map .id
+getUserId : Shared -> Maybe String
+getUserId shared =
+    shared.user |> Maybe.map .id

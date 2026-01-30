@@ -3,7 +3,7 @@ module Page.Workflow.New exposing
     , Msg
     , init
     , update
-    , updateSession
+    , updateShared
     , view
     )
 
@@ -39,7 +39,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
 import Json.Encode as Encode
-import Session exposing (Session)
+import Shared exposing (Shared)
 
 
 
@@ -49,8 +49,8 @@ import Session exposing (Session)
 {-| ページの状態
 -}
 type alias Model =
-    { -- セッション（API 呼び出しに必要）
-      session : Session
+    { -- 共有状態（API 呼び出しに必要）
+      shared : Shared
 
     -- API データ
     , definitions : RemoteData (List WorkflowDefinition)
@@ -97,9 +97,9 @@ type RemoteData a
 ページ表示時にワークフロー定義一覧を取得する。
 
 -}
-init : Session -> ( Model, Cmd Msg )
-init session =
-    ( { session = session
+init : Shared -> ( Model, Cmd Msg )
+init shared =
+    ( { shared = shared
       , definitions = Loading
       , selectedDefinitionId = Nothing
       , title = ""
@@ -110,28 +110,28 @@ init session =
       , saveMessage = Nothing
       , submitting = False
       }
-    , fetchDefinitions session
+    , fetchDefinitions shared
     )
 
 
 {-| ワークフロー定義一覧を取得
 -}
-fetchDefinitions : Session -> Cmd Msg
-fetchDefinitions session =
+fetchDefinitions : Shared -> Cmd Msg
+fetchDefinitions shared =
     WorkflowDefinitionApi.listDefinitions
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , toMsg = GotDefinitions
         }
 
 
-{-| セッションを更新
+{-| 共有状態を更新
 
-Main.elm から新しいセッション（CSRF トークン取得後など）を受け取る。
+Main.elm から新しい共有状態（CSRF トークン取得後など）を受け取る。
 
 -}
-updateSession : Session -> Model -> Model
-updateSession session model =
-    { model | session = session }
+updateShared : Shared -> Model -> Model
+updateShared shared model =
+    { model | shared = shared }
 
 
 
@@ -225,7 +225,7 @@ update msg model =
                         , saveMessage = Nothing
                         , validationErrors = Dict.empty
                       }
-                    , saveDraft model.session definitionId model.title model.formValues
+                    , saveDraft model.shared definitionId model.title model.formValues
                     )
 
         GotSaveResult result ->
@@ -261,7 +261,7 @@ update msg model =
                             | submitting = True
                             , saveMessage = Nothing
                           }
-                        , submitWorkflow model.session workflow.id model.approverInput
+                        , submitWorkflow model.shared workflow.id model.approverInput
                         )
 
                     Nothing ->
@@ -272,7 +272,7 @@ update msg model =
                                     | submitting = True
                                     , saveMessage = Nothing
                                   }
-                                , saveAndSubmit model.session
+                                , saveAndSubmit model.shared
                                     definitionId
                                     model.title
                                     model.formValues
@@ -299,7 +299,7 @@ update msg model =
                 Ok workflow ->
                     -- 保存成功 → 続けて申請
                     ( { model | savedWorkflow = Just workflow }
-                    , submitWorkflow model.session workflow.id approverInput
+                    , submitWorkflow model.shared workflow.id approverInput
                     )
 
                 Err _ ->
@@ -406,10 +406,10 @@ getSelectedDefinition maybeId definitions =
 
 {-| 下書き保存 API を呼び出す
 -}
-saveDraft : Session -> String -> String -> Dict String String -> Cmd Msg
-saveDraft session definitionId title formValues =
+saveDraft : Shared -> String -> String -> Dict String String -> Cmd Msg
+saveDraft shared definitionId title formValues =
     WorkflowApi.createWorkflow
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , body =
             { definitionId = definitionId
             , title = title
@@ -430,10 +430,10 @@ encodeFormValues values =
 
 {-| ワークフローを申請
 -}
-submitWorkflow : Session -> String -> String -> Cmd Msg
-submitWorkflow session workflowId approverInput =
+submitWorkflow : Shared -> String -> String -> Cmd Msg
+submitWorkflow shared workflowId approverInput =
     WorkflowApi.submitWorkflow
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , id = workflowId
         , body = { assignedTo = String.trim approverInput }
         , toMsg = GotSubmitResult
@@ -449,13 +449,13 @@ MVP では保存結果を GotSaveResult で受け取り、そこから申請を�
 将来的には Task.andThen パターンで連結する方がエレガント。
 
 -}
-saveAndSubmit : Session -> String -> String -> Dict String String -> String -> Cmd Msg
-saveAndSubmit session definitionId title formValues approverInput =
+saveAndSubmit : Shared -> String -> String -> Dict String String -> String -> Cmd Msg
+saveAndSubmit shared definitionId title formValues approverInput =
     -- MVP では簡略化: 保存のみ行い、保存成功後にユーザーが再度申請ボタンを押す
     -- 理由: Elm で Cmd のチェーンは Task 変換が必要で複雑になるため
     -- TODO: 将来的には保存→申請の連続処理を実装
     WorkflowApi.createWorkflow
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , body =
             { definitionId = definitionId
             , title = title

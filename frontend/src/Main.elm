@@ -20,7 +20,7 @@ import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Route exposing (Route)
-import Session exposing (Session)
+import Shared exposing (Shared)
 import Url exposing (Url)
 
 
@@ -74,22 +74,22 @@ type Page
 
 {-| アプリケーションの状態
 
-グローバル状態（Session）と現在のページ状態を保持する。
+グローバル状態（Shared）と現在のページ状態を保持する。
 
 -}
 type alias Model =
     { key : Nav.Key
     , url : Url
     , route : Route
-    , session : Session
+    , shared : Shared
     , page : Page
     }
 
 
 {-| アプリケーションの初期化
 
-Session を初期化し、初期ルートに対応するページを初期化する。
-起動時に CSRF トークンを取得して Session に設定する。
+Shared を初期化し、初期ルートに対応するページを初期化する。
+起動時に CSRF トークンを取得して Shared に設定する。
 
 -}
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -98,22 +98,22 @@ init flags url key =
         route =
             Route.fromUrl url
 
-        session =
-            Session.init { apiBaseUrl = flags.apiBaseUrl }
+        shared =
+            Shared.init { apiBaseUrl = flags.apiBaseUrl }
 
         ( page, pageCmd ) =
-            initPage route session
+            initPage route shared
 
         csrfCmd =
-            fetchCsrfToken session
+            fetchCsrfToken shared
 
         userCmd =
-            fetchUser session
+            fetchUser shared
     in
     ( { key = key
       , url = url
       , route = route
-      , session = session
+      , shared = shared
       , page = page
       }
     , Cmd.batch [ pageCmd, csrfCmd, userCmd ]
@@ -126,32 +126,32 @@ init flags url key =
 ログイン後に再度取得される。
 
 -}
-fetchCsrfToken : Session -> Cmd Msg
-fetchCsrfToken session =
+fetchCsrfToken : Shared -> Cmd Msg
+fetchCsrfToken shared =
     AuthApi.getCsrfToken
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , toMsg = GotCsrfToken
         }
 
 
 {-| ユーザー情報を取得
 
-セッションが有効な場合、ユーザー情報を取得して Session に設定する。
+セッションが有効な場合、ユーザー情報を取得して Shared に設定する。
 未認証の場合は 401 が返されるが、無視する。
 
 -}
-fetchUser : Session -> Cmd Msg
-fetchUser session =
+fetchUser : Shared -> Cmd Msg
+fetchUser shared =
     AuthApi.getMe
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , toMsg = GotUser
         }
 
 
 {-| ルートに応じたページを初期化
 -}
-initPage : Route -> Session -> ( Page, Cmd Msg )
-initPage route session =
+initPage : Route -> Shared -> ( Page, Cmd Msg )
+initPage route shared =
     case route of
         Route.Home ->
             ( HomePage, Cmd.none )
@@ -159,21 +159,21 @@ initPage route session =
         Route.Workflows ->
             let
                 ( model, cmd ) =
-                    WorkflowList.init session
+                    WorkflowList.init shared
             in
             ( WorkflowsPage model, Cmd.map WorkflowsMsg cmd )
 
         Route.WorkflowNew ->
             let
                 ( model, cmd ) =
-                    WorkflowNew.init session
+                    WorkflowNew.init shared
             in
             ( WorkflowNewPage model, Cmd.map WorkflowNewMsg cmd )
 
         Route.WorkflowDetail id ->
             let
                 ( model, cmd ) =
-                    WorkflowDetail.init session id
+                    WorkflowDetail.init shared id
             in
             ( WorkflowDetailPage model, Cmd.map WorkflowDetailMsg cmd )
 
@@ -181,26 +181,26 @@ initPage route session =
             ( NotFoundPage, Cmd.none )
 
 
-{-| ページの Session を更新
+{-| ページの Shared を更新
 
-CSRF トークン取得後など、グローバルな Session が更新されたときに
-各ページの Session も同期する。
+CSRF トークン取得後など、グローバルな Shared が更新されたときに
+各ページの Shared も同期する。
 
 -}
-updatePageSession : Session -> Page -> Page
-updatePageSession session page =
+updatePageShared : Shared -> Page -> Page
+updatePageShared shared page =
     case page of
         HomePage ->
             HomePage
 
         WorkflowsPage subModel ->
-            WorkflowsPage (WorkflowList.updateSession session subModel)
+            WorkflowsPage (WorkflowList.updateShared shared subModel)
 
         WorkflowNewPage subModel ->
-            WorkflowNewPage (WorkflowNew.updateSession session subModel)
+            WorkflowNewPage (WorkflowNew.updateShared shared subModel)
 
         WorkflowDetailPage subModel ->
-            WorkflowDetailPage (WorkflowDetail.updateSession session subModel)
+            WorkflowDetailPage (WorkflowDetail.updateShared shared subModel)
 
         NotFoundPage ->
             NotFoundPage
@@ -219,7 +219,7 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url
     | GotCsrfToken (Result ApiError String)
-    | GotUser (Result ApiError Session.User)
+    | GotUser (Result ApiError Shared.User)
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
     | WorkflowDetailMsg WorkflowDetail.Msg
@@ -244,7 +244,7 @@ update msg model =
                     Route.fromUrl url
 
                 ( page, pageCmd ) =
-                    initPage route model.session
+                    initPage route model.shared
             in
             ( { model | url = url, route = route, page = page }
             , pageCmd
@@ -254,13 +254,13 @@ update msg model =
             case result of
                 Ok token ->
                     let
-                        newSession =
-                            Session.withCsrfToken token model.session
+                        newShared =
+                            Shared.withCsrfToken token model.shared
 
                         newPage =
-                            updatePageSession newSession model.page
+                            updatePageShared newShared model.page
                     in
-                    ( { model | session = newSession, page = newPage }
+                    ( { model | shared = newShared, page = newPage }
                     , Cmd.none
                     )
 
@@ -273,13 +273,13 @@ update msg model =
             case result of
                 Ok user ->
                     let
-                        newSession =
-                            Session.withUser user model.session
+                        newShared =
+                            Shared.withUser user model.shared
 
                         newPage =
-                            updatePageSession newSession model.page
+                            updatePageShared newShared model.page
                     in
-                    ( { model | session = newSession, page = newPage }
+                    ( { model | shared = newShared, page = newPage }
                     , Cmd.none
                     )
 

@@ -3,7 +3,7 @@ module Page.Workflow.Detail exposing
     , Msg
     , init
     , update
-    , updateSession
+    , updateShared
     , view
     )
 
@@ -37,7 +37,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
 import Route
-import Session exposing (Session)
+import Shared exposing (Shared)
 
 
 
@@ -47,8 +47,8 @@ import Session exposing (Session)
 {-| ページの状態
 -}
 type alias Model =
-    { -- セッション
-      session : Session
+    { -- 共有状態
+      shared : Shared
 
     -- パラメータ
     , workflowId : String
@@ -75,9 +75,9 @@ type RemoteData a
 
 {-| 初期化
 -}
-init : Session -> String -> ( Model, Cmd Msg )
-init session workflowId =
-    ( { session = session
+init : Shared -> String -> ( Model, Cmd Msg )
+init shared workflowId =
+    ( { shared = shared
       , workflowId = workflowId
       , workflow = Loading
       , definition = NotAsked
@@ -86,21 +86,21 @@ init session workflowId =
       , successMessage = Nothing
       }
     , WorkflowApi.getWorkflow
-        { config = Session.toRequestConfig session
+        { config = Shared.toRequestConfig shared
         , id = workflowId
         , toMsg = GotWorkflow
         }
     )
 
 
-{-| セッションを更新
+{-| 共有状態を更新
 
-Main.elm から新しいセッション（CSRF トークン取得後など）を受け取る。
+Main.elm から新しい共有状態（CSRF トークン取得後など）を受け取る。
 
 -}
-updateSession : Session -> Model -> Model
-updateSession session model =
-    { model | session = session }
+updateShared : Shared -> Model -> Model
+updateShared shared model =
+    { model | shared = shared }
 
 
 
@@ -130,7 +130,7 @@ update msg model =
                 Ok workflow ->
                     ( { model | workflow = Success workflow }
                     , WorkflowDefinitionApi.getDefinition
-                        { config = Session.toRequestConfig model.session
+                        { config = Shared.toRequestConfig model.shared
                         , id = workflow.definitionId
                         , toMsg = GotDefinition
                         }
@@ -161,7 +161,7 @@ update msg model =
                 , successMessage = Nothing
               }
             , WorkflowApi.getWorkflow
-                { config = Session.toRequestConfig model.session
+                { config = Shared.toRequestConfig model.shared
                 , id = model.workflowId
                 , toMsg = GotWorkflow
                 }
@@ -170,7 +170,7 @@ update msg model =
         ClickApprove step ->
             ( { model | isSubmitting = True, errorMessage = Nothing }
             , WorkflowApi.approveStep
-                { config = Session.toRequestConfig model.session
+                { config = Shared.toRequestConfig model.shared
                 , workflowId = model.workflowId
                 , stepId = step.id
                 , body = { version = step.version, comment = Nothing }
@@ -181,7 +181,7 @@ update msg model =
         ClickReject step ->
             ( { model | isSubmitting = True, errorMessage = Nothing }
             , WorkflowApi.rejectStep
-                { config = Session.toRequestConfig model.session
+                { config = Shared.toRequestConfig model.shared
                 , workflowId = model.workflowId
                 , stepId = step.id
                 , body = { version = step.version, comment = Nothing }
@@ -318,7 +318,7 @@ viewContent model =
             viewError
 
         Success workflow ->
-            viewWorkflowDetail workflow model.definition model.isSubmitting model.session
+            viewWorkflowDetail workflow model.definition model.isSubmitting model.shared
 
 
 viewError : Html Msg
@@ -330,12 +330,12 @@ viewError =
         ]
 
 
-viewWorkflowDetail : WorkflowInstance -> RemoteData WorkflowDefinition -> Bool -> Session -> Html Msg
-viewWorkflowDetail workflow maybeDefinition isSubmitting session =
+viewWorkflowDetail : WorkflowInstance -> RemoteData WorkflowDefinition -> Bool -> Shared -> Html Msg
+viewWorkflowDetail workflow maybeDefinition isSubmitting shared =
     div [ class "workflow-detail" ]
         [ viewTitle workflow
         , viewStatus workflow
-        , viewApprovalButtons workflow isSubmitting session
+        , viewApprovalButtons workflow isSubmitting shared
         , hr [] []
         , viewSteps workflow
         , hr [] []
@@ -458,11 +458,11 @@ formatDateTime maybeDateTime =
 現在のユーザーが担当者に割り当てられているアクティブなステップがある場合のみ表示。
 
 -}
-viewApprovalButtons : WorkflowInstance -> Bool -> Session -> Html Msg
-viewApprovalButtons workflow isSubmitting session =
+viewApprovalButtons : WorkflowInstance -> Bool -> Shared -> Html Msg
+viewApprovalButtons workflow isSubmitting shared =
     let
         currentUserId =
-            Session.getUserId session
+            Shared.getUserId shared
     in
     case findActiveStepForUser workflow.steps currentUserId of
         Just step ->
