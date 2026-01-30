@@ -17,6 +17,8 @@ pub use core_service::{
    CoreServiceClientImpl,
    CoreServiceError,
    CreateWorkflowRequest,
+   DashboardStatsDto,
+   DashboardStatsResponse,
    GetUserByEmailResponse,
    SubmitWorkflowRequest,
    TaskDetailDto,
