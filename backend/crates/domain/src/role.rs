@@ -41,7 +41,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{DomainError, tenant::TenantId, user::UserId};
+use crate::{tenant::TenantId, user::UserId};
 
 /// ロール ID（一意識別子）
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -103,37 +103,6 @@ impl Permission {
    pub fn as_str(&self) -> &str {
       &self.0
    }
-
-   /// この権限がワイルドカード（*）かどうか
-   pub fn is_wildcard(&self) -> bool {
-      self.0 == "*"
-   }
-
-   /// 特定の権限を包含しているかチェックする
-   ///
-   /// # 例
-   ///
-   /// - `workflow:*` は `workflow:read` を包含する
-   /// - `*` はすべての権限を包含する
-   /// - `workflow:read` は `workflow:read` のみを包含する
-   pub fn includes(&self, other: &Permission) -> bool {
-      if self.is_wildcard() {
-         return true;
-      }
-
-      if self.0 == other.0 {
-         return true;
-      }
-
-      // resource:* 形式のチェック（other もコロンを含む場合のみマッチ）
-      if let Some(resource) = self.0.strip_suffix(":*")
-         && let Some((other_resource, _)) = other.0.split_once(':')
-      {
-         return resource == other_resource;
-      }
-
-      false
-   }
 }
 
 impl std::fmt::Display for Permission {
@@ -151,7 +120,7 @@ impl std::fmt::Display for Permission {
 ///
 /// - システムロール（`is_system == true`）は `tenant_id == None`
 /// - テナントロール（`is_system == false`）は `tenant_id` が必須
-/// - システムロールは削除・編集不可
+/// - システムロール（`is_system == true`）は DB シードデータで管理
 #[derive(Debug, Clone)]
 pub struct Role {
    id:          RoleId,
@@ -274,47 +243,6 @@ impl Role {
    pub fn updated_at(&self) -> DateTime<Utc> {
       self.updated_at
    }
-
-   // ビジネスロジックメソッド
-
-   /// 特定の権限を持っているかチェックする
-   pub fn has_permission(&self, permission: &Permission) -> bool {
-      self.permissions.iter().any(|p| p.includes(permission))
-   }
-
-   /// ロールが削除可能かチェックする
-   ///
-   /// システムロールは削除不可。
-   pub fn can_delete(&self) -> Result<(), DomainError> {
-      if self.is_system {
-         return Err(DomainError::Forbidden(
-            "システムロールは削除できません".to_string(),
-         ));
-      }
-      Ok(())
-   }
-
-   /// ロールが編集可能かチェックする
-   ///
-   /// システムロールは編集不可。
-   pub fn can_edit(&self) -> Result<(), DomainError> {
-      if self.is_system {
-         return Err(DomainError::Forbidden(
-            "システムロールは編集できません".to_string(),
-         ));
-      }
-      Ok(())
-   }
-
-   /// 権限を更新した新しいインスタンスを返す
-   pub fn with_permissions(self, permissions: Vec<Permission>) -> Result<Self, DomainError> {
-      self.can_edit()?;
-      Ok(Self {
-         permissions,
-         updated_at: Utc::now(),
-         ..self
-      })
-   }
 }
 
 /// ユーザーロール関連（User と Role の多対多）
@@ -368,7 +296,6 @@ impl UserRole {
 
 #[cfg(test)]
 mod tests {
-   use pretty_assertions::assert_eq;
    use rstest::{fixture, rstest};
 
    use super::*;
@@ -386,42 +313,6 @@ mod tests {
       let tenant_id = TenantId::new();
       let permissions = vec![Permission::new("workflow:read")];
       Role::new_tenant(tenant_id, "custom_role".to_string(), None, permissions)
-   }
-
-   // Permission のテスト
-
-   #[test]
-   fn test_ワイルドカードはワイルドカードとして判定される() {
-      let wildcard = Permission::new("*");
-
-      assert!(wildcard.is_wildcard());
-   }
-
-   #[test]
-   fn test_具体的な権限はワイルドカードではない() {
-      let specific = Permission::new("workflow:read");
-
-      assert!(!specific.is_wildcard());
-   }
-
-   #[rstest]
-   #[case("*", "workflow:read", true, "全権限")]
-   #[case("*", "task:read", true, "全権限")]
-   #[case("workflow:*", "workflow:read", true, "リソース単位")]
-   #[case("workflow:*", "task:read", false, "リソース単位")]
-   #[case("workflow:*", "workflow", false, "コロンなし権限は包含しない")]
-   #[case("workflow:read", "workflow:read", true, "完全一致")]
-   #[case("workflow:read", "task:read", false, "完全一致")]
-   fn test_権限の包含判定(
-      #[case] parent: &str,
-      #[case] child: &str,
-      #[case] expected: bool,
-      #[case] _reason: &str,
-   ) {
-      let parent_perm = Permission::new(parent);
-      let child_perm = Permission::new(child);
-
-      assert_eq!(parent_perm.includes(&child_perm), expected);
    }
 
    // Role のテスト
@@ -446,31 +337,5 @@ mod tests {
    #[rstest]
    fn test_テナントロールはテナントidを持つ(テナントロール: Role) {
       assert!(テナントロール.tenant_id().is_some());
-   }
-
-   #[rstest]
-   #[case("workflow:read", true)]
-   #[case("workflow:create", true)]
-   #[case("task:read", true)]
-   #[case("task:write", false)]
-   fn test_ロールは権限を保持しているかチェックできる(
-      システムロール: Role,
-      #[case] permission: &str,
-      #[case] expected: bool,
-   ) {
-      assert_eq!(
-         システムロール.has_permission(&Permission::new(permission)),
-         expected
-      );
-   }
-
-   #[rstest]
-   fn test_システムロールは削除できない(システムロール: Role) {
-      assert!(システムロール.can_delete().is_err());
-   }
-
-   #[rstest]
-   fn test_テナントロールは削除できる(テナントロール: Role) {
-      assert!(テナントロール.can_delete().is_ok());
    }
 }
