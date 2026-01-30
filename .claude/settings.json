@@ -123,7 +123,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); if echo \"$input\" | jq -r '.tool_input.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; echo '📝 ドキュメント作成を確認: ADR / 技術ノート / セッションログ（該当する場合）'; fi"
+            "command": "input=$(cat); if echo \"$input\" | jq -r '.tool_input.command // empty' 2>/dev/null | grep -q 'git commit'; then ./.claude/hooks/pre-commit-check.sh || exit 1; echo '📝 ドキュメント作成を確認: ADR / ナレッジベース / セッションログ（該当する場合）'; fi"
           }
         ]
       }

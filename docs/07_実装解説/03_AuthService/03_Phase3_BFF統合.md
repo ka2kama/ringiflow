@@ -357,5 +357,5 @@ async fn get_user_by_email<R>(
 ## 関連ドキュメント
 
 - 設計書: [08_AuthService設計.md](../../03_詳細設計書/08_AuthService設計.md)
-- 技術ノート: [パスワードハッシュ.md](../../06_技術ノート/パスワードハッシュ.md)
+- ナレッジベース: [パスワードハッシュ.md](../../06_ナレッジベース/security/パスワードハッシュ.md)
 - ADR: [017_AuthService分離の方針.md](../../05_ADR/017_AuthService分離の方針.md)

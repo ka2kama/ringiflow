@@ -1,6 +1,6 @@
 ---
 name: walkthrough
-description: コードウォークスルーで学習する。指定された領域のコードを一つずつ解説し、質問を受けながら理解を深める。学習ノートに記録する。
+description: コードウォークスルーで学習する。指定された領域のコードを一つずつ解説し、質問を受けながら理解を深める。ナレッジベースに記録する。
 argument-hint: <対象領域（例: Page/Workflow/Detail.elm, 認証フロー, Api.Http.elm）>
 user-invocable: true
 ---
@@ -28,14 +28,14 @@ $ARGUMENTS
 
 ## 学習ノート
 
-`docs/08_学習ノート/` にトピック単位で記録する。
+`docs/06_ナレッジベース/` の適切なカテゴリにトピック単位で記録する。
 
 - 既存のノート一覧を確認し、既存ファイルへの追記か新規作成か判断する
-- 技術ノート（客観的な技術解説）とは異なり、学習者の言葉で理解を整理する内容にする
+- カテゴリ: `rust/`, `elm/`, `frontend/`, `infra/`, `architecture/`, `security/`, `devtools/`, `english/`
 
 ### 既存ノート
 
-!`ls docs/08_学習ノート/ 2>/dev/null || echo "(まだノートなし)"`
+!`ls docs/06_ナレッジベース/ 2>/dev/null || echo "(まだノートなし)"`
 
 ## 未消化のトピック候補
 

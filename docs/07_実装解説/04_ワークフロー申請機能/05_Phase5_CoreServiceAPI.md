@@ -253,7 +253,7 @@ Core Service の内部 API ができたので、次は BFF でこれをプロキ
 
 - [ワークフローユースケース実装（Phase 4）](./04_Phase4_WorkflowUseCase.md)
 - [API 設計](../../03_詳細設計書/03_API設計.md)
-- [BFF パターン](../../06_技術ノート/BFFパターン.md)
+- [BFF パターン](../../06_ナレッジベース/architecture/BFFパターン.md)
 
 ## 変更履歴
 

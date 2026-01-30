@@ -4,7 +4,7 @@ module Main exposing (main)
 
 TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
 
-詳細: [TEA パターン](../../../docs/05_技術ノート/Elmアーキテクチャ.md)
+詳細: [TEA パターン](../../../docs/06_ナレッジベース/elm/Elmアーキテクチャ.md)
 
 -}
 
@@ -337,7 +337,7 @@ update msg model =
 {-| 外部イベントの購読
 
 現在は購読なし。将来的に WebSocket、Ports、タイマーを追加予定。
-詳細: [Ports 設計](../../../docs/05_技術ノート/Elmポート.md)
+詳細: [Ports 設計](../../../docs/06_ナレッジベース/elm/Elmポート.md)
 
 -}
 subscriptions : Model -> Sub Msg

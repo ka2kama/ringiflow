@@ -301,7 +301,7 @@ Rust コードを実装する際:
    ```
    - `--all-targets`: テストコード内のクエリもキャッシュに含める
    - CI 環境では `SQLX_OFFLINE=true` でビルドするため、キャッシュがないとビルドが失敗する
-   - 詳細: [sqlx-cli 技術ノート](../../docs/06_技術ノート/sqlx-cli.md#オフラインモード詳細)
+   - 詳細: [sqlx-cli](../../docs/06_ナレッジベース/rust/sqlx-cli.md#オフラインモード詳細)
 
 禁止事項:
 - `unwrap()` / `expect()` の無思慮な使用
