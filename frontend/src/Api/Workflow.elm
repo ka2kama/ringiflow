@@ -32,7 +32,7 @@ BFF の `/api/v1/workflows` エンドポイントへのアクセスを提供。
 
 -}
 
-import Api.Http as Api exposing (ApiError, RequestConfig)
+import Api exposing (ApiError, RequestConfig)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance)
 import Http
 import Json.Decode as Decode exposing (Decoder)

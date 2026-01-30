@@ -1,4 +1,4 @@
-module Api.Http exposing
+module Api exposing
     ( ApiError(..)
     , ProblemDetails
     , RequestConfig
@@ -17,9 +17,9 @@ CSRF トークン、X-Tenant-ID ヘッダーの付与と RFC 7807 エラーハ�
 
 ## 使用例
 
-    import Api.Http as Api
+    import Api
 
-    fetchDefinitions : RequestConfig -> (Result Api.ApiError (List WorkflowDefinition) -> msg) -> Cmd msg
+    fetchDefinitions : Api.RequestConfig -> (Result Api.ApiError (List WorkflowDefinition) -> msg) -> Cmd msg
     fetchDefinitions config toMsg =
         Api.get
             { config = config

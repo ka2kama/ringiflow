@@ -20,7 +20,7 @@ module Page.Task.List exposing
 
 -}
 
-import Api.Http exposing (ApiError)
+import Api exposing (ApiError)
 import Api.Task as TaskApi
 import Data.Task exposing (TaskItem)
 import Data.WorkflowInstance as WorkflowInstance

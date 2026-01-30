@@ -8,8 +8,8 @@ TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
 
 -}
 
+import Api exposing (ApiError)
 import Api.Auth as AuthApi
-import Api.Http exposing (ApiError)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)

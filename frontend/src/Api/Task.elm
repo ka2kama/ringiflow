@@ -24,7 +24,7 @@ BFF の `/api/v1/tasks` エンドポイントへのアクセスを提供。
 
 -}
 
-import Api.Http as Api exposing (ApiError, RequestConfig)
+import Api exposing (ApiError, RequestConfig)
 import Data.Task as Task exposing (TaskDetail, TaskItem)
 
 

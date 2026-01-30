@@ -27,7 +27,7 @@ config =
       NoUnused.CustomTypeConstructorArgs.rule
         -- TODO: Api/Data モジュールの一部フィールドは Phase 3（申請一覧・詳細）で使用予定
         |> Rule.ignoreErrorsForFiles
-            [ "src/Api/Http.elm"
+            [ "src/Api.elm"
             , "src/Data/FormField.elm"
             , "src/Data/WorkflowInstance.elm"
             ]
@@ -41,7 +41,7 @@ config =
         |> Rule.ignoreErrorsForFiles [ "src/Ports.elm" ]
         -- TODO: Api/Data モジュールの一部関数・型は Phase 3（申請一覧・詳細）で使用予定
         |> Rule.ignoreErrorsForFiles
-            [ "src/Api/Http.elm"
+            [ "src/Api.elm"
             , "src/Api/Workflow.elm"
             , "src/Api/WorkflowDefinition.elm"
             , "src/Data/FormField.elm"

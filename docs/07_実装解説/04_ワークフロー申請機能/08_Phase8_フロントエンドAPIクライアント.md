@@ -37,7 +37,7 @@ Phase 7 で実装した BFF API は POST エンドポイントのみだった。
 | `Data/WorkflowInstance.elm` | ワークフローインスタンス（申請案件） |
 | `Data/FormField.elm` | 動的フォームフィールド定義 |
 
-### 2. HTTP ヘルパー（`Api/Http.elm`）
+### 2. HTTP ヘルパー（`Api.elm`）
 
 BFF への API リクエストに必要な共通処理を提供。
 
@@ -110,7 +110,7 @@ Phase 1 では API クライアント層のみ実装し、UI は Phase 2 で実�
 NoUnused.Modules.rule
     -- TODO: Phase 1 で作成した API/Data モジュール。Phase 2 で UI 実装後に除外設定を削除する
     |> Rule.ignoreErrorsForFiles
-        [ "src/Api/Http.elm"
+        [ "src/Api.elm"
         , "src/Api/Workflow.elm"
         , ...
         ]

@@ -27,7 +27,7 @@ BFF の `/api/v1/workflow-definitions` エンドポイントへのアクセス�
 
 -}
 
-import Api.Http as Api exposing (ApiError, RequestConfig)
+import Api exposing (ApiError, RequestConfig)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 
 

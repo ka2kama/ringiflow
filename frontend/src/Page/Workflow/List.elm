@@ -25,7 +25,7 @@ module Page.Workflow.List exposing
 
 -}
 
-import Api.Http exposing (ApiError)
+import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Data.WorkflowInstance as WorkflowInstance exposing (Status, WorkflowInstance)
 import Html exposing (..)
