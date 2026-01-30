@@ -69,7 +69,7 @@ GitHub Actions で自動実行される（`.github/workflows/ci.yaml`）。
 ## 関連ドキュメント
 
 - [`tests/api/README.md`](../../../tests/api/README.md) - テスト実行手順とトラブルシューティング
-- [技術ノート: hurl](../../06_技術ノート/hurl.md) - hurl の使い方
+- [ナレッジベース: hurl](../../06_ナレッジベース/devtools/hurl.md) - hurl の使い方
 
 ---
 

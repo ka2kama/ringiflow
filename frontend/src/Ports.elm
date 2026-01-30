@@ -7,7 +7,7 @@ port module Ports exposing
 
 Elm と JavaScript の間に型安全な通信チャネルを提供する。
 
-詳細: [Elm Ports](../../../docs/05_技術ノート/Elmポート.md)
+詳細: [Elm Ports](../../../docs/06_ナレッジベース/elm/Elmポート.md)
 
 -}
 

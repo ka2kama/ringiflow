@@ -242,7 +242,7 @@ BFF API ができたので、次は Elm でフロントエンドを実装する�
 ## 参照
 
 - [Core Service API 実装（Phase 6）](./05_Phase5_CoreServiceAPI.md)
-- [BFF パターン](../../06_技術ノート/BFFパターン.md)
+- [BFF パターン](../../06_ナレッジベース/architecture/BFFパターン.md)
 - [API 設計](../../03_詳細設計書/03_API設計.md)
 
 ## 変更履歴

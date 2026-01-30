@@ -95,7 +95,7 @@ GitHub は従来の Branch protection rules に加え、より柔軟な Rulesets
 
 ### 2.2 main ブランチ保護（Ruleset）
 
-JSON パラメータの詳細は [技術ノート: GitHub Ruleset](../../06_技術ノート/GitHub_Ruleset.md) を参照。
+JSON パラメータの詳細は [ナレッジベース: GitHub Ruleset](../../06_ナレッジベース/devtools/GitHub_Ruleset.md) を参照。
 
 **方法 A: CLI（推奨）**
 
@@ -936,7 +936,7 @@ API 利用料が発生する。利用状況は https://console.anthropic.com/usa
 
 ### 10.4 Ruleset への Status Check 追加
 
-JSON パラメータの詳細は [技術ノート: GitHub Ruleset](../../06_技術ノート/GitHub_Ruleset.md) を参照。
+JSON パラメータの詳細は [ナレッジベース: GitHub Ruleset](../../06_ナレッジベース/devtools/GitHub_Ruleset.md) を参照。
 
 **方法 A: CLI（推奨）**
 

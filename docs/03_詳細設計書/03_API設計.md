@@ -44,9 +44,9 @@ graph LR
 
 ## 共通仕様
 
-API 設計の一般的なパターンは技術ノートを参照。
+API 設計の一般的なパターンはナレッジベースを参照。
 
-→ [RESTful API 設計](../06_技術ノート/REST_API設計.md)
+→ [RESTful API 設計](../06_ナレッジベース/architecture/REST_API設計.md)
 
 ### ベース URL
 

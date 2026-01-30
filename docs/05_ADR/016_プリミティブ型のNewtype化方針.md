@@ -97,7 +97,7 @@ description、comment などの自由形式テキストは `String` のまま残
 
 ### 関連ドキュメント
 
-- 技術ノート: [Newtype パターン](../06_技術ノート/Newtypeパターン.md)
+- ナレッジベース: [Newtype パターン](../06_ナレッジベース/rust/Newtypeパターン.md)
 - 実装: `backend/crates/domain/src/value_objects.rs`
 
 ---

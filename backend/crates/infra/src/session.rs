@@ -3,7 +3,7 @@
 //! Redis を使用したセッション管理と CSRF トークン管理を提供する。
 //!
 //! - 設計: [07_認証機能設計.md](../../../docs/03_詳細設計書/07_認証機能設計.md)
-//! - Redis: [Redis.md](../../../docs/06_技術ノート/Redis.md)（Pipeline、SCAN など）
+//! - Redis: [Redis.md](../../../docs/06_ナレッジベース/infra/Redis.md)（Pipeline、SCAN など）
 //!
 //! ## Redis キー設計
 //!

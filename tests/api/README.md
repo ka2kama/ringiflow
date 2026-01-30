@@ -152,4 +152,4 @@ GitHub Actions で自動実行される。
 ## 参考
 
 - [Hurl 公式ドキュメント](https://hurl.dev/docs/manual.html)
-- [技術ノート: hurl](../../docs/06_技術ノート/hurl.md)
+- [ナレッジベース: hurl](../../docs/06_ナレッジベース/devtools/hurl.md)

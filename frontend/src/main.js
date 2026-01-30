@@ -40,7 +40,7 @@ import { Elm } from "./Main.elm";
  * 開発用認証バイパス（DevAuth）のセットアップ
  *
  * 開発環境でログイン画面なしに認証済み状態を実現する。
- * 詳細: docs/06_技術ノート/DevAuth.md
+ * 詳細: docs/06_ナレッジベース/security/DevAuth.md
  *
  * ## 動作条件
  *
