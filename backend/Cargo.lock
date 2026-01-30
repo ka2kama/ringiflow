@@ -1654,7 +1654,6 @@ dependencies = [
  "pretty_assertions",
  "ringiflow-domain",
  "ringiflow-infra",
- "ringiflow-shared",
  "serde",
  "serde_json",
  "sqlx",
@@ -1683,7 +1682,6 @@ dependencies = [
  "reqwest",
  "ringiflow-domain",
  "ringiflow-infra",
- "ringiflow-shared",
  "serde",
  "serde_json",
  "subtle",
@@ -1711,7 +1709,6 @@ dependencies = [
  "pretty_assertions",
  "ringiflow-domain",
  "ringiflow-infra",
- "ringiflow-shared",
  "serde",
  "serde_json",
  "sqlx",
@@ -1731,7 +1728,6 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "pretty_assertions",
- "ringiflow-shared",
  "rstest",
  "serde",
  "serde_json",
@@ -1749,7 +1745,6 @@ dependencies = [
  "pretty_assertions",
  "redis",
  "ringiflow-domain",
- "ringiflow-shared",
  "rstest",
  "serde",
  "serde_json",
@@ -1764,15 +1759,6 @@ dependencies = [
 [[package]]
 name = "ringiflow-shared"
 version = "0.1.0"
-dependencies = [
- "chrono",
- "pretty_assertions",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
- "uuid",
-]
 
 [[package]]
 name = "rsa"
