@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                title, form_data, status, version, current_step_id,\n                initiated_by, submitted_at, completed_at,\n                created_at, updated_at\n            FROM workflow_instances\n            WHERE id = ANY($1) AND tenant_id = $2\n            ORDER BY created_at DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "definition_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "definition_version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "form_data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "current_step_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "initiated_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "completed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "17109a8fd2be99f4c480682f57e3044dee9d3520e8908379c9bf8daeedfd7a9b"
+}
