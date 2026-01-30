@@ -75,15 +75,9 @@ pub struct UserResponse {
    pub status:    String,
 }
 
-/// メールアドレス検索レスポンス
+/// ユーザー詳細データ（権限付き）
 #[derive(Debug, Clone, Deserialize)]
-pub struct GetUserByEmailResponse {
-   pub user: UserResponse,
-}
-
-/// ユーザー詳細レスポンス（権限付き）
-#[derive(Debug, Clone, Deserialize)]
-pub struct UserWithPermissionsResponse {
+pub struct UserWithPermissionsData {
    pub user:        UserResponse,
    pub roles:       Vec<String>,
    pub permissions: Vec<String>,
@@ -228,12 +222,12 @@ pub trait CoreServiceClient: Send + Sync {
    ///
    /// # 戻り値
    ///
-   /// ユーザーが存在すれば `GetUserByEmailResponse`、なければ `CoreServiceError::UserNotFound`
+   /// ユーザーが存在すれば `ApiResponse<UserResponse>`、なければ `CoreServiceError::UserNotFound`
    async fn get_user_by_email(
       &self,
       tenant_id: Uuid,
       email: &str,
-   ) -> Result<GetUserByEmailResponse, CoreServiceError>;
+   ) -> Result<ApiResponse<UserResponse>, CoreServiceError>;
 
    /// ユーザー情報を取得する
    ///
@@ -245,9 +239,11 @@ pub trait CoreServiceClient: Send + Sync {
    ///
    /// # 戻り値
    ///
-   /// ユーザーが存在すれば `UserWithPermissionsResponse`、なければ `CoreServiceError::UserNotFound`
-   async fn get_user(&self, user_id: Uuid)
-   -> Result<UserWithPermissionsResponse, CoreServiceError>;
+   /// ユーザーが存在すれば `ApiResponse<UserWithPermissionsData>`、なければ `CoreServiceError::UserNotFound`
+   async fn get_user(
+      &self,
+      user_id: Uuid,
+   ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError>;
 
    /// ワークフローを作成する（下書き）
    ///
@@ -457,7 +453,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
       &self,
       tenant_id: Uuid,
       email: &str,
-   ) -> Result<GetUserByEmailResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
       let url = format!(
          "{}/internal/users/by-email?email={}&tenant_id={}",
          self.base_url,
@@ -469,7 +465,7 @@ impl CoreServiceClient for CoreServiceClientImpl {
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<GetUserByEmailResponse>().await?;
+            let body = response.json::<ApiResponse<UserResponse>>().await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::UserNotFound),
@@ -486,14 +482,16 @@ impl CoreServiceClient for CoreServiceClientImpl {
    async fn get_user(
       &self,
       user_id: Uuid,
-   ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
       let url = format!("{}/internal/users/{}", self.base_url, user_id);
 
       let response = self.client.get(&url).send().await?;
 
       match response.status() {
          status if status.is_success() => {
-            let body = response.json::<UserWithPermissionsResponse>().await?;
+            let body = response
+               .json::<ApiResponse<UserWithPermissionsData>>()
+               .await?;
             Ok(body)
          }
          reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::UserNotFound),

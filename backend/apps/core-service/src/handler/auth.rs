@@ -23,6 +23,7 @@ use ringiflow_domain::{
    user::{Email, User, UserId},
 };
 use ringiflow_infra::repository::user_repository::UserRepository;
+use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -65,12 +66,6 @@ impl From<&User> for UserResponse {
    }
 }
 
-/// メールアドレス検索レスポンス
-#[derive(Debug, Serialize)]
-pub struct GetUserByEmailResponse {
-   pub user: UserResponse,
-}
-
 /// ロール情報レスポンス
 // FIXME: `#[allow(dead_code)]` を解消する
 //        （ユーザー取得 API でロール詳細を返すか、構造体ごと削除する）
@@ -96,9 +91,9 @@ impl From<&Role> for RoleResponse {
    }
 }
 
-/// ユーザー詳細レスポンス（権限付き）
+/// ユーザー詳細データ（権限付き）
 #[derive(Debug, Serialize)]
-pub struct UserWithPermissionsResponse {
+pub struct UserWithPermissionsData {
    pub user:        UserResponse,
    pub roles:       Vec<String>,
    pub permissions: Vec<String>,
@@ -163,9 +158,7 @@ where
       .await
    {
       Ok(Some(user)) => {
-         let response = GetUserByEmailResponse {
-            user: UserResponse::from(&user),
-         };
+         let response = ApiResponse::new(UserResponse::from(&user));
          (StatusCode::OK, Json(response)).into_response()
       }
       Ok(None) => (
@@ -215,11 +208,11 @@ where
             .flat_map(|r| r.permissions().iter().map(|p| p.as_str().to_string()))
             .collect();
 
-         let response = UserWithPermissionsResponse {
+         let response = ApiResponse::new(UserWithPermissionsData {
             user: UserResponse::from(&user),
             roles: roles.iter().map(|r| r.name().to_string()).collect(),
             permissions,
-         };
+         });
          (StatusCode::OK, Json(response)).into_response()
       }
       Ok(None) => (
@@ -392,8 +385,8 @@ mod tests {
          .unwrap();
       let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-      assert_eq!(json["user"]["email"], "user@example.com");
-      assert_eq!(json["user"]["status"], "active");
+      assert_eq!(json["data"]["email"], "user@example.com");
+      assert_eq!(json["data"]["status"], "active");
    }
 
    #[tokio::test]

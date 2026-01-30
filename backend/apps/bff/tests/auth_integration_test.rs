@@ -41,10 +41,9 @@ use ringiflow_bff::{
       CoreServiceClient,
       CoreServiceError,
       CreateWorkflowRequest,
-      GetUserByEmailResponse,
       SubmitWorkflowRequest,
       UserResponse,
-      UserWithPermissionsResponse,
+      UserWithPermissionsData,
       VerifyResponse,
    },
    handler::{AuthState, csrf, login, logout, me},
@@ -127,29 +126,27 @@ impl CoreServiceClient for StubCoreServiceClient {
       &self,
       _tenant_id: Uuid,
       _email: &str,
-   ) -> Result<GetUserByEmailResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
       if !self.config.user_exists {
          return Err(CoreServiceError::UserNotFound);
       }
 
-      Ok(GetUserByEmailResponse {
-         user: Self::create_user_response(),
-      })
+      Ok(ApiResponse::new(Self::create_user_response()))
    }
 
    async fn get_user(
       &self,
       _user_id: Uuid,
-   ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
+   ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
       if !self.config.user_exists {
          return Err(CoreServiceError::UserNotFound);
       }
 
-      Ok(UserWithPermissionsResponse {
+      Ok(ApiResponse::new(UserWithPermissionsData {
          user:        Self::create_user_response(),
          roles:       vec!["user".to_string()],
          permissions: vec!["workflow:read".to_string()],
-      })
+      }))
    }
 
    async fn create_workflow(

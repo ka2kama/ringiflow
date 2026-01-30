@@ -30,7 +30,7 @@ use crate::client::{
    AuthServiceError,
    CoreServiceClient,
    CoreServiceError,
-   UserWithPermissionsResponse,
+   UserWithPermissionsData,
 };
 
 /// Cookie 名
@@ -118,8 +118,8 @@ pub struct MeResponseData {
    pub permissions: Vec<String>,
 }
 
-impl From<UserWithPermissionsResponse> for MeResponseData {
-   fn from(res: UserWithPermissionsResponse) -> Self {
+impl From<UserWithPermissionsData> for MeResponseData {
+   fn from(res: UserWithPermissionsData) -> Self {
       Self {
          id:          res.user.id,
          email:       res.user.email,
@@ -203,7 +203,7 @@ where
 
    match user_result {
       Ok(user_response) => {
-         let user = &user_response.user;
+         let user = &user_response.data;
 
          // Step 2: Auth Service でパスワードを検証
          let verify_result = state
@@ -228,7 +228,7 @@ where
                   TenantId::from_uuid(user.tenant_id),
                   user.email.clone(),
                   user.name.clone(),
-                  user_with_roles.roles.clone(),
+                  user_with_roles.data.roles.clone(),
                );
 
                match state.session_manager.create(&session_data).await {
@@ -255,7 +255,7 @@ where
                            email:     user.email.clone(),
                            name:      user.name.clone(),
                            tenant_id: user.tenant_id,
-                           roles:     user_with_roles.roles,
+                           roles:     user_with_roles.data.roles,
                         },
                      });
 
@@ -373,7 +373,7 @@ where
          let user_id = *session_data.user_id().as_uuid();
          match state.core_service_client.get_user(user_id).await {
             Ok(user_info) => {
-               let response = ApiResponse::new(MeResponseData::from(user_info));
+               let response = ApiResponse::new(MeResponseData::from(user_info.data));
                (StatusCode::OK, Json(response)).into_response()
             }
             Err(CoreServiceError::UserNotFound) => {
@@ -580,13 +580,13 @@ mod tests {
    use uuid::Uuid;
 
    use super::*;
-   use crate::client::{GetUserByEmailResponse, UserResponse, VerifyResponse};
+   use crate::client::{UserResponse, VerifyResponse};
 
    // テスト用スタブ
 
    struct StubCoreServiceClient {
-      user_by_email_result: Result<GetUserByEmailResponse, CoreServiceError>,
-      get_user_result:      Result<UserWithPermissionsResponse, CoreServiceError>,
+      user_by_email_result: Result<ApiResponse<UserResponse>, CoreServiceError>,
+      get_user_result:      Result<ApiResponse<UserWithPermissionsData>, CoreServiceError>,
    }
 
    impl StubCoreServiceClient {
@@ -599,12 +599,12 @@ mod tests {
             status:    "active".to_string(),
          };
          Self {
-            user_by_email_result: Ok(GetUserByEmailResponse { user: user.clone() }),
-            get_user_result:      Ok(UserWithPermissionsResponse {
+            user_by_email_result: Ok(ApiResponse::new(user.clone())),
+            get_user_result:      Ok(ApiResponse::new(UserWithPermissionsData {
                user,
                roles: vec!["user".to_string()],
                permissions: vec!["workflow:read".to_string()],
-            }),
+            })),
          }
       }
 
@@ -622,14 +622,14 @@ mod tests {
          &self,
          _tenant_id: Uuid,
          _email: &str,
-      ) -> Result<GetUserByEmailResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
          self.user_by_email_result.clone()
       }
 
       async fn get_user(
          &self,
          _user_id: Uuid,
-      ) -> Result<UserWithPermissionsResponse, CoreServiceError> {
+      ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
          self.get_user_result.clone()
       }
 
