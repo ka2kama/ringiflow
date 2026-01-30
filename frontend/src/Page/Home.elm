@@ -1,31 +1,136 @@
-module Page.Home exposing (view)
+module Page.Home exposing (Model, Msg, init, update, updateShared, view)
 
-{-| ホームページ
+{-| ホームページ（ダッシュボード）
 
-アプリケーションのトップページを表示する。
-
-
-## 将来の拡張
-
-  - ダッシュボード（未処理タスク数、最近の申請など）
-  - クイックアクション（新規申請ボタンなど）
+アプリケーションのトップページ。
+KPI 統計情報（承認待ち、申請中、本日完了）とクイックアクションを表示する。
 
 -}
 
+import Api.Dashboard as DashboardApi
+import Api.Http exposing (ApiError(..))
+import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Shared exposing (Shared)
 
 
-{-| ホームページの描画
+
+-- MODEL
+
+
+{-| ダッシュボード画面の状態
+
+RemoteData パターンで API 呼び出しの状態を管理する。
+
 -}
-view : Html msg
-view =
+type RemoteData a
+    = Loading
+    | Failure
+    | Success a
+
+
+type alias Model =
+    { shared : Shared
+    , stats : RemoteData DashboardStats
+    }
+
+
+{-| 初期化: API から統計情報を取得
+-}
+init : Shared -> ( Model, Cmd Msg )
+init shared =
+    ( { shared = shared
+      , stats = Loading
+      }
+    , DashboardApi.getStats
+        { config = Shared.toRequestConfig shared
+        , toMsg = GotDashboardStats
+        }
+    )
+
+
+{-| Shared の更新を反映
+-}
+updateShared : Shared -> Model -> Model
+updateShared shared model =
+    { model | shared = shared }
+
+
+
+-- UPDATE
+
+
+type Msg
+    = GotDashboardStats (Result ApiError DashboardStats)
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        GotDashboardStats result ->
+            case result of
+                Ok stats ->
+                    ( { model | stats = Success stats }, Cmd.none )
+
+                Err _ ->
+                    ( { model | stats = Failure }, Cmd.none )
+
+
+
+-- VIEW
+
+
+{-| ダッシュボード画面の描画
+-}
+view : Model -> Html Msg
+view model =
     div []
-        [ h2 [] [ text "ようこそ RingiFlow へ" ]
-        , p [] [ text "ワークフロー管理システムです。" ]
+        [ h2 [] [ text "ダッシュボード" ]
+        , viewStats model.stats
         , viewQuickActions
-        , viewStatus
         ]
+
+
+{-| KPI 統計カードの表示
+
+RemoteData パターンで Loading / Failure / Success を切り替える。
+
+-}
+viewStats : RemoteData DashboardStats -> Html Msg
+viewStats remoteStats =
+    case remoteStats of
+        Loading ->
+            div
+                [ style "padding" "2rem"
+                , style "text-align" "center"
+                , style "color" "#5f6368"
+                ]
+                [ text "統計情報を読み込み中..." ]
+
+        Failure ->
+            div
+                [ style "padding" "1.5rem"
+                , style "background-color" "#fce8e6"
+                , style "border-radius" "8px"
+                , style "color" "#c5221f"
+                ]
+                [ text "統計情報の取得に失敗しました" ]
+
+        Success stats ->
+            -- TODO(human): KPI カードを実装する
+            viewStatsCards stats
+
+
+{-| KPI カードの描画
+
+3 つの統計値をカードとして横並びに表示する。
+
+-}
+viewStatsCards : DashboardStats -> Html Msg
+viewStatsCards stats =
+    -- TODO(human): 実装してください
+    div [] []
 
 
 {-| クイックアクションエリア
@@ -67,20 +172,4 @@ viewQuickActions =
             , style "border-radius" "4px"
             ]
             [ text "タスク一覧" ]
-        ]
-
-
-{-| ステータス表示
--}
-viewStatus : Html msg
-viewStatus =
-    div
-        [ style "background-color" "white"
-        , style "padding" "1.5rem"
-        , style "border-radius" "8px"
-        , style "box-shadow" "0 2px 4px rgba(0,0,0,0.1)"
-        , style "margin-top" "1.5rem"
-        ]
-        [ h3 [] [ text "Phase 2 実装中" ]
-        , p [] [ text "申請フォーム UI を構築しています。" ]
         ]
