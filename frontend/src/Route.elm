@@ -69,6 +69,8 @@ Route はカスタム型（Tagged Union / Sum Type）として定義。
   - `Workflows`: 申請一覧（`/workflows`）
   - `WorkflowNew`: 新規申請（`/workflows/new`）
   - `WorkflowDetail`: 申請詳細（`/workflows/{id}`）
+  - `Tasks`: タスク一覧（`/tasks`）
+  - `TaskDetail`: タスク詳細（`/tasks/{id}`）
   - `NotFound`: 存在しないパス
 
 -}
@@ -77,6 +79,8 @@ type Route
     | Workflows
     | WorkflowNew
     | WorkflowDetail String
+    | Tasks
+    | TaskDetail String
     | NotFound
 
 
@@ -124,6 +128,8 @@ parser =
         , Parser.map WorkflowNew (s "workflows" </> s "new")
         , Parser.map WorkflowDetail (s "workflows" </> string)
         , Parser.map Workflows (s "workflows")
+        , Parser.map TaskDetail (s "tasks" </> string)
+        , Parser.map Tasks (s "tasks")
         ]
 
 
@@ -183,6 +189,12 @@ toString route =
 
         WorkflowDetail id ->
             "/workflows/" ++ id
+
+        Tasks ->
+            "/tasks"
+
+        TaskDetail id ->
+            "/tasks/" ++ id
 
         NotFound ->
             "/not-found"
