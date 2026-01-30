@@ -594,6 +594,88 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   # ============================================================
+  # タスク API
+  # ============================================================
+  /api/v1/tasks/my:
+    get:
+      tags:
+        - tasks
+      summary: 自分のタスク一覧取得
+      description: |
+        ログインユーザーにアサインされたアクティブなタスク（承認ステップ）の一覧を取得する。
+
+        「タスク」とは WorkflowStep のユーザー向けビューであり、
+        自分にアサインされた承認待ちのステップを表す。
+      operationId: listMyTasks
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+      responses:
+        '200':
+          description: タスク一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/tasks/{id}:
+    get:
+      tags:
+        - tasks
+      summary: タスク詳細取得
+      description: |
+        指定された ID のタスク（承認ステップ）の詳細を取得する。
+
+        レスポンスにはステップ情報と、関連するワークフローインスタンス（全ステップ含む）が含まれる。
+        自分にアサインされたタスクのみ取得可能。
+      operationId: getTask
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - name: id
+          in: path
+          required: true
+          description: タスク（ワークフローステップ）ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: タスク詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 自分にアサインされていないタスク
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/forbidden
+                title: Forbidden
+                status: 403
+                detail: このタスクにアクセスする権限がありません
+        '404':
+          description: タスクが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/task-not-found
+                title: Task Not Found
+                status: 404
+                detail: タスクが見つかりません
+
+  # ============================================================
   # ヘルスチェック API
   # ============================================================
   /health:
@@ -971,6 +1053,123 @@ components:
           type: string
           format: date-time
           description: 更新日時
+
+    # ============================================================
+    # タスク関連
+    # ============================================================
+    TaskListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskItem'
+
+    TaskDetailResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/TaskDetail'
+
+    TaskItem:
+      type: object
+      description: タスク一覧の要素。承認ステップとワークフロー概要を含む。
+      required:
+        - id
+        - step_name
+        - status
+        - version
+        - created_at
+        - workflow
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ステップインスタンス ID
+        step_name:
+          type: string
+          description: ステップ名
+        status:
+          type: string
+          enum: [Pending, Active, Completed, Skipped]
+          description: ステップの状態
+        version:
+          type: integer
+          minimum: 1
+          description: 楽観的ロック用バージョン番号
+        assigned_to:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: 担当者のユーザー ID
+        due_date:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 期限
+        started_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 処理開始日時
+        created_at:
+          type: string
+          format: date-time
+          description: 作成日時
+        workflow:
+          $ref: '#/components/schemas/TaskWorkflowSummary'
+
+    TaskWorkflowSummary:
+      type: object
+      description: タスク一覧で表示するワークフロー概要情報
+      required:
+        - id
+        - title
+        - status
+        - initiated_by
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ワークフローインスタンス ID
+        title:
+          type: string
+          description: ワークフロータイトル
+        status:
+          type: string
+          enum: [Draft, Pending, InProgress, Approved, Rejected, Cancelled]
+          description: ワークフローの状態
+        initiated_by:
+          type: string
+          format: uuid
+          description: 申請者のユーザー ID
+        submitted_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: 申請日時
+
+    TaskDetail:
+      type: object
+      description: タスク詳細。承認ステップと関連するワークフロー全体を含む。
+      required:
+        - step
+        - workflow
+      properties:
+        step:
+          $ref: '#/components/schemas/WorkflowStep'
+          description: タスクに対応するワークフローステップ
+        workflow:
+          $ref: '#/components/schemas/WorkflowInstance'
+          description: 関連するワークフローインスタンス（全ステップ含む）
 
     # ============================================================
     # 認証関連
