@@ -15,11 +15,13 @@
 //! - `workflow`: ワークフロー関連（作成、申請）
 
 pub mod auth;
+pub mod dashboard;
 pub mod health;
 pub mod task;
 pub mod workflow;
 
 pub use auth::{AuthState, csrf, login, logout, me};
+pub use dashboard::get_dashboard_stats;
 pub use health::health_check;
 pub use task::{get_task, list_my_tasks};
 pub use workflow::{

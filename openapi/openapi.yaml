@@ -676,6 +676,36 @@ paths:
                 detail: タスクが見つかりません
 
   # ============================================================
+  # ダッシュボード API
+  # ============================================================
+  /api/v1/dashboard/stats:
+    get:
+      tags:
+        - dashboard
+      summary: ダッシュボード統計情報取得
+      description: |
+        ログインユーザーのダッシュボード統計情報を取得する。
+
+        以下の KPI を返す:
+        - 承認待ちタスク数（Active なステップのうち自分にアサインされたもの）
+        - 申請中ワークフロー数（InProgress なインスタンスのうち自分が申請したもの）
+        - 本日完了タスク数（今日 completed_at が設定されたステップのうち自分にアサインされたもの）
+      operationId: getDashboardStats
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+      responses:
+        '200':
+          description: ダッシュボード統計情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
   # ヘルスチェック API
   # ============================================================
   /health:
@@ -1170,6 +1200,38 @@ components:
         workflow:
           $ref: '#/components/schemas/WorkflowInstance'
           description: 関連するワークフローインスタンス（全ステップ含む）
+
+    # ============================================================
+    # ダッシュボード関連
+    # ============================================================
+    DashboardStatsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/DashboardStats'
+
+    DashboardStats:
+      type: object
+      description: ダッシュボードの統計情報
+      required:
+        - pending_tasks
+        - my_workflows_in_progress
+        - completed_today
+      properties:
+        pending_tasks:
+          type: integer
+          minimum: 0
+          description: 承認待ちタスク数（Active なステップのうち自分にアサインされたもの）
+        my_workflows_in_progress:
+          type: integer
+          minimum: 0
+          description: 申請中ワークフロー数（InProgress なインスタンスのうち自分が申請したもの）
+        completed_today:
+          type: integer
+          minimum: 0
+          description: 本日完了タスク数（今日 completed_at が設定されたステップのうち自分にアサインされたもの）
 
     # ============================================================
     # 認証関連

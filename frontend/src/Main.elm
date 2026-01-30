@@ -14,7 +14,7 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Page.Home
+import Page.Home as Home
 import Page.NotFound
 import Page.Task.Detail as TaskDetail
 import Page.Task.List as TaskList
@@ -67,7 +67,7 @@ Nested TEA パターンにより、各ページの Model を Page 型で保持�
 
 -}
 type Page
-    = HomePage
+    = HomePage Home.Model
     | WorkflowsPage WorkflowList.Model
     | WorkflowNewPage WorkflowNew.Model
     | WorkflowDetailPage WorkflowDetail.Model
@@ -158,7 +158,11 @@ initPage : Route -> Shared -> ( Page, Cmd Msg )
 initPage route shared =
     case route of
         Route.Home ->
-            ( HomePage, Cmd.none )
+            let
+                ( model, cmd ) =
+                    Home.init shared
+            in
+            ( HomePage model, Cmd.map HomeMsg cmd )
 
         Route.Workflows ->
             let
@@ -208,8 +212,8 @@ CSRF トークン取得後など、グローバルな Shared が更新された�
 updatePageShared : Shared -> Page -> Page
 updatePageShared shared page =
     case page of
-        HomePage ->
-            HomePage
+        HomePage subModel ->
+            HomePage (Home.updateShared shared subModel)
 
         WorkflowsPage subModel ->
             WorkflowsPage (WorkflowList.updateShared shared subModel)
@@ -244,6 +248,7 @@ type Msg
     | UrlChanged Url
     | GotCsrfToken (Result ApiError String)
     | GotUser (Result ApiError Shared.User)
+    | HomeMsg Home.Msg
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
     | WorkflowDetailMsg WorkflowDetail.Msg
@@ -311,6 +316,20 @@ update msg model =
 
                 Err _ ->
                     -- 未認証の場合は 401 が返されるが、無視する
+                    ( model, Cmd.none )
+
+        HomeMsg subMsg ->
+            case model.page of
+                HomePage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            Home.update subMsg subModel
+                    in
+                    ( { model | page = HomePage newSubModel }
+                    , Cmd.map HomeMsg subCmd
+                    )
+
+                _ ->
                     ( model, Cmd.none )
 
         WorkflowsMsg subMsg ->
@@ -444,8 +463,9 @@ viewMain model =
         , style "margin" "0 auto"
         ]
         [ case model.page of
-            HomePage ->
-                Page.Home.view
+            HomePage subModel ->
+                Home.view subModel
+                    |> Html.map HomeMsg
 
             WorkflowsPage subModel ->
                 WorkflowList.view subModel

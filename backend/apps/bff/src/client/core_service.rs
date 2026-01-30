@@ -237,6 +237,22 @@ pub struct TaskDetailResponse {
    pub data: TaskDetailDto,
 }
 
+// --- ダッシュボード関連の型 ---
+
+/// ダッシュボード統計 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct DashboardStatsDto {
+   pub pending_tasks: i64,
+   pub my_workflows_in_progress: i64,
+   pub completed_today: i64,
+}
+
+/// ダッシュボード統計レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct DashboardStatsResponse {
+   pub data: DashboardStatsDto,
+}
+
 /// Core Service クライアントトレイト
 ///
 /// テスト時にスタブを使用できるようトレイトで定義。
@@ -442,6 +458,17 @@ pub trait CoreServiceClient: Send + Sync {
       tenant_id: Uuid,
       user_id: Uuid,
    ) -> Result<TaskDetailResponse, CoreServiceError>;
+
+   // ===== ダッシュボード系メソッド =====
+
+   /// ダッシュボード統計情報を取得する
+   ///
+   /// Core Service の `GET /internal/dashboard/stats` を呼び出す。
+   async fn get_dashboard_stats(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<DashboardStatsResponse, CoreServiceError>;
 }
 
 /// Core Service クライアント実装
@@ -827,6 +854,35 @@ impl CoreServiceClient for CoreServiceClientImpl {
          reqwest::StatusCode::FORBIDDEN => {
             let body = response.text().await.unwrap_or_default();
             Err(CoreServiceError::Forbidden(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   // ===== ダッシュボード系メソッドの実装 =====
+
+   async fn get_dashboard_stats(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<DashboardStatsResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/dashboard/stats?tenant_id={}&user_id={}",
+         self.base_url, tenant_id, user_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<DashboardStatsResponse>().await?;
+            Ok(body)
          }
          status => {
             let body = response.text().await.unwrap_or_default();

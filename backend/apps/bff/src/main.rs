@@ -73,6 +73,7 @@ use handler::{
    approve_step,
    create_workflow,
    csrf,
+   get_dashboard_stats,
    get_task,
    get_workflow,
    get_workflow_definition,
@@ -228,6 +229,11 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/api/v1/tasks/{id}",
          get(get_task::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      // ダッシュボード API
+      .route(
+         "/api/v1/dashboard/stats",
+         get(get_dashboard_stats::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .with_state(workflow_state)
       .layer(from_fn_with_state(

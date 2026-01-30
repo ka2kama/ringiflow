@@ -1,0 +1,511 @@
+//! # ダッシュボードユースケース
+//!
+//! ダッシュボード統計情報（KPI）の取得に関するビジネスロジックを実装する。
+//!
+//! ## 統計項目
+//!
+//! - 承認待ちタスク数: 自分にアサインされた Active なステップ数
+//! - 申請中ワークフロー数: 自分が申請した InProgress なインスタンス数
+//! - 本日完了タスク数: 自分にアサインされた本日 completed_at のステップ数
+
+use chrono::{DateTime, Utc};
+use ringiflow_domain::{
+   tenant::TenantId,
+   user::UserId,
+   workflow::{WorkflowInstanceStatus, WorkflowStepStatus},
+};
+use ringiflow_infra::repository::{WorkflowInstanceRepository, WorkflowStepRepository};
+use serde::Serialize;
+
+use crate::error::CoreError;
+
+/// ダッシュボード統計情報
+#[derive(Debug, Clone, Serialize)]
+pub struct DashboardStats {
+   pub pending_tasks: i64,
+   pub my_workflows_in_progress: i64,
+   pub completed_today: i64,
+}
+
+/// ダッシュボードユースケース実装
+pub struct DashboardUseCaseImpl<I, S> {
+   instance_repo: I,
+   step_repo:     S,
+}
+
+impl<I, S> DashboardUseCaseImpl<I, S>
+where
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+{
+   pub fn new(instance_repo: I, step_repo: S) -> Self {
+      Self {
+         instance_repo,
+         step_repo,
+      }
+   }
+
+   /// ダッシュボード統計情報を取得する
+   ///
+   /// 現在時刻を引数として受け取ることで、テスタビリティを確保する。
+   pub async fn get_stats(
+      &self,
+      tenant_id: TenantId,
+      user_id: UserId,
+      now: DateTime<Utc>,
+   ) -> Result<DashboardStats, CoreError> {
+      // 1. 承認待ちタスク数: 自分にアサインされた Active なステップ
+      let my_steps = self
+         .step_repo
+         .find_by_assigned_to(&tenant_id, &user_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップ取得エラー: {}", e)))?;
+
+      let pending_tasks = my_steps
+         .iter()
+         .filter(|s| s.status() == WorkflowStepStatus::Active)
+         .count() as i64;
+
+      // 2. 申請中ワークフロー数: 自分が申請した InProgress なインスタンス
+      let my_instances = self
+         .instance_repo
+         .find_by_initiated_by(&tenant_id, &user_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンス取得エラー: {}", e)))?;
+
+      let my_workflows_in_progress = my_instances
+         .iter()
+         .filter(|i| i.status() == WorkflowInstanceStatus::InProgress)
+         .count() as i64;
+
+      // 3. 本日完了タスク数: 自分にアサインされた本日 completed_at のステップ
+      let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap();
+      let today_start_utc = today_start.and_utc();
+
+      let completed_today = my_steps
+         .iter()
+         .filter(|s| {
+            s.status() == WorkflowStepStatus::Completed
+               && s
+                  .completed_at()
+                  .is_some_and(|completed| completed >= today_start_utc)
+         })
+         .count() as i64;
+
+      Ok(DashboardStats {
+         pending_tasks,
+         my_workflows_in_progress,
+         completed_today,
+      })
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use std::sync::{Arc, Mutex};
+
+   use async_trait::async_trait;
+   use chrono::Utc;
+   use ringiflow_domain::{
+      tenant::TenantId,
+      user::UserId,
+      value_objects::Version,
+      workflow::{
+         WorkflowDefinitionId,
+         WorkflowInstance,
+         WorkflowInstanceId,
+         WorkflowStep,
+         WorkflowStepId,
+      },
+   };
+   use ringiflow_infra::{
+      InfraError,
+      repository::{WorkflowInstanceRepository, WorkflowStepRepository},
+   };
+
+   use super::*;
+
+   // ===== モックリポジトリ =====
+
+   #[derive(Clone)]
+   struct MockWorkflowInstanceRepository {
+      instances: Arc<Mutex<Vec<WorkflowInstance>>>,
+   }
+
+   impl MockWorkflowInstanceRepository {
+      fn new() -> Self {
+         Self {
+            instances: Arc::new(Mutex::new(Vec::new())),
+         }
+      }
+   }
+
+   #[async_trait]
+   impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
+      async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+         self.instances.lock().unwrap().push(instance.clone());
+         Ok(())
+      }
+
+      async fn update_with_version_check(
+         &self,
+         _instance: &WorkflowInstance,
+         _expected_version: Version,
+      ) -> Result<(), InfraError> {
+         Ok(())
+      }
+
+      async fn find_by_id(
+         &self,
+         id: &WorkflowInstanceId,
+         tenant_id: &TenantId,
+      ) -> Result<Option<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|i| i.id() == id && i.tenant_id() == tenant_id)
+            .cloned())
+      }
+
+      async fn find_by_tenant(
+         &self,
+         tenant_id: &TenantId,
+      ) -> Result<Vec<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|i| i.tenant_id() == tenant_id)
+            .cloned()
+            .collect())
+      }
+
+      async fn find_by_initiated_by(
+         &self,
+         tenant_id: &TenantId,
+         user_id: &UserId,
+      ) -> Result<Vec<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|i| i.tenant_id() == tenant_id && i.initiated_by() == user_id)
+            .cloned()
+            .collect())
+      }
+
+      async fn find_by_ids(
+         &self,
+         ids: &[WorkflowInstanceId],
+         tenant_id: &TenantId,
+      ) -> Result<Vec<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|i| ids.contains(i.id()) && i.tenant_id() == tenant_id)
+            .cloned()
+            .collect())
+      }
+   }
+
+   #[derive(Clone)]
+   struct MockWorkflowStepRepository {
+      steps: Arc<Mutex<Vec<WorkflowStep>>>,
+   }
+
+   impl MockWorkflowStepRepository {
+      fn new() -> Self {
+         Self {
+            steps: Arc::new(Mutex::new(Vec::new())),
+         }
+      }
+   }
+
+   #[async_trait]
+   impl WorkflowStepRepository for MockWorkflowStepRepository {
+      async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+         self.steps.lock().unwrap().push(step.clone());
+         Ok(())
+      }
+
+      async fn update_with_version_check(
+         &self,
+         _step: &WorkflowStep,
+         _expected_version: Version,
+      ) -> Result<(), InfraError> {
+         Ok(())
+      }
+
+      async fn find_by_id(
+         &self,
+         id: &WorkflowStepId,
+         _tenant_id: &TenantId,
+      ) -> Result<Option<WorkflowStep>, InfraError> {
+         Ok(self
+            .steps
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.id() == id)
+            .cloned())
+      }
+
+      async fn find_by_instance(
+         &self,
+         instance_id: &WorkflowInstanceId,
+         _tenant_id: &TenantId,
+      ) -> Result<Vec<WorkflowStep>, InfraError> {
+         Ok(self
+            .steps
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|s| s.instance_id() == instance_id)
+            .cloned()
+            .collect())
+      }
+
+      async fn find_by_assigned_to(
+         &self,
+         _tenant_id: &TenantId,
+         user_id: &UserId,
+      ) -> Result<Vec<WorkflowStep>, InfraError> {
+         Ok(self
+            .steps
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|s| s.assigned_to() == Some(user_id))
+            .cloned()
+            .collect())
+      }
+   }
+
+   // ===== テスト =====
+
+   #[tokio::test]
+   async fn test_承認待ちタスク数がactiveステップのみカウントされる() {
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      // Active ステップ（カウント対象）
+      let active_step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      )
+      .activated();
+      step_repo.insert(&active_step).await.unwrap();
+
+      // Pending ステップ（カウント対象外）
+      let pending_step = WorkflowStep::new(
+         instance.id().clone(),
+         "review".to_string(),
+         "レビュー".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      );
+      step_repo.insert(&pending_step).await.unwrap();
+
+      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let stats = usecase
+         .get_stats(tenant_id, approver_id, Utc::now())
+         .await
+         .unwrap();
+
+      assert_eq!(stats.pending_tasks, 1);
+   }
+
+   #[tokio::test]
+   async fn test_申請中ワークフロー数がinprogressのみカウントされる() {
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      // InProgress インスタンス（カウント対象）
+      let in_progress = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "申請中1".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&in_progress).await.unwrap();
+
+      // Draft インスタンス（カウント対象外）
+      let draft = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "下書き".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      );
+      instance_repo.insert(&draft).await.unwrap();
+
+      // Approved インスタンス（カウント対象外）
+      let approved = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "承認済み".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .approved();
+      instance_repo.insert(&approved).await.unwrap();
+
+      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let stats = usecase
+         .get_stats(tenant_id, user_id, Utc::now())
+         .await
+         .unwrap();
+
+      assert_eq!(stats.my_workflows_in_progress, 1);
+   }
+
+   #[tokio::test]
+   async fn test_本日完了タスク数が今日のcompleted_atのみカウントされる() {
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "テスト申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      // 完了済みステップ（今日 → カウント対象）
+      let completed_step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      )
+      .activated()
+      .approve(Some("OK".to_string()))
+      .unwrap();
+      step_repo.insert(&completed_step).await.unwrap();
+
+      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let now = Utc::now();
+      let stats = usecase
+         .get_stats(tenant_id, approver_id, now)
+         .await
+         .unwrap();
+
+      assert_eq!(stats.completed_today, 1);
+   }
+
+   #[tokio::test]
+   async fn test_タスクがない場合はすべて0を返す() {
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let stats = usecase
+         .get_stats(tenant_id, user_id, Utc::now())
+         .await
+         .unwrap();
+
+      assert_eq!(stats.pending_tasks, 0);
+      assert_eq!(stats.my_workflows_in_progress, 0);
+      assert_eq!(stats.completed_today, 0);
+   }
+
+   #[tokio::test]
+   async fn test_他ユーザーのデータは含まれない() {
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+      let other_user_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      // user_id が申請した InProgress インスタンス
+      let instance = WorkflowInstance::new(
+         tenant_id.clone(),
+         WorkflowDefinitionId::new(),
+         Version::initial(),
+         "ユーザーAの申請".to_string(),
+         serde_json::json!({}),
+         user_id.clone(),
+      )
+      .submitted()
+      .unwrap()
+      .with_current_step("approval".to_string());
+      instance_repo.insert(&instance).await.unwrap();
+
+      // approver_id にアサインされた Active ステップ
+      let step = WorkflowStep::new(
+         instance.id().clone(),
+         "approval".to_string(),
+         "承認".to_string(),
+         "approval".to_string(),
+         Some(approver_id.clone()),
+      )
+      .activated();
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+
+      // other_user_id で統計を取得 → すべて 0
+      let stats = usecase
+         .get_stats(tenant_id, other_user_id, Utc::now())
+         .await
+         .unwrap();
+
+      assert_eq!(stats.pending_tasks, 0);
+      assert_eq!(stats.my_workflows_in_progress, 0);
+      assert_eq!(stats.completed_today, 0);
+   }
+}
