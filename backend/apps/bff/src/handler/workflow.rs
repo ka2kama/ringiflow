@@ -386,7 +386,7 @@ where
 // --- ヘルパー関数 ---
 
 /// X-Tenant-ID ヘッダーからテナント ID を抽出する
-fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
+pub(crate) fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
    let tenant_id_str = headers
       .get("X-Tenant-ID")
       .and_then(|v| v.to_str().ok())
@@ -396,7 +396,7 @@ fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
 }
 
 /// セッションを取得する
-async fn get_session<S>(
+pub(crate) async fn get_session<S>(
    session_manager: &S,
    jar: &CookieJar,
    tenant_id: Uuid,
@@ -438,7 +438,7 @@ fn unauthorized_response() -> Response {
 }
 
 /// 内部エラーレスポンス
-fn internal_error_response() -> Response {
+pub(crate) fn internal_error_response() -> Response {
    (
       StatusCode::INTERNAL_SERVER_ERROR,
       Json(ErrorResponse {
@@ -452,7 +452,7 @@ fn internal_error_response() -> Response {
 }
 
 /// 404 Not Found レスポンス
-fn not_found_response(error_type: &str, title: &str, detail: &str) -> Response {
+pub(crate) fn not_found_response(error_type: &str, title: &str, detail: &str) -> Response {
    (
       StatusCode::NOT_FOUND,
       Json(ErrorResponse {
@@ -480,7 +480,7 @@ fn validation_error_response(detail: &str) -> Response {
 }
 
 /// 403 Forbidden レスポンス
-fn forbidden_response(detail: &str) -> Response {
+pub(crate) fn forbidden_response(detail: &str) -> Response {
    (
       StatusCode::FORBIDDEN,
       Json(ErrorResponse {

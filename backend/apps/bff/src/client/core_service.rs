@@ -192,6 +192,51 @@ pub struct WorkflowDefinitionListResponse {
    pub data: Vec<WorkflowDefinitionDto>,
 }
 
+// --- タスク関連の型 ---
+
+/// ワークフロー概要 DTO（タスク一覧用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskWorkflowSummaryDto {
+   pub id:           String,
+   pub title:        String,
+   pub status:       String,
+   pub initiated_by: String,
+   pub submitted_at: Option<String>,
+}
+
+/// タスク一覧の要素 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskItemDto {
+   pub id:          String,
+   pub step_name:   String,
+   pub status:      String,
+   pub version:     i32,
+   pub assigned_to: Option<String>,
+   pub due_date:    Option<String>,
+   pub started_at:  Option<String>,
+   pub created_at:  String,
+   pub workflow:    TaskWorkflowSummaryDto,
+}
+
+/// タスク一覧レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskListResponse {
+   pub data: Vec<TaskItemDto>,
+}
+
+/// タスク詳細 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskDetailDto {
+   pub step:     WorkflowStepDto,
+   pub workflow: WorkflowInstanceDto,
+}
+
+/// タスク詳細レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskDetailResponse {
+   pub data: TaskDetailDto,
+}
+
 /// Core Service クライアントトレイト
 ///
 /// テスト時にスタブを使用できるようトレイトで定義。
@@ -376,6 +421,27 @@ pub trait CoreServiceClient: Send + Sync {
       step_id: Uuid,
       req: ApproveRejectRequest,
    ) -> Result<WorkflowResponse, CoreServiceError>;
+
+   // ===== タスク系メソッド =====
+
+   /// 自分のタスク一覧を取得する
+   ///
+   /// Core Service の `GET /internal/tasks/my` を呼び出す。
+   async fn list_my_tasks(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<TaskListResponse, CoreServiceError>;
+
+   /// タスク詳細を取得する
+   ///
+   /// Core Service の `GET /internal/tasks/{id}` を呼び出す。
+   async fn get_task(
+      &self,
+      task_id: Uuid,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<TaskDetailResponse, CoreServiceError>;
 }
 
 /// Core Service クライアント実装
@@ -699,6 +765,68 @@ impl CoreServiceClient for CoreServiceClientImpl {
          reqwest::StatusCode::CONFLICT => {
             let body = response.text().await.unwrap_or_default();
             Err(CoreServiceError::Conflict(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   // ===== タスク系メソッドの実装 =====
+
+   async fn list_my_tasks(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<TaskListResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/tasks/my?tenant_id={}&user_id={}",
+         self.base_url, tenant_id, user_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<TaskListResponse>().await?;
+            Ok(body)
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn get_task(
+      &self,
+      task_id: Uuid,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<TaskDetailResponse, CoreServiceError> {
+      let url = format!(
+         "{}/internal/tasks/{}?tenant_id={}&user_id={}",
+         self.base_url, task_id, tenant_id, user_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<TaskDetailResponse>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
+         reqwest::StatusCode::FORBIDDEN => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Forbidden(body))
          }
          status => {
             let body = response.text().await.unwrap_or_default();

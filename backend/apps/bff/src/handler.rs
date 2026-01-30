@@ -16,10 +16,12 @@
 
 pub mod auth;
 pub mod health;
+pub mod task;
 pub mod workflow;
 
 pub use auth::{AuthState, csrf, login, logout, me};
 pub use health::health_check;
+pub use task::{get_task, list_my_tasks};
 pub use workflow::{
    WorkflowState,
    approve_step,
