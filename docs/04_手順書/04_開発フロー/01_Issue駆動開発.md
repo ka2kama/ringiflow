@@ -93,9 +93,9 @@ git checkout -b feature/34-user-auth
 
 ```bash
 # 空コミットで Draft PR を作成
-git commit --allow-empty -m "#34 WIP: ログイン機能を実装"
+git commit --allow-empty -m "#34 WIP: Implement login feature"
 git push -u origin HEAD
-gh pr create --draft --title "#34 ログイン機能を実装" --body-file .github/pull_request_template.md
+gh pr create --draft --title "#34 Implement login feature" --body-file .github/pull_request_template.md
 ```
 
 **Draft PR の目的:**
@@ -206,7 +206,7 @@ TDD（Red → Green → Refactor）で MVP を積み上げる。
 
 ```bash
 git add docs/03_詳細設計書/ openapi/
-git commit -m "#34 ログイン機能の詳細設計を追加"
+git commit -m "#34 Add detailed design for login feature"
 ```
 
 設計と実装を分けてコミットすることで:
@@ -234,9 +234,9 @@ Red → Green → Refactor を繰り返す
 
 | タイミング | 例 |
 |-----------|-----|
-| テストが通ったとき | `UserRepository: find_by_email のテストを追加` |
-| リファクタリング完了時 | `UserRepository: エラーハンドリングを整理` |
-| 1つの機能単位が完成したとき | `UserRepository を実装` |
+| テストが通ったとき | `Add test for UserRepository find_by_email` |
+| リファクタリング完了時 | `Refactor error handling in UserRepository` |
+| 1つの機能単位が完成したとき | `Implement UserRepository` |
 
 **良いコミット:**
 - 小さく、1つの目的に集中
@@ -251,7 +251,7 @@ Red → Green → Refactor を繰り返す
 コミットメッセージの先頭に Issue 番号を含める（GitHub 上でリンクされる）。
 
 ```bash
-git commit -m "#34 UserRepository: find_by_email を実装"
+git commit -m "#34 Implement find_by_email for UserRepository"
 ```
 
 自動付与: lefthook がブランチ名（`feature/34-xxx`）から Issue 番号を抽出して自動で先頭に追加する。手動で書く必要はない。

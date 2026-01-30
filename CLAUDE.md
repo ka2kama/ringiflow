@@ -4,7 +4,27 @@
 
 ## 言語
 
-常に日本語で応答する。コミットメッセージ、コメント、ドキュメントも日本語で記述する。
+常に日本語で応答する。コメント、ドキュメントも日本語で記述する。
+
+### 段階的英語化
+
+開発ワークフローを通じた英語力向上のため、以下は英語で記述する:
+
+- **コミットメッセージ**: 英語で記述する
+- **PR タイトル**: 英語で記述する
+
+それ以外（コードコメント、ドキュメント、PR 本文、応答）は引き続き日本語。
+
+### プロンプト英訳
+
+ユーザーの日本語プロンプトに対し、応答の冒頭で英訳を添える:
+
+```
+💬 Your prompt in English: [ユーザーの発言の英訳]
+```
+
+- 短い相槌や「はい」「いいえ」程度の返答には不要
+- 意訳で構わない。自然な英語表現を優先する
 
 ## プロジェクト概要
 
@@ -269,6 +289,18 @@ Issue クローズ時には振り返りコメントを残し、重要な学び�
 
 注: Yes/No で答えられるクローズドクエスチョンには適用しない。
 
+### 英語サマリー（Insight ブロック）
+
+Insight ブロックには、日本語の解説に加えて 1〜2 文の英語サマリーを必ず付ける:
+
+```
+★ Insight ─────────────────────────────────────
+[日本語の教育的ポイント 2-3 点]
+
+📝 In English: [1-2 sentence summary of the key takeaway]
+─────────────────────────────────────────────────
+```
+
 ## Issue 駆動開発
 
 **AI エージェントへの必須事項:**
@@ -308,19 +340,31 @@ git checkout -b fix/バグ名       # バグ修正
 ### コミットメッセージ
 
 ```bash
-git commit -m "#34 UserRepository: find_by_email を実装"
+git commit -m "#34 Implement find_by_email for UserRepository"
 ```
 
 lefthook により、ブランチ名が `feature/34-xxx` 形式なら Issue 番号は自動付与される。
+
+英語コミットでよく使う動詞パターン:
+
+| 動詞 | 用途 | 例 |
+|------|------|-----|
+| Implement | 新規実装 | Implement user authentication |
+| Add | 追加 | Add validation to login form |
+| Fix | バグ修正 | Fix null pointer in session handler |
+| Update | 変更・改善 | Update error messages for clarity |
+| Refactor | リファクタリング | Refactor session management logic |
+| Remove | 削除 | Remove deprecated API endpoint |
+| Rename | リネーム | Rename Session to Shared |
 
 ### PR 作成（Draft）
 
 → 詳細: [手順書: Draft PR を作成](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#3-draft-pr-を作成)
 
 ```bash
-git commit --allow-empty -m "#34 WIP: ログイン機能を実装"
+git commit --allow-empty -m "#34 WIP: Implement login feature"
 git push -u origin HEAD
-gh pr create --draft --title "#34 ログイン機能を実装" --body-file .github/pull_request_template.md
+gh pr create --draft --title "#34 Implement login feature" --body-file .github/pull_request_template.md
 ```
 
 **PR 本文の形式:**
