@@ -6,7 +6,6 @@ license.workspace = true
 
 [dependencies]
 ringiflow-domain.workspace = true
-ringiflow-shared.workspace = true
 async-trait.workspace = true
 sqlx.workspace = true
 redis.workspace = true
