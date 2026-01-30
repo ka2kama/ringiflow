@@ -95,7 +95,7 @@ withUser : User -> Shared -> Shared
 withUser user shared =
     { shared
         | user = Just user
-        , tenantId = extractTenantId user
+        , tenantId = extractTenantId
     }
 
 
@@ -103,15 +103,14 @@ withUser user shared =
 -- HELPERS
 
 
-{-| ユーザーからテナント ID を抽出
+{-| テナント ID を取得
 
-MVP ではユーザー情報にテナント ID が含まれる想定。
-将来的には User 型に tenantId フィールドを追加する。
+MVP では固定値を返す。
+TODO: User 型に tenantId を追加後、User -> String に変更する。
 
 -}
-extractTenantId : User -> String
-extractTenantId _ =
-    -- TODO: User 型に tenantId を追加後、ここを修正
+extractTenantId : String
+extractTenantId =
     "00000000-0000-0000-0000-000000000001"
 
 
