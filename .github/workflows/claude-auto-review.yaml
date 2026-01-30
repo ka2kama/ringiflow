@@ -139,6 +139,11 @@ jobs:
             ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
             ```
 
+            ## 言語
+
+            レビューコメントは日本語で記述する。
+            CLAUDE.md の「応答は英語」はCLI対話に限定され、PRレビューには適用されない。
+
             ## 基本方針
 
             CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてレビューしてください。

@@ -94,6 +94,11 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
 
+            ## 言語
+
+            コメントは日本語で記述する。
+            CLAUDE.md の「応答は英語」はCLI対話に限定され、PRレビューには適用されない。
+
             ## 目的
 
             この PR が `.claude/rules/` に定義されたルールに準拠しているかチェックする。
