@@ -9,6 +9,8 @@
 //! cd backend && cargo test -p ringiflow-infra --test workflow_instance_repository_test
 //! ```
 
+use std::collections::HashSet;
+
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -240,4 +242,121 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
       "InfraError::Conflict を期待したが {:?} が返った",
       err
    );
+}
+
+// ===== find_by_ids テスト =====
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_ids_空のvecを渡すと空のvecが返る(pool: PgPool) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+
+   let result = repo.find_by_ids(&[], &tenant_id).await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_empty());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_ids_存在するidを渡すとインスタンスが返る(pool: PgPool) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+
+   let instance1 = WorkflowInstance::new(
+      tenant_id.clone(),
+      definition_id.clone(),
+      Version::initial(),
+      "申請1".to_string(),
+      json!({}),
+      user_id.clone(),
+   );
+   let instance2 = WorkflowInstance::new(
+      tenant_id.clone(),
+      definition_id,
+      Version::initial(),
+      "申請2".to_string(),
+      json!({}),
+      user_id,
+   );
+   let id1 = instance1.id().clone();
+   let id2 = instance2.id().clone();
+
+   repo.insert(&instance1).await.unwrap();
+   repo.insert(&instance2).await.unwrap();
+
+   let result = repo
+      .find_by_ids(&[id1.clone(), id2.clone()], &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   let found = result.unwrap();
+   assert_eq!(found.len(), 2);
+
+   let found_ids: HashSet<String> = found.iter().map(|i| i.id().to_string()).collect();
+   assert!(found_ids.contains(&id1.to_string()));
+   assert!(found_ids.contains(&id2.to_string()));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_ids_存在しないidを含んでも存在するもののみ返る(
+   pool: PgPool,
+) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+
+   let instance = WorkflowInstance::new(
+      tenant_id.clone(),
+      definition_id,
+      Version::initial(),
+      "テスト申請".to_string(),
+      json!({}),
+      user_id,
+   );
+   let existing_id = instance.id().clone();
+   let nonexistent_id = WorkflowInstanceId::new();
+
+   repo.insert(&instance).await.unwrap();
+
+   let result = repo
+      .find_by_ids(&[existing_id.clone(), nonexistent_id], &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   let found = result.unwrap();
+   assert_eq!(found.len(), 1);
+   assert_eq!(found[0].id(), &existing_id);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_ids_テナントidでフィルタされる(pool: PgPool) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let other_tenant_id = TenantId::new();
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+
+   let instance = WorkflowInstance::new(
+      tenant_id.clone(),
+      definition_id,
+      Version::initial(),
+      "テスト申請".to_string(),
+      json!({}),
+      user_id,
+   );
+   let instance_id = instance.id().clone();
+
+   repo.insert(&instance).await.unwrap();
+
+   // 別のテナント ID で検索
+   let result = repo.find_by_ids(&[instance_id], &other_tenant_id).await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_empty());
 }

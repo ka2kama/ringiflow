@@ -107,6 +107,26 @@ pub trait WorkflowInstanceRepository: Send + Sync {
       tenant_id: &TenantId,
       user_id: &UserId,
    ) -> Result<Vec<WorkflowInstance>, InfraError>;
+
+   /// 複数 ID によるインスタンス一覧を取得
+   ///
+   /// タスク一覧画面でワークフロータイトルを表示するために使用する。
+   /// 存在しない ID は無視し、見つかったインスタンスのみ返す。
+   ///
+   /// # 引数
+   ///
+   /// - `ids`: ワークフローインスタンス ID の一覧
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// - `Ok(Vec<WorkflowInstance>)`: 見つかったインスタンス一覧
+   /// - `Err(_)`: データベースエラー
+   async fn find_by_ids(
+      &self,
+      ids: &[WorkflowInstanceId],
+      tenant_id: &TenantId,
+   ) -> Result<Vec<WorkflowInstance>, InfraError>;
 }
 
 /// PostgreSQL 実装の WorkflowInstanceRepository
@@ -313,6 +333,63 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
             "#,
          tenant_id.as_uuid(),
          user_id.as_uuid()
+      )
+      .fetch_all(&self.pool)
+      .await?;
+
+      let instances = rows
+         .into_iter()
+         .map(|row| -> Result<WorkflowInstance, InfraError> {
+            Ok(WorkflowInstance::from_db(
+               WorkflowInstanceId::from_uuid(row.id),
+               TenantId::from_uuid(row.tenant_id),
+               WorkflowDefinitionId::from_uuid(row.definition_id),
+               Version::new(row.definition_version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               row.title,
+               row.form_data,
+               row.status
+                  .parse::<WorkflowInstanceStatus>()
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               Version::new(row.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               row.current_step_id,
+               UserId::from_uuid(row.initiated_by),
+               row.submitted_at,
+               row.completed_at,
+               row.created_at,
+               row.updated_at,
+            ))
+         })
+         .collect::<Result<Vec<_>, InfraError>>()?;
+
+      Ok(instances)
+   }
+
+   async fn find_by_ids(
+      &self,
+      ids: &[WorkflowInstanceId],
+      tenant_id: &TenantId,
+   ) -> Result<Vec<WorkflowInstance>, InfraError> {
+      if ids.is_empty() {
+         return Ok(Vec::new());
+      }
+
+      let uuid_ids: Vec<uuid::Uuid> = ids.iter().map(|id| *id.as_uuid()).collect();
+
+      let rows = sqlx::query!(
+         r#"
+            SELECT
+                id, tenant_id, definition_id, definition_version,
+                title, form_data, status, version, current_step_id,
+                initiated_by, submitted_at, completed_at,
+                created_at, updated_at
+            FROM workflow_instances
+            WHERE id = ANY($1) AND tenant_id = $2
+            ORDER BY created_at DESC
+            "#,
+         &uuid_ids,
+         tenant_id.as_uuid()
       )
       .fetch_all(&self.pool)
       .await?;

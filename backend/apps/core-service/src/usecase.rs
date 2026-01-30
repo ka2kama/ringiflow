@@ -12,6 +12,7 @@
 //!
 //! - `workflow`: ワークフロー関連のユースケース
 
+pub mod task;
 pub mod workflow;
 
 use async_trait::async_trait;
@@ -20,6 +21,7 @@ use ringiflow_domain::{
    user::UserId,
    workflow::{WorkflowInstance, WorkflowInstanceId},
 };
+pub use task::TaskUseCaseImpl;
 pub use workflow::{
    ApproveRejectInput,
    CreateWorkflowInput,

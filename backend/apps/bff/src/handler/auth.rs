@@ -727,6 +727,25 @@ mod tests {
          // テストスタブでは未使用
          unimplemented!("reject_step is not used in auth tests")
       }
+
+      async fn list_my_tasks(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<crate::client::TaskListResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("list_my_tasks is not used in auth tests")
+      }
+
+      async fn get_task(
+         &self,
+         _task_id: Uuid,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<crate::client::TaskDetailResponse, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("get_task is not used in auth tests")
+      }
    }
 
    struct StubAuthServiceClient {

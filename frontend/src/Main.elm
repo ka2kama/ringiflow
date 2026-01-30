@@ -16,6 +16,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page.Home
 import Page.NotFound
+import Page.Task.Detail as TaskDetail
+import Page.Task.List as TaskList
 import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
@@ -69,6 +71,8 @@ type Page
     | WorkflowsPage WorkflowList.Model
     | WorkflowNewPage WorkflowNew.Model
     | WorkflowDetailPage WorkflowDetail.Model
+    | TasksPage TaskList.Model
+    | TaskDetailPage TaskDetail.Model
     | NotFoundPage
 
 
@@ -177,6 +181,20 @@ initPage route shared =
             in
             ( WorkflowDetailPage model, Cmd.map WorkflowDetailMsg cmd )
 
+        Route.Tasks ->
+            let
+                ( model, cmd ) =
+                    TaskList.init shared
+            in
+            ( TasksPage model, Cmd.map TasksMsg cmd )
+
+        Route.TaskDetail id ->
+            let
+                ( model, cmd ) =
+                    TaskDetail.init shared id
+            in
+            ( TaskDetailPage model, Cmd.map TaskDetailMsg cmd )
+
         Route.NotFound ->
             ( NotFoundPage, Cmd.none )
 
@@ -202,6 +220,12 @@ updatePageShared shared page =
         WorkflowDetailPage subModel ->
             WorkflowDetailPage (WorkflowDetail.updateShared shared subModel)
 
+        TasksPage subModel ->
+            TasksPage (TaskList.updateShared shared subModel)
+
+        TaskDetailPage subModel ->
+            TaskDetailPage (TaskDetail.updateShared shared subModel)
+
         NotFoundPage ->
             NotFoundPage
 
@@ -223,6 +247,8 @@ type Msg
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
     | WorkflowDetailMsg WorkflowDetail.Msg
+    | TasksMsg TaskList.Msg
+    | TaskDetailMsg TaskDetail.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -329,6 +355,34 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        TasksMsg subMsg ->
+            case model.page of
+                TasksPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            TaskList.update subMsg subModel
+                    in
+                    ( { model | page = TasksPage newSubModel }
+                    , Cmd.map TasksMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        TaskDetailMsg subMsg ->
+            case model.page of
+                TaskDetailPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            TaskDetail.update subMsg subModel
+                    in
+                    ( { model | page = TaskDetailPage newSubModel }
+                    , Cmd.map TaskDetailMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 
 -- SUBSCRIPTIONS
@@ -404,6 +458,14 @@ viewMain model =
             WorkflowDetailPage subModel ->
                 WorkflowDetail.view subModel
                     |> Html.map WorkflowDetailMsg
+
+            TasksPage subModel ->
+                TaskList.view subModel
+                    |> Html.map TasksMsg
+
+            TaskDetailPage subModel ->
+                TaskDetail.view subModel
+                    |> Html.map TaskDetailMsg
 
             NotFoundPage ->
                 Page.NotFound.view

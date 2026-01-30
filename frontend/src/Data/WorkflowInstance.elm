@@ -12,6 +12,8 @@ module Data.WorkflowInstance exposing
     , statusToCssClass
     , statusToJapanese
     , statusToString
+    , stepDecoder
+    , stepStatusDecoder
     , stepStatusToJapanese
     )
 

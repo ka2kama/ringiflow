@@ -57,6 +57,16 @@ viewQuickActions =
             , style "border-radius" "4px"
             ]
             [ text "新規申請" ]
+        , a
+            [ href "/tasks"
+            , style "display" "inline-block"
+            , style "padding" "0.75rem 1.5rem"
+            , style "background-color" "#ea8600"
+            , style "color" "white"
+            , style "text-decoration" "none"
+            , style "border-radius" "4px"
+            ]
+            [ text "タスク一覧" ]
         ]
 
 

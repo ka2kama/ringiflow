@@ -67,15 +67,18 @@ use axum::{
 };
 use config::CoreConfig;
 use handler::{
+   TaskState,
    UserState,
    WorkflowState,
    approve_step,
    create_workflow,
+   get_task,
    get_user,
    get_user_by_email,
    get_workflow,
    get_workflow_definition,
    health_check,
+   list_my_tasks,
    list_my_workflows,
    list_workflow_definitions,
    reject_step,
@@ -93,7 +96,7 @@ use ringiflow_infra::{
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use usecase::WorkflowUseCaseImpl;
+use usecase::{TaskUseCaseImpl, WorkflowUseCaseImpl};
 
 /// Core Service サーバーのエントリーポイント
 ///
@@ -138,6 +141,14 @@ async fn main() -> anyhow::Result<()> {
    let workflow_usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
    let workflow_state = Arc::new(WorkflowState {
       usecase: workflow_usecase,
+   });
+
+   // タスク関連の依存コンポーネント
+   let task_instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let task_step_repo = PostgresWorkflowStepRepository::new(pool.clone());
+   let task_usecase = TaskUseCaseImpl::new(task_instance_repo, task_step_repo);
+   let task_state = Arc::new(TaskState {
+      usecase: task_usecase,
    });
 
    // ルーター構築
@@ -232,6 +243,16 @@ async fn main() -> anyhow::Result<()> {
          ),
       )
       .with_state(workflow_state)
+      // タスク API
+      .route(
+         "/internal/tasks/my",
+         get(list_my_tasks::<PostgresWorkflowInstanceRepository, PostgresWorkflowStepRepository>),
+      )
+      .route(
+         "/internal/tasks/{id}",
+         get(get_task::<PostgresWorkflowInstanceRepository, PostgresWorkflowStepRepository>),
+      )
+      .with_state(task_state)
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動

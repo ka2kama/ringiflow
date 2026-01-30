@@ -73,9 +73,11 @@ use handler::{
    approve_step,
    create_workflow,
    csrf,
+   get_task,
    get_workflow,
    get_workflow_definition,
    health_check,
+   list_my_tasks,
    list_my_workflows,
    list_workflow_definitions,
    login,
@@ -217,6 +219,15 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/api/v1/workflows/{id}/steps/{step_id}/reject",
          post(reject_step::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      // タスク API
+      .route(
+         "/api/v1/tasks/my",
+         get(list_my_tasks::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      .route(
+         "/api/v1/tasks/{id}",
+         get(get_task::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .with_state(workflow_state)
       .layer(from_fn_with_state(

@@ -14,10 +14,12 @@
 
 pub mod auth;
 pub mod health;
+pub mod task;
 pub mod workflow;
 
 pub use auth::{UserState, get_user, get_user_by_email};
 pub use health::health_check;
+pub use task::{TaskState, get_task, list_my_tasks};
 pub use workflow::{
    WorkflowState,
    approve_step,

@@ -695,6 +695,21 @@ mod tests {
             .cloned()
             .collect())
       }
+
+      async fn find_by_ids(
+         &self,
+         ids: &[WorkflowInstanceId],
+         tenant_id: &TenantId,
+      ) -> Result<Vec<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|i| ids.contains(i.id()) && i.tenant_id() == tenant_id)
+            .cloned()
+            .collect())
+      }
    }
 
    #[derive(Clone)]
