@@ -7,8 +7,8 @@ KPI 統計情報（承認待ち、申請中、本日完了）とクイックア�
 
 -}
 
+import Api exposing (ApiError)
 import Api.Dashboard as DashboardApi
-import Api.Http exposing (ApiError)
 import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
 import Html.Attributes exposing (..)

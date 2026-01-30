@@ -23,7 +23,7 @@ BFF の `/auth` エンドポイントへのアクセスを提供。
 
 -}
 
-import Api.Http as Api exposing (ApiError, RequestConfig)
+import Api exposing (ApiError, RequestConfig)
 import Json.Decode as Decode exposing (Decoder)
 import Shared exposing (User)
 

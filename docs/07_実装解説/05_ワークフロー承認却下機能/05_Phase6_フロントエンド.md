@@ -9,7 +9,7 @@
 ### 1. エラー型の拡張
 
 ```elm
--- Api/Http.elm
+-- Api.elm
 type ApiError
     = BadRequest ProblemDetails
     | Unauthorized

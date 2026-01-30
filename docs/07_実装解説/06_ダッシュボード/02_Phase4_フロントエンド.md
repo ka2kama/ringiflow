@@ -95,10 +95,10 @@ Nested TEA 統合のため、以下の箇所を更新:
 
 ```elm
 -- 採用: 型のみインポート
-import Api.Http exposing (ApiError)
+import Api exposing (ApiError)
 
 -- 不採用: コンストラクタも公開
-import Api.Http exposing (ApiError(..))
+import Api exposing (ApiError(..))
 ```
 
 なぜこの設計か:

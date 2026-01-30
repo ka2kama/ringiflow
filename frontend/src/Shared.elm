@@ -28,7 +28,7 @@ Shared は「グローバル状態」として Main.elm で保持し、
 
 -}
 
-import Api.Http exposing (RequestConfig)
+import Api exposing (RequestConfig)
 
 
 
@@ -116,7 +116,7 @@ extractTenantId =
 
 {-| API リクエスト設定に変換
 
-Api.Http モジュールの関数で使用する RequestConfig を生成。
+Api モジュールの関数で使用する RequestConfig を生成。
 
     shared
         |> Shared.toRequestConfig

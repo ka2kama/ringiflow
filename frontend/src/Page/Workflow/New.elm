@@ -27,7 +27,7 @@ module Page.Workflow.New exposing
 
 -}
 
-import Api.Http exposing (ApiError)
+import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
