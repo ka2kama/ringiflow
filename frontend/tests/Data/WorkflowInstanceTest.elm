@@ -141,30 +141,30 @@ statusToJapaneseTests =
 statusToCssClassTests : Test
 statusToCssClassTests =
     describe "statusToCssClass"
-        [ test "Draft → status-draft" <|
+        [ test "Draft → Tailwind gray classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Draft
-                    |> Expect.equal "status-draft"
-        , test "Pending → status-pending" <|
+                    |> Expect.equal "bg-gray-100 text-gray-600"
+        , test "Pending → Tailwind warning classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Pending
-                    |> Expect.equal "status-pending"
-        , test "InProgress → status-in-progress" <|
+                    |> Expect.equal "bg-warning-50 text-warning-600"
+        , test "InProgress → Tailwind info classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass InProgress
-                    |> Expect.equal "status-in-progress"
-        , test "Approved → status-approved" <|
+                    |> Expect.equal "bg-info-50 text-info-600"
+        , test "Approved → Tailwind success classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Approved
-                    |> Expect.equal "status-approved"
-        , test "Rejected → status-rejected" <|
+                    |> Expect.equal "bg-success-50 text-success-600"
+        , test "Rejected → Tailwind error classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Rejected
-                    |> Expect.equal "status-rejected"
-        , test "Cancelled → status-cancelled" <|
+                    |> Expect.equal "bg-error-50 text-error-600"
+        , test "Cancelled → Tailwind secondary classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Cancelled
-                    |> Expect.equal "status-cancelled"
+                    |> Expect.equal "bg-secondary-100 text-secondary-500"
         ]
 
 
