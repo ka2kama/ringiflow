@@ -81,6 +81,74 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Fetch PR comments
+        id: pr-comments
+        if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+
+          # PR コメントと Review コメントを取得（最新20件、claude[bot] 自身を除外）
+          COMMENTS=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, created_at: .created_at}] | .[-20:]' 2>/dev/null || echo "[]")
+
+          REVIEW_COMMENTS=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, path: .path, created_at: .created_at}] | .[-20:]' 2>/dev/null || echo "[]")
+
+          # JSON を環境ファイルに出力（multiline safe）
+          {
+            echo "PR_COMMENTS<<EOF_COMMENTS"
+            echo "$COMMENTS"
+            echo "EOF_COMMENTS"
+            echo "REVIEW_COMMENTS<<EOF_REVIEW"
+            echo "$REVIEW_COMMENTS"
+            echo "EOF_REVIEW"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build review context
+        id: review-context
+        if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+          CURRENT_SHA="${{ github.event.workflow_run.head_sha }}"
+
+          # claude[bot] の直近レビューのコミット SHA を取得
+          LAST_REVIEW_SHA=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews" \
+            --jq '[.[] | select(.user.login == "claude[bot]")] | last | .commit_id // empty')
+
+          {
+            echo "REVIEW_MODE<<REVIEW_MODE_EOF"
+            if [ -n "$LAST_REVIEW_SHA" ] && [ "$LAST_REVIEW_SHA" != "$CURRENT_SHA" ] && git cat-file -e "${LAST_REVIEW_SHA}" 2>/dev/null; then
+              echo "### 増分チェックモード（Re-check）"
+              echo ""
+              echo "前回チェックコミット: ${LAST_REVIEW_SHA}"
+              echo "今回のコミット: ${CURRENT_SHA}"
+              echo ""
+              echo "これは再チェック（前回のチェック後に修正が push された）です。"
+              echo "以下の方針でチェックしてください:"
+              echo ""
+              echo "1. **前回指摘したルール違反が修正されたか確認**"
+              echo "2. **新しく変更されたファイルについてのみルール準拠をチェック**"
+              echo "3. **前回問題がなかった箇所の再チェックは不要**"
+              echo ""
+              echo "#### 前回チェック以降の差分"
+              echo ""
+              echo '```diff'
+              git diff "${LAST_REVIEW_SHA}..${CURRENT_SHA}" -- . ':!*.lock' 2>/dev/null | head -c 50000 || echo "(差分取得に失敗)"
+              echo '```'
+              echo ""
+              echo "注: 差分が大きい場合は 50KB で切り詰めています。完全な差分は gh pr diff で確認してください。"
+            else
+              echo "### 初回チェック"
+              echo ""
+              echo "PR 全体のルール準拠をチェックしてください。"
+            fi
+            echo "REVIEW_MODE_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run Claude Rules Check
         id: check
         if: steps.check-draft.outputs.is_draft == 'false'
@@ -93,6 +161,24 @@ jobs:
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+
+            ## PR コメント（議論の文脈）
+
+            以下は PR 上でのこれまでの議論です。チェック前に必ず目を通し、文脈を理解してください。
+
+            ### PR コメント
+            ```json
+            ${{ steps.pr-comments.outputs.PR_COMMENTS }}
+            ```
+
+            ### レビューコメント（インラインコメント）
+            ```json
+            ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
+            ```
+
+            ## チェックモード
+
+            ${{ steps.review-context.outputs.REVIEW_MODE }}
 
             ## 言語
 
@@ -116,6 +202,18 @@ jobs:
             - コーディング規約（命名、構造、スタイル）
             - 必須の手順（テスト、ドキュメント更新など）
             - 禁止事項
+
+            ### 過去の議論を踏まえた判断
+
+            PR コメントで既に議論された内容については、以下のように判断する:
+
+            | コメントの内容 | 対応 |
+            |---------------|------|
+            | 正当な理由が説明されている（設計意図、別のルールでカバー済み等） | 尊重し、再指摘しない |
+            | 単なる質問、未解決の議論 | 必要に応じて追加コメント |
+            | 「後で直す」「TODO」などの保留 | 必要に応じてリマインド |
+
+            過去の議論を踏まえた上で、なお指摘が必要と判断した場合は、その理由を明記する。
 
             ## フィードバック方法
 
