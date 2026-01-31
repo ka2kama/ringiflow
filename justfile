@@ -41,6 +41,8 @@ check-tools:
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
+    @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
+    @which redis-cli > /dev/null || (echo "ERROR: redis-cli がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
