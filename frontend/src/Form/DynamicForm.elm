@@ -78,7 +78,7 @@ viewFields :
     -> (String -> String -> msg)
     -> Html msg
 viewFields fields formValues validationErrors onInputMsg =
-    div [ class "dynamic-form-fields" ]
+    div []
         (List.map
             (\field ->
                 let
@@ -105,12 +105,7 @@ viewField :
     -> Html msg
 viewField field value maybeError onInputMsg =
     div
-        [ style "margin-bottom" "1rem"
-        , classList
-            [ ( "form-field", True )
-            , ( "form-field--error", maybeError /= Nothing )
-            ]
-        ]
+        [ class "mb-4" ]
         [ viewLabel field
         , viewInput field value onInputMsg
         , viewError maybeError
@@ -123,13 +118,11 @@ viewLabel : FormField -> Html msg
 viewLabel field =
     label
         [ for field.id
-        , style "display" "block"
-        , style "margin-bottom" "0.5rem"
-        , style "font-weight" "500"
+        , class "mb-2 block font-medium"
         ]
         [ text field.label
         , if field.validation.required then
-            span [ style "color" "#d93025" ] [ text " *" ]
+            span [ class "text-error-600" ] [ text " *" ]
 
           else
             text ""
@@ -172,12 +165,7 @@ viewTextInput field value onInputMsg =
         , Html.Attributes.value value
         , placeholder (Maybe.withDefault "" field.placeholder)
         , onInput onInputMsg
-        , style "width" "100%"
-        , style "padding" "0.75rem"
-        , style "border" "1px solid #dadce0"
-        , style "border-radius" "4px"
-        , style "font-size" "1rem"
-        , style "box-sizing" "border-box"
+        , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         ]
         []
 
@@ -193,12 +181,7 @@ viewNumberInput field value onInputMsg =
         , Html.Attributes.value value
         , placeholder (Maybe.withDefault "" field.placeholder)
         , onInput onInputMsg
-        , style "width" "100%"
-        , style "padding" "0.75rem"
-        , style "border" "1px solid #dadce0"
-        , style "border-radius" "4px"
-        , style "font-size" "1rem"
-        , style "box-sizing" "border-box"
+        , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
 
         -- 数値バリデーション属性を追加
         , case field.validation.min of
@@ -225,13 +208,7 @@ viewSelectInput field value options onInputMsg =
         [ id field.id
         , name field.id
         , onInput onInputMsg
-        , style "width" "100%"
-        , style "padding" "0.75rem"
-        , style "border" "1px solid #dadce0"
-        , style "border-radius" "4px"
-        , style "font-size" "1rem"
-        , style "background-color" "white"
-        , style "cursor" "pointer"
+        , class "w-full cursor-pointer rounded border border-secondary-100 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         ]
         (option
             [ Html.Attributes.value ""
@@ -260,12 +237,7 @@ viewDateInput field value onInputMsg =
         , name field.id
         , Html.Attributes.value value
         , onInput onInputMsg
-        , style "width" "100%"
-        , style "padding" "0.75rem"
-        , style "border" "1px solid #dadce0"
-        , style "border-radius" "4px"
-        , style "font-size" "1rem"
-        , style "box-sizing" "border-box"
+        , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         ]
         []
 
@@ -283,14 +255,11 @@ viewFileInput field =
             [ type_ "file"
             , id field.id
             , name field.id
-            , style "padding" "0.5rem 0"
+            , class "py-2"
             ]
             []
         , p
-            [ style "font-size" "0.875rem"
-            , style "color" "#5f6368"
-            , style "margin-top" "0.25rem"
-            ]
+            [ class "mt-1 text-sm text-secondary-500" ]
             [ text "※ ファイルアップロードは現在準備中です" ]
         ]
 
@@ -302,9 +271,7 @@ viewError maybeError =
     case maybeError of
         Just errorMsg ->
             div
-                [ style "color" "#d93025"
-                , style "font-size" "0.875rem"
-                , style "margin-top" "0.25rem"
+                [ class "mt-1 text-sm text-error-600"
                 , attribute "role" "alert"
                 ]
                 [ text errorMsg ]

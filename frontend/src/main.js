@@ -34,6 +34,7 @@
  * - parcel: ゼロ設定だが、Elm サポートが限定的
  */
 
+import "./styles.css";
 import { Elm } from "./Main.elm";
 
 /**

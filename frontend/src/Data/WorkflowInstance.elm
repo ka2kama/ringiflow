@@ -195,28 +195,28 @@ statusToJapanese status =
             "キャンセル"
 
 
-{-| ステータスを CSS クラス名に変換（スタイリング用）
+{-| ステータスを Tailwind CSS クラスに変換（バッジスタイリング用）
 -}
 statusToCssClass : Status -> String
 statusToCssClass status =
     case status of
         Draft ->
-            "status-draft"
+            "bg-gray-100 text-gray-600"
 
         Pending ->
-            "status-pending"
+            "bg-warning-50 text-warning-600"
 
         InProgress ->
-            "status-in-progress"
+            "bg-info-50 text-info-600"
 
         Approved ->
-            "status-approved"
+            "bg-success-50 text-success-600"
 
         Rejected ->
-            "status-rejected"
+            "bg-error-50 text-error-600"
 
         Cancelled ->
-            "status-cancelled"
+            "bg-secondary-100 text-secondary-500"
 
 
 {-| ステップステータスを日本語に変換

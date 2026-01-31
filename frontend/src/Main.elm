@@ -3,6 +3,7 @@ module Main exposing (main)
 {-| RingiFlow メインモジュール
 
 TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
+サイドバーナビゲーション付きのアプリシェルレイアウトを提供する。
 
 詳細: [TEA パターン](../../../docs/06_ナレッジベース/elm/Elmアーキテクチャ.md)
 
@@ -14,6 +15,7 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
 import Page.Home as Home
 import Page.NotFound
 import Page.Task.Detail as TaskDetail
@@ -23,6 +25,8 @@ import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Route exposing (Route)
 import Shared exposing (Shared)
+import Svg exposing (svg)
+import Svg.Attributes as SvgAttr
 import Url exposing (Url)
 
 
@@ -78,7 +82,7 @@ type Page
 
 {-| アプリケーションの状態
 
-グローバル状態（Shared）と現在のページ状態を保持する。
+グローバル状態（Shared）と現在のページ状態、サイドバーの開閉状態を保持する。
 
 -}
 type alias Model =
@@ -87,6 +91,7 @@ type alias Model =
     , route : Route
     , shared : Shared
     , page : Page
+    , sidebarOpen : Bool
     }
 
 
@@ -119,6 +124,7 @@ init flags url key =
       , route = route
       , shared = shared
       , page = page
+      , sidebarOpen = False
       }
     , Cmd.batch [ pageCmd, csrfCmd, userCmd ]
     )
@@ -248,6 +254,8 @@ type Msg
     | UrlChanged Url
     | GotCsrfToken (Result ApiError String)
     | GotUser (Result ApiError Shared.User)
+    | ToggleSidebar
+    | CloseSidebar
     | HomeMsg Home.Msg
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
@@ -277,7 +285,12 @@ update msg model =
                 ( page, pageCmd ) =
                     initPage route model.shared
             in
-            ( { model | url = url, route = route, page = page }
+            ( { model
+                | url = url
+                , route = route
+                , page = page
+                , sidebarOpen = False
+              }
             , pageCmd
             )
 
@@ -317,6 +330,16 @@ update msg model =
                 Err _ ->
                     -- 未認証の場合は 401 が返されるが、無視する
                     ( model, Cmd.none )
+
+        ToggleSidebar ->
+            ( { model | sidebarOpen = not model.sidebarOpen }
+            , Cmd.none
+            )
+
+        CloseSidebar ->
+            ( { model | sidebarOpen = False }
+            , Cmd.none
+            )
 
         HomeMsg subMsg ->
             case model.page of
@@ -423,83 +446,288 @@ subscriptions _ =
 
 
 {-| Model から HTML を生成
+
+アプリシェルレイアウト:
+
+  - デスクトップ（lg 以上）: 固定サイドバー + コンテンツエリア
+  - モバイル: トップバー + スライドインサイドバー + オーバーレイ
+
 -}
 view : Model -> Browser.Document Msg
 view model =
-    { title = "RingiFlow"
+    { title = pageTitle model.route ++ " | RingiFlow"
     , body =
-        [ viewHeader
-        , viewMain model
-        , viewFooter
+        [ div [ class "flex h-screen bg-secondary-50 overflow-hidden" ]
+            [ viewSidebar model.route model.sidebarOpen model.shared
+            , viewMobileOverlay model.sidebarOpen
+            , div [ class "flex flex-col flex-1 overflow-hidden" ]
+                [ viewTopBar
+                , main_
+                    [ class "flex-1 overflow-y-auto p-6" ]
+                    [ div [ class "mx-auto max-w-5xl" ]
+                        [ viewPage model ]
+                    ]
+                ]
+            ]
         ]
     }
 
 
-{-| ヘッダー部分の描画
+{-| ルートに応じたページタイトル
 -}
-viewHeader : Html Msg
-viewHeader =
-    header
-        [ style "background-color" "#1a73e8"
-        , style "color" "white"
-        , style "padding" "1rem"
+pageTitle : Route -> String
+pageTitle route =
+    case route of
+        Route.Home ->
+            "ダッシュボード"
+
+        Route.Workflows ->
+            "申請一覧"
+
+        Route.WorkflowNew ->
+            "新規申請"
+
+        Route.WorkflowDetail _ ->
+            "申請詳細"
+
+        Route.Tasks ->
+            "タスク一覧"
+
+        Route.TaskDetail _ ->
+            "タスク詳細"
+
+        Route.NotFound ->
+            "ページが見つかりません"
+
+
+{-| サイドバーナビゲーション
+
+デスクトップ: 常に表示（w-64）
+モバイル: sidebarOpen 時にスライドイン
+
+-}
+viewSidebar : Route -> Bool -> Shared -> Html Msg
+viewSidebar currentRoute isOpen shared =
+    let
+        mobileVisibility =
+            if isOpen then
+                "translate-x-0"
+
+            else
+                "-translate-x-full"
+    in
+    aside
+        [ class
+            ("fixed inset-y-0 left-0 z-30 flex w-sidebar flex-col bg-secondary-900 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 "
+                ++ mobileVisibility
+            )
         ]
-        [ h1 [ style "margin" "0", style "font-size" "1.5rem" ]
-            [ text "RingiFlow" ]
+        [ -- ロゴエリア
+          div [ class "flex h-16 items-center px-6" ]
+            [ a [ href (Route.toString Route.Home), class "text-xl font-bold tracking-wide text-white no-underline" ]
+                [ text "RingiFlow" ]
+            ]
+
+        -- ナビゲーションリンク
+        , nav [ class "flex-1 space-y-1 px-3 py-4" ]
+            [ viewNavItem currentRoute Route.Home "ダッシュボード" iconDashboard
+            , viewNavItem currentRoute Route.Workflows "申請一覧" iconWorkflows
+            , viewNavItem currentRoute Route.Tasks "タスク一覧" iconTasks
+            ]
+
+        -- フッター（ユーザー情報 + Copyright）
+        , div [ class "border-t border-secondary-700 px-4 py-4" ]
+            [ viewUserInfo shared
+            , div [ class "mt-3 text-center text-xs text-secondary-500" ]
+                [ text "© 2026 RingiFlow" ]
+            ]
         ]
 
 
-{-| メインコンテンツ部分の描画
+{-| ナビゲーション項目
+
+アクティブ状態は `isRouteActive` で判定し、背景色を変更する。
+
+-}
+viewNavItem : Route -> Route -> String -> Html Msg -> Html Msg
+viewNavItem currentRoute targetRoute label icon =
+    let
+        isActive =
+            Route.isRouteActive targetRoute currentRoute
+
+        activeClass =
+            if isActive then
+                "bg-primary-600 text-white"
+
+            else
+                "text-secondary-100 hover:bg-secondary-700"
+    in
+    a
+        [ href (Route.toString targetRoute)
+        , class ("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " ++ activeClass)
+        ]
+        [ icon
+        , span [] [ text label ]
+        ]
+
+
+{-| ユーザー情報表示
+-}
+viewUserInfo : Shared -> Html Msg
+viewUserInfo shared =
+    case shared.user of
+        Just user ->
+            div [ class "flex items-center gap-3" ]
+                [ div [ class "flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-medium" ]
+                    [ text (String.left 1 user.name) ]
+                , div [ class "min-w-0 flex-1" ]
+                    [ div [ class "truncate text-sm font-medium" ] [ text user.name ]
+                    , div [ class "truncate text-xs text-secondary-500" ] [ text user.email ]
+                    ]
+                ]
+
+        Nothing ->
+            div [ class "text-sm text-secondary-500" ]
+                [ text "未ログイン" ]
+
+
+{-| トップバー（モバイル用ハンバーガーメニュー）
+-}
+viewTopBar : Html Msg
+viewTopBar =
+    header [ class "flex h-16 items-center border-b border-secondary-100 bg-white px-4 lg:px-6" ]
+        [ -- ハンバーガーボタン（モバイルのみ）
+          button
+            [ class "mr-4 rounded-lg p-2 text-secondary-500 hover:bg-secondary-50 lg:hidden"
+            , onClick ToggleSidebar
+            ]
+            [ iconMenu ]
+
+        -- ページヘッダー領域（将来の検索バー等に使用）
+        , div [ class "flex-1" ] []
+        ]
+
+
+{-| モバイルオーバーレイ（サイドバー表示時の背景暗転）
+-}
+viewMobileOverlay : Bool -> Html Msg
+viewMobileOverlay isOpen =
+    if isOpen then
+        div
+            [ class "fixed inset-0 z-20 bg-black/50 lg:hidden"
+            , onClick CloseSidebar
+            ]
+            []
+
+    else
+        text ""
+
+
+{-| ページコンテンツの描画
 
 Page に応じて対応するページモジュールの view を呼び出す。
 Nested TEA パターンにより、ページの Msg は Main の Msg にマップされる。
 
 -}
-viewMain : Model -> Html Msg
-viewMain model =
-    main_
-        [ style "padding" "2rem"
-        , style "max-width" "1200px"
-        , style "margin" "0 auto"
-        ]
-        [ case model.page of
-            HomePage subModel ->
-                Home.view subModel
-                    |> Html.map HomeMsg
+viewPage : Model -> Html Msg
+viewPage model =
+    case model.page of
+        HomePage subModel ->
+            Home.view subModel
+                |> Html.map HomeMsg
 
-            WorkflowsPage subModel ->
-                WorkflowList.view subModel
-                    |> Html.map WorkflowsMsg
+        WorkflowsPage subModel ->
+            WorkflowList.view subModel
+                |> Html.map WorkflowsMsg
 
-            WorkflowNewPage subModel ->
-                WorkflowNew.view subModel
-                    |> Html.map WorkflowNewMsg
+        WorkflowNewPage subModel ->
+            WorkflowNew.view subModel
+                |> Html.map WorkflowNewMsg
 
-            WorkflowDetailPage subModel ->
-                WorkflowDetail.view subModel
-                    |> Html.map WorkflowDetailMsg
+        WorkflowDetailPage subModel ->
+            WorkflowDetail.view subModel
+                |> Html.map WorkflowDetailMsg
 
-            TasksPage subModel ->
-                TaskList.view subModel
-                    |> Html.map TasksMsg
+        TasksPage subModel ->
+            TaskList.view subModel
+                |> Html.map TasksMsg
 
-            TaskDetailPage subModel ->
-                TaskDetail.view subModel
-                    |> Html.map TaskDetailMsg
+        TaskDetailPage subModel ->
+            TaskDetail.view subModel
+                |> Html.map TaskDetailMsg
 
-            NotFoundPage ->
-                Page.NotFound.view
-        ]
+        NotFoundPage ->
+            Page.NotFound.view
 
 
-{-| フッター部分の描画
+
+-- ICONS
+
+
+{-| SVG アイコン: ダッシュボード（グリッド）
 -}
-viewFooter : Html Msg
-viewFooter =
-    footer
-        [ style "background-color" "#f1f3f4"
-        , style "padding" "1rem"
-        , style "text-align" "center"
-        , style "margin-top" "2rem"
+iconDashboard : Html msg
+iconDashboard =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
         ]
-        [ text "© 2026 RingiFlow" ]
+        [ Svg.rect [ SvgAttr.x "3", SvgAttr.y "3", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "14", SvgAttr.y "3", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "3", SvgAttr.y "14", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "14", SvgAttr.y "14", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
+        ]
+
+
+{-| SVG アイコン: 申請一覧（ドキュメント）
+-}
+iconWorkflows : Html msg
+iconWorkflows =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.path [ SvgAttr.d "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" ] []
+        , Svg.path [ SvgAttr.d "M14 2v6h6" ] []
+        , Svg.line [ SvgAttr.x1 "16", SvgAttr.y1 "13", SvgAttr.x2 "8", SvgAttr.y2 "13" ] []
+        , Svg.line [ SvgAttr.x1 "16", SvgAttr.y1 "17", SvgAttr.x2 "8", SvgAttr.y2 "17" ] []
+        ]
+
+
+{-| SVG アイコン: タスク一覧（チェックリスト）
+-}
+iconTasks : Html msg
+iconTasks =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.path [ SvgAttr.d "M9 11l3 3L22 4" ] []
+        , Svg.path [ SvgAttr.d "M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" ] []
+        ]
+
+
+{-| SVG アイコン: ハンバーガーメニュー
+-}
+iconMenu : Html msg
+iconMenu =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-6 w-6"
+        ]
+        [ Svg.line [ SvgAttr.x1 "3", SvgAttr.y1 "6", SvgAttr.x2 "21", SvgAttr.y2 "6" ] []
+        , Svg.line [ SvgAttr.x1 "3", SvgAttr.y1 "12", SvgAttr.x2 "21", SvgAttr.y2 "12" ] []
+        , Svg.line [ SvgAttr.x1 "3", SvgAttr.y1 "18", SvgAttr.x2 "21", SvgAttr.y2 "18" ] []
+        ]

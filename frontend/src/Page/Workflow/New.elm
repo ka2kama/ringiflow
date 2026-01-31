@@ -474,7 +474,7 @@ saveAndSubmit shared definitionId title formValues approverInput =
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 [] [ text "新規申請" ]
+        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "新規申請" ]
         , viewSaveMessage model.saveMessage
         , viewContent model
         ]
@@ -487,46 +487,22 @@ viewSaveMessage maybeSaveMessage =
     case maybeSaveMessage of
         Just (SaveSuccess message) ->
             div
-                [ style "padding" "1rem"
-                , style "margin-bottom" "1rem"
-                , style "background-color" "#e6f4ea"
-                , style "color" "#137333"
-                , style "border-radius" "4px"
-                , style "display" "flex"
-                , style "justify-content" "space-between"
-                , style "align-items" "center"
-                ]
+                [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700 mb-4" ]
                 [ text message
                 , button
                     [ Html.Events.onClick ClearMessage
-                    , style "background" "none"
-                    , style "border" "none"
-                    , style "cursor" "pointer"
-                    , style "font-size" "1.25rem"
-                    , style "color" "#137333"
+                    , class "border-0 bg-transparent cursor-pointer text-xl text-success-700"
                     ]
                     [ text "×" ]
                 ]
 
         Just (SaveError message) ->
             div
-                [ style "padding" "1rem"
-                , style "margin-bottom" "1rem"
-                , style "background-color" "#fce8e6"
-                , style "color" "#d93025"
-                , style "border-radius" "4px"
-                , style "display" "flex"
-                , style "justify-content" "space-between"
-                , style "align-items" "center"
-                ]
+                [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700 mb-4" ]
                 [ text message
                 , button
                     [ Html.Events.onClick ClearMessage
-                    , style "background" "none"
-                    , style "border" "none"
-                    , style "cursor" "pointer"
-                    , style "font-size" "1.25rem"
-                    , style "color" "#d93025"
+                    , class "border-0 bg-transparent cursor-pointer text-xl text-error-700"
                     ]
                     [ text "×" ]
                 ]
@@ -557,23 +533,17 @@ viewContent model =
 -}
 viewLoading : Html Msg
 viewLoading =
-    div
-        [ style "text-align" "center"
-        , style "padding" "2rem"
-        , style "color" "#5f6368"
+    div [ class "flex flex-col items-center justify-center py-8" ]
+        [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+        , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
         ]
-        [ text "読み込み中..." ]
 
 
 {-| エラー表示
 -}
 viewError : Html Msg
 viewError =
-    div
-        [ style "text-align" "center"
-        , style "padding" "2rem"
-        , style "color" "#d93025"
-        ]
+    div [ class "rounded-lg bg-error-50 p-8 text-center text-error-700" ]
         [ text "データの取得に失敗しました。"
         , br [] []
         , text "ページを再読み込みしてください。"
@@ -613,13 +583,10 @@ viewForm model definitions =
 viewDefinitionSelector : List WorkflowDefinition -> Maybe String -> Html Msg
 viewDefinitionSelector definitions selectedId =
     div
-        [ style "margin-bottom" "2rem" ]
-        [ h3 [] [ text "Step 1: ワークフロー種類を選択" ]
+        [ class "mb-8" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 1: ワークフロー種類を選択" ]
         , div
-            [ style "display" "flex"
-            , style "flex-direction" "column"
-            , style "gap" "0.5rem"
-            ]
+            [ class "flex flex-col gap-2" ]
             (List.map (viewDefinitionOption selectedId) definitions)
         ]
 
@@ -633,18 +600,14 @@ viewDefinitionOption selectedId definition =
             selectedId == Just definition.id
     in
     label
-        [ style "display" "flex"
-        , style "align-items" "center"
-        , style "padding" "1rem"
-        , style "border" "1px solid #dadce0"
-        , style "border-radius" "8px"
-        , style "cursor" "pointer"
-        , style "background-color"
-            (if isSelected then
-                "#e8f0fe"
+        [ class
+            ("flex items-center cursor-pointer rounded-lg border border-secondary-100 p-4"
+                ++ (if isSelected then
+                        " bg-primary-50"
 
-             else
-                "white"
+                    else
+                        " bg-white"
+                   )
             )
         ]
         [ input
@@ -653,14 +616,14 @@ viewDefinitionOption selectedId definition =
             , Html.Attributes.value definition.id
             , checked isSelected
             , Html.Events.onClick (SelectDefinition definition.id)
-            , style "margin-right" "1rem"
+            , class "mr-4"
             ]
             []
         , div []
-            [ div [ style "font-weight" "500" ] [ text definition.name ]
+            [ div [ class "font-medium" ] [ text definition.name ]
             , case definition.description of
                 Just desc ->
-                    div [ style "color" "#5f6368", style "font-size" "0.875rem" ]
+                    div [ class "text-sm text-secondary-500" ]
                         [ text desc ]
 
                 Nothing ->
@@ -674,18 +637,16 @@ viewDefinitionOption selectedId definition =
 viewFormInputs : Model -> WorkflowDefinition -> Html Msg
 viewFormInputs model definition =
     div []
-        [ h3 [] [ text "Step 2: フォーム入力" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 2: フォーム入力" ]
 
         -- タイトル入力
-        , div [ style "margin-bottom" "1.5rem" ]
+        , div [ class "mb-6" ]
             [ label
                 [ for "title"
-                , style "display" "block"
-                , style "margin-bottom" "0.5rem"
-                , style "font-weight" "500"
+                , class "block mb-2 font-medium"
                 ]
                 [ text "タイトル"
-                , span [ style "color" "#d93025" ] [ text " *" ]
+                , span [ class "text-error-600" ] [ text " *" ]
                 ]
             , input
                 [ type_ "text"
@@ -693,12 +654,7 @@ viewFormInputs model definition =
                 , Html.Attributes.value model.title
                 , Html.Events.onInput UpdateTitle
                 , placeholder "申請のタイトルを入力"
-                , style "width" "100%"
-                , style "padding" "0.75rem"
-                , style "border" "1px solid #dadce0"
-                , style "border-radius" "4px"
-                , style "font-size" "1rem"
-                , style "box-sizing" "border-box"
+                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 ]
                 []
             , viewTitleError model
@@ -720,16 +676,14 @@ viewFormInputs model definition =
 viewApproverSection : Model -> Html Msg
 viewApproverSection model =
     div []
-        [ h3 [] [ text "Step 3: 承認者選択" ]
-        , div [ style "margin-bottom" "1.5rem" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 3: 承認者選択" ]
+        , div [ class "mb-6" ]
             [ label
                 [ for "approver"
-                , style "display" "block"
-                , style "margin-bottom" "0.5rem"
-                , style "font-weight" "500"
+                , class "block mb-2 font-medium"
                 ]
                 [ text "承認者（ユーザー ID）"
-                , span [ style "color" "#d93025" ] [ text " *" ]
+                , span [ class "text-error-600" ] [ text " *" ]
                 ]
             , input
                 [ type_ "text"
@@ -737,20 +691,12 @@ viewApproverSection model =
                 , Html.Attributes.value model.approverInput
                 , Html.Events.onInput UpdateApproverInput
                 , placeholder "承認者のユーザー ID を入力"
-                , style "width" "100%"
-                , style "padding" "0.75rem"
-                , style "border" "1px solid #dadce0"
-                , style "border-radius" "4px"
-                , style "font-size" "1rem"
-                , style "box-sizing" "border-box"
+                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 ]
                 []
             , viewApproverError model
             , p
-                [ style "font-size" "0.875rem"
-                , style "color" "#5f6368"
-                , style "margin-top" "0.5rem"
-                ]
+                [ class "mt-2 text-sm text-secondary-500" ]
                 [ text "※ 将来的にはユーザー検索機能を実装予定です" ]
             ]
         ]
@@ -763,10 +709,7 @@ viewApproverError model =
     case Dict.get "approver" model.validationErrors of
         Just errorMsg ->
             div
-                [ style "color" "#d93025"
-                , style "font-size" "0.875rem"
-                , style "margin-top" "0.25rem"
-                ]
+                [ class "mt-1 text-sm text-error-600" ]
                 [ text errorMsg ]
 
         Nothing ->
@@ -780,10 +723,7 @@ viewTitleError model =
     case Dict.get "title" model.validationErrors of
         Just errorMsg ->
             div
-                [ style "color" "#d93025"
-                , style "font-size" "0.875rem"
-                , style "margin-top" "0.25rem"
-                ]
+                [ class "mt-1 text-sm text-error-600" ]
                 [ text errorMsg ]
 
         Nothing ->
@@ -801,15 +741,9 @@ viewDynamicFormFields definition model =
 
             else
                 div
-                    [ style "margin-bottom" "1.5rem"
-                    , style "padding" "1rem"
-                    , style "background-color" "#f8f9fa"
-                    , style "border-radius" "8px"
-                    ]
+                    [ class "mb-6 rounded-lg bg-secondary-50 p-4" ]
                     [ h4
-                        [ style "margin" "0 0 1rem 0"
-                        , style "color" "#202124"
-                        ]
+                        [ class "mb-4 text-secondary-900" ]
                         [ text (definition.name ++ " フォーム") ]
                     , DynamicForm.viewFields
                         fields
@@ -820,11 +754,7 @@ viewDynamicFormFields definition model =
 
         Err _ ->
             div
-                [ style "color" "#d93025"
-                , style "padding" "1rem"
-                , style "background-color" "#fce8e6"
-                , style "border-radius" "4px"
-                ]
+                [ class "rounded bg-error-50 p-4 text-error-600" ]
                 [ text "フォーム定義の読み込みに失敗しました。" ]
 
 
@@ -833,32 +763,17 @@ viewDynamicFormFields definition model =
 viewActions : Model -> Html Msg
 viewActions model =
     div
-        [ style "display" "flex"
-        , style "justify-content" "flex-end"
-        , style "gap" "1rem"
-        , style "margin-top" "2rem"
-        , style "padding-top" "1rem"
-        , style "border-top" "1px solid #dadce0"
-        ]
+        [ class "mt-8 flex justify-end gap-4 border-t border-secondary-100 pt-4" ]
         [ button
             [ Html.Events.onClick SaveDraft
             , disabled model.submitting
-            , style "padding" "0.75rem 1.5rem"
-            , style "border" "1px solid #dadce0"
-            , style "border-radius" "4px"
-            , style "background-color" "white"
-            , style "cursor" "pointer"
+            , class "rounded border border-secondary-100 bg-white px-6 py-3 cursor-pointer hover:bg-secondary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             ]
             [ text "下書き保存" ]
         , button
             [ Html.Events.onClick Submit
             , disabled model.submitting
-            , style "padding" "0.75rem 1.5rem"
-            , style "border" "none"
-            , style "border-radius" "4px"
-            , style "background-color" "#1a73e8"
-            , style "color" "white"
-            , style "cursor" "pointer"
+            , class "rounded border-0 bg-primary-600 px-6 py-3 text-white cursor-pointer hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             ]
             [ text "申請する" ]
         ]

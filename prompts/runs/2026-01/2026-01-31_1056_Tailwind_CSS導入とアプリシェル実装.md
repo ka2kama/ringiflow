@@ -1,0 +1,109 @@
+# Tailwind CSS 導入とアプリシェル実装
+
+## 日時
+
+2026-01-31
+
+## 概要
+
+Issue #174 — Tailwind CSS v4 をフロントエンドに統合し、サイドバーナビゲーション付きのレスポンシブなアプリシェルレイアウトを実装した。全既存ページをインラインスタイルから Tailwind ユーティリティクラスに移行。
+
+## 背景と目的
+
+- MVP 完了後の UI/UX 改善フェーズ
+- インラインスタイル（`style "property" "value"`）の排除と Tailwind クラスへの統一
+- デザイントークン（カラーパレット）の一元管理
+- レスポンシブ対応のサイドバーナビゲーション実装
+
+## 実施内容
+
+### Phase 1: Tailwind CSS 統合（ビルドパイプライン）
+
+- `@tailwindcss/vite` プラグインで Vite に直接統合（PostCSS 不要）
+- `styles.css` に `@theme` ディレクティブでデザイントークンを定義
+- `index.html` のインライン `<style>` ブロックを削除
+
+### Phase 2: アプリシェルレイアウト（Main.elm）
+
+- サイドバーナビゲーション実装（デスクトップ: 固定表示、モバイル: スライドイン + オーバーレイ）
+- `sidebarOpen : Bool` を Model に追加、ページ遷移時に自動閉じ
+- トップバー（ハンバーガーボタン + ユーザー情報）
+- `Route.elm` に `isRouteActive` ヘルパー追加（サイドバーのアクティブ状態表示）
+- SVG アイコン（`elm/svg` パッケージ追加）
+
+### Phase 3: 全ページの Tailwind 移行
+
+対象: Home, NotFound, Workflow/List, Workflow/Detail, Workflow/New, Task/List, Task/Detail, Form/DynamicForm, Data/WorkflowInstance
+
+主な変更:
+- インラインスタイル属性 → Tailwind ユーティリティクラス
+- orphaned CSS クラス（定義なし）→ Tailwind クラス
+- `statusToCssClass` を Tailwind クラスに変更
+
+### Phase 4: UI/UX 改善
+
+- フォーカスリング（`focus:ring-2 focus:ring-primary-500`）を全フォーム入力に追加
+- disabled ボタンの視覚的フィードバック（`disabled:opacity-50 disabled:cursor-not-allowed`）
+- アニメーション付きローディングスピナー（`animate-spin` border trick）
+- 空状態の改善（CTA ボタン、ガイダンステキスト）
+- パンくずリスト（詳細ページにセクション内階層表示）
+- フォーム入力のコントラスト改善（`border-secondary-300` + `bg-white`）
+
+### Phase 5: ADR-027 作成
+
+技術選定の根拠を ADR に記録（Tailwind v4 vs v3 vs elm-css vs Plain CSS + BEM）。
+
+## 設計判断
+
+### Tailwind v4（v3 ではなく）
+
+- `@tailwindcss/vite` で PostCSS 不要
+- CSS ファーストの `@theme` ディレクティブ
+- ソースファイル自動スキャン
+
+→ 詳細: [ADR-027](../../docs/05_ADR/027_Tailwind_CSS導入.md)
+
+### サイドバー状態管理: Elm Model
+
+- CSS-only（checkbox hack）ではなく Elm の `sidebarOpen : Bool` で管理
+- ページ遷移時の自動閉じなど、アプリケーションロジックとの連携が容易
+
+### フォーム入力の視認性
+
+- `border-secondary-100` → `border-secondary-300`: ボーダーコントラスト向上
+- `bg-white` 追加: グレー背景（`bg-secondary-50`）に対する塗りのコントラスト
+- 業界標準パターン（Tailwind UI、Google Material Design）に準拠
+
+### パンくずリストの設計
+
+- サイドバーがトップレベルナビゲーションを担うため、パンくずにはホームを含めない
+- セクション内の階層のみ表示（例: `申請一覧 / 申請詳細`）
+- 現在のページは非リンクのプレーンテキスト（`text-secondary-900 font-medium`）
+
+## 変更ファイル（20 ファイル）
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `frontend/src/styles.css` | 新規作成 — Tailwind エントリポイント + デザイントークン |
+| `frontend/vite.config.js` | `@tailwindcss/vite` プラグイン追加 |
+| `frontend/src/main.js` | CSS import 追加 |
+| `frontend/index.html` | インライン style 削除 |
+| `frontend/src/Main.elm` | アプリシェル、サイドバー、Model/Msg 拡張 |
+| `frontend/src/Route.elm` | `isRouteActive` ヘルパー追加 |
+| `frontend/src/Data/WorkflowInstance.elm` | `statusToCssClass` を Tailwind クラスに |
+| `frontend/src/Page/Home.elm` | インラインスタイル → Tailwind |
+| `frontend/src/Page/NotFound.elm` | インラインスタイル → Tailwind |
+| `frontend/src/Page/Workflow/New.elm` | インラインスタイル → Tailwind |
+| `frontend/src/Page/Workflow/List.elm` | CSS クラス → Tailwind |
+| `frontend/src/Page/Workflow/Detail.elm` | CSS クラス → Tailwind + パンくず |
+| `frontend/src/Page/Task/List.elm` | CSS クラス → Tailwind |
+| `frontend/src/Page/Task/Detail.elm` | CSS クラス → Tailwind + パンくず |
+| `frontend/src/Form/DynamicForm.elm` | インラインスタイル → Tailwind |
+| `frontend/tests/Data/WorkflowInstanceTest.elm` | Tailwind クラス値に更新 |
+| `docs/05_ADR/027_Tailwind_CSS導入.md` | 新規作成 |
+
+## 学び
+
+- Tailwind v4 の `@theme` は CSS カスタムプロパティを直接定義するため、デバッグツールでトークン値を確認しやすい
+- フォーム入力のアフォーダンスには3層が必要: 塗りコントラスト（bg-white）、ボーダー（border-300）、フォーカスリング（ring-primary-500）
+- サイドバーベースのレイアウトでは、パンくずにホームを含めるのは冗長 — サイドバー自体がトップレベルナビゲーション
