@@ -145,7 +145,7 @@ dev-down:
 # データストア操作（開発用）
 # =============================================================================
 
-_psql_url := "postgres://ringiflow:ringiflow@localhost:" + env_var("POSTGRES_PORT") + "/ringiflow_dev"
+_psql_url := "postgres://ringiflow:ringiflow@localhost:" + env_var_or_default("POSTGRES_PORT", "15432") + "/ringiflow_dev"
 
 # PostgreSQL: テーブル一覧を表示
 db-tables:
