@@ -41,7 +41,7 @@ import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, Wor
 import Form.DynamicForm as DynamicForm
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
 import RemoteData exposing (RemoteData(..))
 import Route
@@ -78,6 +78,7 @@ type alias Model =
     , definition : RemoteData ApiError WorkflowDefinition
 
     -- 承認/却下の状態
+    , comment : String
     , isSubmitting : Bool
     , pendingAction : Maybe PendingAction
     , errorMessage : Maybe String
@@ -93,6 +94,7 @@ init shared workflowId =
       , workflowId = workflowId
       , workflow = Loading
       , definition = NotAsked
+      , comment = ""
       , isSubmitting = False
       , pendingAction = Nothing
       , errorMessage = Nothing
@@ -126,6 +128,7 @@ type Msg
     = GotWorkflow (Result ApiError WorkflowInstance)
     | GotDefinition (Result ApiError WorkflowDefinition)
     | Refresh
+    | UpdateComment String
     | ClickApprove WorkflowStep
     | ClickReject WorkflowStep
     | ConfirmAction
@@ -182,6 +185,9 @@ update msg model =
                 }
             )
 
+        UpdateComment newComment ->
+            ( { model | comment = newComment }, Cmd.none )
+
         ClickApprove step ->
             ( { model | pendingAction = Just (ConfirmApprove step) }
             , Cmd.none
@@ -200,7 +206,7 @@ update msg model =
                         { config = Shared.toRequestConfig model.shared
                         , workflowId = model.workflowId
                         , stepId = step.id
-                        , body = { version = step.version, comment = Nothing }
+                        , body = { version = step.version, comment = nonEmptyComment model.comment }
                         , toMsg = GotApproveResult
                         }
                     )
@@ -211,7 +217,7 @@ update msg model =
                         { config = Shared.toRequestConfig model.shared
                         , workflowId = model.workflowId
                         , stepId = step.id
-                        , body = { version = step.version, comment = Nothing }
+                        , body = { version = step.version, comment = nonEmptyComment model.comment }
                         , toMsg = GotRejectResult
                         }
                     )
@@ -236,6 +242,17 @@ update msg model =
             )
 
 
+{-| 空文字列を Nothing に変換
+-}
+nonEmptyComment : String -> Maybe String
+nonEmptyComment comment =
+    if String.isEmpty (String.trim comment) then
+        Nothing
+
+    else
+        Just (String.trim comment)
+
+
 {-| 承認/却下結果のハンドリング
 -}
 handleApprovalResult : String -> Result ApiError WorkflowInstance -> Model -> ( Model, Cmd Msg )
@@ -247,6 +264,7 @@ handleApprovalResult successMsg result model =
                 , isSubmitting = False
                 , successMessage = Just successMsg
                 , errorMessage = Nothing
+                , comment = ""
               }
             , Cmd.none
             )
@@ -321,7 +339,7 @@ viewContent model =
             viewError
 
         Success workflow ->
-            viewWorkflowDetail workflow model.definition model.isSubmitting model.shared
+            viewWorkflowDetail workflow model.definition model.comment model.isSubmitting model.shared
 
 
 viewError : Html Msg
@@ -333,12 +351,12 @@ viewError =
         ]
 
 
-viewWorkflowDetail : WorkflowInstance -> RemoteData ApiError WorkflowDefinition -> Bool -> Shared -> Html Msg
-viewWorkflowDetail workflow maybeDefinition isSubmitting shared =
+viewWorkflowDetail : WorkflowInstance -> RemoteData ApiError WorkflowDefinition -> String -> Bool -> Shared -> Html Msg
+viewWorkflowDetail workflow maybeDefinition comment isSubmitting shared =
     div [ class "space-y-6" ]
         [ viewTitle workflow
         , viewStatus workflow
-        , viewApprovalButtons workflow isSubmitting shared
+        , viewApprovalSection workflow comment isSubmitting shared
         , viewSteps workflow
         , viewBasicInfo workflow
         , viewFormData workflow maybeDefinition
@@ -482,50 +500,78 @@ viewConfirmDialog maybePending =
 -- APPROVAL VIEWS
 
 
-{-| 承認/却下ボタンを表示
+{-| 承認/却下セクション
 
 現在のユーザーが担当者に割り当てられているアクティブなステップがある場合のみ表示。
 
 -}
-viewApprovalButtons : WorkflowInstance -> Bool -> Shared -> Html Msg
-viewApprovalButtons workflow isSubmitting shared =
+viewApprovalSection : WorkflowInstance -> String -> Bool -> Shared -> Html Msg
+viewApprovalSection workflow comment isSubmitting shared =
     let
         currentUserId =
             Shared.getUserId shared
     in
     case findActiveStepForUser workflow.steps currentUserId of
         Just step ->
-            div [ class "flex gap-3" ]
-                [ button
-                    [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    , onClick (ClickApprove step)
-                    , disabled isSubmitting
-                    ]
-                    [ text
-                        (if isSubmitting then
-                            "処理中..."
-
-                         else
-                            "承認"
-                        )
-                    ]
-                , button
-                    [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    , onClick (ClickReject step)
-                    , disabled isSubmitting
-                    ]
-                    [ text
-                        (if isSubmitting then
-                            "処理中..."
-
-                         else
-                            "却下"
-                        )
-                    ]
+            div [ class "space-y-4 rounded-lg border border-secondary-100 p-4" ]
+                [ viewCommentInput comment
+                , viewApprovalButtons step isSubmitting
                 ]
 
         Nothing ->
             text ""
+
+
+{-| コメント入力欄
+-}
+viewCommentInput : String -> Html Msg
+viewCommentInput comment =
+    div [ class "space-y-2" ]
+        [ label [ for "approval-comment", class "block text-sm font-medium text-secondary-700" ] [ text "コメント（任意）" ]
+        , textarea
+            [ id "approval-comment"
+            , class "w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            , value comment
+            , onInput UpdateComment
+            , placeholder "承認/却下の理由を入力..."
+            , rows 3
+            ]
+            []
+        ]
+
+
+{-| 承認/却下ボタン
+-}
+viewApprovalButtons : WorkflowStep -> Bool -> Html Msg
+viewApprovalButtons step isSubmitting =
+    div [ class "flex gap-3" ]
+        [ button
+            [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            , onClick (ClickApprove step)
+            , disabled isSubmitting
+            ]
+            [ text
+                (if isSubmitting then
+                    "処理中..."
+
+                 else
+                    "承認"
+                )
+            ]
+        , button
+            [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            , onClick (ClickReject step)
+            , disabled isSubmitting
+            ]
+            [ text
+                (if isSubmitting then
+                    "処理中..."
+
+                 else
+                    "却下"
+                )
+            ]
+        ]
 
 
 {-| 現在のユーザーが担当のアクティブなステップを探す
