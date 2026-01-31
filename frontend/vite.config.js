@@ -5,11 +5,12 @@
  * 技術詳細: [Vite](../docs/06_ナレッジベース/frontend/Vite.md)
  */
 
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import elmPlugin from "vite-plugin-elm";
 
 export default defineConfig({
-  plugins: [elmPlugin()],
+  plugins: [elmPlugin(), tailwindcss()],
 
   // SPA モード: 存在しないパスは index.html にフォールバック
   appType: "spa",

@@ -12,8 +12,10 @@
     "lint": "elm-format --validate src/ && elm-review"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
     "elm-review": "^2.13.5",
     "elm-test": "0.19.1-revision17",
+    "tailwindcss": "^4.1.18",
     "vite": "^7.3.1",
     "vite-plugin-elm": "^3.0.1"
   },
@@ -21,7 +23,9 @@
     "node": "22.16.0"
   },
   "pnpm": {
-    "neverBuiltDependencies": ["esbuild"],
+    "neverBuiltDependencies": [
+      "esbuild"
+    ],
     "overrides": {
       "cross-spawn@<6.0.6": "6.0.6"
     }
