@@ -13,6 +13,7 @@ import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import RemoteData exposing (RemoteData(..))
+import Route
 import Shared exposing (Shared)
 
 
@@ -149,17 +150,17 @@ viewQuickActions : Html msg
 viewQuickActions =
     div [ class "mt-6 flex flex-wrap gap-3" ]
         [ a
-            [ href "/workflows"
+            [ href (Route.toString Route.Workflows)
             , class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-success-700"
             ]
             [ text "申請一覧" ]
         , a
-            [ href "/workflows/new"
+            [ href (Route.toString Route.WorkflowNew)
             , class "inline-flex items-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
             ]
             [ text "新規申請" ]
         , a
-            [ href "/tasks"
+            [ href (Route.toString Route.Tasks)
             , class "inline-flex items-center rounded-lg bg-warning-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-warning-700"
             ]
             [ text "タスク一覧" ]
