@@ -6,6 +6,7 @@ module Shared exposing
     , toRequestConfig
     , withCsrfToken
     , withUser
+    , zone
     )
 
 {-| 共有状態モジュール
@@ -29,6 +30,7 @@ Shared は「グローバル状態」として Main.elm で保持し、
 -}
 
 import Api exposing (RequestConfig)
+import Time
 
 
 
@@ -60,6 +62,7 @@ type alias Shared =
     , tenantId : String
     , csrfToken : Maybe String
     , apiBaseUrl : String
+    , timeZone : Time.Zone
     }
 
 
@@ -72,13 +75,17 @@ type alias Shared =
 開発環境では仮のテナント ID を使用。
 本番環境では GET /auth/me でテナント情報を取得する。
 
+timezoneOffsetMinutes: JavaScript の getTimezoneOffset() を反転した値。
+JST なら 540（= +9 \* 60）。
+
 -}
-init : { apiBaseUrl : String } -> Shared
-init { apiBaseUrl } =
+init : { apiBaseUrl : String, timezoneOffsetMinutes : Int } -> Shared
+init { apiBaseUrl, timezoneOffsetMinutes } =
     { user = Nothing
     , tenantId = "00000000-0000-0000-0000-000000000001" -- 開発用テナント
     , csrfToken = Nothing
     , apiBaseUrl = apiBaseUrl
+    , timeZone = Time.customZone timezoneOffsetMinutes []
     }
 
 
@@ -139,3 +146,13 @@ toRequestConfig shared =
 getUserId : Shared -> Maybe String
 getUserId shared =
     shared.user |> Maybe.map .id
+
+
+{-| タイムゾーンを取得
+
+日付・時刻のフォーマットに使用する。
+
+-}
+zone : Shared -> Time.Zone
+zone shared =
+    shared.timeZone

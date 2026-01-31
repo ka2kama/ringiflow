@@ -57,6 +57,7 @@ main =
 type alias Flags =
     { apiBaseUrl : String
     , timestamp : Int
+    , timezoneOffsetMinutes : Int
     }
 
 
@@ -108,7 +109,10 @@ init flags url key =
             Route.fromUrl url
 
         shared =
-            Shared.init { apiBaseUrl = flags.apiBaseUrl }
+            Shared.init
+                { apiBaseUrl = flags.apiBaseUrl
+                , timezoneOffsetMinutes = flags.timezoneOffsetMinutes
+                }
 
         ( page, pageCmd ) =
             initPage route shared
