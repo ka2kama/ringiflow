@@ -30,6 +30,7 @@ import Api.ErrorMessage as ErrorMessage
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Component.LoadingSpinner as LoadingSpinner
+import Component.MessageAlert as MessageAlert
 import Data.FormField exposing (FormField)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, WorkflowStep)
@@ -230,7 +231,11 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewHeader
-        , viewMessages model
+        , MessageAlert.view
+            { onDismiss = DismissMessage
+            , successMessage = model.successMessage
+            , errorMessage = model.errorMessage
+            }
         , viewContent model
         ]
 
@@ -241,30 +246,6 @@ viewHeader =
         [ a [ href (Route.toString Route.Workflows), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "申請一覧" ]
         , span [ class "text-secondary-400" ] [ text "/" ]
         , span [ class "text-secondary-900 font-medium" ] [ text "申請詳細" ]
-        ]
-
-
-viewMessages : Model -> Html Msg
-viewMessages model =
-    div [ class "space-y-2 mb-4" ]
-        [ case model.successMessage of
-            Just msg ->
-                div [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700" ]
-                    [ text msg
-                    , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick DismissMessage ] [ text "×" ]
-                    ]
-
-            Nothing ->
-                text ""
-        , case model.errorMessage of
-            Just msg ->
-                div [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700" ]
-                    [ text msg
-                    , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick DismissMessage ] [ text "×" ]
-                    ]
-
-            Nothing ->
-                text ""
         ]
 
 
