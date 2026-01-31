@@ -2,6 +2,7 @@ module Page.Workflow.Detail exposing
     ( Model
     , Msg
     , init
+    , subscriptions
     , update
     , updateShared
     , view
@@ -17,6 +18,7 @@ module Page.Workflow.Detail exposing
   - 基本情報の表示（タイトル、ステータス、日時）
   - フォームデータの表示
   - 一覧への戻るリンク
+  - 承認/却下時の確認ダイアログ
 
 
 ## 設計
@@ -29,6 +31,8 @@ import Api exposing (ApiError)
 import Api.ErrorMessage as ErrorMessage
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
+import Browser.Events
+import Component.ConfirmDialog as ConfirmDialog
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.FormField exposing (FormField)
@@ -43,10 +47,21 @@ import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 import Util.DateFormat as DateFormat
+import Util.KeyEvent as KeyEvent
 
 
 
 -- MODEL
+
+
+{-| 確認待ちの操作
+
+承認/却下ボタンクリック後、確認ダイアログで最終確認するまで保持する。
+
+-}
+type PendingAction
+    = ConfirmApprove WorkflowStep
+    | ConfirmReject WorkflowStep
 
 
 {-| ページの状態
@@ -64,6 +79,7 @@ type alias Model =
 
     -- 承認/却下の状態
     , isSubmitting : Bool
+    , pendingAction : Maybe PendingAction
     , errorMessage : Maybe String
     , successMessage : Maybe String
     }
@@ -78,6 +94,7 @@ init shared workflowId =
       , workflow = Loading
       , definition = NotAsked
       , isSubmitting = False
+      , pendingAction = Nothing
       , errorMessage = Nothing
       , successMessage = Nothing
       }
@@ -111,6 +128,8 @@ type Msg
     | Refresh
     | ClickApprove WorkflowStep
     | ClickReject WorkflowStep
+    | ConfirmAction
+    | CancelAction
     | GotApproveResult (Result ApiError WorkflowInstance)
     | GotRejectResult (Result ApiError WorkflowInstance)
     | DismissMessage
@@ -164,25 +183,45 @@ update msg model =
             )
 
         ClickApprove step ->
-            ( { model | isSubmitting = True, errorMessage = Nothing }
-            , WorkflowApi.approveStep
-                { config = Shared.toRequestConfig model.shared
-                , workflowId = model.workflowId
-                , stepId = step.id
-                , body = { version = step.version, comment = Nothing }
-                , toMsg = GotApproveResult
-                }
+            ( { model | pendingAction = Just (ConfirmApprove step) }
+            , Cmd.none
             )
 
         ClickReject step ->
-            ( { model | isSubmitting = True, errorMessage = Nothing }
-            , WorkflowApi.rejectStep
-                { config = Shared.toRequestConfig model.shared
-                , workflowId = model.workflowId
-                , stepId = step.id
-                , body = { version = step.version, comment = Nothing }
-                , toMsg = GotRejectResult
-                }
+            ( { model | pendingAction = Just (ConfirmReject step) }
+            , Cmd.none
+            )
+
+        ConfirmAction ->
+            case model.pendingAction of
+                Just (ConfirmApprove step) ->
+                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , WorkflowApi.approveStep
+                        { config = Shared.toRequestConfig model.shared
+                        , workflowId = model.workflowId
+                        , stepId = step.id
+                        , body = { version = step.version, comment = Nothing }
+                        , toMsg = GotApproveResult
+                        }
+                    )
+
+                Just (ConfirmReject step) ->
+                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , WorkflowApi.rejectStep
+                        { config = Shared.toRequestConfig model.shared
+                        , workflowId = model.workflowId
+                        , stepId = step.id
+                        , body = { version = step.version, comment = Nothing }
+                        , toMsg = GotRejectResult
+                        }
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        CancelAction ->
+            ( { model | pendingAction = Nothing }
+            , Cmd.none
             )
 
         GotApproveResult result ->
@@ -222,6 +261,25 @@ handleApprovalResult successMsg result model =
 
 
 
+-- SUBSCRIPTIONS
+
+
+{-| 外部イベントの購読
+
+確認ダイアログ表示中のみ ESC キーを購読する。
+
+-}
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.pendingAction of
+        Just _ ->
+            Browser.Events.onKeyDown (KeyEvent.escKeyDecoder CancelAction)
+
+        Nothing ->
+            Sub.none
+
+
+
 -- VIEW
 
 
@@ -237,6 +295,7 @@ view model =
             , errorMessage = model.errorMessage
             }
         , viewContent model
+        , viewConfirmDialog model.pendingAction
         ]
 
 
@@ -379,6 +438,44 @@ viewRawFormData formData =
                 |> Result.withDefault "（データなし）"
             )
         ]
+
+
+
+-- CONFIRM DIALOG
+
+
+{-| 確認ダイアログの描画
+
+pendingAction が Nothing の場合は何も表示しない。
+
+-}
+viewConfirmDialog : Maybe PendingAction -> Html Msg
+viewConfirmDialog maybePending =
+    case maybePending of
+        Just (ConfirmApprove _) ->
+            ConfirmDialog.view
+                { title = "承認の確認"
+                , message = "この申請を承認しますか？"
+                , confirmLabel = "承認する"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmAction
+                , onCancel = CancelAction
+                , actionStyle = ConfirmDialog.Positive
+                }
+
+        Just (ConfirmReject _) ->
+            ConfirmDialog.view
+                { title = "却下の確認"
+                , message = "この申請を却下しますか？"
+                , confirmLabel = "却下する"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmAction
+                , onCancel = CancelAction
+                , actionStyle = ConfirmDialog.Destructive
+                }
+
+        Nothing ->
+            text ""
 
 
 

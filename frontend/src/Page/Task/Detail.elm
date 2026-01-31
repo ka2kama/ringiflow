@@ -2,6 +2,7 @@ module Page.Task.Detail exposing
     ( Model
     , Msg
     , init
+    , subscriptions
     , update
     , updateShared
     , view
@@ -20,6 +21,7 @@ module Page.Task.Detail exposing
   - 承認ステップの進捗表示
   - 承認/却下ボタン（Active なステップの場合のみ）
   - コメント入力欄
+  - 承認/却下時の確認ダイアログ
 
 -}
 
@@ -27,6 +29,8 @@ import Api exposing (ApiError)
 import Api.ErrorMessage as ErrorMessage
 import Api.Task as TaskApi
 import Api.Workflow as WorkflowApi
+import Browser.Events
+import Component.ConfirmDialog as ConfirmDialog
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.Task exposing (TaskDetail)
@@ -44,10 +48,21 @@ import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 import Util.DateFormat as DateFormat
+import Util.KeyEvent as KeyEvent
 
 
 
 -- MODEL
+
+
+{-| 確認待ちの操作
+
+承認/却下ボタンクリック後、確認ダイアログで最終確認するまで保持する。
+
+-}
+type PendingAction
+    = ConfirmApprove WorkflowStep
+    | ConfirmReject WorkflowStep
 
 
 {-| ページの状態
@@ -62,6 +77,7 @@ type alias Model =
     -- 承認/却下の状態
     , comment : String
     , isSubmitting : Bool
+    , pendingAction : Maybe PendingAction
     , errorMessage : Maybe String
     , successMessage : Maybe String
     }
@@ -76,6 +92,7 @@ init shared taskId =
       , task = Loading
       , comment = ""
       , isSubmitting = False
+      , pendingAction = Nothing
       , errorMessage = Nothing
       , successMessage = Nothing
       }
@@ -106,6 +123,8 @@ type Msg
     | UpdateComment String
     | ClickApprove WorkflowStep
     | ClickReject WorkflowStep
+    | ConfirmAction
+    | CancelAction
     | GotApproveResult (Result ApiError WorkflowInstance)
     | GotRejectResult (Result ApiError WorkflowInstance)
     | DismissMessage
@@ -147,13 +166,33 @@ update msg model =
             )
 
         ClickApprove step ->
-            ( { model | isSubmitting = True, errorMessage = Nothing }
-            , approveStep model step
+            ( { model | pendingAction = Just (ConfirmApprove step) }
+            , Cmd.none
             )
 
         ClickReject step ->
-            ( { model | isSubmitting = True, errorMessage = Nothing }
-            , rejectStep model step
+            ( { model | pendingAction = Just (ConfirmReject step) }
+            , Cmd.none
+            )
+
+        ConfirmAction ->
+            case model.pendingAction of
+                Just (ConfirmApprove step) ->
+                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , approveStep model step
+                    )
+
+                Just (ConfirmReject step) ->
+                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , rejectStep model step
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        CancelAction ->
+            ( { model | pendingAction = Nothing }
+            , Cmd.none
             )
 
         GotApproveResult result ->
@@ -253,6 +292,25 @@ handleApprovalResult successMsg result model =
 
 
 
+-- SUBSCRIPTIONS
+
+
+{-| 外部イベントの購読
+
+確認ダイアログ表示中のみ ESC キーを購読する。
+
+-}
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.pendingAction of
+        Just _ ->
+            Browser.Events.onKeyDown (KeyEvent.escKeyDecoder CancelAction)
+
+        Nothing ->
+            Sub.none
+
+
+
 -- VIEW
 
 
@@ -268,6 +326,7 @@ view model =
             , errorMessage = model.errorMessage
             }
         , viewContent model
+        , viewConfirmDialog model.pendingAction
         ]
 
 
@@ -414,6 +473,44 @@ viewStepStatusBadge step =
             Nothing ->
                 text ""
         ]
+
+
+
+-- CONFIRM DIALOG
+
+
+{-| 確認ダイアログの描画
+
+pendingAction が Nothing の場合は何も表示しない。
+
+-}
+viewConfirmDialog : Maybe PendingAction -> Html Msg
+viewConfirmDialog maybePending =
+    case maybePending of
+        Just (ConfirmApprove _) ->
+            ConfirmDialog.view
+                { title = "承認の確認"
+                , message = "この申請を承認しますか？"
+                , confirmLabel = "承認する"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmAction
+                , onCancel = CancelAction
+                , actionStyle = ConfirmDialog.Positive
+                }
+
+        Just (ConfirmReject _) ->
+            ConfirmDialog.view
+                { title = "却下の確認"
+                , message = "この申請を却下しますか？"
+                , confirmLabel = "却下する"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmAction
+                , onCancel = CancelAction
+                , actionStyle = ConfirmDialog.Destructive
+                }
+
+        Nothing ->
+            text ""
 
 
 

@@ -432,13 +432,21 @@ update msg model =
 
 {-| 外部イベントの購読
 
-現在は購読なし。将来的に WebSocket、Ports、タイマーを追加予定。
+現在のページに応じて、各ページの subscriptions にルーティングする。
 詳細: [Ports 設計](../../../docs/06_ナレッジベース/elm/Elmポート.md)
 
 -}
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model.page of
+        TaskDetailPage subModel ->
+            Sub.map TaskDetailMsg (TaskDetail.subscriptions subModel)
+
+        WorkflowDetailPage subModel ->
+            Sub.map WorkflowDetailMsg (WorkflowDetail.subscriptions subModel)
+
+        _ ->
+            Sub.none
 
 
 
