@@ -30,6 +30,7 @@ import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Util.DateFormat as DateFormat
 
 
 
@@ -195,8 +196,8 @@ viewTaskRow task =
             [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ stepStatusToCssClass task.status) ]
                 [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
             ]
-        , td [ class "px-4 py-3" ] [ text (formatMaybeDate task.dueDate) ]
-        , td [ class "px-4 py-3" ] [ text (formatMaybeDate task.startedAt) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.dueDate) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.startedAt) ]
         ]
 
 
@@ -226,15 +227,3 @@ stepStatusToCssClass status =
 
         WorkflowInstance.StepSkipped ->
             "bg-secondary-100 text-secondary-500"
-
-
-{-| Maybe な日時文字列から日付部分を抽出
--}
-formatMaybeDate : Maybe String -> String
-formatMaybeDate maybeDate =
-    case maybeDate of
-        Just isoString ->
-            String.left 10 isoString
-
-        Nothing ->
-            "-"

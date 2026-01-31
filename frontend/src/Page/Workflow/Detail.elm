@@ -39,6 +39,7 @@ import Json.Decode as Decode
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Util.DateFormat as DateFormat
 
 
 
@@ -360,11 +361,11 @@ viewBasicInfo workflow =
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
             , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy ]
             , dt [ class "text-secondary-500" ] [ text "申請日" ]
-            , dd [ class "text-secondary-900" ] [ text (formatDateTime workflow.submittedAt) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatMaybeDateTime workflow.submittedAt) ]
             , dt [ class "text-secondary-500" ] [ text "作成日" ]
-            , dd [ class "text-secondary-900" ] [ text (formatDateTime (Just workflow.createdAt)) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime workflow.createdAt) ]
             , dt [ class "text-secondary-500" ] [ text "更新日" ]
-            , dd [ class "text-secondary-900" ] [ text (formatDateTime (Just workflow.updatedAt)) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime workflow.updatedAt) ]
             ]
         ]
 
@@ -431,18 +432,6 @@ viewRawFormData formData =
                 |> Result.withDefault "（データなし）"
             )
         ]
-
-
-formatDateTime : Maybe String -> String
-formatDateTime maybeDateTime =
-    case maybeDateTime of
-        Nothing ->
-            "-"
-
-        Just dateTime ->
-            -- ISO 8601 から日付と時刻を抽出（簡易実装）
-            String.left 16 dateTime
-                |> String.replace "T" " "
 
 
 
