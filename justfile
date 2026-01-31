@@ -141,6 +141,17 @@ dev-down:
     PROJECT_NAME=$(basename "$(pwd)")
     docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down
 
+# 開発サーバープロセスを一括終了（mprocs がハングしたとき用）
+dev-kill:
+    #!/usr/bin/env bash
+    echo "開発サーバープロセスを終了中..."
+    pkill -f "mprocs" 2>/dev/null && echo "  mprocs を終了しました" || true
+    pkill -f "ringiflow-bff" 2>/dev/null && echo "  BFF を終了しました" || true
+    pkill -f "ringiflow-core-service" 2>/dev/null && echo "  Core Service を終了しました" || true
+    pkill -f "ringiflow-auth-service" 2>/dev/null && echo "  Auth Service を終了しました" || true
+    pkill -f "pnpm.*dev.*ringiflow" 2>/dev/null || pkill -f "vite.*ringiflow" 2>/dev/null && echo "  Web を終了しました" || true
+    echo "✓ 完了"
+
 # =============================================================================
 # データストア操作（開発用）
 # =============================================================================
