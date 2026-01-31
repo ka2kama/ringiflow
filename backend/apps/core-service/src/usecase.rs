@@ -16,6 +16,8 @@ pub mod dashboard;
 pub mod task;
 pub mod workflow;
 
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 pub use dashboard::DashboardUseCaseImpl;
 use ringiflow_domain::{
@@ -23,6 +25,7 @@ use ringiflow_domain::{
    user::UserId,
    workflow::{WorkflowInstance, WorkflowInstanceId},
 };
+use ringiflow_infra::repository::UserRepository;
 pub use task::TaskUseCaseImpl;
 pub use workflow::{
    ApproveRejectInput,
@@ -33,6 +36,29 @@ pub use workflow::{
 };
 
 use crate::error::CoreError;
+
+/// ユーザー ID のリストからユーザー名を一括解決する
+///
+/// 返り値は `UserId → ユーザー名` の HashMap。
+/// 空の ID リストを渡した場合は空の HashMap を返す。
+pub(crate) async fn resolve_user_names(
+   user_repo: &impl UserRepository,
+   user_ids: &[UserId],
+) -> Result<HashMap<UserId, String>, CoreError> {
+   if user_ids.is_empty() {
+      return Ok(HashMap::new());
+   }
+
+   let users = user_repo
+      .find_by_ids(user_ids)
+      .await
+      .map_err(|e| CoreError::Internal(e.to_string()))?;
+
+   Ok(users
+      .into_iter()
+      .map(|user| (user.id().clone(), user.name().as_str().to_string()))
+      .collect())
+}
 
 /// ワークフローユースケーストレイト
 ///
@@ -85,11 +111,12 @@ pub trait WorkflowUseCase: Send + Sync {
 
 /// WorkflowUseCaseImpl に WorkflowUseCase トレイトを実装
 #[async_trait]
-impl<D, I, S> WorkflowUseCase for WorkflowUseCaseImpl<D, I, S>
+impl<D, I, S, U> WorkflowUseCase for WorkflowUseCaseImpl<D, I, S, U>
 where
    D: ringiflow_infra::repository::WorkflowDefinitionRepository + Send + Sync,
    I: ringiflow_infra::repository::WorkflowInstanceRepository + Send + Sync,
    S: ringiflow_infra::repository::WorkflowStepRepository + Send + Sync,
+   U: UserRepository,
 {
    async fn create_workflow(
       &self,

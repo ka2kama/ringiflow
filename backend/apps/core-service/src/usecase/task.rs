@@ -16,7 +16,11 @@ use ringiflow_domain::{
       WorkflowStepStatus,
    },
 };
-use ringiflow_infra::repository::{WorkflowInstanceRepository, WorkflowStepRepository};
+use ringiflow_infra::repository::{
+   UserRepository,
+   WorkflowInstanceRepository,
+   WorkflowStepRepository,
+};
 
 use crate::error::CoreError;
 
@@ -35,22 +39,33 @@ pub struct TaskDetail {
 
 /// タスクユースケース実装
 ///
-/// I: WorkflowInstanceRepository, S: WorkflowStepRepository
-pub struct TaskUseCaseImpl<I, S> {
+/// I: WorkflowInstanceRepository, S: WorkflowStepRepository, U: UserRepository
+pub struct TaskUseCaseImpl<I, S, U> {
    instance_repo: I,
    step_repo:     S,
+   user_repo:     U,
 }
 
-impl<I, S> TaskUseCaseImpl<I, S>
+impl<I, S, U> TaskUseCaseImpl<I, S, U>
 where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
+   U: UserRepository,
 {
-   pub fn new(instance_repo: I, step_repo: S) -> Self {
+   pub fn new(instance_repo: I, step_repo: S, user_repo: U) -> Self {
       Self {
          instance_repo,
          step_repo,
+         user_repo,
       }
+   }
+
+   /// ユーザー ID のリストからユーザー名を一括解決する
+   pub async fn resolve_user_names(
+      &self,
+      user_ids: &[UserId],
+   ) -> Result<HashMap<UserId, String>, CoreError> {
+      crate::usecase::resolve_user_names(&self.user_repo, user_ids).await
    }
 
    /// 自分のタスク一覧を取得する
@@ -348,6 +363,52 @@ mod tests {
       }
    }
 
+   /// テスト用のモック UserRepository
+   #[derive(Clone)]
+   struct MockUserRepository;
+
+   #[async_trait]
+   impl ringiflow_infra::repository::UserRepository for MockUserRepository {
+      async fn find_by_email(
+         &self,
+         _tenant_id: &TenantId,
+         _email: &ringiflow_domain::user::Email,
+      ) -> Result<Option<ringiflow_domain::user::User>, InfraError> {
+         Ok(None)
+      }
+
+      async fn find_by_id(
+         &self,
+         _id: &UserId,
+      ) -> Result<Option<ringiflow_domain::user::User>, InfraError> {
+         Ok(None)
+      }
+
+      async fn find_with_roles(
+         &self,
+         _id: &UserId,
+      ) -> Result<
+         Option<(
+            ringiflow_domain::user::User,
+            Vec<ringiflow_domain::role::Role>,
+         )>,
+         InfraError,
+      > {
+         Ok(None)
+      }
+
+      async fn find_by_ids(
+         &self,
+         _ids: &[UserId],
+      ) -> Result<Vec<ringiflow_domain::user::User>, InfraError> {
+         Ok(Vec::new())
+      }
+
+      async fn update_last_login(&self, _id: &UserId) -> Result<(), InfraError> {
+         Ok(())
+      }
+   }
+
    // ===== テスト =====
 
    #[tokio::test]
@@ -395,7 +456,7 @@ mod tests {
       );
       step_repo.insert(&pending_step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
       let result = usecase.list_my_tasks(tenant_id, approver_id).await;
@@ -440,7 +501,7 @@ mod tests {
       .activated();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
       let result = usecase.list_my_tasks(tenant_id, approver_id).await;
@@ -486,7 +547,7 @@ mod tests {
       .activated();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act: 別のユーザーで取得
       let result = usecase.list_my_tasks(tenant_id, other_user_id).await;
@@ -505,7 +566,7 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
       let result = usecase.list_my_tasks(tenant_id, user_id).await;
@@ -549,7 +610,7 @@ mod tests {
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
       let result = usecase.get_task(step_id, tenant_id, approver_id).await;
@@ -571,7 +632,7 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act: 存在しない step_id で取得
       let result = usecase
@@ -617,7 +678,7 @@ mod tests {
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo);
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act: 別のユーザーで取得
       let result = usecase.get_task(step_id, tenant_id, other_user_id).await;

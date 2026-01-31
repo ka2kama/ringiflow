@@ -140,7 +140,13 @@ async fn main() -> anyhow::Result<()> {
    let definition_repo = PostgresWorkflowDefinitionRepository::new(pool.clone());
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
-   let workflow_usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+   let workflow_user_repo = PostgresUserRepository::new(pool.clone());
+   let workflow_usecase = WorkflowUseCaseImpl::new(
+      definition_repo,
+      instance_repo,
+      step_repo,
+      workflow_user_repo,
+   );
    let workflow_state = Arc::new(WorkflowState {
       usecase: workflow_usecase,
    });
@@ -148,7 +154,8 @@ async fn main() -> anyhow::Result<()> {
    // タスク関連の依存コンポーネント
    let task_instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let task_step_repo = PostgresWorkflowStepRepository::new(pool.clone());
-   let task_usecase = TaskUseCaseImpl::new(task_instance_repo, task_step_repo);
+   let task_user_repo = PostgresUserRepository::new(pool.clone());
+   let task_usecase = TaskUseCaseImpl::new(task_instance_repo, task_step_repo, task_user_repo);
    let task_state = Arc::new(TaskState {
       usecase: task_usecase,
    });
@@ -182,6 +189,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -192,6 +200,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -203,6 +212,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             )
             .post(
@@ -210,6 +220,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -220,6 +231,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -230,6 +242,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -240,6 +253,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -250,6 +264,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
                >,
             ),
          )
@@ -258,12 +273,22 @@ async fn main() -> anyhow::Result<()> {
          .route(
             "/internal/tasks/my",
             get(
-               list_my_tasks::<PostgresWorkflowInstanceRepository, PostgresWorkflowStepRepository>,
+               list_my_tasks::<
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+               >,
             ),
          )
          .route(
             "/internal/tasks/{id}",
-            get(get_task::<PostgresWorkflowInstanceRepository, PostgresWorkflowStepRepository>),
+            get(
+               get_task::<
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+               >,
+            ),
          )
          .with_state(task_state)
          // ダッシュボード API

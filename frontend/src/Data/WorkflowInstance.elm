@@ -31,6 +31,7 @@ module Data.WorkflowInstance exposing
 
 -}
 
+import Data.UserRef exposing (UserRef)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (optional, required)
 import Json.Encode as Encode
@@ -59,7 +60,7 @@ type alias WorkflowStep =
     , stepName : String
     , status : StepStatus
     , decision : Maybe Decision
-    , assignedTo : Maybe String
+    , assignedTo : Maybe UserRef
     , comment : Maybe String
     , version : Int
     }
@@ -108,7 +109,7 @@ type alias WorkflowInstance =
     , status : Status
     , version : Int
     , formData : Encode.Value
-    , initiatedBy : String
+    , initiatedBy : UserRef
     , currentStepId : Maybe String
     , steps : List WorkflowStep
     , submittedAt : Maybe String
@@ -341,7 +342,7 @@ stepDecoder =
         |> required "step_name" Decode.string
         |> required "status" stepStatusDecoder
         |> optional "decision" (Decode.nullable decisionDecoder) Nothing
-        |> optional "assigned_to" (Decode.nullable Decode.string) Nothing
+        |> optional "assigned_to" (Decode.nullable Data.UserRef.decoder) Nothing
         |> optional "comment" (Decode.nullable Decode.string) Nothing
         |> optional "version" Decode.int 1
 
@@ -357,7 +358,7 @@ decoder =
         |> required "status" statusDecoder
         |> optional "version" Decode.int 1
         |> required "form_data" Decode.value
-        |> required "initiated_by" Decode.string
+        |> required "initiated_by" Data.UserRef.decoder
         |> optional "current_step_id" (Decode.nullable Decode.string) Nothing
         |> optional "steps" (Decode.list stepDecoder) []
         |> optional "submitted_at" (Decode.nullable Decode.string) Nothing

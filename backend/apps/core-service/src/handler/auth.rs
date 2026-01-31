@@ -307,6 +307,10 @@ mod tests {
          Ok(self.user_with_roles.clone())
       }
 
+      async fn find_by_ids(&self, _ids: &[UserId]) -> Result<Vec<User>, InfraError> {
+         Ok(self.user.clone().into_iter().collect())
+      }
+
       async fn update_last_login(&self, _id: &UserId) -> Result<(), InfraError> {
          Ok(())
       }

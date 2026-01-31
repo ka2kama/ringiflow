@@ -2,7 +2,10 @@
 //!
 //! Core Service のタスク関連エンドポイントを実装する。
 
-use std::sync::Arc;
+use std::{
+   collections::{HashMap, HashSet},
+   sync::Arc,
+};
 
 use axum::{
    Json,
@@ -15,20 +18,24 @@ use ringiflow_domain::{
    user::UserId,
    workflow::{WorkflowInstance, WorkflowStepId},
 };
-use ringiflow_infra::repository::{WorkflowInstanceRepository, WorkflowStepRepository};
+use ringiflow_infra::repository::{
+   UserRepository,
+   WorkflowInstanceRepository,
+   WorkflowStepRepository,
+};
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
    error::CoreError,
-   handler::workflow::{UserQuery, WorkflowInstanceDto, WorkflowStepDto},
-   usecase::task::{TaskDetail, TaskItem, TaskUseCaseImpl},
+   handler::workflow::{UserQuery, UserRefDto, WorkflowInstanceDto, WorkflowStepDto, to_user_ref},
+   usecase::task::{TaskItem, TaskUseCaseImpl},
 };
 
 /// タスクハンドラーの State
-pub struct TaskState<I, S> {
-   pub usecase: TaskUseCaseImpl<I, S>,
+pub struct TaskState<I, S, U> {
+   pub usecase: TaskUseCaseImpl<I, S, U>,
 }
 
 /// タスク一覧の要素 DTO
@@ -38,7 +45,7 @@ pub struct TaskItemDto {
    pub step_name:   String,
    pub status:      String,
    pub version:     i32,
-   pub assigned_to: Option<String>,
+   pub assigned_to: Option<UserRefDto>,
    pub due_date:    Option<String>,
    pub started_at:  Option<String>,
    pub created_at:  String,
@@ -51,34 +58,34 @@ pub struct WorkflowSummaryDto {
    pub id:           String,
    pub title:        String,
    pub status:       String,
-   pub initiated_by: String,
+   pub initiated_by: UserRefDto,
    pub submitted_at: Option<String>,
 }
 
-impl From<WorkflowInstance> for WorkflowSummaryDto {
-   fn from(instance: WorkflowInstance) -> Self {
+impl WorkflowSummaryDto {
+   fn from_instance(instance: &WorkflowInstance, user_names: &HashMap<UserId, String>) -> Self {
       Self {
          id:           instance.id().to_string(),
          title:        instance.title().to_string(),
          status:       format!("{:?}", instance.status()),
-         initiated_by: instance.initiated_by().to_string(),
+         initiated_by: to_user_ref(instance.initiated_by(), user_names),
          submitted_at: instance.submitted_at().map(|t| t.to_rfc3339()),
       }
    }
 }
 
-impl From<TaskItem> for TaskItemDto {
-   fn from(item: TaskItem) -> Self {
+impl TaskItemDto {
+   fn from_task_item(item: &TaskItem, user_names: &HashMap<UserId, String>) -> Self {
       Self {
          id:          item.step.id().to_string(),
          step_name:   item.step.step_name().to_string(),
          status:      format!("{:?}", item.step.status()),
          version:     item.step.version().as_i32(),
-         assigned_to: item.step.assigned_to().map(|u| u.to_string()),
+         assigned_to: item.step.assigned_to().map(|u| to_user_ref(u, user_names)),
          due_date:    item.step.due_date().map(|t| t.to_rfc3339()),
          started_at:  item.step.started_at().map(|t| t.to_rfc3339()),
          created_at:  item.step.created_at().to_rfc3339(),
-         workflow:    WorkflowSummaryDto::from(item.workflow),
+         workflow:    WorkflowSummaryDto::from_instance(&item.workflow, user_names),
       }
    }
 }
@@ -90,39 +97,41 @@ pub struct TaskDetailDto {
    pub workflow: WorkflowInstanceDto,
 }
 
-impl From<TaskDetail> for TaskDetailDto {
-   fn from(detail: TaskDetail) -> Self {
-      // ワークフローインスタンスをステップ付きで変換
-      let workflow_dto = WorkflowInstanceDto::from(crate::usecase::workflow::WorkflowWithSteps {
-         instance: detail.workflow,
-         steps:    detail.steps,
-      });
-
-      Self {
-         step:     WorkflowStepDto::from(detail.step),
-         workflow: workflow_dto,
-      }
-   }
-}
-
 /// 自分のタスク一覧を取得する
 ///
 /// ## エンドポイント
 /// GET /internal/tasks/my?tenant_id={tenant_id}&user_id={user_id}
-pub async fn list_my_tasks<I, S>(
-   State(state): State<Arc<TaskState<I, S>>>,
+pub async fn list_my_tasks<I, S, U>(
+   State(state): State<Arc<TaskState<I, S, U>>>,
    Query(query): Query<UserQuery>,
 ) -> Result<Response, CoreError>
 where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
+   U: UserRepository,
 {
    let tenant_id = TenantId::from_uuid(query.tenant_id);
    let user_id = UserId::from_uuid(query.user_id);
 
    let tasks = state.usecase.list_my_tasks(tenant_id, user_id).await?;
 
-   let response = ApiResponse::new(tasks.into_iter().map(TaskItemDto::from).collect::<Vec<_>>());
+   // 全タスクのユーザー ID を収集して一括解決
+   let mut user_id_set = HashSet::new();
+   for task in &tasks {
+      user_id_set.insert(task.workflow.initiated_by().clone());
+      if let Some(uid) = task.step.assigned_to() {
+         user_id_set.insert(uid.clone());
+      }
+   }
+   let all_user_ids: Vec<UserId> = user_id_set.into_iter().collect();
+   let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
+
+   let response = ApiResponse::new(
+      tasks
+         .iter()
+         .map(|t| TaskItemDto::from_task_item(t, &user_names))
+         .collect::<Vec<_>>(),
+   );
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -131,14 +140,15 @@ where
 ///
 /// ## エンドポイント
 /// GET /internal/tasks/{id}?tenant_id={tenant_id}&user_id={user_id}
-pub async fn get_task<I, S>(
-   State(state): State<Arc<TaskState<I, S>>>,
+pub async fn get_task<I, S, U>(
+   State(state): State<Arc<TaskState<I, S, U>>>,
    Path(id): Path<Uuid>,
    Query(query): Query<UserQuery>,
 ) -> Result<Response, CoreError>
 where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
+   U: UserRepository,
 {
    let step_id = WorkflowStepId::from_uuid(id);
    let tenant_id = TenantId::from_uuid(query.tenant_id);
@@ -146,7 +156,21 @@ where
 
    let detail = state.usecase.get_task(step_id, tenant_id, user_id).await?;
 
-   let response = ApiResponse::new(TaskDetailDto::from(detail));
+   // ユーザー名を解決
+   let user_ids =
+      crate::usecase::workflow::collect_user_ids_from_workflow(&detail.workflow, &detail.steps);
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(TaskDetailDto {
+      step:     WorkflowStepDto::from_step(&detail.step, &user_names),
+      workflow: WorkflowInstanceDto::from_workflow_with_steps(
+         &crate::usecase::workflow::WorkflowWithSteps {
+            instance: detail.workflow,
+            steps:    detail.steps,
+         },
+         &user_names,
+      ),
+   });
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }

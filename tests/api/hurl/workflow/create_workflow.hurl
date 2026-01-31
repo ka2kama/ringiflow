@@ -58,7 +58,8 @@ jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "Draft"
 jsonpath "$.data.form_data.title" == "交通費"
 jsonpath "$.data.form_data.description" == "出張時の交通費"
-jsonpath "$.data.initiated_by" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data.current_step_id" == null
 jsonpath "$.data.submitted_at" == null
 jsonpath "$.data.created_at" exists

@@ -213,7 +213,7 @@ decoderTests =
                             "definition_id": "def-001",
                             "status": "Draft",
                             "form_data": {"amount": 10000},
-                            "initiated_by": "user-001",
+                            "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
                             "current_step_id": "step-1",
                             "submitted_at": "2026-01-15T10:00:00Z",
                             "created_at": "2026-01-01T00:00:00Z",
@@ -247,7 +247,7 @@ decoderTests =
                             "definition_id": "def-002",
                             "status": "Pending",
                             "form_data": {},
-                            "initiated_by": "user-002",
+                            "initiated_by": {"id": "user-002", "name": "テストユーザー2"},
                             "current_step_id": null,
                             "submitted_at": null,
                             "created_at": "2026-01-01T00:00:00Z",
@@ -279,7 +279,7 @@ decoderTests =
                             "definition_id": "def-003",
                             "status": "Approved",
                             "form_data": {},
-                            "initiated_by": "user-003",
+                            "initiated_by": {"id": "user-003", "name": "テストユーザー3"},
                             "created_at": "2026-01-01T00:00:00Z",
                             "updated_at": "2026-01-01T00:00:00Z"
                         }
@@ -311,7 +311,7 @@ decoderTests =
                             ++ status
                             ++ """",
                             "form_data": {},
-                            "initiated_by": "user-001",
+                            "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
                             "created_at": "2026-01-01T00:00:00Z",
                             "updated_at": "2026-01-01T00:00:00Z"
                         }
@@ -347,7 +347,7 @@ decoderTests =
                             "definition_id": "def-001",
                             "status": "Unknown",
                             "form_data": {},
-                            "initiated_by": "user-001",
+                            "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
                             "created_at": "2026-01-01T00:00:00Z",
                             "updated_at": "2026-01-01T00:00:00Z"
                         }
@@ -390,7 +390,7 @@ listDecoderTests =
                                     "definition_id": "def-001",
                                     "status": "Draft",
                                     "form_data": {},
-                                    "initiated_by": "user-001",
+                                    "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
                                     "created_at": "2026-01-01T00:00:00Z",
                                     "updated_at": "2026-01-01T00:00:00Z"
                                 },
@@ -400,7 +400,7 @@ listDecoderTests =
                                     "definition_id": "def-002",
                                     "status": "Approved",
                                     "form_data": {},
-                                    "initiated_by": "user-002",
+                                    "initiated_by": {"id": "user-002", "name": "テストユーザー2"},
                                     "created_at": "2026-01-01T00:00:00Z",
                                     "updated_at": "2026-01-01T00:00:00Z"
                                 }

@@ -2,6 +2,8 @@
 //!
 //! ワークフローの作成・取得・申請に関するビジネスロジックを実装する。
 
+use std::collections::{HashMap, HashSet};
+
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -18,7 +20,12 @@ use ringiflow_domain::{
 };
 use ringiflow_infra::{
    InfraError,
-   repository::{WorkflowDefinitionRepository, WorkflowInstanceRepository, WorkflowStepRepository},
+   repository::{
+      UserRepository,
+      WorkflowDefinitionRepository,
+      WorkflowInstanceRepository,
+      WorkflowStepRepository,
+   },
 };
 use serde_json::Value as JsonValue;
 
@@ -61,28 +68,57 @@ pub struct ApproveRejectInput {
    pub comment: Option<String>,
 }
 
+/// WorkflowInstance + Steps からユーザー ID を収集する
+///
+/// ワークフローの initiated_by と各ステップの assigned_to を
+/// 重複排除して返す。ユーザー名一括解決の前処理として使用する。
+pub(crate) fn collect_user_ids_from_workflow(
+   instance: &WorkflowInstance,
+   steps: &[WorkflowStep],
+) -> Vec<UserId> {
+   let mut set = HashSet::new();
+   set.insert(instance.initiated_by().clone());
+   for step in steps {
+      if let Some(user_id) = step.assigned_to() {
+         set.insert(user_id.clone());
+      }
+   }
+   set.into_iter().collect()
+}
+
 /// ワークフローユースケース実装
 ///
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
-pub struct WorkflowUseCaseImpl<D, I, S> {
+pub struct WorkflowUseCaseImpl<D, I, S, U> {
    definition_repo: D,
    instance_repo:   I,
    step_repo:       S,
+   user_repo:       U,
 }
 
-impl<D, I, S> WorkflowUseCaseImpl<D, I, S>
+impl<D, I, S, U> WorkflowUseCaseImpl<D, I, S, U>
 where
    D: WorkflowDefinitionRepository,
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
+   U: UserRepository,
 {
    /// 新しいワークフローユースケースを作成
-   pub fn new(definition_repo: D, instance_repo: I, step_repo: S) -> Self {
+   pub fn new(definition_repo: D, instance_repo: I, step_repo: S, user_repo: U) -> Self {
       Self {
          definition_repo,
          instance_repo,
          step_repo,
+         user_repo,
       }
+   }
+
+   /// ユーザー ID のリストからユーザー名を一括解決する
+   pub async fn resolve_user_names(
+      &self,
+      user_ids: &[UserId],
+   ) -> Result<HashMap<UserId, String>, CoreError> {
+      crate::usecase::resolve_user_names(&self.user_repo, user_ids).await
    }
 
    /// ワークフローインスタンスを作成する（下書き）
@@ -555,6 +591,7 @@ mod tests {
    use std::sync::{Arc, Mutex};
 
    use ringiflow_domain::{
+      user::User,
       value_objects::{Version, WorkflowName},
       workflow::{WorkflowDefinition, WorkflowDefinitionStatus},
    };
@@ -797,6 +834,43 @@ mod tests {
       }
    }
 
+   /// テスト用のモック UserRepository
+   ///
+   /// ユーザー名解決テストが必要な場合に使用する。
+   /// ワークフローユースケースのテストでは直接利用しないが、型パラメータを満たすために必要。
+   #[derive(Clone)]
+   struct MockUserRepository;
+
+   #[async_trait::async_trait]
+   impl ringiflow_infra::repository::UserRepository for MockUserRepository {
+      async fn find_by_email(
+         &self,
+         _tenant_id: &TenantId,
+         _email: &ringiflow_domain::user::Email,
+      ) -> Result<Option<User>, InfraError> {
+         Ok(None)
+      }
+
+      async fn find_by_id(&self, _id: &UserId) -> Result<Option<User>, InfraError> {
+         Ok(None)
+      }
+
+      async fn find_with_roles(
+         &self,
+         _id: &UserId,
+      ) -> Result<Option<(User, Vec<ringiflow_domain::role::Role>)>, InfraError> {
+         Ok(None)
+      }
+
+      async fn find_by_ids(&self, _ids: &[UserId]) -> Result<Vec<User>, InfraError> {
+         Ok(Vec::new())
+      }
+
+      async fn update_last_login(&self, _id: &UserId) -> Result<(), InfraError> {
+         Ok(())
+      }
+   }
+
    #[tokio::test]
    async fn test_create_workflow_正常系() {
       // Arrange
@@ -818,7 +892,12 @@ mod tests {
       let published_definition = definition.published().unwrap();
       definition_repo.add_definition(published_definition.clone());
 
-      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo);
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo.clone(),
+         step_repo,
+         MockUserRepository,
+      );
 
       let input = CreateWorkflowInput {
          definition_id: published_definition.id().clone(),
@@ -856,7 +935,12 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+      );
 
       let input = CreateWorkflowInput {
          definition_id: WorkflowDefinitionId::new(),
@@ -909,8 +993,12 @@ mod tests {
       .activated();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase =
-         WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo.clone(),
+         step_repo.clone(),
+         MockUserRepository,
+      );
 
       let input = ApproveRejectInput {
          version: step.version(),
@@ -984,7 +1072,12 @@ mod tests {
       .activated();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+      );
 
       let input = ApproveRejectInput {
          version: step.version(),
@@ -1035,7 +1128,12 @@ mod tests {
       // activated() を呼ばないので Pending のまま
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+      );
 
       let input = ApproveRejectInput {
          version: step.version(),
@@ -1085,7 +1183,12 @@ mod tests {
       .activated();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+      );
 
       // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
       let wrong_version = Version::initial().next();
@@ -1139,8 +1242,12 @@ mod tests {
       .activated();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase =
-         WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo.clone(),
+         step_repo.clone(),
+         MockUserRepository,
+      );
 
       let input = ApproveRejectInput {
          version: step.version(),
@@ -1212,8 +1319,12 @@ mod tests {
       );
       instance_repo.insert(&instance).await.unwrap();
 
-      let usecase =
-         WorkflowUseCaseImpl::new(definition_repo, instance_repo.clone(), step_repo.clone());
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo.clone(),
+         step_repo.clone(),
+         MockUserRepository,
+      );
 
       let input = SubmitWorkflowInput {
          assigned_to: approver_id.clone(),

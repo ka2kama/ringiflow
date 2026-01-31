@@ -71,7 +71,8 @@ jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.current_step_id" exists
 jsonpath "$.data.submitted_at" exists
-jsonpath "$.data.initiated_by" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 
 # =============================================================================
 # 異常系: 未認証では申請できない（CSRF トークンなしで 403）

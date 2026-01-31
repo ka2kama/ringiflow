@@ -20,6 +20,7 @@ module Data.Task exposing
 
 -}
 
+import Data.UserRef exposing (UserRef)
 import Data.WorkflowInstance as WorkflowInstance
     exposing
         ( StepStatus
@@ -40,7 +41,7 @@ type alias WorkflowSummary =
     { id : String
     , title : String
     , status : String
-    , initiatedBy : String
+    , initiatedBy : UserRef
     , submittedAt : Maybe String
     }
 
@@ -55,7 +56,7 @@ type alias TaskItem =
     , stepName : String
     , status : StepStatus
     , version : Int
-    , assignedTo : Maybe String
+    , assignedTo : Maybe UserRef
     , dueDate : Maybe String
     , startedAt : Maybe String
     , createdAt : String
@@ -87,7 +88,7 @@ workflowSummaryDecoder =
         |> required "id" Decode.string
         |> required "title" Decode.string
         |> required "status" Decode.string
-        |> required "initiated_by" Decode.string
+        |> required "initiated_by" Data.UserRef.decoder
         |> optional "submitted_at" (Decode.nullable Decode.string) Nothing
 
 
@@ -100,7 +101,7 @@ taskItemDecoder =
         |> required "step_name" Decode.string
         |> required "status" WorkflowInstance.stepStatusDecoder
         |> optional "version" Decode.int 1
-        |> optional "assigned_to" (Decode.nullable Decode.string) Nothing
+        |> optional "assigned_to" (Decode.nullable Data.UserRef.decoder) Nothing
         |> optional "due_date" (Decode.nullable Decode.string) Nothing
         |> optional "started_at" (Decode.nullable Decode.string) Nothing
         |> required "created_at" Decode.string
