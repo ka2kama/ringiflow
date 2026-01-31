@@ -46,6 +46,7 @@ import Json.Decode as Decode
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Time
 import Util.DateFormat as DateFormat
 import Util.KeyEvent as KeyEvent
 
@@ -358,7 +359,7 @@ viewWorkflowDetail workflow maybeDefinition comment isSubmitting shared =
         , viewStatus workflow
         , viewApprovalSection workflow comment isSubmitting shared
         , viewSteps workflow
-        , viewBasicInfo workflow
+        , viewBasicInfo (Shared.zone shared) workflow
         , viewFormData workflow maybeDefinition
         ]
 
@@ -377,19 +378,19 @@ viewStatus workflow =
         ]
 
 
-viewBasicInfo : WorkflowInstance -> Html Msg
-viewBasicInfo workflow =
+viewBasicInfo : Time.Zone -> WorkflowInstance -> Html Msg
+viewBasicInfo zone workflow =
     div []
         [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
         , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
             , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy.name ]
             , dt [ class "text-secondary-500" ] [ text "申請日" ]
-            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatMaybeDateTime workflow.submittedAt) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatMaybeDateTime zone workflow.submittedAt) ]
             , dt [ class "text-secondary-500" ] [ text "作成日" ]
-            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime workflow.createdAt) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime zone workflow.createdAt) ]
             , dt [ class "text-secondary-500" ] [ text "更新日" ]
-            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime workflow.updatedAt) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime zone workflow.updatedAt) ]
             ]
         ]
 

@@ -35,6 +35,7 @@ import Html.Events exposing (onClick, onInput)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Time
 import Util.DateFormat as DateFormat
 
 
@@ -160,7 +161,7 @@ viewContent model =
             viewError
 
         Success workflows ->
-            viewWorkflowList model.statusFilter workflows
+            viewWorkflowList (Shared.zone model.shared) model.statusFilter workflows
 
 
 viewError : Html Msg
@@ -172,8 +173,8 @@ viewError =
         ]
 
 
-viewWorkflowList : Maybe Status -> List WorkflowInstance -> Html Msg
-viewWorkflowList statusFilter workflows =
+viewWorkflowList : Time.Zone -> Maybe Status -> List WorkflowInstance -> Html Msg
+viewWorkflowList zone statusFilter workflows =
     let
         filteredWorkflows =
             case statusFilter of
@@ -194,7 +195,7 @@ viewWorkflowList statusFilter workflows =
 
           else
             div []
-                [ div [ class "overflow-x-auto" ] [ viewWorkflowTable filteredWorkflows ]
+                [ div [ class "overflow-x-auto" ] [ viewWorkflowTable zone filteredWorkflows ]
                 , viewCount (List.length filteredWorkflows)
                 ]
         ]
@@ -251,8 +252,8 @@ statusFromFilterValue str =
         WorkflowInstance.statusFromString str
 
 
-viewWorkflowTable : List WorkflowInstance -> Html Msg
-viewWorkflowTable workflows =
+viewWorkflowTable : Time.Zone -> List WorkflowInstance -> Html Msg
+viewWorkflowTable zone workflows =
     table [ class "w-full border-collapse" ]
         [ thead [ class "border-b border-secondary-100" ]
             [ tr []
@@ -262,12 +263,12 @@ viewWorkflowTable workflows =
                 ]
             ]
         , tbody []
-            (List.map viewWorkflowRow workflows)
+            (List.map (viewWorkflowRow zone) workflows)
         ]
 
 
-viewWorkflowRow : WorkflowInstance -> Html Msg
-viewWorkflowRow workflow =
+viewWorkflowRow : Time.Zone -> WorkflowInstance -> Html Msg
+viewWorkflowRow zone workflow =
     tr [ class "border-b border-secondary-100" ]
         [ td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.WorkflowDetail workflow.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
@@ -277,7 +278,7 @@ viewWorkflowRow workflow =
             [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
                 [ text (WorkflowInstance.statusToJapanese workflow.status) ]
             ]
-        , td [ class "px-4 py-3" ] [ text (DateFormat.formatDate workflow.createdAt) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatDate zone workflow.createdAt) ]
         ]
 
 

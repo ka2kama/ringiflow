@@ -3,12 +3,36 @@ module Util.DateFormatTest exposing (suite)
 {-| Util.DateFormat モジュールのテスト
 
 日付フォーマット関数の正確性を検証する。
+タイムゾーン変換が正しく行われることを確認する。
 
 -}
 
 import Expect
 import Test exposing (..)
+import Time
 import Util.DateFormat as DateFormat
+
+
+
+-- テスト用タイムゾーン
+
+
+{-| JST (+09:00)
+-}
+jst : Time.Zone
+jst =
+    Time.customZone (9 * 60) []
+
+
+{-| UTC
+-}
+utc : Time.Zone
+utc =
+    Time.utc
+
+
+
+-- suite
 
 
 suite : Test
@@ -28,22 +52,23 @@ suite =
 formatDateTests : Test
 formatDateTests =
     describe "formatDate"
-        [ test "ISO 8601 日時文字列から日付部分を抽出する" <|
+        [ test "UTC の日時を JST の日付に変換する" <|
             \_ ->
-                DateFormat.formatDate "2026-01-15T10:30:00Z"
+                DateFormat.formatDate jst "2026-01-15T10:30:00Z"
                     |> Expect.equal "2026-01-15"
-        , test "タイムゾーンオフセット付きでも日付部分を抽出する" <|
+        , test "UTC の深夜をまたぐ時刻を JST で翌日の日付に変換する" <|
             \_ ->
-                DateFormat.formatDate "2026-01-15T10:30:00+09:00"
+                -- UTC 23:30 → JST 翌日 08:30
+                DateFormat.formatDate jst "2026-01-15T23:30:00Z"
+                    |> Expect.equal "2026-01-16"
+        , test "UTC タイムゾーンでは日付がそのまま返る" <|
+            \_ ->
+                DateFormat.formatDate utc "2026-01-15T10:30:00Z"
                     |> Expect.equal "2026-01-15"
-        , test "日付のみの文字列はそのまま返す" <|
+        , test "パース失敗時は元の文字列を返す" <|
             \_ ->
-                DateFormat.formatDate "2026-01-15"
-                    |> Expect.equal "2026-01-15"
-        , test "10文字未満の文字列はそのまま返す" <|
-            \_ ->
-                DateFormat.formatDate "short"
-                    |> Expect.equal "short"
+                DateFormat.formatDate jst "invalid"
+                    |> Expect.equal "invalid"
         ]
 
 
@@ -54,13 +79,13 @@ formatDateTests =
 formatMaybeDateTests : Test
 formatMaybeDateTests =
     describe "formatMaybeDate"
-        [ test "Just の場合は日付部分を抽出する" <|
+        [ test "Just の場合はタイムゾーン変換した日付を返す" <|
             \_ ->
-                DateFormat.formatMaybeDate (Just "2026-01-15T10:30:00Z")
+                DateFormat.formatMaybeDate jst (Just "2026-01-15T10:30:00Z")
                     |> Expect.equal "2026-01-15"
         , test "Nothing の場合は \"-\" を返す" <|
             \_ ->
-                DateFormat.formatMaybeDate Nothing
+                DateFormat.formatMaybeDate jst Nothing
                     |> Expect.equal "-"
         ]
 
@@ -72,18 +97,23 @@ formatMaybeDateTests =
 formatDateTimeTests : Test
 formatDateTimeTests =
     describe "formatDateTime"
-        [ test "ISO 8601 日時文字列から日付と時刻を抽出する" <|
+        [ test "UTC の日時を JST の日時に変換する" <|
             \_ ->
-                DateFormat.formatDateTime "2026-01-15T10:30:00Z"
+                DateFormat.formatDateTime jst "2026-01-15T10:30:00Z"
+                    |> Expect.equal "2026-01-15 19:30"
+        , test "UTC の深夜をまたぐ時刻を JST で翌日に変換する" <|
+            \_ ->
+                -- UTC 23:30 → JST 翌日 08:30
+                DateFormat.formatDateTime jst "2026-01-15T23:30:00Z"
+                    |> Expect.equal "2026-01-16 08:30"
+        , test "UTC タイムゾーンでは時刻がそのまま返る" <|
+            \_ ->
+                DateFormat.formatDateTime utc "2026-01-15T10:30:00Z"
                     |> Expect.equal "2026-01-15 10:30"
-        , test "T を空白に置換する" <|
+        , test "パース失敗時は元の文字列を返す" <|
             \_ ->
-                DateFormat.formatDateTime "2026-12-31T23:59:00Z"
-                    |> Expect.equal "2026-12-31 23:59"
-        , test "16文字未満の文字列は T を空白に置換して返す" <|
-            \_ ->
-                DateFormat.formatDateTime "2026-01-15"
-                    |> Expect.equal "2026-01-15"
+                DateFormat.formatDateTime jst "invalid"
+                    |> Expect.equal "invalid"
         ]
 
 
@@ -94,12 +124,12 @@ formatDateTimeTests =
 formatMaybeDateTimeTests : Test
 formatMaybeDateTimeTests =
     describe "formatMaybeDateTime"
-        [ test "Just の場合は日付と時刻を抽出する" <|
+        [ test "Just の場合はタイムゾーン変換した日時を返す" <|
             \_ ->
-                DateFormat.formatMaybeDateTime (Just "2026-01-15T10:30:00Z")
-                    |> Expect.equal "2026-01-15 10:30"
+                DateFormat.formatMaybeDateTime jst (Just "2026-01-15T10:30:00Z")
+                    |> Expect.equal "2026-01-15 19:30"
         , test "Nothing の場合は \"-\" を返す" <|
             \_ ->
-                DateFormat.formatMaybeDateTime Nothing
+                DateFormat.formatMaybeDateTime jst Nothing
                     |> Expect.equal "-"
         ]

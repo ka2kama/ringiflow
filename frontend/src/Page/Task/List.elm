@@ -31,6 +31,7 @@ import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Time
 import Util.DateFormat as DateFormat
 
 
@@ -138,7 +139,7 @@ viewContent model =
             viewError
 
         Success tasks ->
-            viewTaskList tasks
+            viewTaskList (Shared.zone model.shared) tasks
 
 
 viewError : Html Msg
@@ -150,8 +151,8 @@ viewError =
         ]
 
 
-viewTaskList : List TaskItem -> Html Msg
-viewTaskList tasks =
+viewTaskList : Time.Zone -> List TaskItem -> Html Msg
+viewTaskList zone tasks =
     if List.isEmpty tasks then
         div [ class "py-12 text-center" ]
             [ p [ class "text-secondary-500" ] [ text "承認待ちのタスクはありません" ]
@@ -160,13 +161,13 @@ viewTaskList tasks =
 
     else
         div []
-            [ div [ class "overflow-x-auto" ] [ viewTaskTable tasks ]
+            [ div [ class "overflow-x-auto" ] [ viewTaskTable zone tasks ]
             , viewCount (List.length tasks)
             ]
 
 
-viewTaskTable : List TaskItem -> Html Msg
-viewTaskTable tasks =
+viewTaskTable : Time.Zone -> List TaskItem -> Html Msg
+viewTaskTable zone tasks =
     table [ class "w-full" ]
         [ thead [ class "border-b border-secondary-100" ]
             [ tr []
@@ -178,12 +179,12 @@ viewTaskTable tasks =
                 ]
             ]
         , tbody []
-            (List.map viewTaskRow tasks)
+            (List.map (viewTaskRow zone) tasks)
         ]
 
 
-viewTaskRow : TaskItem -> Html Msg
-viewTaskRow task =
+viewTaskRow : Time.Zone -> TaskItem -> Html Msg
+viewTaskRow zone task =
     tr [ class "border-b border-secondary-100" ]
         [ td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.TaskDetail task.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
@@ -194,8 +195,8 @@ viewTaskRow task =
             [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.stepStatusToCssClass task.status) ]
                 [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
             ]
-        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.dueDate) ]
-        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.startedAt) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate zone task.dueDate) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate zone task.startedAt) ]
         ]
 
 

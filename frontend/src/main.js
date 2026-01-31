@@ -115,6 +115,9 @@ const app = Elm.Main.init({
   flags: {
     apiBaseUrl: import.meta.env.VITE_API_BASE_URL || "",
     timestamp: Date.now(),
+    // JavaScript の getTimezoneOffset() は UTC - ローカル（分）を返す（JST なら -540）
+    // Elm の Time.customZone はローカル - UTC（分）を期待するので符号を反転する
+    timezoneOffsetMinutes: -new Date().getTimezoneOffset(),
   },
 });
 
