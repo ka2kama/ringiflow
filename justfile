@@ -140,6 +140,33 @@ dev-down:
     docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down
 
 # =============================================================================
+# データストア操作（開発用）
+# =============================================================================
+
+# PostgreSQL: テーブル一覧を表示
+db-tables:
+    @psql "postgres://ringiflow:ringiflow@localhost:${POSTGRES_PORT}/ringiflow_dev" \
+        -c "\dt public.*" --pset="footer=off"
+
+# PostgreSQL: 指定テーブルのカラム定義を表示
+db-schema table:
+    @psql "postgres://ringiflow:ringiflow@localhost:${POSTGRES_PORT}/ringiflow_dev" \
+        -c "\d {{table}}"
+
+# PostgreSQL: 任意の SQL を実行
+db-query sql:
+    @psql "postgres://ringiflow:ringiflow@localhost:${POSTGRES_PORT}/ringiflow_dev" \
+        -c "{{sql}}"
+
+# Redis: キー一覧を表示（パターンで絞り込み可能、デフォルト: *）
+redis-keys pattern='*':
+    @redis-cli -p "${REDIS_PORT}" keys "{{pattern}}"
+
+# Redis: 指定キーの値を取得
+redis-get key:
+    @redis-cli -p "${REDIS_PORT}" get "{{key}}"
+
+# =============================================================================
 # フォーマット
 # =============================================================================
 
