@@ -1357,6 +1357,7 @@ components:
           description: ユーザー ID
         name:
           type: string
+          maxLength: 100
           description: ユーザー名
 
     CsrfTokenResponse:

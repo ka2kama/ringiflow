@@ -127,10 +127,10 @@ pub struct UserRefDto {
 /// ユーザーが見つからない場合は「（不明なユーザー）」にフォールバック。
 pub(crate) fn to_user_ref(user_id: &UserId, user_names: &HashMap<UserId, String>) -> UserRefDto {
    let id = user_id.to_string();
-   let name = user_names
-      .get(user_id)
-      .cloned()
-      .unwrap_or_else(|| "（不明なユーザー）".to_string());
+   let name = user_names.get(user_id).cloned().unwrap_or_else(|| {
+      tracing::warn!(user_id = %user_id, "User not found when resolving user name");
+      "（不明なユーザー）".to_string()
+   });
    UserRefDto { id, name }
 }
 
