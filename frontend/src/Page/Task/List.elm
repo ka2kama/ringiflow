@@ -134,7 +134,10 @@ viewContent : Model -> Html Msg
 viewContent model =
     case model.tasks of
         Loading ->
-            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
+            div [ class "flex flex-col items-center justify-center py-8" ]
+                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+                ]
 
         Failure ->
             viewError
@@ -155,11 +158,14 @@ viewError =
 viewTaskList : List TaskItem -> Html Msg
 viewTaskList tasks =
     if List.isEmpty tasks then
-        div [ class "py-8 text-center text-secondary-500" ] [ text "承認待ちのタスクはありません" ]
+        div [ class "py-12 text-center" ]
+            [ p [ class "text-secondary-500" ] [ text "承認待ちのタスクはありません" ]
+            , p [ class "mt-2 text-sm text-secondary-400" ] [ text "新しいタスクが割り当てられるとここに表示されます" ]
+            ]
 
     else
         div []
-            [ viewTaskTable tasks
+            [ div [ class "overflow-x-auto" ] [ viewTaskTable tasks ]
             , viewCount (List.length tasks)
             ]
 
@@ -184,17 +190,17 @@ viewTaskTable tasks =
 viewTaskRow : TaskItem -> Html Msg
 viewTaskRow task =
     tr [ class "border-b border-secondary-100" ]
-        [ td [ class "px-4 py-3 text-sm" ]
+        [ td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.TaskDetail task.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text task.stepName ]
             ]
-        , td [ class "px-4 py-3 text-sm" ] [ text task.workflow.title ]
-        , td [ class "px-4 py-3 text-sm" ]
+        , td [ class "px-4 py-3" ] [ text task.workflow.title ]
+        , td [ class "px-4 py-3" ]
             [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ stepStatusToCssClass task.status) ]
                 [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
             ]
-        , td [ class "px-4 py-3 text-sm" ] [ text (formatMaybeDate task.dueDate) ]
-        , td [ class "px-4 py-3 text-sm" ] [ text (formatMaybeDate task.startedAt) ]
+        , td [ class "px-4 py-3" ] [ text (formatMaybeDate task.dueDate) ]
+        , td [ class "px-4 py-3" ] [ text (formatMaybeDate task.startedAt) ]
         ]
 
 

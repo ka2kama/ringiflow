@@ -474,7 +474,7 @@ saveAndSubmit shared definitionId title formValues approverInput =
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 [] [ text "新規申請" ]
+        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "新規申請" ]
         , viewSaveMessage model.saveMessage
         , viewContent model
         ]
@@ -487,7 +487,7 @@ viewSaveMessage maybeSaveMessage =
     case maybeSaveMessage of
         Just (SaveSuccess message) ->
             div
-                [ class "flex items-center justify-between rounded bg-success-50 p-4 text-success-700 mb-4" ]
+                [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700 mb-4" ]
                 [ text message
                 , button
                     [ Html.Events.onClick ClearMessage
@@ -498,11 +498,11 @@ viewSaveMessage maybeSaveMessage =
 
         Just (SaveError message) ->
             div
-                [ class "flex items-center justify-between rounded bg-error-50 p-4 text-error-600 mb-4" ]
+                [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700 mb-4" ]
                 [ text message
                 , button
                     [ Html.Events.onClick ClearMessage
-                    , class "border-0 bg-transparent cursor-pointer text-xl text-error-600"
+                    , class "border-0 bg-transparent cursor-pointer text-xl text-error-700"
                     ]
                     [ text "×" ]
                 ]
@@ -533,17 +533,17 @@ viewContent model =
 -}
 viewLoading : Html Msg
 viewLoading =
-    div
-        [ class "p-8 text-center text-secondary-500" ]
-        [ text "読み込み中..." ]
+    div [ class "flex flex-col items-center justify-center py-8" ]
+        [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+        , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+        ]
 
 
 {-| エラー表示
 -}
 viewError : Html Msg
 viewError =
-    div
-        [ class "p-8 text-center text-error-600" ]
+    div [ class "rounded-lg bg-error-50 p-8 text-center text-error-700" ]
         [ text "データの取得に失敗しました。"
         , br [] []
         , text "ページを再読み込みしてください。"
@@ -584,7 +584,7 @@ viewDefinitionSelector : List WorkflowDefinition -> Maybe String -> Html Msg
 viewDefinitionSelector definitions selectedId =
     div
         [ class "mb-8" ]
-        [ h3 [] [ text "Step 1: ワークフロー種類を選択" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 1: ワークフロー種類を選択" ]
         , div
             [ class "flex flex-col gap-2" ]
             (List.map (viewDefinitionOption selectedId) definitions)
@@ -637,7 +637,7 @@ viewDefinitionOption selectedId definition =
 viewFormInputs : Model -> WorkflowDefinition -> Html Msg
 viewFormInputs model definition =
     div []
-        [ h3 [] [ text "Step 2: フォーム入力" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 2: フォーム入力" ]
 
         -- タイトル入力
         , div [ class "mb-6" ]
@@ -654,7 +654,7 @@ viewFormInputs model definition =
                 , Html.Attributes.value model.title
                 , Html.Events.onInput UpdateTitle
                 , placeholder "申請のタイトルを入力"
-                , class "w-full rounded border border-secondary-100 px-3 py-3 text-base"
+                , class "w-full rounded border border-secondary-100 px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 ]
                 []
             , viewTitleError model
@@ -676,7 +676,7 @@ viewFormInputs model definition =
 viewApproverSection : Model -> Html Msg
 viewApproverSection model =
     div []
-        [ h3 [] [ text "Step 3: 承認者選択" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 3: 承認者選択" ]
         , div [ class "mb-6" ]
             [ label
                 [ for "approver"
@@ -691,7 +691,7 @@ viewApproverSection model =
                 , Html.Attributes.value model.approverInput
                 , Html.Events.onInput UpdateApproverInput
                 , placeholder "承認者のユーザー ID を入力"
-                , class "w-full rounded border border-secondary-100 px-3 py-3 text-base"
+                , class "w-full rounded border border-secondary-100 px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 ]
                 []
             , viewApproverError model
@@ -767,13 +767,13 @@ viewActions model =
         [ button
             [ Html.Events.onClick SaveDraft
             , disabled model.submitting
-            , class "rounded border border-secondary-100 bg-white px-6 py-3 cursor-pointer hover:bg-secondary-50 transition-colors"
+            , class "rounded border border-secondary-100 bg-white px-6 py-3 cursor-pointer hover:bg-secondary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             ]
             [ text "下書き保存" ]
         , button
             [ Html.Events.onClick Submit
             , disabled model.submitting
-            , class "rounded border-0 bg-primary-600 px-6 py-3 text-white cursor-pointer hover:bg-primary-700 transition-colors"
+            , class "rounded border-0 bg-primary-600 px-6 py-3 text-white cursor-pointer hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             ]
             [ text "申請する" ]
         ]

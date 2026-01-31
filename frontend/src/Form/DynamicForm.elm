@@ -165,7 +165,7 @@ viewTextInput field value onInputMsg =
         , Html.Attributes.value value
         , placeholder (Maybe.withDefault "" field.placeholder)
         , onInput onInputMsg
-        , class "w-full rounded border border-secondary-100 px-3 py-3 text-base"
+        , class "w-full rounded border border-secondary-100 px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         ]
         []
 
@@ -181,7 +181,7 @@ viewNumberInput field value onInputMsg =
         , Html.Attributes.value value
         , placeholder (Maybe.withDefault "" field.placeholder)
         , onInput onInputMsg
-        , class "w-full rounded border border-secondary-100 px-3 py-3 text-base"
+        , class "w-full rounded border border-secondary-100 px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
 
         -- 数値バリデーション属性を追加
         , case field.validation.min of
@@ -208,7 +208,7 @@ viewSelectInput field value options onInputMsg =
         [ id field.id
         , name field.id
         , onInput onInputMsg
-        , class "w-full cursor-pointer rounded border border-secondary-100 bg-white px-3 py-3 text-base"
+        , class "w-full cursor-pointer rounded border border-secondary-100 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         ]
         (option
             [ Html.Attributes.value ""
@@ -237,7 +237,7 @@ viewDateInput field value onInputMsg =
         , name field.id
         , Html.Attributes.value value
         , onInput onInputMsg
-        , class "w-full rounded border border-secondary-100 px-3 py-3 text-base"
+        , class "w-full rounded border border-secondary-100 px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
         ]
         []
 

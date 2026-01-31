@@ -146,7 +146,7 @@ view model =
 viewHeader : Html Msg
 viewHeader =
     div [ class "flex items-center justify-between mb-6" ]
-        [ h1 [] [ text "申請一覧" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "申請一覧" ]
         , a [ href (Route.toString Route.WorkflowNew), class "inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700" ]
             [ text "+ 新規申請" ]
         ]
@@ -156,7 +156,10 @@ viewContent : Model -> Html Msg
 viewContent model =
     case model.workflows of
         Loading ->
-            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
+            div [ class "flex flex-col items-center justify-center py-8" ]
+                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+                ]
 
         Failure ->
             viewError
@@ -188,11 +191,15 @@ viewWorkflowList statusFilter workflows =
     div []
         [ viewStatusFilter statusFilter
         , if List.isEmpty filteredWorkflows then
-            div [ class "py-8 text-center text-secondary-500" ] [ text "申請がありません" ]
+            div [ class "py-12 text-center" ]
+                [ p [ class "text-secondary-500" ] [ text "申請がありません" ]
+                , a [ href (Route.toString Route.WorkflowNew), class "mt-4 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700" ]
+                    [ text "新規申請を作成" ]
+                ]
 
           else
             div []
-                [ viewWorkflowTable filteredWorkflows
+                [ div [ class "overflow-x-auto" ] [ viewWorkflowTable filteredWorkflows ]
                 , viewCount (List.length filteredWorkflows)
                 ]
         ]
@@ -267,15 +274,15 @@ viewWorkflowTable workflows =
 viewWorkflowRow : WorkflowInstance -> Html Msg
 viewWorkflowRow workflow =
     tr [ class "border-b border-secondary-100" ]
-        [ td [ class "px-4 py-3 text-sm" ]
+        [ td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.WorkflowDetail workflow.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text workflow.title ]
             ]
-        , td [ class "px-4 py-3 text-sm" ]
+        , td [ class "px-4 py-3" ]
             [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
                 [ text (WorkflowInstance.statusToJapanese workflow.status) ]
             ]
-        , td [ class "px-4 py-3 text-sm" ] [ text (formatDate workflow.createdAt) ]
+        , td [ class "px-4 py-3" ] [ text (formatDate workflow.createdAt) ]
         ]
 
 

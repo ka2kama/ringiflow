@@ -312,7 +312,10 @@ viewContent model =
             div [] []
 
         Loading ->
-            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
+            div [ class "flex flex-col items-center justify-center py-8" ]
+                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+                ]
 
         Failure ->
             viewError
@@ -385,7 +388,10 @@ viewFormData workflow maybeDefinition =
                 text ""
 
             Loading ->
-                div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
+                div [ class "flex flex-col items-center justify-center py-8" ]
+                    [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+                    , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+                    ]
 
             Failure ->
                 viewRawFormData workflow.formData
@@ -468,7 +474,7 @@ viewApprovalButtons workflow isSubmitting shared =
         Just step ->
             div [ class "flex gap-3" ]
                 [ button
-                    [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700"
+                    [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     , onClick (ClickApprove step)
                     , disabled isSubmitting
                     ]
@@ -481,7 +487,7 @@ viewApprovalButtons workflow isSubmitting shared =
                         )
                     ]
                 , button
-                    [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700"
+                    [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     , onClick (ClickReject step)
                     , disabled isSubmitting
                     ]

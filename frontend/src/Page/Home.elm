@@ -102,8 +102,10 @@ viewStats : RemoteData DashboardStats -> Html Msg
 viewStats remoteStats =
     case remoteStats of
         Loading ->
-            div [ class "py-8 text-center text-secondary-500" ]
-                [ text "統計情報を読み込み中..." ]
+            div [ class "flex flex-col items-center justify-center py-8" ]
+                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+                ]
 
         Failure ->
             div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]

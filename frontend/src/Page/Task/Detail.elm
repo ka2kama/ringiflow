@@ -339,7 +339,10 @@ viewContent : Model -> Html Msg
 viewContent model =
     case model.task of
         Loading ->
-            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
+            div [ class "flex flex-col items-center justify-center py-8" ]
+                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
+                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
+                ]
 
         Failure ->
             viewError
@@ -413,7 +416,7 @@ viewCommentInput comment =
         [ label [ for "approval-comment", class "block text-sm font-medium text-secondary-700" ] [ text "コメント（任意）" ]
         , textarea
             [ id "approval-comment"
-            , class "w-full rounded-lg border border-secondary-100 px-3 py-2 text-sm"
+            , class "w-full rounded-lg border border-secondary-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             , value comment
             , onInput UpdateComment
             , placeholder "承認/却下の理由を入力..."
@@ -427,7 +430,7 @@ viewApprovalButtons : WorkflowStep -> Bool -> Html Msg
 viewApprovalButtons step isSubmitting =
     div [ class "flex gap-3" ]
         [ button
-            [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700"
+            [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed"
             , onClick (ClickApprove step)
             , disabled isSubmitting
             ]
@@ -440,7 +443,7 @@ viewApprovalButtons step isSubmitting =
                 )
             ]
         , button
-            [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700"
+            [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700 disabled:opacity-50 disabled:cursor-not-allowed"
             , onClick (ClickReject step)
             , disabled isSubmitting
             ]
