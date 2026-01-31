@@ -23,7 +23,8 @@ module Page.Task.Detail exposing
 
 -}
 
-import Api exposing (ApiError(..))
+import Api exposing (ApiError)
+import Api.ErrorMessage as ErrorMessage
 import Api.Task as TaskApi
 import Api.Workflow as WorkflowApi
 import Data.Task exposing (TaskDetail)
@@ -243,43 +244,10 @@ handleApprovalResult successMsg result model =
         Err error ->
             ( { model
                 | isSubmitting = False
-                , errorMessage = Just (apiErrorToMessage error)
+                , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "タスク" } error)
               }
             , Cmd.none
             )
-
-
-{-| API エラーをユーザー向けメッセージに変換
--}
-apiErrorToMessage : ApiError -> String
-apiErrorToMessage error =
-    case error of
-        Conflict problem ->
-            "このタスクは既に更新されています。最新の状態を取得してください。（" ++ problem.detail ++ "）"
-
-        Forbidden problem ->
-            "この操作を実行する権限がありません。（" ++ problem.detail ++ "）"
-
-        BadRequest problem ->
-            problem.detail
-
-        NotFound _ ->
-            "タスクが見つかりません。"
-
-        Unauthorized ->
-            "ログインが必要です。"
-
-        ServerError _ ->
-            "サーバーエラーが発生しました。"
-
-        NetworkError ->
-            "ネットワークエラーが発生しました。"
-
-        Timeout ->
-            "リクエストがタイムアウトしました。"
-
-        DecodeError _ ->
-            "データの処理中にエラーが発生しました。"
 
 
 
