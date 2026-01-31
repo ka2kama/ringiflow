@@ -31,6 +31,7 @@ import Data.WorkflowInstance as WorkflowInstance exposing (Status, WorkflowInsta
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
+import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 
@@ -46,19 +47,11 @@ type alias Model =
       shared : Shared
 
     -- API データ
-    , workflows : RemoteData (List WorkflowInstance)
+    , workflows : RemoteData ApiError (List WorkflowInstance)
 
     -- フィルタ状態
     , statusFilter : Maybe Status
     }
-
-
-{-| リモートデータの状態
--}
-type RemoteData a
-    = Loading
-    | Failure
-    | Success a
 
 
 {-| 初期化
@@ -110,8 +103,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err _ ->
-                    ( { model | workflows = Failure }
+                Err err ->
+                    ( { model | workflows = Failure err }
                     , Cmd.none
                     )
 
@@ -155,13 +148,16 @@ viewHeader =
 viewContent : Model -> Html Msg
 viewContent model =
     case model.workflows of
+        NotAsked ->
+            text ""
+
         Loading ->
             div [ class "flex flex-col items-center justify-center py-8" ]
                 [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
                 , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
                 ]
 
-        Failure ->
+        Failure _ ->
             viewError
 
         Success workflows ->

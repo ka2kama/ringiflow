@@ -36,6 +36,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode
+import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 
@@ -54,23 +55,14 @@ type alias Model =
     , workflowId : String
 
     -- API データ
-    , workflow : RemoteData WorkflowInstance
-    , definition : RemoteData WorkflowDefinition
+    , workflow : RemoteData ApiError WorkflowInstance
+    , definition : RemoteData ApiError WorkflowDefinition
 
     -- 承認/却下の状態
     , isSubmitting : Bool
     , errorMessage : Maybe String
     , successMessage : Maybe String
     }
-
-
-{-| リモートデータの状態
--}
-type RemoteData a
-    = NotAsked
-    | Loading
-    | Failure
-    | Success a
 
 
 {-| 初期化
@@ -136,8 +128,8 @@ update msg model =
                         }
                     )
 
-                Err _ ->
-                    ( { model | workflow = Failure }
+                Err err ->
+                    ( { model | workflow = Failure err }
                     , Cmd.none
                     )
 
@@ -148,8 +140,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err _ ->
-                    ( { model | definition = Failure }
+                Err err ->
+                    ( { model | definition = Failure err }
                     , Cmd.none
                     )
 
@@ -318,7 +310,7 @@ viewContent model =
                 , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
                 ]
 
-        Failure ->
+        Failure _ ->
             viewError
 
         Success workflow ->
@@ -334,7 +326,7 @@ viewError =
         ]
 
 
-viewWorkflowDetail : WorkflowInstance -> RemoteData WorkflowDefinition -> Bool -> Shared -> Html Msg
+viewWorkflowDetail : WorkflowInstance -> RemoteData ApiError WorkflowDefinition -> Bool -> Shared -> Html Msg
 viewWorkflowDetail workflow maybeDefinition isSubmitting shared =
     div [ class "space-y-6" ]
         [ viewTitle workflow
@@ -377,7 +369,7 @@ viewBasicInfo workflow =
         ]
 
 
-viewFormData : WorkflowInstance -> RemoteData WorkflowDefinition -> Html Msg
+viewFormData : WorkflowInstance -> RemoteData ApiError WorkflowDefinition -> Html Msg
 viewFormData workflow maybeDefinition =
     div []
         [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
@@ -391,7 +383,7 @@ viewFormData workflow maybeDefinition =
                     , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
                     ]
 
-            Failure ->
+            Failure _ ->
                 viewRawFormData workflow.formData
 
             Success definition ->

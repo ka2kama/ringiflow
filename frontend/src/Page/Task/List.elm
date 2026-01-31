@@ -27,6 +27,7 @@ import Data.WorkflowInstance as WorkflowInstance
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
+import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 
@@ -39,16 +40,8 @@ import Shared exposing (Shared)
 -}
 type alias Model =
     { shared : Shared
-    , tasks : RemoteData (List TaskItem)
+    , tasks : RemoteData ApiError (List TaskItem)
     }
-
-
-{-| リモートデータの状態
--}
-type RemoteData a
-    = Loading
-    | Failure
-    | Success a
 
 
 {-| 初期化
@@ -95,8 +88,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err _ ->
-                    ( { model | tasks = Failure }
+                Err err ->
+                    ( { model | tasks = Failure err }
                     , Cmd.none
                     )
 
@@ -133,13 +126,16 @@ viewHeader =
 viewContent : Model -> Html Msg
 viewContent model =
     case model.tasks of
+        NotAsked ->
+            text ""
+
         Loading ->
             div [ class "flex flex-col items-center justify-center py-8" ]
                 [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
                 , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
                 ]
 
-        Failure ->
+        Failure _ ->
             viewError
 
         Success tasks ->

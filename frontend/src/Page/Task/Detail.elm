@@ -37,6 +37,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode
+import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 
@@ -52,7 +53,7 @@ type alias Model =
     , taskId : String
 
     -- API データ
-    , task : RemoteData TaskDetail
+    , task : RemoteData ApiError TaskDetail
 
     -- 承認/却下の状態
     , comment : String
@@ -60,14 +61,6 @@ type alias Model =
     , errorMessage : Maybe String
     , successMessage : Maybe String
     }
-
-
-{-| リモートデータの状態
--}
-type RemoteData a
-    = Loading
-    | Failure
-    | Success a
 
 
 {-| 初期化
@@ -126,8 +119,8 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err _ ->
-                    ( { model | task = Failure }
+                Err err ->
+                    ( { model | task = Failure err }
                     , Cmd.none
                     )
 
@@ -339,13 +332,16 @@ viewMessages model =
 viewContent : Model -> Html Msg
 viewContent model =
     case model.task of
+        NotAsked ->
+            text ""
+
         Loading ->
             div [ class "flex flex-col items-center justify-center py-8" ]
                 [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
                 , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
                 ]
 
-        Failure ->
+        Failure _ ->
             viewError
 
         Success taskDetail ->

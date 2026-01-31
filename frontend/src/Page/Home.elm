@@ -12,6 +12,7 @@ import Api.Dashboard as DashboardApi
 import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 
 
@@ -24,15 +25,9 @@ import Shared exposing (Shared)
 RemoteData パターンで API 呼び出しの状態を管理する。
 
 -}
-type RemoteData a
-    = Loading
-    | Failure
-    | Success a
-
-
 type alias Model =
     { shared : Shared
-    , stats : RemoteData DashboardStats
+    , stats : RemoteData ApiError DashboardStats
     }
 
 
@@ -73,8 +68,8 @@ update msg model =
                 Ok stats ->
                     ( { model | stats = Success stats }, Cmd.none )
 
-                Err _ ->
-                    ( { model | stats = Failure }, Cmd.none )
+                Err err ->
+                    ( { model | stats = Failure err }, Cmd.none )
 
 
 
@@ -98,16 +93,19 @@ view model =
 RemoteData パターンで Loading / Failure / Success を切り替える。
 
 -}
-viewStats : RemoteData DashboardStats -> Html Msg
+viewStats : RemoteData ApiError DashboardStats -> Html Msg
 viewStats remoteStats =
     case remoteStats of
+        NotAsked ->
+            text ""
+
         Loading ->
             div [ class "flex flex-col items-center justify-center py-8" ]
                 [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
                 , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
                 ]
 
-        Failure ->
+        Failure _ ->
             div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
                 [ text "統計情報の取得に失敗しました" ]
 
