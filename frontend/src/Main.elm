@@ -524,7 +524,7 @@ viewSidebar currentRoute isOpen shared =
         ]
         [ -- ロゴエリア
           div [ class "flex h-16 items-center px-6" ]
-            [ span [ class "text-xl font-bold tracking-wide" ]
+            [ a [ href (Route.toString Route.Home), class "text-xl font-bold tracking-wide text-white no-underline" ]
                 [ text "RingiFlow" ]
             ]
 
