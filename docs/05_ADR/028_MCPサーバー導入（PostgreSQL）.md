@@ -95,6 +95,25 @@ Redis MCP サーバーは導入しない。理由:
 - `.mcp.json` に接続情報がハードコードされる（開発環境のみなので許容）
 - MCP サーバーのプロセスが Claude Code 実行中に常駐する
 
+### 技術的な注意点: `bin` フィールドの欠如
+
+`@zeddotdev/postgres-context-server` は `package.json` に `bin` フィールドを定義していない。このため、一般的な MCP 設定パターンである `npx -y パッケージ名` では `could not determine executable to run` エラーが発生する。
+
+回避策として `npx --package` でパッケージをインストールした後、`node --input-type=module -e "import 'パッケージ名'"` で ESM モジュールとして直接実行する:
+
+```json
+{
+  "command": "npx",
+  "args": [
+    "-y", "--package", "@zeddotdev/postgres-context-server",
+    "node", "--input-type=module", "-e",
+    "import '@zeddotdev/postgres-context-server'"
+  ]
+}
+```
+
+この問題が上流で修正された場合は、`npx -y パッケージ名` のシンプルな形式に戻せる。
+
 ### 関連ドキュメント
 
 - 廃止: [ADR-009: MCP サーバー導入の見送り](009_MCPサーバー導入の見送り.md)
@@ -108,3 +127,4 @@ Redis MCP サーバーは導入しない。理由:
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-31 | 初版作成 |
+| 2026-01-31 | `bin` フィールド欠如の回避策を追記、`.mcp.json` の起動コマンドを修正 |

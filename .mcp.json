@@ -2,7 +2,15 @@
   "mcpServers": {
     "postgres": {
       "command": "npx",
-      "args": ["-y", "@zeddotdev/postgres-context-server"],
+      "args": [
+        "-y",
+        "--package",
+        "@zeddotdev/postgres-context-server",
+        "node",
+        "--input-type=module",
+        "-e",
+        "import '@zeddotdev/postgres-context-server'"
+      ],
       "env": {
         "DATABASE_URL": "postgresql://ringiflow:ringiflow@localhost:15432/ringiflow_dev"
       }
