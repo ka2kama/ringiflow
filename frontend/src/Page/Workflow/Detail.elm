@@ -30,7 +30,7 @@ import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Data.FormField exposing (FormField)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
-import Data.WorkflowInstance as WorkflowInstance exposing (StepStatus(..), WorkflowInstance, WorkflowStep)
+import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, WorkflowStep)
 import Form.DynamicForm as DynamicForm
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -266,7 +266,7 @@ apiErrorToMessage error =
 -}
 view : Model -> Html Msg
 view model =
-    div [ class "workflow-detail-page" ]
+    div []
         [ viewHeader
         , viewMessages model
         , viewContent model
@@ -275,29 +275,29 @@ view model =
 
 viewHeader : Html Msg
 viewHeader =
-    div [ class "page-header" ]
-        [ a [ href (Route.toString Route.Workflows), class "back-link" ]
+    div [ class "mb-6" ]
+        [ a [ href (Route.toString Route.Workflows), class "text-sm text-primary-600 hover:text-primary-700 hover:underline" ]
             [ text "← 一覧に戻る" ]
         ]
 
 
 viewMessages : Model -> Html Msg
 viewMessages model =
-    div [ class "messages" ]
+    div [ class "space-y-2 mb-4" ]
         [ case model.successMessage of
             Just msg ->
-                div [ class "alert alert-success" ]
+                div [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700" ]
                     [ text msg
-                    , button [ class "alert-dismiss", onClick DismissMessage ] [ text "×" ]
+                    , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick DismissMessage ] [ text "×" ]
                     ]
 
             Nothing ->
                 text ""
         , case model.errorMessage of
             Just msg ->
-                div [ class "alert alert-error" ]
+                div [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700" ]
                     [ text msg
-                    , button [ class "alert-dismiss", onClick DismissMessage ] [ text "×" ]
+                    , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick DismissMessage ] [ text "×" ]
                     ]
 
             Nothing ->
@@ -312,7 +312,7 @@ viewContent model =
             div [] []
 
         Loading ->
-            div [ class "loading" ] [ text "読み込み中..." ]
+            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
 
         Failure ->
             viewError
@@ -323,69 +323,69 @@ viewContent model =
 
 viewError : Html Msg
 viewError =
-    div [ class "error-message" ]
+    div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
         [ p [] [ text "データの取得に失敗しました。" ]
-        , button [ onClick Refresh, class "btn btn-secondary" ]
+        , button [ onClick Refresh, class "mt-2 inline-flex items-center rounded-lg border border-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50" ]
             [ text "再読み込み" ]
         ]
 
 
 viewWorkflowDetail : WorkflowInstance -> RemoteData WorkflowDefinition -> Bool -> Shared -> Html Msg
 viewWorkflowDetail workflow maybeDefinition isSubmitting shared =
-    div [ class "workflow-detail" ]
+    div [ class "space-y-6" ]
         [ viewTitle workflow
         , viewStatus workflow
         , viewApprovalButtons workflow isSubmitting shared
-        , hr [] []
+        , hr [ class "border-t border-secondary-100" ] []
         , viewSteps workflow
-        , hr [] []
+        , hr [ class "border-t border-secondary-100" ] []
         , viewBasicInfo workflow
-        , hr [] []
+        , hr [ class "border-t border-secondary-100" ] []
         , viewFormData workflow maybeDefinition
         ]
 
 
 viewTitle : WorkflowInstance -> Html Msg
 viewTitle workflow =
-    h1 [ class "workflow-title" ] [ text workflow.title ]
+    h1 [ class "text-2xl font-bold text-secondary-900" ] [ text workflow.title ]
 
 
 viewStatus : WorkflowInstance -> Html Msg
 viewStatus workflow =
-    div [ class "workflow-status" ]
+    div [ class "text-secondary-700" ]
         [ text "ステータス: "
-        , span [ class (WorkflowInstance.statusToCssClass workflow.status) ]
+        , span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
             [ text (WorkflowInstance.statusToJapanese workflow.status) ]
         ]
 
 
 viewBasicInfo : WorkflowInstance -> Html Msg
 viewBasicInfo workflow =
-    div [ class "basic-info" ]
-        [ h2 [] [ text "基本情報" ]
-        , dl []
-            [ dt [] [ text "申請者" ]
-            , dd [] [ text workflow.initiatedBy ]
-            , dt [] [ text "申請日" ]
-            , dd [] [ text (formatDateTime workflow.submittedAt) ]
-            , dt [] [ text "作成日" ]
-            , dd [] [ text (formatDateTime (Just workflow.createdAt)) ]
-            , dt [] [ text "更新日" ]
-            , dd [] [ text (formatDateTime (Just workflow.updatedAt)) ]
+    div []
+        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
+        , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
+            [ dt [ class "text-secondary-500" ] [ text "申請者" ]
+            , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy ]
+            , dt [ class "text-secondary-500" ] [ text "申請日" ]
+            , dd [ class "text-secondary-900" ] [ text (formatDateTime workflow.submittedAt) ]
+            , dt [ class "text-secondary-500" ] [ text "作成日" ]
+            , dd [ class "text-secondary-900" ] [ text (formatDateTime (Just workflow.createdAt)) ]
+            , dt [ class "text-secondary-500" ] [ text "更新日" ]
+            , dd [ class "text-secondary-900" ] [ text (formatDateTime (Just workflow.updatedAt)) ]
             ]
         ]
 
 
 viewFormData : WorkflowInstance -> RemoteData WorkflowDefinition -> Html Msg
 viewFormData workflow maybeDefinition =
-    div [ class "form-data" ]
-        [ h2 [] [ text "フォームデータ" ]
+    div []
+        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
         , case maybeDefinition of
             NotAsked ->
                 text ""
 
             Loading ->
-                div [ class "loading" ] [ text "読み込み中..." ]
+                div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
 
             Failure ->
                 viewRawFormData workflow.formData
@@ -399,7 +399,7 @@ viewFormDataWithLabels : WorkflowDefinition -> Decode.Value -> Html Msg
 viewFormDataWithLabels definition formData =
     case DynamicForm.extractFormFields definition.definition of
         Ok fields ->
-            dl []
+            dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
                 (List.concatMap (viewFormField formData) fields)
 
         Err _ ->
@@ -413,8 +413,8 @@ viewFormField formData field =
             Decode.decodeValue (Decode.field field.id Decode.string) formData
                 |> Result.withDefault ""
     in
-    [ dt [] [ text field.label ]
-    , dd []
+    [ dt [ class "text-secondary-500" ] [ text field.label ]
+    , dd [ class "text-secondary-900" ]
         [ text
             (if String.isEmpty value then
                 "-"
@@ -428,7 +428,7 @@ viewFormField formData field =
 
 viewRawFormData : Decode.Value -> Html Msg
 viewRawFormData formData =
-    pre [ class "raw-json" ]
+    pre [ class "overflow-x-auto rounded-lg bg-secondary-50 p-4 text-sm font-mono" ]
         [ text
             (Decode.decodeValue (Decode.keyValuePairs Decode.string) formData
                 |> Result.map (List.map (\( k, v ) -> k ++ ": " ++ v) >> String.join "\n")
@@ -466,9 +466,9 @@ viewApprovalButtons workflow isSubmitting shared =
     in
     case findActiveStepForUser workflow.steps currentUserId of
         Just step ->
-            div [ class "approval-buttons" ]
+            div [ class "flex gap-3" ]
                 [ button
-                    [ class "btn btn-success"
+                    [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700"
                     , onClick (ClickApprove step)
                     , disabled isSubmitting
                     ]
@@ -481,7 +481,7 @@ viewApprovalButtons workflow isSubmitting shared =
                         )
                     ]
                 , button
-                    [ class "btn btn-danger"
+                    [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700"
                     , onClick (ClickReject step)
                     , disabled isSubmitting
                     ]
@@ -524,54 +524,38 @@ viewSteps workflow =
         text ""
 
     else
-        div [ class "workflow-steps" ]
-            [ h2 [] [ text "承認ステップ" ]
-            , ul [ class "step-list" ]
+        div []
+            [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "承認ステップ" ]
+            , ul [ class "space-y-3 list-none pl-0" ]
                 (List.map viewStep workflow.steps)
             ]
 
 
 viewStep : WorkflowStep -> Html Msg
 viewStep step =
-    li [ class ("step-item step-" ++ stepStatusToCssClass step.status) ]
-        [ div [ class "step-header" ]
-            [ span [ class "step-name" ] [ text step.stepName ]
-            , span [ class "step-status" ] [ text (WorkflowInstance.stepStatusToJapanese step.status) ]
+    li [ class "rounded-lg border border-secondary-100 p-4" ]
+        [ div [ class "flex items-center justify-between" ]
+            [ span [ class "font-medium text-secondary-900" ] [ text step.stepName ]
+            , span [ class "text-sm text-secondary-500" ] [ text (WorkflowInstance.stepStatusToJapanese step.status) ]
             ]
-        , div [ class "step-details" ]
+        , div [ class "mt-2 flex flex-wrap gap-3 text-sm text-secondary-500" ]
             [ case step.assignedTo of
                 Just assignee ->
-                    span [ class "step-assignee" ] [ text ("担当: " ++ assignee) ]
+                    span [] [ text ("担当: " ++ assignee) ]
 
                 Nothing ->
                     text ""
             , case step.decision of
                 Just decision ->
-                    span [ class "step-decision" ] [ text (WorkflowInstance.decisionToJapanese decision) ]
+                    span [] [ text (WorkflowInstance.decisionToJapanese decision) ]
 
                 Nothing ->
                     text ""
             , case step.comment of
                 Just comment ->
-                    span [ class "step-comment" ] [ text ("コメント: " ++ comment) ]
+                    span [] [ text ("コメント: " ++ comment) ]
 
                 Nothing ->
                     text ""
             ]
         ]
-
-
-stepStatusToCssClass : StepStatus -> String
-stepStatusToCssClass status =
-    case status of
-        StepPending ->
-            "pending"
-
-        StepActive ->
-            "active"
-
-        StepCompleted ->
-            "completed"
-
-        StepSkipped ->
-            "skipped"

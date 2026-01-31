@@ -14,30 +14,14 @@ import Html.Attributes exposing (..)
 -}
 view : Html msg
 view =
-    div
-        [ style "text-align" "center"
-        , style "padding" "3rem"
-        ]
-        [ h2
-            [ style "font-size" "3rem"
-            , style "color" "#5f6368"
-            , style "margin-bottom" "1rem"
-            ]
+    div [ class "py-12 text-center" ]
+        [ h2 [ class "mb-4 text-6xl font-bold text-secondary-500" ]
             [ text "404" ]
-        , p
-            [ style "font-size" "1.25rem"
-            , style "color" "#5f6368"
-            , style "margin-bottom" "2rem"
-            ]
+        , p [ class "mb-8 text-lg text-secondary-500" ]
             [ text "お探しのページは存在しません。" ]
         , a
             [ href "/"
-            , style "display" "inline-block"
-            , style "padding" "0.75rem 1.5rem"
-            , style "background-color" "#1a73e8"
-            , style "color" "white"
-            , style "text-decoration" "none"
-            , style "border-radius" "4px"
+            , class "inline-flex items-center rounded-lg bg-primary-600 px-6 py-3 font-medium text-white transition-colors hover:bg-primary-700"
             ]
             [ text "ホームに戻る" ]
         ]

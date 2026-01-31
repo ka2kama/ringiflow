@@ -86,7 +86,8 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 [] [ text "ダッシュボード" ]
+        [ h2 [ class "mb-6 text-2xl font-bold text-secondary-900" ]
+            [ text "ダッシュボード" ]
         , viewStats model.stats
         , viewQuickActions
         ]
@@ -101,24 +102,15 @@ viewStats : RemoteData DashboardStats -> Html Msg
 viewStats remoteStats =
     case remoteStats of
         Loading ->
-            div
-                [ style "padding" "2rem"
-                , style "text-align" "center"
-                , style "color" "#5f6368"
-                ]
+            div [ class "py-8 text-center text-secondary-500" ]
                 [ text "統計情報を読み込み中..." ]
 
         Failure ->
-            div
-                [ style "padding" "1.5rem"
-                , style "background-color" "#fce8e6"
-                , style "border-radius" "8px"
-                , style "color" "#c5221f"
-                ]
+            div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
                 [ text "統計情報の取得に失敗しました" ]
 
         Success stats ->
-            -- TODO(human): KPI カードを実装する
+            -- TODO(human): KPI カードのデザインを実装してください
             viewStatsCards stats
 
 
@@ -129,16 +121,10 @@ viewStats remoteStats =
 -}
 viewStatsCards : DashboardStats -> Html Msg
 viewStatsCards stats =
-    -- TODO(human): KPI カードのデザインを実装してください
-    -- 現在はプレースホルダーとして数値のみ表示
-    div
-        [ style "display" "flex"
-        , style "gap" "1rem"
-        , style "margin-top" "1rem"
-        ]
-        [ viewStatCard "承認待ちタスク" stats.pendingTasks "#e8f0fe" "#1a73e8"
-        , viewStatCard "申請中" stats.myWorkflowsInProgress "#fef7e0" "#ea8600"
-        , viewStatCard "本日完了" stats.completedToday "#e6f4ea" "#34a853"
+    div [ class "mt-4 grid gap-4 sm:grid-cols-3" ]
+        [ viewStatCard "承認待ちタスク" stats.pendingTasks "bg-primary-50" "text-primary-600"
+        , viewStatCard "申請中" stats.myWorkflowsInProgress "bg-warning-50" "text-warning-600"
+        , viewStatCard "本日完了" stats.completedToday "bg-success-50" "text-success-600"
         ]
 
 
@@ -148,24 +134,11 @@ TODO(human): カードのデザインを改善してください
 
 -}
 viewStatCard : String -> Int -> String -> String -> Html Msg
-viewStatCard label value bgColor textColor =
-    div
-        [ style "flex" "1"
-        , style "padding" "1.5rem"
-        , style "background-color" bgColor
-        , style "border-radius" "8px"
-        , style "text-align" "center"
-        ]
-        [ div
-            [ style "font-size" "2rem"
-            , style "font-weight" "bold"
-            , style "color" textColor
-            ]
+viewStatCard label value bgColorClass textColorClass =
+    div [ class ("rounded-xl p-6 text-center " ++ bgColorClass) ]
+        [ div [ class ("text-3xl font-bold " ++ textColorClass) ]
             [ text (String.fromInt value) ]
-        , div
-            [ style "margin-top" "0.5rem"
-            , style "color" "#5f6368"
-            ]
+        , div [ class "mt-2 text-sm text-secondary-500" ]
             [ text label ]
         ]
 
@@ -174,39 +147,20 @@ viewStatCard label value bgColor textColor =
 -}
 viewQuickActions : Html msg
 viewQuickActions =
-    div
-        [ style "display" "flex"
-        , style "gap" "1rem"
-        , style "margin-top" "1.5rem"
-        ]
+    div [ class "mt-6 flex flex-wrap gap-3" ]
         [ a
             [ href "/workflows"
-            , style "display" "inline-block"
-            , style "padding" "0.75rem 1.5rem"
-            , style "background-color" "#34a853"
-            , style "color" "white"
-            , style "text-decoration" "none"
-            , style "border-radius" "4px"
+            , class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-success-700"
             ]
             [ text "申請一覧" ]
         , a
             [ href "/workflows/new"
-            , style "display" "inline-block"
-            , style "padding" "0.75rem 1.5rem"
-            , style "background-color" "#1a73e8"
-            , style "color" "white"
-            , style "text-decoration" "none"
-            , style "border-radius" "4px"
+            , class "inline-flex items-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
             ]
             [ text "新規申請" ]
         , a
             [ href "/tasks"
-            , style "display" "inline-block"
-            , style "padding" "0.75rem 1.5rem"
-            , style "background-color" "#ea8600"
-            , style "color" "white"
-            , style "text-decoration" "none"
-            , style "border-radius" "4px"
+            , class "inline-flex items-center rounded-lg bg-warning-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-warning-700"
             ]
             [ text "タスク一覧" ]
         ]

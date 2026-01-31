@@ -137,7 +137,7 @@ update msg model =
 -}
 view : Model -> Html Msg
 view model =
-    div [ class "workflow-list-page" ]
+    div []
         [ viewHeader
         , viewContent model
         ]
@@ -145,9 +145,9 @@ view model =
 
 viewHeader : Html Msg
 viewHeader =
-    div [ class "page-header" ]
+    div [ class "flex items-center justify-between mb-6" ]
         [ h1 [] [ text "申請一覧" ]
-        , a [ href (Route.toString Route.WorkflowNew), class "btn btn-primary" ]
+        , a [ href (Route.toString Route.WorkflowNew), class "inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700" ]
             [ text "+ 新規申請" ]
         ]
 
@@ -156,7 +156,7 @@ viewContent : Model -> Html Msg
 viewContent model =
     case model.workflows of
         Loading ->
-            div [ class "loading" ] [ text "読み込み中..." ]
+            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
 
         Failure ->
             viewError
@@ -167,9 +167,9 @@ viewContent model =
 
 viewError : Html Msg
 viewError =
-    div [ class "error-message" ]
+    div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
         [ p [] [ text "データの取得に失敗しました。" ]
-        , button [ onClick Refresh, class "btn btn-secondary" ]
+        , button [ onClick Refresh, class "mt-2 inline-flex items-center rounded-lg border border-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50" ]
             [ text "再読み込み" ]
         ]
 
@@ -185,10 +185,10 @@ viewWorkflowList statusFilter workflows =
                 Just status ->
                     List.filter (\w -> w.status == status) workflows
     in
-    div [ class "workflow-list-content" ]
+    div []
         [ viewStatusFilter statusFilter
         , if List.isEmpty filteredWorkflows then
-            div [ class "empty-message" ] [ text "申請がありません" ]
+            div [ class "py-8 text-center text-secondary-500" ] [ text "申請がありません" ]
 
           else
             div []
@@ -214,9 +214,9 @@ viewStatusFilter currentFilter =
         isSelected maybeStatus =
             currentFilter == maybeStatus
     in
-    div [ class "status-filter" ]
+    div [ class "mb-4 flex items-center gap-2" ]
         [ label [] [ text "ステータス: " ]
-        , select [ onInput (statusFromFilterValue >> SetStatusFilter) ]
+        , select [ onInput (statusFromFilterValue >> SetStatusFilter), class "rounded border border-secondary-100 bg-white px-3 py-1.5 text-sm" ]
             (List.map
                 (\( maybeStatus, label_ ) ->
                     option
@@ -251,12 +251,12 @@ statusFromFilterValue str =
 
 viewWorkflowTable : List WorkflowInstance -> Html Msg
 viewWorkflowTable workflows =
-    table [ class "workflow-table" ]
-        [ thead []
+    table [ class "w-full border-collapse" ]
+        [ thead [ class "border-b border-secondary-100" ]
             [ tr []
-                [ th [] [ text "タイトル" ]
-                , th [] [ text "ステータス" ]
-                , th [] [ text "作成日" ]
+                [ th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "タイトル" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステータス" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "作成日" ]
                 ]
             ]
         , tbody []
@@ -266,22 +266,22 @@ viewWorkflowTable workflows =
 
 viewWorkflowRow : WorkflowInstance -> Html Msg
 viewWorkflowRow workflow =
-    tr []
-        [ td []
-            [ a [ href (Route.toString (Route.WorkflowDetail workflow.id)) ]
+    tr [ class "border-b border-secondary-100" ]
+        [ td [ class "px-4 py-3 text-sm" ]
+            [ a [ href (Route.toString (Route.WorkflowDetail workflow.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text workflow.title ]
             ]
-        , td []
-            [ span [ class (WorkflowInstance.statusToCssClass workflow.status) ]
+        , td [ class "px-4 py-3 text-sm" ]
+            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
                 [ text (WorkflowInstance.statusToJapanese workflow.status) ]
             ]
-        , td [] [ text (formatDate workflow.createdAt) ]
+        , td [ class "px-4 py-3 text-sm" ] [ text (formatDate workflow.createdAt) ]
         ]
 
 
 viewCount : Int -> Html Msg
 viewCount count =
-    div [ class "workflow-count" ]
+    div [ class "mt-4 text-sm text-secondary-500" ]
         [ text ("全 " ++ String.fromInt count ++ " 件") ]
 
 

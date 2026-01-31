@@ -117,7 +117,7 @@ update msg model =
 -}
 view : Model -> Html Msg
 view model =
-    div [ class "task-list-page" ]
+    div []
         [ viewHeader
         , viewContent model
         ]
@@ -125,8 +125,8 @@ view model =
 
 viewHeader : Html Msg
 viewHeader =
-    div [ class "page-header" ]
-        [ h1 [] [ text "タスク一覧" ]
+    div [ class "mb-6" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "タスク一覧" ]
         ]
 
 
@@ -134,7 +134,7 @@ viewContent : Model -> Html Msg
 viewContent model =
     case model.tasks of
         Loading ->
-            div [ class "loading" ] [ text "読み込み中..." ]
+            div [ class "py-8 text-center text-secondary-500" ] [ text "読み込み中..." ]
 
         Failure ->
             viewError
@@ -145,9 +145,9 @@ viewContent model =
 
 viewError : Html Msg
 viewError =
-    div [ class "error-message" ]
+    div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
         [ p [] [ text "データの取得に失敗しました。" ]
-        , button [ onClick Refresh, class "btn btn-secondary" ]
+        , button [ onClick Refresh, class "mt-2 inline-flex items-center rounded-lg border border-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50" ]
             [ text "再読み込み" ]
         ]
 
@@ -155,7 +155,7 @@ viewError =
 viewTaskList : List TaskItem -> Html Msg
 viewTaskList tasks =
     if List.isEmpty tasks then
-        div [ class "empty-message" ] [ text "承認待ちのタスクはありません" ]
+        div [ class "py-8 text-center text-secondary-500" ] [ text "承認待ちのタスクはありません" ]
 
     else
         div []
@@ -166,14 +166,14 @@ viewTaskList tasks =
 
 viewTaskTable : List TaskItem -> Html Msg
 viewTaskTable tasks =
-    table [ class "task-table" ]
-        [ thead []
+    table [ class "w-full" ]
+        [ thead [ class "border-b border-secondary-100" ]
             [ tr []
-                [ th [] [ text "ステップ名" ]
-                , th [] [ text "申請タイトル" ]
-                , th [] [ text "ステータス" ]
-                , th [] [ text "期限" ]
-                , th [] [ text "開始日" ]
+                [ th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステップ名" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "申請タイトル" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステータス" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "期限" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "開始日" ]
                 ]
             ]
         , tbody []
@@ -183,24 +183,24 @@ viewTaskTable tasks =
 
 viewTaskRow : TaskItem -> Html Msg
 viewTaskRow task =
-    tr []
-        [ td []
-            [ a [ href (Route.toString (Route.TaskDetail task.id)) ]
+    tr [ class "border-b border-secondary-100" ]
+        [ td [ class "px-4 py-3 text-sm" ]
+            [ a [ href (Route.toString (Route.TaskDetail task.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text task.stepName ]
             ]
-        , td [] [ text task.workflow.title ]
-        , td []
-            [ span [ class (stepStatusToCssClass task.status) ]
+        , td [ class "px-4 py-3 text-sm" ] [ text task.workflow.title ]
+        , td [ class "px-4 py-3 text-sm" ]
+            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ stepStatusToCssClass task.status) ]
                 [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
             ]
-        , td [] [ text (formatMaybeDate task.dueDate) ]
-        , td [] [ text (formatMaybeDate task.startedAt) ]
+        , td [ class "px-4 py-3 text-sm" ] [ text (formatMaybeDate task.dueDate) ]
+        , td [ class "px-4 py-3 text-sm" ] [ text (formatMaybeDate task.startedAt) ]
         ]
 
 
 viewCount : Int -> Html Msg
 viewCount count =
-    div [ class "task-count" ]
+    div [ class "mt-4 text-sm text-secondary-500" ]
         [ text ("全 " ++ String.fromInt count ++ " 件") ]
 
 
@@ -214,16 +214,16 @@ stepStatusToCssClass : WorkflowInstance.StepStatus -> String
 stepStatusToCssClass status =
     case status of
         WorkflowInstance.StepPending ->
-            "status-pending"
+            "bg-gray-100 text-gray-600"
 
         WorkflowInstance.StepActive ->
-            "status-active"
+            "bg-warning-50 text-warning-600"
 
         WorkflowInstance.StepCompleted ->
-            "status-completed"
+            "bg-success-50 text-success-600"
 
         WorkflowInstance.StepSkipped ->
-            "status-skipped"
+            "bg-secondary-100 text-secondary-500"
 
 
 {-| Maybe な日時文字列から日付部分を抽出
