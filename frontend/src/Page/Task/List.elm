@@ -22,6 +22,7 @@ module Page.Task.List exposing
 
 import Api exposing (ApiError)
 import Api.Task as TaskApi
+import Component.LoadingSpinner as LoadingSpinner
 import Data.Task exposing (TaskItem)
 import Data.WorkflowInstance as WorkflowInstance
 import Html exposing (..)
@@ -30,6 +31,7 @@ import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Util.DateFormat as DateFormat
 
 
 
@@ -130,10 +132,7 @@ viewContent model =
             text ""
 
         Loading ->
-            div [ class "flex flex-col items-center justify-center py-8" ]
-                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
-                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
-                ]
+            LoadingSpinner.view
 
         Failure _ ->
             viewError
@@ -192,11 +191,11 @@ viewTaskRow task =
             ]
         , td [ class "px-4 py-3" ] [ text task.workflow.title ]
         , td [ class "px-4 py-3" ]
-            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ stepStatusToCssClass task.status) ]
+            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.stepStatusToCssClass task.status) ]
                 [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
             ]
-        , td [ class "px-4 py-3" ] [ text (formatMaybeDate task.dueDate) ]
-        , td [ class "px-4 py-3" ] [ text (formatMaybeDate task.startedAt) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.dueDate) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.startedAt) ]
         ]
 
 
@@ -204,37 +203,3 @@ viewCount : Int -> Html Msg
 viewCount count =
     div [ class "mt-4 text-sm text-secondary-500" ]
         [ text ("全 " ++ String.fromInt count ++ " 件") ]
-
-
-
--- HELPERS
-
-
-{-| ステップステータスを CSS クラス名に変換
--}
-stepStatusToCssClass : WorkflowInstance.StepStatus -> String
-stepStatusToCssClass status =
-    case status of
-        WorkflowInstance.StepPending ->
-            "bg-gray-100 text-gray-600"
-
-        WorkflowInstance.StepActive ->
-            "bg-warning-50 text-warning-600"
-
-        WorkflowInstance.StepCompleted ->
-            "bg-success-50 text-success-600"
-
-        WorkflowInstance.StepSkipped ->
-            "bg-secondary-100 text-secondary-500"
-
-
-{-| Maybe な日時文字列から日付部分を抽出
--}
-formatMaybeDate : Maybe String -> String
-formatMaybeDate maybeDate =
-    case maybeDate of
-        Just isoString ->
-            String.left 10 isoString
-
-        Nothing ->
-            "-"

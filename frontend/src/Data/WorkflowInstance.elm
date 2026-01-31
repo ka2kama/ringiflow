@@ -14,6 +14,7 @@ module Data.WorkflowInstance exposing
     , statusToString
     , stepDecoder
     , stepStatusDecoder
+    , stepStatusToCssClass
     , stepStatusToJapanese
     )
 
@@ -216,6 +217,24 @@ statusToCssClass status =
             "bg-error-50 text-error-600"
 
         Cancelled ->
+            "bg-secondary-100 text-secondary-500"
+
+
+{-| ステップステータスを Tailwind CSS クラスに変換（バッジスタイリング用）
+-}
+stepStatusToCssClass : StepStatus -> String
+stepStatusToCssClass status =
+    case status of
+        StepPending ->
+            "bg-gray-100 text-gray-600"
+
+        StepActive ->
+            "bg-warning-50 text-warning-600"
+
+        StepCompleted ->
+            "bg-success-50 text-success-600"
+
+        StepSkipped ->
             "bg-secondary-100 text-secondary-500"
 
 

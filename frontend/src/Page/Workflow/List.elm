@@ -27,6 +27,7 @@ module Page.Workflow.List exposing
 
 import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
+import Component.LoadingSpinner as LoadingSpinner
 import Data.WorkflowInstance as WorkflowInstance exposing (Status, WorkflowInstance)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -34,6 +35,7 @@ import Html.Events exposing (onClick, onInput)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Util.DateFormat as DateFormat
 
 
 
@@ -152,10 +154,7 @@ viewContent model =
             text ""
 
         Loading ->
-            div [ class "flex flex-col items-center justify-center py-8" ]
-                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
-                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
-                ]
+            LoadingSpinner.view
 
         Failure _ ->
             viewError
@@ -278,7 +277,7 @@ viewWorkflowRow workflow =
             [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
                 [ text (WorkflowInstance.statusToJapanese workflow.status) ]
             ]
-        , td [ class "px-4 py-3" ] [ text (formatDate workflow.createdAt) ]
+        , td [ class "px-4 py-3" ] [ text (DateFormat.formatDate workflow.createdAt) ]
         ]
 
 
@@ -286,10 +285,3 @@ viewCount : Int -> Html Msg
 viewCount count =
     div [ class "mt-4 text-sm text-secondary-500" ]
         [ text ("全 " ++ String.fromInt count ++ " 件") ]
-
-
-{-| ISO 8601 日時文字列から日付部分を抽出
--}
-formatDate : String -> String
-formatDate isoString =
-    String.left 10 isoString

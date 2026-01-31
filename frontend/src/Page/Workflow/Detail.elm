@@ -25,9 +25,12 @@ module Page.Workflow.Detail exposing
 
 -}
 
-import Api exposing (ApiError(..))
+import Api exposing (ApiError)
+import Api.ErrorMessage as ErrorMessage
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
+import Component.LoadingSpinner as LoadingSpinner
+import Component.MessageAlert as MessageAlert
 import Data.FormField exposing (FormField)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, WorkflowStep)
@@ -39,6 +42,7 @@ import Json.Decode as Decode
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Util.DateFormat as DateFormat
 
 
 
@@ -211,43 +215,10 @@ handleApprovalResult successMsg result model =
         Err error ->
             ( { model
                 | isSubmitting = False
-                , errorMessage = Just (apiErrorToMessage error)
+                , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー" } error)
               }
             , Cmd.none
             )
-
-
-{-| API エラーをユーザー向けメッセージに変換
--}
-apiErrorToMessage : ApiError -> String
-apiErrorToMessage error =
-    case error of
-        Conflict problem ->
-            "このワークフローは既に更新されています。最新の状態を取得してください。（" ++ problem.detail ++ "）"
-
-        Forbidden problem ->
-            "この操作を実行する権限がありません。（" ++ problem.detail ++ "）"
-
-        BadRequest problem ->
-            problem.detail
-
-        NotFound _ ->
-            "ワークフローが見つかりません。"
-
-        Unauthorized ->
-            "ログインが必要です。"
-
-        ServerError _ ->
-            "サーバーエラーが発生しました。"
-
-        NetworkError ->
-            "ネットワークエラーが発生しました。"
-
-        Timeout ->
-            "リクエストがタイムアウトしました。"
-
-        DecodeError _ ->
-            "データの処理中にエラーが発生しました。"
 
 
 
@@ -260,7 +231,11 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewHeader
-        , viewMessages model
+        , MessageAlert.view
+            { onDismiss = DismissMessage
+            , successMessage = model.successMessage
+            , errorMessage = model.errorMessage
+            }
         , viewContent model
         ]
 
@@ -274,30 +249,6 @@ viewHeader =
         ]
 
 
-viewMessages : Model -> Html Msg
-viewMessages model =
-    div [ class "space-y-2 mb-4" ]
-        [ case model.successMessage of
-            Just msg ->
-                div [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700" ]
-                    [ text msg
-                    , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick DismissMessage ] [ text "×" ]
-                    ]
-
-            Nothing ->
-                text ""
-        , case model.errorMessage of
-            Just msg ->
-                div [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700" ]
-                    [ text msg
-                    , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick DismissMessage ] [ text "×" ]
-                    ]
-
-            Nothing ->
-                text ""
-        ]
-
-
 viewContent : Model -> Html Msg
 viewContent model =
     case model.workflow of
@@ -305,10 +256,7 @@ viewContent model =
             div [] []
 
         Loading ->
-            div [ class "flex flex-col items-center justify-center py-8" ]
-                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
-                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
-                ]
+            LoadingSpinner.view
 
         Failure _ ->
             viewError
@@ -360,11 +308,11 @@ viewBasicInfo workflow =
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
             , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy ]
             , dt [ class "text-secondary-500" ] [ text "申請日" ]
-            , dd [ class "text-secondary-900" ] [ text (formatDateTime workflow.submittedAt) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatMaybeDateTime workflow.submittedAt) ]
             , dt [ class "text-secondary-500" ] [ text "作成日" ]
-            , dd [ class "text-secondary-900" ] [ text (formatDateTime (Just workflow.createdAt)) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime workflow.createdAt) ]
             , dt [ class "text-secondary-500" ] [ text "更新日" ]
-            , dd [ class "text-secondary-900" ] [ text (formatDateTime (Just workflow.updatedAt)) ]
+            , dd [ class "text-secondary-900" ] [ text (DateFormat.formatDateTime workflow.updatedAt) ]
             ]
         ]
 
@@ -431,18 +379,6 @@ viewRawFormData formData =
                 |> Result.withDefault "（データなし）"
             )
         ]
-
-
-formatDateTime : Maybe String -> String
-formatDateTime maybeDateTime =
-    case maybeDateTime of
-        Nothing ->
-            "-"
-
-        Just dateTime ->
-            -- ISO 8601 から日付と時刻を抽出（簡易実装）
-            String.left 16 dateTime
-                |> String.replace "T" " "
 
 
 

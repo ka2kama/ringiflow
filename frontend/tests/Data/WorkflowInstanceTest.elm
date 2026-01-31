@@ -6,7 +6,7 @@ module Data.WorkflowInstanceTest exposing (suite)
 
 -}
 
-import Data.WorkflowInstance as WorkflowInstance exposing (Status(..))
+import Data.WorkflowInstance as WorkflowInstance exposing (Status(..), StepStatus(..))
 import Expect
 import Json.Decode as Decode
 import Test exposing (..)
@@ -19,6 +19,7 @@ suite =
         , statusFromStringTests
         , statusToJapaneseTests
         , statusToCssClassTests
+        , stepStatusToCssClassTests
         , decoderTests
         , listDecoderTests
         ]
@@ -164,6 +165,32 @@ statusToCssClassTests =
         , test "Cancelled → Tailwind secondary classes" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Cancelled
+                    |> Expect.equal "bg-secondary-100 text-secondary-500"
+        ]
+
+
+
+-- stepStatusToCssClass
+
+
+stepStatusToCssClassTests : Test
+stepStatusToCssClassTests =
+    describe "stepStatusToCssClass"
+        [ test "StepPending → Tailwind gray classes" <|
+            \_ ->
+                WorkflowInstance.stepStatusToCssClass StepPending
+                    |> Expect.equal "bg-gray-100 text-gray-600"
+        , test "StepActive → Tailwind warning classes" <|
+            \_ ->
+                WorkflowInstance.stepStatusToCssClass StepActive
+                    |> Expect.equal "bg-warning-50 text-warning-600"
+        , test "StepCompleted → Tailwind success classes" <|
+            \_ ->
+                WorkflowInstance.stepStatusToCssClass StepCompleted
+                    |> Expect.equal "bg-success-50 text-success-600"
+        , test "StepSkipped → Tailwind secondary classes" <|
+            \_ ->
+                WorkflowInstance.stepStatusToCssClass StepSkipped
                     |> Expect.equal "bg-secondary-100 text-secondary-500"
         ]
 
