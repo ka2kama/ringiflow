@@ -193,7 +193,7 @@ viewTaskRow task =
             ]
         , td [ class "px-4 py-3" ] [ text task.workflow.title ]
         , td [ class "px-4 py-3" ]
-            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ stepStatusToCssClass task.status) ]
+            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.stepStatusToCssClass task.status) ]
                 [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
             ]
         , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate task.dueDate) ]
@@ -205,25 +205,3 @@ viewCount : Int -> Html Msg
 viewCount count =
     div [ class "mt-4 text-sm text-secondary-500" ]
         [ text ("全 " ++ String.fromInt count ++ " 件") ]
-
-
-
--- HELPERS
-
-
-{-| ステップステータスを CSS クラス名に変換
--}
-stepStatusToCssClass : WorkflowInstance.StepStatus -> String
-stepStatusToCssClass status =
-    case status of
-        WorkflowInstance.StepPending ->
-            "bg-gray-100 text-gray-600"
-
-        WorkflowInstance.StepActive ->
-            "bg-warning-50 text-warning-600"
-
-        WorkflowInstance.StepCompleted ->
-            "bg-success-50 text-success-600"
-
-        WorkflowInstance.StepSkipped ->
-            "bg-secondary-100 text-secondary-500"

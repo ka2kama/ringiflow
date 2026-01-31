@@ -425,7 +425,7 @@ viewStepStatusBadge : WorkflowStep -> Html Msg
 viewStepStatusBadge step =
     div [ class "text-secondary-700" ]
         [ text "このタスクのステータス: "
-        , span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ stepStatusToCssClass step.status) ]
+        , span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.stepStatusToCssClass step.status) ]
             [ text (WorkflowInstance.stepStatusToJapanese step.status) ]
         , case step.decision of
             Just decision ->
@@ -524,23 +524,3 @@ viewStep step =
                     text ""
             ]
         ]
-
-
-
--- HELPERS
-
-
-stepStatusToCssClass : StepStatus -> String
-stepStatusToCssClass status =
-    case status of
-        StepPending ->
-            "bg-gray-100 text-gray-600"
-
-        StepActive ->
-            "bg-warning-50 text-warning-600"
-
-        StepCompleted ->
-            "bg-success-50 text-success-600"
-
-        StepSkipped ->
-            "bg-secondary-100 text-secondary-500"
