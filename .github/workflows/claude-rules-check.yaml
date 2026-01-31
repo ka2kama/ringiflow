@@ -81,6 +81,31 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Fetch PR comments
+        id: pr-comments
+        if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+
+          # PR コメントと Review コメントを取得（最新20件、claude[bot] 自身を除外）
+          COMMENTS=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, created_at: .created_at}] | .[-20:]' 2>/dev/null || echo "[]")
+
+          REVIEW_COMMENTS=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login != "claude[bot]") | {author: .user.login, body: .body, path: .path, created_at: .created_at}] | .[-20:]' 2>/dev/null || echo "[]")
+
+          # JSON を環境ファイルに出力（multiline safe）
+          {
+            echo "PR_COMMENTS<<EOF_COMMENTS"
+            echo "$COMMENTS"
+            echo "EOF_COMMENTS"
+            echo "REVIEW_COMMENTS<<EOF_REVIEW"
+            echo "$REVIEW_COMMENTS"
+            echo "EOF_REVIEW"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build review context
         id: review-context
         if: steps.check-draft.outputs.is_draft == 'false'
@@ -137,6 +162,20 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
 
+            ## PR コメント（議論の文脈）
+
+            以下は PR 上でのこれまでの議論です。チェック前に必ず目を通し、文脈を理解してください。
+
+            ### PR コメント
+            ```json
+            ${{ steps.pr-comments.outputs.PR_COMMENTS }}
+            ```
+
+            ### レビューコメント（インラインコメント）
+            ```json
+            ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
+            ```
+
             ## チェックモード
 
             ${{ steps.review-context.outputs.REVIEW_MODE }}
@@ -163,6 +202,18 @@ jobs:
             - コーディング規約（命名、構造、スタイル）
             - 必須の手順（テスト、ドキュメント更新など）
             - 禁止事項
+
+            ### 過去の議論を踏まえた判断
+
+            PR コメントで既に議論された内容については、以下のように判断する:
+
+            | コメントの内容 | 対応 |
+            |---------------|------|
+            | 正当な理由が説明されている（設計意図、別のルールでカバー済み等） | 尊重し、再指摘しない |
+            | 単なる質問、未解決の議論 | 必要に応じて追加コメント |
+            | 「後で直す」「TODO」などの保留 | 必要に応じてリマインド |
+
+            過去の議論を踏まえた上で、なお指摘が必要と判断した場合は、その理由を明記する。
 
             ## フィードバック方法
 
