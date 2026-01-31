@@ -145,20 +145,19 @@ dev-down:
 # データストア操作（開発用）
 # =============================================================================
 
+_psql_url := "postgres://ringiflow:ringiflow@localhost:" + env_var("POSTGRES_PORT") + "/ringiflow_dev"
+
 # PostgreSQL: テーブル一覧を表示
 db-tables:
-    @psql "postgres://ringiflow:ringiflow@localhost:${POSTGRES_PORT}/ringiflow_dev" \
-        -c "\dt public.*" --pset="footer=off"
+    @psql "{{ _psql_url }}" -c "\dt public.*" --pset="footer=off"
 
 # PostgreSQL: 指定テーブルのカラム定義を表示
 db-schema table:
-    @psql "postgres://ringiflow:ringiflow@localhost:${POSTGRES_PORT}/ringiflow_dev" \
-        -c "\d {{table}}"
+    @psql "{{ _psql_url }}" -c "\d {{table}}"
 
 # PostgreSQL: 任意の SQL を実行
 db-query sql:
-    @psql "postgres://ringiflow:ringiflow@localhost:${POSTGRES_PORT}/ringiflow_dev" \
-        -c "{{sql}}"
+    @psql "{{ _psql_url }}" -c "{{sql}}"
 
 # Redis: キー一覧を表示（パターンで絞り込み可能、デフォルト: *）
 redis-keys pattern='*':
