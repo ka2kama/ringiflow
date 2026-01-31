@@ -306,9 +306,9 @@ view model =
 viewHeader : Html Msg
 viewHeader =
     nav [ class "mb-6 flex items-center gap-2 text-sm" ]
-        [ a [ href (Route.toString Route.Home), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "ダッシュボード" ]
+        [ a [ href (Route.toString Route.Tasks), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "タスク一覧" ]
         , span [ class "text-secondary-400" ] [ text "/" ]
-        , a [ href (Route.toString Route.Tasks), class "text-primary-600 hover:text-primary-700 hover:underline" ] [ text "タスク一覧" ]
+        , span [ class "text-secondary-900 font-medium" ] [ text "タスク詳細" ]
         ]
 
 
@@ -414,7 +414,7 @@ viewCommentInput comment =
         [ label [ for "approval-comment", class "block text-sm font-medium text-secondary-700" ] [ text "コメント（任意）" ]
         , textarea
             [ id "approval-comment"
-            , class "w-full rounded-lg border border-secondary-100 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            , class "w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             , value comment
             , onInput UpdateComment
             , placeholder "承認/却下の理由を入力..."
