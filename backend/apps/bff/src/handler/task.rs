@@ -22,6 +22,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use super::workflow::{
+   UserRefData,
    WorkflowData,
    WorkflowState,
    WorkflowStepData,
@@ -41,7 +42,7 @@ pub struct TaskWorkflowSummaryData {
    pub id:           String,
    pub title:        String,
    pub status:       String,
-   pub initiated_by: String,
+   pub initiated_by: UserRefData,
    pub submitted_at: Option<String>,
 }
 
@@ -51,7 +52,7 @@ impl From<crate::client::TaskWorkflowSummaryDto> for TaskWorkflowSummaryData {
          id:           dto.id,
          title:        dto.title,
          status:       dto.status,
-         initiated_by: dto.initiated_by,
+         initiated_by: UserRefData::from(dto.initiated_by),
          submitted_at: dto.submitted_at,
       }
    }
@@ -64,7 +65,7 @@ pub struct TaskItemData {
    pub step_name:   String,
    pub status:      String,
    pub version:     i32,
-   pub assigned_to: Option<String>,
+   pub assigned_to: Option<UserRefData>,
    pub due_date:    Option<String>,
    pub started_at:  Option<String>,
    pub created_at:  String,
@@ -78,7 +79,7 @@ impl From<crate::client::TaskItemDto> for TaskItemData {
          step_name:   dto.step_name,
          status:      dto.status,
          version:     dto.version,
-         assigned_to: dto.assigned_to,
+         assigned_to: dto.assigned_to.map(UserRefData::from),
          due_date:    dto.due_date,
          started_at:  dto.started_at,
          created_at:  dto.created_at,

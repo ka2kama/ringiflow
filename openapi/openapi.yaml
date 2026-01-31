@@ -963,9 +963,7 @@ components:
           description: フォームデータ
           additionalProperties: true
         initiated_by:
-          type: string
-          format: uuid
-          description: 申請者のユーザー ID
+          $ref: '#/components/schemas/UserRef'
         current_step_id:
           type:
             - string
@@ -1037,11 +1035,10 @@ components:
           minimum: 1
           description: 楽観的ロック用バージョン番号
         assigned_to:
-          type:
-            - string
-            - 'null'
-          format: uuid
-          description: 担当者のユーザー ID
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+          description: 担当者のユーザー参照
         decision:
           type:
             - string
@@ -1132,11 +1129,10 @@ components:
           minimum: 1
           description: 楽観的ロック用バージョン番号
         assigned_to:
-          type:
-            - string
-            - 'null'
-          format: uuid
-          description: 担当者のユーザー ID
+          oneOf:
+            - $ref: '#/components/schemas/UserRef'
+            - type: 'null'
+          description: 担当者のユーザー参照
         due_date:
           type:
             - string
@@ -1177,9 +1173,7 @@ components:
           enum: [Draft, Pending, InProgress, Approved, Rejected, Cancelled]
           description: ワークフローの状態
         initiated_by:
-          type: string
-          format: uuid
-          description: 申請者のユーザー ID
+          $ref: '#/components/schemas/UserRef'
         submitted_at:
           type:
             - string
@@ -1349,6 +1343,21 @@ components:
             type: string
           description: ロール一覧
           example: ["user"]
+
+    UserRef:
+      type: object
+      description: ユーザー参照（ID とユーザー名のペア）
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザー ID
+        name:
+          type: string
+          description: ユーザー名
 
     CsrfTokenResponse:
       type: object

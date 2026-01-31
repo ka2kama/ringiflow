@@ -83,6 +83,15 @@ pub struct UserWithPermissionsData {
    pub permissions: Vec<String>,
 }
 
+// --- ユーザー参照型 ---
+
+/// ユーザー参照 DTO（Core Service からのデシリアライズ用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserRefDto {
+   pub id:   String,
+   pub name: String,
+}
+
 // --- ワークフロー関連の型 ---
 
 /// ワークフロー作成リクエスト（Core Service 内部 API 用）
@@ -120,7 +129,7 @@ pub struct WorkflowStepDto {
    pub step_type:    String,
    pub status:       String,
    pub version:      i32,
-   pub assigned_to:  Option<String>,
+   pub assigned_to:  Option<UserRefDto>,
    pub decision:     Option<String>,
    pub comment:      Option<String>,
    pub due_date:     Option<String>,
@@ -139,7 +148,7 @@ pub struct WorkflowInstanceDto {
    pub status: String,
    pub version: i32,
    pub form_data: serde_json::Value,
-   pub initiated_by: String,
+   pub initiated_by: UserRefDto,
    pub current_step_id: Option<String>,
    #[serde(default)]
    pub steps: Vec<WorkflowStepDto>,
@@ -171,7 +180,7 @@ pub struct TaskWorkflowSummaryDto {
    pub id:           String,
    pub title:        String,
    pub status:       String,
-   pub initiated_by: String,
+   pub initiated_by: UserRefDto,
    pub submitted_at: Option<String>,
 }
 
@@ -182,7 +191,7 @@ pub struct TaskItemDto {
    pub step_name:   String,
    pub status:      String,
    pub version:     i32,
-   pub assigned_to: Option<String>,
+   pub assigned_to: Option<UserRefDto>,
    pub due_date:    Option<String>,
    pub started_at:  Option<String>,
    pub created_at:  String,

@@ -55,6 +55,12 @@ pub trait UserRepository: Send + Sync {
    /// ユーザー情報と、そのユーザーに割り当てられたロールを一括で取得する。
    async fn find_with_roles(&self, id: &UserId) -> Result<Option<(User, Vec<Role>)>, InfraError>;
 
+   /// 複数の ID でユーザーを一括検索
+   ///
+   /// 存在しない ID は無視し、見つかったユーザーのみ返す。
+   /// 空の配列を渡した場合は空の Vec を返す。
+   async fn find_by_ids(&self, ids: &[UserId]) -> Result<Vec<User>, InfraError>;
+
    /// 最終ログイン日時を更新
    async fn update_last_login(&self, id: &UserId) -> Result<(), InfraError>;
 }
@@ -213,6 +219,51 @@ impl UserRepository for PostgresUserRepository {
          .collect();
 
       Ok(Some((user, roles)))
+   }
+
+   async fn find_by_ids(&self, ids: &[UserId]) -> Result<Vec<User>, InfraError> {
+      if ids.is_empty() {
+         return Ok(Vec::new());
+      }
+
+      let uuid_ids: Vec<uuid::Uuid> = ids.iter().map(|id| *id.as_uuid()).collect();
+
+      let rows = sqlx::query!(
+         r#"
+            SELECT
+                id,
+                tenant_id,
+                email,
+                name,
+                status,
+                last_login_at,
+                created_at,
+                updated_at
+            FROM users
+            WHERE id = ANY($1)
+            "#,
+         &uuid_ids
+      )
+      .fetch_all(&self.pool)
+      .await?;
+
+      rows
+         .into_iter()
+         .map(|row| {
+            Ok(User::from_db(
+               UserId::from_uuid(row.id),
+               TenantId::from_uuid(row.tenant_id),
+               Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               row.status
+                  .parse::<UserStatus>()
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               row.last_login_at,
+               row.created_at,
+               row.updated_at,
+            ))
+         })
+         .collect()
    }
 
    async fn update_last_login(&self, id: &UserId) -> Result<(), InfraError> {

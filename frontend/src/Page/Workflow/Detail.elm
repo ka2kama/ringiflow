@@ -383,7 +383,7 @@ viewBasicInfo workflow =
         [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
         , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
-            , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy ]
+            , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy.name ]
             , dt [ class "text-secondary-500" ] [ text "申請日" ]
             , dd [ class "text-secondary-900" ] [ text (DateFormat.formatMaybeDateTime workflow.submittedAt) ]
             , dt [ class "text-secondary-500" ] [ text "作成日" ]
@@ -586,7 +586,7 @@ findActiveStepForUser steps maybeUserId =
             steps
                 |> List.filter
                     (\step ->
-                        step.status == WorkflowInstance.StepActive && step.assignedTo == Just userId
+                        step.status == WorkflowInstance.StepActive && Maybe.map .id step.assignedTo == Just userId
                     )
                 |> List.head
 
@@ -616,7 +616,7 @@ viewStep step =
         , div [ class "mt-2 flex flex-wrap gap-3 text-sm text-secondary-500" ]
             [ case step.assignedTo of
                 Just assignee ->
-                    span [] [ text ("担当: " ++ assignee) ]
+                    span [] [ text ("担当: " ++ assignee.name) ]
 
                 Nothing ->
                     text ""

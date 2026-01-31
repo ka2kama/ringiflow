@@ -118,6 +118,22 @@ pub struct StepPathParams {
    pub step_id: Uuid,
 }
 
+/// ユーザー参照データ（フロントエンドへの Serialize 用）
+#[derive(Debug, Serialize)]
+pub struct UserRefData {
+   pub id:   String,
+   pub name: String,
+}
+
+impl From<crate::client::UserRefDto> for UserRefData {
+   fn from(dto: crate::client::UserRefDto) -> Self {
+      Self {
+         id:   dto.id,
+         name: dto.name,
+      }
+   }
+}
+
 /// ワークフローステップデータ
 #[derive(Debug, Serialize)]
 pub struct WorkflowStepData {
@@ -127,7 +143,7 @@ pub struct WorkflowStepData {
    pub step_type:    String,
    pub status:       String,
    pub version:      i32,
-   pub assigned_to:  Option<String>,
+   pub assigned_to:  Option<UserRefData>,
    pub decision:     Option<String>,
    pub comment:      Option<String>,
    pub due_date:     Option<String>,
@@ -146,7 +162,7 @@ impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
          step_type:    dto.step_type,
          status:       dto.status,
          version:      dto.version,
-         assigned_to:  dto.assigned_to,
+         assigned_to:  dto.assigned_to.map(UserRefData::from),
          decision:     dto.decision,
          comment:      dto.comment,
          due_date:     dto.due_date,
@@ -167,7 +183,7 @@ pub struct WorkflowData {
    pub status: String,
    pub version: i32,
    pub form_data: serde_json::Value,
-   pub initiated_by: String,
+   pub initiated_by: UserRefData,
    pub current_step_id: Option<String>,
    pub steps: Vec<WorkflowStepData>,
    pub submitted_at: Option<String>,
@@ -195,7 +211,7 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
          status: dto.status,
          version: dto.version,
          form_data: dto.form_data,
-         initiated_by: dto.initiated_by,
+         initiated_by: UserRefData::from(dto.initiated_by),
          current_step_id: dto.current_step_id,
          steps: dto.steps.into_iter().map(WorkflowStepData::from).collect(),
          submitted_at: dto.submitted_at,

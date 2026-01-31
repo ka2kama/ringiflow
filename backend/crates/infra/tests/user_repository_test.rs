@@ -152,6 +152,64 @@ async fn test_ユーザーとロールを一緒に取得できる(pool: PgPool) 
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn test_複数idでユーザーを一括取得できる(pool: PgPool) {
+   let (tenant_id, user_id1) = setup_test_data(&pool).await;
+
+   // 2人目のユーザーを追加
+   let user_id2 = UserId::from_uuid(Uuid::now_v7());
+   sqlx::query!(
+      r#"
+        INSERT INTO users (id, tenant_id, email, name, status)
+        VALUES ($1, $2, 'user2@example.com', 'User Two', 'active')
+        "#,
+      user_id2.as_uuid(),
+      tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("ユーザー2作成に失敗");
+
+   let repo = PostgresUserRepository::new(pool);
+
+   let result = repo
+      .find_by_ids(&[user_id1.clone(), user_id2.clone()])
+      .await;
+
+   assert!(result.is_ok());
+   let users = result.unwrap();
+   assert_eq!(users.len(), 2);
+   let ids: Vec<&UserId> = users.iter().map(|u| u.id()).collect();
+   assert!(ids.contains(&&user_id1));
+   assert!(ids.contains(&&user_id2));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_存在しないidが含まれても取得できるものだけ返す(pool: PgPool) {
+   let (_tenant_id, user_id) = setup_test_data(&pool).await;
+   let nonexistent_id = UserId::from_uuid(Uuid::now_v7());
+   let repo = PostgresUserRepository::new(pool);
+
+   let result = repo.find_by_ids(&[user_id.clone(), nonexistent_id]).await;
+
+   assert!(result.is_ok());
+   let users = result.unwrap();
+   assert_eq!(users.len(), 1);
+   assert_eq!(users[0].id(), &user_id);
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_空のid配列を渡すと空vecを返す(pool: PgPool) {
+   let (_tenant_id, _user_id) = setup_test_data(&pool).await;
+   let repo = PostgresUserRepository::new(pool);
+
+   let result = repo.find_by_ids(&[]).await;
+
+   assert!(result.is_ok());
+   let users = result.unwrap();
+   assert!(users.is_empty());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn test_最終ログイン日時を更新できる(pool: PgPool) {
    let (_tenant_id, user_id) = setup_test_data(&pool).await;
    let repo = PostgresUserRepository::new(pool.clone());
