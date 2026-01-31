@@ -39,6 +39,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
 import Json.Encode as Encode
+import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 
 
@@ -53,7 +54,7 @@ type alias Model =
       shared : Shared
 
     -- API データ
-    , definitions : RemoteData (List WorkflowDefinition)
+    , definitions : RemoteData ApiError (List WorkflowDefinition)
     , selectedDefinitionId : Maybe String
 
     -- フォーム状態
@@ -78,18 +79,6 @@ type alias Model =
 type SaveMessage
     = SaveSuccess String
     | SaveError String
-
-
-{-| リモートデータの状態
-
-API レスポンスのライフサイクルを型で表現する。
-
--}
-type RemoteData a
-    = NotAsked
-    | Loading
-    | Failure ApiError
-    | Success a
 
 
 {-| 初期化
