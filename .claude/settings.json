@@ -70,7 +70,12 @@
       "Bash(gh issue list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run list:*)",
-      "Bash(gh repo view:*)"
+      "Bash(gh repo view:*)",
+      "Bash(just db-tables)",
+      "Bash(just db-schema:*)",
+      "Bash(just db-query:*)",
+      "Bash(just redis-keys:*)",
+      "Bash(just redis-get:*)"
     ],
     "ask": [
       "Bash(git add:*)",

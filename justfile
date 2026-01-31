@@ -41,6 +41,8 @@ check-tools:
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
+    @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
+    @which redis-cli > /dev/null || (echo "ERROR: redis-cli がインストールされていません" && exit 1)
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -138,6 +140,32 @@ dev-down:
     #!/usr/bin/env bash
     PROJECT_NAME=$(basename "$(pwd)")
     docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down
+
+# =============================================================================
+# データストア操作（開発用）
+# =============================================================================
+
+_psql_url := "postgres://ringiflow:ringiflow@localhost:" + env_var_or_default("POSTGRES_PORT", "15432") + "/ringiflow_dev"
+
+# PostgreSQL: テーブル一覧を表示
+db-tables:
+    @psql "{{ _psql_url }}" -c "\dt public.*" --pset="footer=off"
+
+# PostgreSQL: 指定テーブルのカラム定義を表示
+db-schema table:
+    @psql "{{ _psql_url }}" -c "\d {{table}}"
+
+# PostgreSQL: 任意の SQL を実行
+db-query sql:
+    @psql "{{ _psql_url }}" -c "{{sql}}"
+
+# Redis: キー一覧を表示（パターンで絞り込み可能、デフォルト: *）
+redis-keys pattern='*':
+    @redis-cli -p "${REDIS_PORT}" keys "{{pattern}}"
+
+# Redis: 指定キーの値を取得
+redis-get key:
+    @redis-cli -p "${REDIS_PORT}" get "{{key}}"
 
 # =============================================================================
 # フォーマット

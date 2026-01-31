@@ -85,6 +85,19 @@ cd backend && cargo test --package ringiflow-domain テスト名
 cd frontend && pnpm run test -- --watch tests/Example.elm
 ```
 
+### データストア操作
+
+PostgreSQL スキーマやデータの確認に使用する。MCP（PostgreSQL）も利用可能。
+
+```bash
+just db-tables              # テーブル一覧
+just db-schema テーブル名    # カラム定義
+just db-query "SELECT ..."  # SQL 実行
+just redis-keys             # Redis キー一覧
+just redis-keys "session:*" # パターン指定
+just redis-get キー名        # Redis 値取得
+```
+
 ### 統合テスト
 
 ```bash

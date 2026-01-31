@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "bash",
+      "args": ["scripts/mcp-postgres.sh"],
+      "env": {
+        "DATABASE_URL": "postgresql://ringiflow:ringiflow@localhost:15432/ringiflow_dev"
+      }
+    }
+  }
+}
