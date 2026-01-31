@@ -272,45 +272,7 @@ impl WorkflowInstanceDto {
 
 /// ワークフローハンドラーの State
 pub struct WorkflowState<D, I, S, U> {
-   pub usecase:         WorkflowUseCaseImpl<D, I, S>,
-   pub user_repository: U,
-}
-
-/// ワークフロー関連のエンティティからユーザー ID を収集し、一括でユーザー名を取得する。
-///
-/// 返り値は `UserId → ユーザー名` の HashMap。
-pub(crate) async fn resolve_user_names<U: UserRepository>(
-   user_repository: &U,
-   user_ids: &[UserId],
-) -> Result<HashMap<UserId, String>, CoreError> {
-   if user_ids.is_empty() {
-      return Ok(HashMap::new());
-   }
-
-   let users = user_repository
-      .find_by_ids(user_ids)
-      .await
-      .map_err(|e| CoreError::Internal(e.to_string()))?;
-
-   Ok(users
-      .into_iter()
-      .map(|user| (user.id().clone(), user.name().as_str().to_string()))
-      .collect())
-}
-
-/// WorkflowInstance + Steps からユーザー ID を収集する
-pub(crate) fn collect_user_ids_from_workflow(
-   instance: &WorkflowInstance,
-   steps: &[WorkflowStep],
-) -> Vec<UserId> {
-   let mut set = HashSet::new();
-   set.insert(instance.initiated_by().clone());
-   for step in steps {
-      if let Some(user_id) = step.assigned_to() {
-         set.insert(user_id.clone());
-      }
-   }
-   set.into_iter().collect()
+   pub usecase: WorkflowUseCaseImpl<D, I, S, U>,
 }
 
 /// ワークフローを作成する（下書き）
@@ -350,8 +312,8 @@ where
       .await?;
 
    // ユーザー名を解決
-   let user_ids = collect_user_ids_from_workflow(&instance, &[]);
-   let user_names = resolve_user_names(&state.user_repository, &user_ids).await?;
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(&instance, &[]);
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
    // レスポンスを返す
    let response = ApiResponse::new(WorkflowInstanceDto::from_instance(&instance, &user_names));
@@ -394,8 +356,8 @@ where
       .await?;
 
    // ユーザー名を解決
-   let user_ids = collect_user_ids_from_workflow(&instance, &[]);
-   let user_names = resolve_user_names(&state.user_repository, &user_ids).await?;
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(&instance, &[]);
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
    // レスポンスを返す
    let response = ApiResponse::new(WorkflowInstanceDto::from_instance(&instance, &user_names));
@@ -503,7 +465,7 @@ where
       .collect::<HashSet<_>>()
       .into_iter()
       .collect();
-   let user_names = resolve_user_names(&state.user_repository, &all_user_ids).await?;
+   let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
 
    let response = ApiResponse::new(
       workflows
@@ -542,9 +504,11 @@ where
    let workflow_with_steps = state.usecase.get_workflow(instance_id, tenant_id).await?;
 
    // ユーザー名を解決
-   let user_ids =
-      collect_user_ids_from_workflow(&workflow_with_steps.instance, &workflow_with_steps.steps);
-   let user_names = resolve_user_names(&state.user_repository, &user_ids).await?;
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
       &workflow_with_steps,
@@ -594,9 +558,11 @@ where
       .await?;
 
    // ユーザー名を解決
-   let user_ids =
-      collect_user_ids_from_workflow(&workflow_with_steps.instance, &workflow_with_steps.steps);
-   let user_names = resolve_user_names(&state.user_repository, &user_ids).await?;
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
       &workflow_with_steps,
@@ -644,9 +610,11 @@ where
       .await?;
 
    // ユーザー名を解決
-   let user_ids =
-      collect_user_ids_from_workflow(&workflow_with_steps.instance, &workflow_with_steps.steps);
-   let user_names = resolve_user_names(&state.user_repository, &user_ids).await?;
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
       &workflow_with_steps,

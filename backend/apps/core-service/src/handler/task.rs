@@ -29,22 +29,13 @@ use uuid::Uuid;
 
 use crate::{
    error::CoreError,
-   handler::workflow::{
-      UserQuery,
-      UserRefDto,
-      WorkflowInstanceDto,
-      WorkflowStepDto,
-      collect_user_ids_from_workflow,
-      resolve_user_names,
-      to_user_ref,
-   },
+   handler::workflow::{UserQuery, UserRefDto, WorkflowInstanceDto, WorkflowStepDto, to_user_ref},
    usecase::task::{TaskItem, TaskUseCaseImpl},
 };
 
 /// タスクハンドラーの State
 pub struct TaskState<I, S, U> {
-   pub usecase:         TaskUseCaseImpl<I, S>,
-   pub user_repository: U,
+   pub usecase: TaskUseCaseImpl<I, S, U>,
 }
 
 /// タスク一覧の要素 DTO
@@ -133,7 +124,7 @@ where
       }
    }
    let all_user_ids: Vec<UserId> = user_id_set.into_iter().collect();
-   let user_names = resolve_user_names(&state.user_repository, &all_user_ids).await?;
+   let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
 
    let response = ApiResponse::new(
       tasks
@@ -166,8 +157,9 @@ where
    let detail = state.usecase.get_task(step_id, tenant_id, user_id).await?;
 
    // ユーザー名を解決
-   let user_ids = collect_user_ids_from_workflow(&detail.workflow, &detail.steps);
-   let user_names = resolve_user_names(&state.user_repository, &user_ids).await?;
+   let user_ids =
+      crate::usecase::workflow::collect_user_ids_from_workflow(&detail.workflow, &detail.steps);
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
    let response = ApiResponse::new(TaskDetailDto {
       step:     WorkflowStepDto::from_step(&detail.step, &user_names),

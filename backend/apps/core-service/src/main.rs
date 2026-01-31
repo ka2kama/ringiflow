@@ -141,20 +141,23 @@ async fn main() -> anyhow::Result<()> {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
    let workflow_user_repo = PostgresUserRepository::new(pool.clone());
-   let workflow_usecase = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+   let workflow_usecase = WorkflowUseCaseImpl::new(
+      definition_repo,
+      instance_repo,
+      step_repo,
+      workflow_user_repo,
+   );
    let workflow_state = Arc::new(WorkflowState {
-      usecase:         workflow_usecase,
-      user_repository: workflow_user_repo,
+      usecase: workflow_usecase,
    });
 
    // タスク関連の依存コンポーネント
    let task_instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let task_step_repo = PostgresWorkflowStepRepository::new(pool.clone());
    let task_user_repo = PostgresUserRepository::new(pool.clone());
-   let task_usecase = TaskUseCaseImpl::new(task_instance_repo, task_step_repo);
+   let task_usecase = TaskUseCaseImpl::new(task_instance_repo, task_step_repo, task_user_repo);
    let task_state = Arc::new(TaskState {
-      usecase:         task_usecase,
-      user_repository: task_user_repo,
+      usecase: task_usecase,
    });
 
    // ダッシュボード関連の依存コンポーネント
