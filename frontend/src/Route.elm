@@ -1,4 +1,4 @@
-module Route exposing (Route(..), fromUrl, toString)
+module Route exposing (Route(..), fromUrl, isRouteActive, toString)
 
 {-| URL ルーティングモジュール
 
@@ -198,3 +198,36 @@ toString route =
 
         NotFound ->
             "/not-found"
+
+
+{-| 現在のルートがナビゲーション項目に対応するかを判定
+
+子ルートの場合、親ルートもアクティブとして扱う:
+
+  - `WorkflowNew`, `WorkflowDetail _` → `Workflows` がアクティブ
+  - `TaskDetail _` → `Tasks` がアクティブ
+
+-}
+isRouteActive : Route -> Route -> Bool
+isRouteActive navRoute currentRoute =
+    case ( navRoute, currentRoute ) of
+        ( Home, Home ) ->
+            True
+
+        ( Workflows, Workflows ) ->
+            True
+
+        ( Workflows, WorkflowNew ) ->
+            True
+
+        ( Workflows, WorkflowDetail _ ) ->
+            True
+
+        ( Tasks, Tasks ) ->
+            True
+
+        ( Tasks, TaskDetail _ ) ->
+            True
+
+        _ ->
+            False
