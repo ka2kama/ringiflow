@@ -275,9 +275,10 @@ view model =
 
 viewHeader : Html Msg
 viewHeader =
-    div [ class "mb-6" ]
-        [ a [ href (Route.toString Route.Workflows), class "text-sm text-primary-600 hover:text-primary-700 hover:underline" ]
-            [ text "← 一覧に戻る" ]
+    nav [ class "mb-6 flex items-center gap-2 text-sm" ]
+        [ a [ href (Route.toString Route.Home), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "ダッシュボード" ]
+        , span [ class "text-secondary-400" ] [ text "/" ]
+        , a [ href (Route.toString Route.Workflows), class "text-primary-600 hover:text-primary-700 hover:underline" ] [ text "申請一覧" ]
         ]
 
 
@@ -339,11 +340,8 @@ viewWorkflowDetail workflow maybeDefinition isSubmitting shared =
         [ viewTitle workflow
         , viewStatus workflow
         , viewApprovalButtons workflow isSubmitting shared
-        , hr [ class "border-t border-secondary-100" ] []
         , viewSteps workflow
-        , hr [ class "border-t border-secondary-100" ] []
         , viewBasicInfo workflow
-        , hr [ class "border-t border-secondary-100" ] []
         , viewFormData workflow maybeDefinition
         ]
 
