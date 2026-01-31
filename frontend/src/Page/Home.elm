@@ -9,6 +9,7 @@ KPI 統計情報（承認待ち、申請中、本日完了）とクイックア�
 
 import Api exposing (ApiError)
 import Api.Dashboard as DashboardApi
+import Component.LoadingSpinner as LoadingSpinner
 import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -101,10 +102,7 @@ viewStats remoteStats =
             text ""
 
         Loading ->
-            div [ class "flex flex-col items-center justify-center py-8" ]
-                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
-                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
-                ]
+            LoadingSpinner.view
 
         Failure _ ->
             div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]

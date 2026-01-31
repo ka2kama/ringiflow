@@ -22,6 +22,7 @@ module Page.Task.List exposing
 
 import Api exposing (ApiError)
 import Api.Task as TaskApi
+import Component.LoadingSpinner as LoadingSpinner
 import Data.Task exposing (TaskItem)
 import Data.WorkflowInstance as WorkflowInstance
 import Html exposing (..)
@@ -131,10 +132,7 @@ viewContent model =
             text ""
 
         Loading ->
-            div [ class "flex flex-col items-center justify-center py-8" ]
-                [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
-                , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
-                ]
+            LoadingSpinner.view
 
         Failure _ ->
             viewError
