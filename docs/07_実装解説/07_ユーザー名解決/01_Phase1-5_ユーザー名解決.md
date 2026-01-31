@@ -23,9 +23,12 @@ API レスポンスの `initiated_by` / `assigned_to` を UUID 文字列から `
 
 | ファイル | 責務 |
 |---------|------|
-| [`handler/workflow.rs`](../../../backend/apps/core-service/src/handler/workflow.rs) | `UserRefDto`, `resolve_user_names`, DTO 変換関数 |
+| [`usecase.rs`](../../../backend/apps/core-service/src/usecase.rs) | 共有 `resolve_user_names` 関数 |
+| [`usecase/workflow.rs`](../../../backend/apps/core-service/src/usecase/workflow.rs) | `resolve_user_names` メソッド、`collect_user_ids_from_workflow` |
+| [`usecase/task.rs`](../../../backend/apps/core-service/src/usecase/task.rs) | `resolve_user_names` メソッド |
+| [`handler/workflow.rs`](../../../backend/apps/core-service/src/handler/workflow.rs) | `UserRefDto`, `to_user_ref`, DTO 変換関数 |
 | [`handler/task.rs`](../../../backend/apps/core-service/src/handler/task.rs) | タスク関連 DTO 変換関数 |
-| [`main.rs`](../../../backend/apps/core-service/src/main.rs) | State への `UserRepository` 追加 |
+| [`main.rs`](../../../backend/apps/core-service/src/main.rs) | State 構築（`UserRepository` をユースケースに注入） |
 
 ### Phase 3: BFF レスポンス型
 
@@ -69,26 +72,41 @@ UUID 文字列の代わりに `{ id, name }` ペアを返すことで、フロ�
 
 ### ユーザー名一括解決
 
+`usecase.rs`（親モジュール）に共有関数として配置し、各ユースケースのメソッドから委譲する:
+
 ```rust
+// usecase.rs — 共有関数
 pub(crate) async fn resolve_user_names(
-    user_repository: &impl UserRepository,
+    user_repo: &impl UserRepository,
     user_ids: &[UserId],
-) -> HashMap<UserId, String> {
-    // HashSet で重複排除 → find_by_ids で一括取得 → HashMap に変換
+) -> Result<HashMap<UserId, String>, CoreError> {
+    // 空チェック → find_by_ids で一括取得 → HashMap に変換
+}
+
+// usecase/workflow.rs — メソッドとして公開
+impl<D, I, S, U> WorkflowUseCaseImpl<D, I, S, U> {
+    pub async fn resolve_user_names(&self, user_ids: &[UserId]) -> Result<HashMap<UserId, String>, CoreError> {
+        crate::usecase::resolve_user_names(&self.user_repo, user_ids).await
+    }
 }
 ```
 
 ワークフロー内の全ユーザー ID（`initiated_by` + 各ステップの `assigned_to`）を収集し、1回のクエリで一括取得する。存在しないユーザーは `（不明なユーザー）` にフォールバック。
 
-### State の型パラメータ拡張
+### State の型パラメータ
 
 ```rust
-// Before
-pub struct WorkflowState<D, I, S> { ... }
-// After
+// UserRepository はユースケースが保持する
+pub struct WorkflowUseCaseImpl<D, I, S, U> {
+    definition_repo: D,
+    instance_repo:   I,
+    step_repo:       S,
+    user_repo:       U,
+}
+
+// State はユースケースのみ保持
 pub struct WorkflowState<D, I, S, U> {
-    pub usecase: WorkflowUseCaseImpl<D, I, S>,
-    pub user_repository: U,
+    pub usecase: WorkflowUseCaseImpl<D, I, S, U>,
 }
 ```
 
@@ -106,21 +124,25 @@ just test-rust-integration  # 統合テスト（DB 接続が必要）
 
 ## 設計解説
 
-### 1. ハンドラ層でのユーザー名解決（CQRS Query 側の責務）
+### 1. ユースケース層でのユーザー名解決
 
-場所: [`handler/workflow.rs`](../../../backend/apps/core-service/src/handler/workflow.rs) の `resolve_user_names` 関数
+場所: [`usecase/workflow.rs`](../../../backend/apps/core-service/src/usecase/workflow.rs) の `resolve_user_names` メソッド
 
-なぜこの設計か:
-- ユーザー名はプレゼンテーション層の関心事であり、ドメインロジックには不要
-- ユースケース層に `UserRepository` を追加すると、`WorkflowUseCaseImpl<D, I, S>` → `<D, I, S, U>` となり影響範囲が大きい
+当初はハンドラ層に配置したが、「ハンドラから直接リポジトリを呼ぶのはレイヤードアーキテクチャの違反（割れ窓）」と判断し、ユースケース層に移動した。
 
-代替案:
-- ドメインサービスで解決する → ドメイン層がインフラ依存になるため却下
-- BFF で解決する → Core Service に別 API コールが必要で N+1 問題が発生するため却下
+なぜユースケース層か:
+- `handler → usecase → repository` の依存方向を維持する
+- YAGNI/KISS と割れ窓理論は両立する。影響範囲の大きさは正当なコスト
+- DTO 変換（`UserRefDto`, `to_user_ref`）はハンドラに残す（プレゼンテーション層の責務）
+
+却下した代替案:
+- ハンドラで直接呼ぶ → レイヤードアーキテクチャ違反
+- ドメインサービスで解決する → ドメイン層がインフラ依存になる
+- BFF で解決する → Core Service に別 API コールが必要で N+1 問題が発生する
 
 ### 2. HashSet による ID 重複排除
 
-場所: [`handler/workflow.rs`](../../../backend/apps/core-service/src/handler/workflow.rs) の `collect_user_ids_from_workflow` 関数
+場所: [`usecase/workflow.rs`](../../../backend/apps/core-service/src/usecase/workflow.rs) の `collect_user_ids_from_workflow` 関数
 
 なぜこの設計か:
 - `UserId` は `Hash + Eq` を実装しているが `Ord` を実装していない
