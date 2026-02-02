@@ -9,6 +9,7 @@ KPI 統計情報（承認待ち、申請中、本日完了）とクイックア�
 
 import Api exposing (ApiError)
 import Api.Dashboard as DashboardApi
+import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.Dashboard exposing (DashboardStats)
 import Html exposing (..)
@@ -147,19 +148,19 @@ viewStatCard label value bgColorClass textColorClass =
 viewQuickActions : Html msg
 viewQuickActions =
     div [ class "mt-6 flex flex-wrap gap-3" ]
-        [ a
-            [ href (Route.toString Route.Workflows)
-            , class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-success-700"
-            ]
+        [ Button.link
+            { variant = Button.Success
+            , href = Route.toString Route.Workflows
+            }
             [ text "申請一覧" ]
-        , a
-            [ href (Route.toString Route.WorkflowNew)
-            , class "inline-flex items-center rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-            ]
+        , Button.link
+            { variant = Button.Primary
+            , href = Route.toString Route.WorkflowNew
+            }
             [ text "新規申請" ]
-        , a
-            [ href (Route.toString Route.Tasks)
-            , class "inline-flex items-center rounded-lg bg-warning-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-warning-700"
-            ]
+        , Button.link
+            { variant = Button.Warning
+            , href = Route.toString Route.Tasks
+            }
             [ text "タスク一覧" ]
         ]

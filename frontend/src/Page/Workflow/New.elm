@@ -30,6 +30,7 @@ module Page.Workflow.New exposing
 import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
+import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance exposing (WorkflowInstance)
@@ -751,16 +752,16 @@ viewActions : Model -> Html Msg
 viewActions model =
     div
         [ class "mt-8 flex justify-end gap-4 border-t border-secondary-100 pt-4" ]
-        [ button
-            [ Html.Events.onClick SaveDraft
-            , disabled model.submitting
-            , class "rounded border border-secondary-100 bg-white px-6 py-3 cursor-pointer hover:bg-secondary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            ]
+        [ Button.view
+            { variant = Button.Outline
+            , disabled = model.submitting
+            , onClick = SaveDraft
+            }
             [ text "下書き保存" ]
-        , button
-            [ Html.Events.onClick Submit
-            , disabled model.submitting
-            , class "rounded border-0 bg-primary-600 px-6 py-3 text-white cursor-pointer hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            ]
+        , Button.view
+            { variant = Button.Primary
+            , disabled = model.submitting
+            , onClick = Submit
+            }
             [ text "申請する" ]
         ]

@@ -22,12 +22,13 @@ module Page.Task.List exposing
 
 import Api exposing (ApiError)
 import Api.Task as TaskApi
+import Component.Badge as Badge
+import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.Task exposing (TaskItem)
 import Data.WorkflowInstance as WorkflowInstance
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
@@ -146,7 +147,11 @@ viewError : Html Msg
 viewError =
     div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
         [ p [] [ text "データの取得に失敗しました。" ]
-        , button [ onClick Refresh, class "mt-2 inline-flex items-center rounded-lg border border-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50" ]
+        , Button.view
+            { variant = Button.Outline
+            , disabled = False
+            , onClick = Refresh
+            }
             [ text "再読み込み" ]
         ]
 
@@ -192,8 +197,10 @@ viewTaskRow zone task =
             ]
         , td [ class "px-4 py-3" ] [ text task.workflow.title ]
         , td [ class "px-4 py-3" ]
-            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.stepStatusToCssClass task.status) ]
-                [ text (WorkflowInstance.stepStatusToJapanese task.status) ]
+            [ Badge.view
+                { colorClass = WorkflowInstance.stepStatusToCssClass task.status
+                , label = WorkflowInstance.stepStatusToJapanese task.status
+                }
             ]
         , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate zone task.dueDate) ]
         , td [ class "px-4 py-3" ] [ text (DateFormat.formatMaybeDate zone task.startedAt) ]

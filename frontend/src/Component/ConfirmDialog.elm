@@ -25,6 +25,7 @@ module Component.ConfirmDialog exposing (ActionStyle(..), view)
 
 -}
 
+import Component.Button as Button
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -75,15 +76,17 @@ view config =
                 [ h2 [ class "text-lg font-semibold text-secondary-900" ] [ text config.title ]
                 , p [ class "mt-2 text-sm text-secondary-600" ] [ text config.message ]
                 , div [ class "mt-6 flex justify-end gap-3" ]
-                    [ button
-                        [ class "inline-flex items-center rounded-lg border border-secondary-300 bg-white px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50"
-                        , onClick config.onCancel
-                        ]
+                    [ Button.view
+                        { variant = Button.Outline
+                        , disabled = False
+                        , onClick = config.onCancel
+                        }
                         [ text config.cancelLabel ]
-                    , button
-                        [ class (confirmButtonClass config.actionStyle)
-                        , onClick config.onConfirm
-                        ]
+                    , Button.view
+                        { variant = actionStyleToVariant config.actionStyle
+                        , disabled = False
+                        , onClick = config.onConfirm
+                        }
                         [ text config.confirmLabel ]
                     ]
                 ]
@@ -91,17 +94,13 @@ view config =
         ]
 
 
-{-| ActionStyle に応じた確認ボタンの CSS クラス
+{-| ActionStyle を Button.Variant にマッピング
 -}
-confirmButtonClass : ActionStyle -> String
-confirmButtonClass actionStyle =
-    let
-        colorClasses =
-            case actionStyle of
-                Positive ->
-                    "bg-success-600 hover:bg-success-700"
+actionStyleToVariant : ActionStyle -> Button.Variant
+actionStyleToVariant actionStyle =
+    case actionStyle of
+        Positive ->
+            Button.Success
 
-                Destructive ->
-                    "bg-error-600 hover:bg-error-700"
-    in
-    "inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors " ++ colorClasses
+        Destructive ->
+            Button.Error

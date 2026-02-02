@@ -6,6 +6,7 @@ module Page.NotFound exposing (view)
 
 -}
 
+import Component.Button as Button
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
@@ -19,9 +20,9 @@ view =
             [ text "404" ]
         , p [ class "mb-8 text-lg text-secondary-500" ]
             [ text "お探しのページは存在しません。" ]
-        , a
-            [ href "/"
-            , class "inline-flex items-center rounded-lg bg-primary-600 px-6 py-3 font-medium text-white transition-colors hover:bg-primary-700"
-            ]
+        , Button.link
+            { variant = Button.Primary
+            , href = "/"
+            }
             [ text "ホームに戻る" ]
         ]
