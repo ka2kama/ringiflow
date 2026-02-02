@@ -104,11 +104,15 @@ viewField :
     -> (String -> msg)
     -> Html msg
 viewField field value maybeError onInputMsg =
+    let
+        errorId =
+            field.id ++ "-error"
+    in
     div
         [ class "mb-4" ]
         [ viewLabel field
-        , viewInput field value onInputMsg
-        , viewError maybeError
+        , viewInput field value maybeError onInputMsg
+        , viewError errorId maybeError
         ]
 
 
@@ -135,20 +139,20 @@ Elm の case 式による網羅性チェックにより、
 新しい FieldType を追加した際にコンパイラが警告を出す。
 
 -}
-viewInput : FormField -> String -> (String -> msg) -> Html msg
-viewInput field value onInputMsg =
+viewInput : FormField -> String -> Maybe String -> (String -> msg) -> Html msg
+viewInput field value maybeError onInputMsg =
     case field.fieldType of
         Text ->
-            viewTextInput field value onInputMsg
+            viewTextInput field value maybeError onInputMsg
 
         Number ->
-            viewNumberInput field value onInputMsg
+            viewNumberInput field value maybeError onInputMsg
 
         Select options ->
-            viewSelectInput field value options onInputMsg
+            viewSelectInput field value maybeError options onInputMsg
 
         Date ->
-            viewDateInput field value onInputMsg
+            viewDateInput field value maybeError onInputMsg
 
         File ->
             viewFileInput field
@@ -156,60 +160,66 @@ viewInput field value onInputMsg =
 
 {-| テキスト入力
 -}
-viewTextInput : FormField -> String -> (String -> msg) -> Html msg
-viewTextInput field value onInputMsg =
+viewTextInput : FormField -> String -> Maybe String -> (String -> msg) -> Html msg
+viewTextInput field value maybeError onInputMsg =
     input
-        [ type_ "text"
-        , id field.id
-        , name field.id
-        , Html.Attributes.value value
-        , placeholder (Maybe.withDefault "" field.placeholder)
-        , onInput onInputMsg
-        , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        ]
+        ([ type_ "text"
+         , id field.id
+         , name field.id
+         , Html.Attributes.value value
+         , placeholder (Maybe.withDefault "" field.placeholder)
+         , onInput onInputMsg
+         , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+         ]
+            ++ ariaErrorAttrs field.id maybeError
+        )
         []
 
 
 {-| 数値入力
 -}
-viewNumberInput : FormField -> String -> (String -> msg) -> Html msg
-viewNumberInput field value onInputMsg =
+viewNumberInput : FormField -> String -> Maybe String -> (String -> msg) -> Html msg
+viewNumberInput field value maybeError onInputMsg =
     input
-        [ type_ "number"
-        , id field.id
-        , name field.id
-        , Html.Attributes.value value
-        , placeholder (Maybe.withDefault "" field.placeholder)
-        , onInput onInputMsg
-        , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+        ([ type_ "number"
+         , id field.id
+         , name field.id
+         , Html.Attributes.value value
+         , placeholder (Maybe.withDefault "" field.placeholder)
+         , onInput onInputMsg
+         , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
 
-        -- 数値バリデーション属性を追加
-        , case field.validation.min of
+         -- 数値バリデーション属性を追加
+         , case field.validation.min of
             Just minVal ->
                 Html.Attributes.min (String.fromFloat minVal)
 
             Nothing ->
                 class ""
-        , case field.validation.max of
+         , case field.validation.max of
             Just maxVal ->
                 Html.Attributes.max (String.fromFloat maxVal)
 
             Nothing ->
                 class ""
-        ]
+         ]
+            ++ ariaErrorAttrs field.id maybeError
+        )
         []
 
 
 {-| ドロップダウン選択
 -}
-viewSelectInput : FormField -> String -> List FormField.SelectOption -> (String -> msg) -> Html msg
-viewSelectInput field value options onInputMsg =
+viewSelectInput : FormField -> String -> Maybe String -> List FormField.SelectOption -> (String -> msg) -> Html msg
+viewSelectInput field value maybeError options onInputMsg =
     select
-        [ id field.id
-        , name field.id
-        , onInput onInputMsg
-        , class "w-full cursor-pointer rounded border border-secondary-100 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        ]
+        ([ id field.id
+         , name field.id
+         , onInput onInputMsg
+         , class "w-full cursor-pointer rounded border border-secondary-100 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+         ]
+            ++ ariaErrorAttrs field.id maybeError
+        )
         (option
             [ Html.Attributes.value ""
             , selected (value == "")
@@ -229,16 +239,18 @@ viewSelectInput field value options onInputMsg =
 
 {-| 日付入力
 -}
-viewDateInput : FormField -> String -> (String -> msg) -> Html msg
-viewDateInput field value onInputMsg =
+viewDateInput : FormField -> String -> Maybe String -> (String -> msg) -> Html msg
+viewDateInput field value maybeError onInputMsg =
     input
-        [ type_ "date"
-        , id field.id
-        , name field.id
-        , Html.Attributes.value value
-        , onInput onInputMsg
-        , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-        ]
+        ([ type_ "date"
+         , id field.id
+         , name field.id
+         , Html.Attributes.value value
+         , onInput onInputMsg
+         , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+         ]
+            ++ ariaErrorAttrs field.id maybeError
+        )
         []
 
 
@@ -264,14 +276,37 @@ viewFileInput field =
         ]
 
 
+
+-- ERROR & ACCESSIBILITY
+
+
+{-| バリデーションエラー時のアクセシビリティ属性
+
+エラーがある場合、`aria-invalid` と `aria-describedby` を設定する。
+スクリーンリーダーがエラー状態とエラーメッセージの関連を認識できるようになる。
+
+-}
+ariaErrorAttrs : String -> Maybe String -> List (Html.Attribute msg)
+ariaErrorAttrs fieldId maybeError =
+    case maybeError of
+        Just _ ->
+            [ attribute "aria-invalid" "true"
+            , attribute "aria-describedby" (fieldId ++ "-error")
+            ]
+
+        Nothing ->
+            []
+
+
 {-| エラーメッセージを描画
 -}
-viewError : Maybe String -> Html msg
-viewError maybeError =
+viewError : String -> Maybe String -> Html msg
+viewError errorId maybeError =
     case maybeError of
         Just errorMsg ->
             div
-                [ class "mt-1 text-sm text-error-600"
+                [ id errorId
+                , class "mt-1 text-sm text-error-600"
                 , attribute "role" "alert"
                 ]
                 [ text errorMsg ]

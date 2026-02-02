@@ -29,6 +29,7 @@ import Api exposing (ApiError)
 import Api.ErrorMessage as ErrorMessage
 import Api.Task as TaskApi
 import Api.Workflow as WorkflowApi
+import Browser.Dom
 import Browser.Events
 import Component.Badge as Badge
 import Component.Button as Button
@@ -49,6 +50,7 @@ import Json.Decode as Decode
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
+import Task
 import Time
 import Util.DateFormat as DateFormat
 import Util.KeyEvent as KeyEvent
@@ -131,6 +133,7 @@ type Msg
     | GotApproveResult (Result ApiError WorkflowInstance)
     | GotRejectResult (Result ApiError WorkflowInstance)
     | DismissMessage
+    | NoOp
 
 
 {-| 状態更新
@@ -170,12 +173,12 @@ update msg model =
 
         ClickApprove step ->
             ( { model | pendingAction = Just (ConfirmApprove step) }
-            , Cmd.none
+            , focusDialogCancel
             )
 
         ClickReject step ->
             ( { model | pendingAction = Just (ConfirmReject step) }
-            , Cmd.none
+            , focusDialogCancel
             )
 
         ConfirmAction ->
@@ -208,6 +211,9 @@ update msg model =
             ( { model | errorMessage = Nothing, successMessage = Nothing }
             , Cmd.none
             )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 {-| 承認 API 呼び出し
@@ -250,6 +256,17 @@ rejectStep model step =
 
         _ ->
             Cmd.none
+
+
+{-| 確認ダイアログのキャンセルボタンにフォーカスを移動
+
+ダイアログ表示時にキーボード操作でアクセスできるようにする。
+
+-}
+focusDialogCancel : Cmd Msg
+focusDialogCancel =
+    Browser.Dom.focus ConfirmDialog.cancelButtonId
+        |> Task.attempt (\_ -> NoOp)
 
 
 {-| 空文字列を Nothing に変換
@@ -426,7 +443,7 @@ viewCommentInput comment =
         [ label [ for "approval-comment", class "block text-sm font-medium text-secondary-700" ] [ text "コメント（任意）" ]
         , textarea
             [ id "approval-comment"
-            , class "w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            , class "w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
             , value comment
             , onInput UpdateComment
             , placeholder "承認/却下の理由を入力..."

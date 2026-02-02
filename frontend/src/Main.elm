@@ -469,13 +469,15 @@ view : Model -> Browser.Document Msg
 view model =
     { title = pageTitle model.route ++ " | RingiFlow"
     , body =
-        [ div [ class "flex h-screen bg-secondary-50 overflow-hidden" ]
+        [ a [ class "sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-4 focus:text-primary-600", href "#main-content" ]
+            [ text "メインコンテンツにスキップ" ]
+        , div [ class "flex h-screen bg-secondary-50 overflow-hidden" ]
             [ viewSidebar model.route model.sidebarOpen model.shared
             , viewMobileOverlay model.sidebarOpen
             , div [ class "flex flex-col flex-1 overflow-hidden" ]
                 [ viewTopBar
                 , main_
-                    [ class "flex-1 overflow-y-auto p-6" ]
+                    [ id "main-content", class "flex-1 overflow-y-auto p-6" ]
                     [ div [ class "mx-auto max-w-5xl" ]
                         [ viewPage model ]
                     ]
@@ -611,6 +613,7 @@ viewTopBar =
         [ -- ハンバーガーボタン（モバイルのみ）
           button
             [ class "mr-4 rounded-lg p-2 text-secondary-500 hover:bg-secondary-50 lg:hidden"
+            , attribute "aria-label" "メニューを開く"
             , onClick ToggleSidebar
             ]
             [ iconMenu ]

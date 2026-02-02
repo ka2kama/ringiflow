@@ -51,9 +51,9 @@ viewSuccessMessage : msg -> Maybe String -> Html msg
 viewSuccessMessage onDismiss maybeMessage =
     case maybeMessage of
         Just message ->
-            div [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700" ]
+            div [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700", attribute "role" "alert" ]
                 [ text message
-                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick onDismiss ] [ text "×" ]
+                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", attribute "aria-label" "閉じる", onClick onDismiss ] [ text "×" ]
                 ]
 
         Nothing ->
@@ -64,9 +64,9 @@ viewErrorMessage : msg -> Maybe String -> Html msg
 viewErrorMessage onDismiss maybeMessage =
     case maybeMessage of
         Just message ->
-            div [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700" ]
+            div [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700", attribute "role" "alert" ]
                 [ text message
-                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", onClick onDismiss ] [ text "×" ]
+                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", attribute "aria-label" "閉じる", onClick onDismiss ] [ text "×" ]
                 ]
 
         Nothing ->
