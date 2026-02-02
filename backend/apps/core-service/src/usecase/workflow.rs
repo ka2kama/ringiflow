@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::Version,
+   value_objects::{DisplayNumber, Version},
    workflow::{
       WorkflowDefinition,
       WorkflowDefinitionId,
@@ -157,10 +157,12 @@ where
       }
 
       // 3. WorkflowInstance を draft として作成
+      // TODO: Phase A-2 で採番サービスに置き換え
       let instance = WorkflowInstance::new(
          tenant_id,
          input.definition_id,
          definition.version(),
+         DisplayNumber::new(1).unwrap(),
          input.title,
          input.form_data,
          user_id,
@@ -973,6 +975,7 @@ mod tests {
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
+         DisplayNumber::new(100).unwrap(),
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
@@ -1053,6 +1056,7 @@ mod tests {
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
+         DisplayNumber::new(100).unwrap(),
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
@@ -1108,6 +1112,7 @@ mod tests {
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
+         DisplayNumber::new(100).unwrap(),
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
@@ -1164,6 +1169,7 @@ mod tests {
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
+         DisplayNumber::new(100).unwrap(),
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
@@ -1223,6 +1229,7 @@ mod tests {
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
+         DisplayNumber::new(100).unwrap(),
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
@@ -1313,6 +1320,7 @@ mod tests {
          tenant_id.clone(),
          published_definition.id().clone(),
          Version::initial(),
+         DisplayNumber::new(100).unwrap(),
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                title, form_data, status, version, current_step_id,\n                initiated_by, submitted_at, completed_at,\n                created_at, updated_at\n            FROM workflow_instances\n            WHERE tenant_id = $1 AND initiated_by = $2\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                display_number, title, form_data, status, version,\n                current_step_id, initiated_by, submitted_at,\n                completed_at, created_at, updated_at\n            FROM workflow_instances\n            WHERE tenant_id = $1 AND initiated_by = $2\n            ORDER BY created_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -25,51 +25,56 @@
       },
       {
         "ordinal": 4,
+        "name": "display_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
         "name": "title",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "form_data",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "version",
         "type_info": "Int4"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "current_step_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "initiated_by",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "submitted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "completed_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -89,6 +94,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       true,
@@ -97,5 +103,5 @@
       false
     ]
   },
-  "hash": "68c08b51468ef50231408dc5ca45f4d532be790500d87c57a8a7eccf82890ceb"
+  "hash": "f3f1746f9d607ee5327f43d774a22525bedf0cb5a0646d70fcf59d47c553b4df"
 }
