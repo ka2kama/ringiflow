@@ -27,11 +27,13 @@ module Page.Workflow.List exposing
 
 import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
+import Component.Badge as Badge
+import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.WorkflowInstance as WorkflowInstance exposing (Status, WorkflowInstance)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onInput)
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
@@ -143,7 +145,10 @@ viewHeader : Html Msg
 viewHeader =
     div [ class "flex items-center justify-between mb-6" ]
         [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "申請一覧" ]
-        , a [ href (Route.toString Route.WorkflowNew), class "inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700" ]
+        , Button.link
+            { variant = Button.Primary
+            , href = Route.toString Route.WorkflowNew
+            }
             [ text "+ 新規申請" ]
         ]
 
@@ -168,7 +173,11 @@ viewError : Html Msg
 viewError =
     div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
         [ p [] [ text "データの取得に失敗しました。" ]
-        , button [ onClick Refresh, class "mt-2 inline-flex items-center rounded-lg border border-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50" ]
+        , Button.view
+            { variant = Button.Outline
+            , disabled = False
+            , onClick = Refresh
+            }
             [ text "再読み込み" ]
         ]
 
@@ -189,8 +198,13 @@ viewWorkflowList zone statusFilter workflows =
         , if List.isEmpty filteredWorkflows then
             div [ class "py-12 text-center" ]
                 [ p [ class "text-secondary-500" ] [ text "申請がありません" ]
-                , a [ href (Route.toString Route.WorkflowNew), class "mt-4 inline-flex items-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-700" ]
-                    [ text "新規申請を作成" ]
+                , div [ class "mt-4" ]
+                    [ Button.link
+                        { variant = Button.Primary
+                        , href = Route.toString Route.WorkflowNew
+                        }
+                        [ text "新規申請を作成" ]
+                    ]
                 ]
 
           else
@@ -275,8 +289,10 @@ viewWorkflowRow zone workflow =
                 [ text workflow.title ]
             ]
         , td [ class "px-4 py-3" ]
-            [ span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
-                [ text (WorkflowInstance.statusToJapanese workflow.status) ]
+            [ Badge.view
+                { colorClass = WorkflowInstance.statusToCssClass workflow.status
+                , label = WorkflowInstance.statusToJapanese workflow.status
+                }
             ]
         , td [ class "px-4 py-3" ] [ text (DateFormat.formatDate zone workflow.createdAt) ]
         ]

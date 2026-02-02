@@ -32,6 +32,8 @@ import Api.ErrorMessage as ErrorMessage
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Browser.Events
+import Component.Badge as Badge
+import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
@@ -41,7 +43,7 @@ import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, Wor
 import Form.DynamicForm as DynamicForm
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onInput)
 import Json.Decode as Decode
 import RemoteData exposing (RemoteData(..))
 import Route
@@ -347,7 +349,11 @@ viewError : Html Msg
 viewError =
     div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
         [ p [] [ text "データの取得に失敗しました。" ]
-        , button [ onClick Refresh, class "mt-2 inline-flex items-center rounded-lg border border-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-50" ]
+        , Button.view
+            { variant = Button.Outline
+            , disabled = False
+            , onClick = Refresh
+            }
             [ text "再読み込み" ]
         ]
 
@@ -373,8 +379,10 @@ viewStatus : WorkflowInstance -> Html Msg
 viewStatus workflow =
     div [ class "text-secondary-700" ]
         [ text "ステータス: "
-        , span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ WorkflowInstance.statusToCssClass workflow.status) ]
-            [ text (WorkflowInstance.statusToJapanese workflow.status) ]
+        , Badge.view
+            { colorClass = WorkflowInstance.statusToCssClass workflow.status
+            , label = WorkflowInstance.statusToJapanese workflow.status
+            }
         ]
 
 
@@ -546,11 +554,11 @@ viewCommentInput comment =
 viewApprovalButtons : WorkflowStep -> Bool -> Html Msg
 viewApprovalButtons step isSubmitting =
     div [ class "flex gap-3" ]
-        [ button
-            [ class "inline-flex items-center rounded-lg bg-success-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            , onClick (ClickApprove step)
-            , disabled isSubmitting
-            ]
+        [ Button.view
+            { variant = Button.Success
+            , disabled = isSubmitting
+            , onClick = ClickApprove step
+            }
             [ text
                 (if isSubmitting then
                     "処理中..."
@@ -559,11 +567,11 @@ viewApprovalButtons step isSubmitting =
                     "承認"
                 )
             ]
-        , button
-            [ class "inline-flex items-center rounded-lg bg-error-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            , onClick (ClickReject step)
-            , disabled isSubmitting
-            ]
+        , Button.view
+            { variant = Button.Error
+            , disabled = isSubmitting
+            , onClick = ClickReject step
+            }
             [ text
                 (if isSubmitting then
                     "処理中..."
