@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                title, form_data, status, version, current_step_id,\n                initiated_by, submitted_at, completed_at,\n                created_at, updated_at\n            FROM workflow_instances\n            WHERE tenant_id = $1\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                display_number, title, form_data, status, version,\n                current_step_id, initiated_by, submitted_at,\n                completed_at, created_at, updated_at\n            FROM workflow_instances\n            WHERE id = ANY($1) AND tenant_id = $2\n            ORDER BY created_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -25,61 +25,68 @@
       },
       {
         "ordinal": 4,
+        "name": "display_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
         "name": "title",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "form_data",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "version",
         "type_info": "Int4"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "current_step_id",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "initiated_by",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "submitted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "completed_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
+        "UuidArray",
         "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -96,5 +103,5 @@
       false
     ]
   },
-  "hash": "d17ef2b72d91ec6d0d491de9da3ce162e32267030f72e2bbd084a84e448c1d9f"
+  "hash": "7366f96c175d08936f3243d1efc7829f11353f5de6a54ad1b2e739cb22be4946"
 }

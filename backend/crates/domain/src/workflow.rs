@@ -37,7 +37,7 @@ use crate::{
    DomainError,
    tenant::TenantId,
    user::UserId,
-   value_objects::{Version, WorkflowName},
+   value_objects::{DisplayNumber, Version, WorkflowName},
 };
 
 // =========================================================================
@@ -354,6 +354,7 @@ pub struct WorkflowInstance {
    tenant_id: TenantId,
    definition_id: WorkflowDefinitionId,
    definition_version: Version,
+   display_number: DisplayNumber,
    title: String,
    form_data: JsonValue,
    status: WorkflowInstanceStatus,
@@ -372,6 +373,7 @@ impl WorkflowInstance {
       tenant_id: TenantId,
       definition_id: WorkflowDefinitionId,
       definition_version: Version,
+      display_number: DisplayNumber,
       title: String,
       form_data: JsonValue,
       initiated_by: UserId,
@@ -382,6 +384,7 @@ impl WorkflowInstance {
          tenant_id,
          definition_id,
          definition_version,
+         display_number,
          title,
          form_data,
          status: WorkflowInstanceStatus::Draft,
@@ -402,6 +405,7 @@ impl WorkflowInstance {
       tenant_id: TenantId,
       definition_id: WorkflowDefinitionId,
       definition_version: Version,
+      display_number: DisplayNumber,
       title: String,
       form_data: JsonValue,
       status: WorkflowInstanceStatus,
@@ -418,6 +422,7 @@ impl WorkflowInstance {
          tenant_id,
          definition_id,
          definition_version,
+         display_number,
          title,
          form_data,
          status,
@@ -447,6 +452,10 @@ impl WorkflowInstance {
 
    pub fn definition_version(&self) -> Version {
       self.definition_version
+   }
+
+   pub fn display_number(&self) -> DisplayNumber {
+      self.display_number
    }
 
    pub fn version(&self) -> Version {
@@ -1010,6 +1019,7 @@ mod tests {
          TenantId::new(),
          WorkflowDefinitionId::new(),
          Version::initial(),
+         DisplayNumber::new(1).unwrap(),
          "テスト申請".to_string(),
          json!({"field": "value"}),
          UserId::new(),

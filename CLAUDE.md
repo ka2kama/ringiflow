@@ -43,7 +43,8 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 ```bash
 just setup              # 初回セットアップ
 just dev-deps           # PostgreSQL, Redis を起動
-just check-all          # リント + テスト（コミット前に必須）
+just check              # リント + テスト（実装中の軽量チェック）
+just check-all          # リント + テスト + API テスト（プッシュ前に必須）
 just fmt                # 全体フォーマット
 ```
 
@@ -429,7 +430,7 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 ### Ready for Review
 
 ```bash
-just check-all  # lint + test
+just check-all  # lint + test + API test
 gh pr ready     # Draft を解除
 ```
 

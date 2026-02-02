@@ -13,6 +13,7 @@
 //! | 型 | ラップ対象 | 用途 |
 //! |---|-----------|------|
 //! | [`Version`] | `u32` | エンティティのバージョン番号 |
+//! | [`DisplayNumber`] | `i64` | 表示用連番（テナント内で一意） |
 //! | [`UserName`] | `String` | ユーザー表示名 |
 //! | [`WorkflowName`] | `String` | ワークフロー定義名 |
 
@@ -129,6 +130,75 @@ impl Default for Version {
 impl std::fmt::Display for Version {
    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       write!(f, "v{}", self.0)
+   }
+}
+
+// =========================================================================
+// DisplayNumber（表示用連番）
+// =========================================================================
+
+/// 表示用連番（値オブジェクト）
+///
+/// テナント内で一意な連番。ワークフローインスタンスなどの表示用 ID に使用する。
+/// 表示形式（例: `WF-42`）のプレフィックスはこの型の責務外。
+///
+/// # 不変条件
+///
+/// - 1 以上の正整数
+///
+/// # 使用例
+///
+/// ```rust
+/// use ringiflow_domain::value_objects::DisplayNumber;
+///
+/// let num = DisplayNumber::new(42).unwrap();
+/// assert_eq!(num.as_i64(), 42);
+/// assert_eq!(num.to_string(), "42");
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct DisplayNumber(i64);
+
+impl DisplayNumber {
+   /// 指定した値から表示用連番を作成する
+   ///
+   /// # バリデーション
+   ///
+   /// - 0 以下は無効（表示用連番は 1 以上）
+   ///
+   /// # エラー
+   ///
+   /// バリデーションに失敗した場合は `DomainError::Validation` を返す。
+   pub fn new(value: i64) -> Result<Self, DomainError> {
+      if value <= 0 {
+         return Err(DomainError::Validation(
+            "表示用連番は 1 以上である必要があります".to_string(),
+         ));
+      }
+      Ok(Self(value))
+   }
+
+   /// 内部の i64 値を取得する
+   pub fn as_i64(&self) -> i64 {
+      self.0
+   }
+}
+
+impl TryFrom<i64> for DisplayNumber {
+   type Error = DomainError;
+
+   /// i64 から DisplayNumber への変換を試みる
+   ///
+   /// # エラー
+   ///
+   /// - 値が 0 以下の場合は `DomainError::Validation` を返す
+   fn try_from(value: i64) -> Result<Self, Self::Error> {
+      Self::new(value)
+   }
+}
+
+impl std::fmt::Display for DisplayNumber {
+   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.0)
    }
 }
 
@@ -302,6 +372,46 @@ mod tests {
    #[test]
    fn test_バージョンのi32からの変換_負数は無効() {
       assert!(Version::try_from(-1).is_err());
+   }
+
+   // DisplayNumber のテスト
+
+   #[test]
+   fn test_表示用連番0は無効() {
+      assert!(DisplayNumber::new(0).is_err());
+   }
+
+   #[test]
+   fn test_表示用連番1は有効() {
+      let num = DisplayNumber::new(1).unwrap();
+      assert_eq!(num.as_i64(), 1);
+   }
+
+   #[test]
+   fn test_表示用連番の負数は無効() {
+      assert!(DisplayNumber::new(-1).is_err());
+   }
+
+   #[test]
+   fn test_表示用連番の最大値は有効() {
+      assert!(DisplayNumber::new(i64::MAX).is_ok());
+   }
+
+   #[test]
+   fn test_表示用連番のi64からの変換_0は無効() {
+      assert!(DisplayNumber::try_from(0_i64).is_err());
+   }
+
+   #[test]
+   fn test_表示用連番のi64からの変換_正数は有効() {
+      let num = DisplayNumber::try_from(42_i64).unwrap();
+      assert_eq!(num.as_i64(), 42);
+   }
+
+   #[test]
+   fn test_表示用連番の表示形式は数値のみ() {
+      let num = DisplayNumber::new(42).unwrap();
+      assert_eq!(num.to_string(), "42");
    }
 
    // UserName のテスト

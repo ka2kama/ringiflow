@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::Version,
+   value_objects::{DisplayNumber, Version},
    workflow::{WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId, WorkflowInstanceStatus},
 };
 use sqlx::PgPool;
@@ -149,16 +149,17 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             INSERT INTO workflow_instances (
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, version, current_step_id,
-                initiated_by, submitted_at, completed_at,
-                created_at, updated_at
+                display_number, title, form_data, status, version,
+                current_step_id, initiated_by, submitted_at,
+                completed_at, created_at, updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             "#,
          instance.id().as_uuid(),
          instance.tenant_id().as_uuid(),
          instance.definition_id().as_uuid(),
          instance.definition_version().as_i32(),
+         instance.display_number().as_i64(),
          instance.title(),
          instance.form_data(),
          instance.status().as_str(),
@@ -227,9 +228,9 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, version, current_step_id,
-                initiated_by, submitted_at, completed_at,
-                created_at, updated_at
+                display_number, title, form_data, status, version,
+                current_step_id, initiated_by, submitted_at,
+                completed_at, created_at, updated_at
             FROM workflow_instances
             WHERE id = $1 AND tenant_id = $2
             "#,
@@ -248,6 +249,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          TenantId::from_uuid(row.tenant_id),
          WorkflowDefinitionId::from_uuid(row.definition_id),
          Version::new(row.definition_version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         DisplayNumber::try_from(row.display_number)
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.title,
          row.form_data,
@@ -274,9 +277,9 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, version, current_step_id,
-                initiated_by, submitted_at, completed_at,
-                created_at, updated_at
+                display_number, title, form_data, status, version,
+                current_step_id, initiated_by, submitted_at,
+                completed_at, created_at, updated_at
             FROM workflow_instances
             WHERE tenant_id = $1
             ORDER BY created_at DESC
@@ -294,6 +297,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                TenantId::from_uuid(row.tenant_id),
                WorkflowDefinitionId::from_uuid(row.definition_id),
                Version::new(row.definition_version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               DisplayNumber::try_from(row.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.title,
                row.form_data,
@@ -324,9 +329,9 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, version, current_step_id,
-                initiated_by, submitted_at, completed_at,
-                created_at, updated_at
+                display_number, title, form_data, status, version,
+                current_step_id, initiated_by, submitted_at,
+                completed_at, created_at, updated_at
             FROM workflow_instances
             WHERE tenant_id = $1 AND initiated_by = $2
             ORDER BY created_at DESC
@@ -345,6 +350,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                TenantId::from_uuid(row.tenant_id),
                WorkflowDefinitionId::from_uuid(row.definition_id),
                Version::new(row.definition_version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               DisplayNumber::try_from(row.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.title,
                row.form_data,
@@ -381,9 +388,9 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
-                title, form_data, status, version, current_step_id,
-                initiated_by, submitted_at, completed_at,
-                created_at, updated_at
+                display_number, title, form_data, status, version,
+                current_step_id, initiated_by, submitted_at,
+                completed_at, created_at, updated_at
             FROM workflow_instances
             WHERE id = ANY($1) AND tenant_id = $2
             ORDER BY created_at DESC
@@ -402,6 +409,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                TenantId::from_uuid(row.tenant_id),
                WorkflowDefinitionId::from_uuid(row.definition_id),
                Version::new(row.definition_version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               DisplayNumber::try_from(row.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.title,
                row.form_data,
