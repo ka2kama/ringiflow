@@ -58,4 +58,4 @@ done
 
 # API テスト実行
 echo "API テストを実行中..."
-hurl --test --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
+hurl --test --jobs 1 --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl

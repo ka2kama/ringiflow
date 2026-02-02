@@ -159,9 +159,9 @@ where
 
       // 3. WorkflowInstance を draft として作成
       // TODO: Phase A-2 で採番サービスに置き換え
-      // 暫定: マイクロ秒精度のタイムスタンプを使用（ミリ秒ではパラレルテストで衝突する）
+      // 暫定: タイムスタンプベースの一意な値を使用（ユニーク制約に対応）
       let display_number =
-         DisplayNumber::new(Utc::now().timestamp_micros()).expect("タイムスタンプは正の値");
+         DisplayNumber::new(Utc::now().timestamp_millis()).expect("タイムスタンプは正の値");
       let instance = WorkflowInstance::new(
          tenant_id,
          input.definition_id,
