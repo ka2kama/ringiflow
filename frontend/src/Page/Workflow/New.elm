@@ -642,7 +642,7 @@ viewFormInputs model definition =
                 , Html.Attributes.value model.title
                 , Html.Events.onInput UpdateTitle
                 , placeholder "申請のタイトルを入力"
-                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
                 ]
                 []
             , viewTitleError model
@@ -679,7 +679,7 @@ viewApproverSection model =
                 , Html.Attributes.value model.approverInput
                 , Html.Events.onInput UpdateApproverInput
                 , placeholder "承認者のユーザー ID を入力"
-                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
                 ]
                 []
             , viewApproverError model

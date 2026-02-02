@@ -1,4 +1,4 @@
-module Component.ConfirmDialog exposing (ActionStyle(..), view)
+module Component.ConfirmDialog exposing (ActionStyle(..), cancelButtonId, view)
 
 {-| 確認ダイアログコンポーネント
 
@@ -76,11 +76,12 @@ view config =
                 [ h2 [ class "text-lg font-semibold text-secondary-900" ] [ text config.title ]
                 , p [ class "mt-2 text-sm text-secondary-600" ] [ text config.message ]
                 , div [ class "mt-6 flex justify-end gap-3" ]
-                    [ Button.view
+                    [ Button.viewWithAttrs
                         { variant = Button.Outline
                         , disabled = False
                         , onClick = config.onCancel
                         }
+                        [ id cancelButtonId ]
                         [ text config.cancelLabel ]
                     , Button.view
                         { variant = actionStyleToVariant config.actionStyle
@@ -92,6 +93,16 @@ view config =
                 ]
             ]
         ]
+
+
+{-| キャンセルボタンの HTML id
+
+ダイアログ表示時の `Browser.Dom.focus` ターゲットとして使用する。
+
+-}
+cancelButtonId : String
+cancelButtonId =
+    "confirm-dialog-cancel"
 
 
 {-| ActionStyle を Button.Variant にマッピング

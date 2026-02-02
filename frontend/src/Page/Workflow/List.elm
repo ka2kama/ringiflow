@@ -232,8 +232,8 @@ viewStatusFilter currentFilter =
             currentFilter == maybeStatus
     in
     div [ class "mb-4 flex items-center gap-2" ]
-        [ label [] [ text "ステータス: " ]
-        , select [ onInput (statusFromFilterValue >> SetStatusFilter), class "rounded border border-secondary-100 bg-white px-3 py-1.5 text-sm" ]
+        [ label [ for "status-filter" ] [ text "ステータス: " ]
+        , select [ id "status-filter", onInput (statusFromFilterValue >> SetStatusFilter), class "rounded border border-secondary-100 bg-white px-3 py-1.5 text-sm" ]
             (List.map
                 (\( maybeStatus, label_ ) ->
                     option

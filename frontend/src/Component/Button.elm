@@ -1,4 +1,4 @@
-module Component.Button exposing (Variant(..), link, variantClass, view)
+module Component.Button exposing (Variant(..), link, variantClass, view, viewWithAttrs)
 
 {-| ボタンコンポーネント
 
@@ -83,13 +83,33 @@ view :
     }
     -> List (Html msg)
     -> Html msg
-view config children =
+view config =
+    viewWithAttrs config []
+
+
+{-| 追加属性付きアクションボタン
+
+`view` と同じだが、`id` 等の追加属性を指定できる。
+`Browser.Dom.focus` のターゲットにする場合などに使用する。
+
+-}
+viewWithAttrs :
+    { variant : Variant
+    , disabled : Bool
+    , onClick : msg
+    }
+    -> List (Html.Attribute msg)
+    -> List (Html msg)
+    -> Html msg
+viewWithAttrs config extraAttrs children =
     button
-        [ type_ "button"
-        , class (baseClass ++ " " ++ variantClass config.variant ++ " disabled:opacity-50 disabled:cursor-not-allowed")
-        , disabled config.disabled
-        , onClick config.onClick
-        ]
+        ([ type_ "button"
+         , class (baseClass ++ " " ++ variantClass config.variant ++ " disabled:opacity-50 disabled:cursor-not-allowed")
+         , disabled config.disabled
+         , onClick config.onClick
+         ]
+            ++ extraAttrs
+        )
         children
 
 
