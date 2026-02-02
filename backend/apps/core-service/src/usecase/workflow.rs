@@ -4,6 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use chrono::Utc;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -158,11 +159,14 @@ where
 
       // 3. WorkflowInstance を draft として作成
       // TODO: Phase A-2 で採番サービスに置き換え
+      // 暫定: タイムスタンプベースの一意な値を使用（ユニーク制約に対応）
+      let display_number =
+         DisplayNumber::new(Utc::now().timestamp_millis()).expect("タイムスタンプは正の値");
       let instance = WorkflowInstance::new(
          tenant_id,
          input.definition_id,
          definition.version(),
-         DisplayNumber::new(1).unwrap(),
+         display_number,
          input.title,
          input.form_data,
          user_id,
