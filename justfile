@@ -297,8 +297,11 @@ test-api: api-test-deps api-test-reset-db
 # 全チェック
 # =============================================================================
 
-# プッシュ前の全チェック（リント、テスト、ビルド、SQLx キャッシュ同期）
-check-all: lint test build-elm sqlx-check
+# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期）
+check: lint test test-rust-integration build-elm sqlx-check
+
+# プッシュ前の全チェック（軽量チェック + API テスト）
+check-all: check test-api
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック
