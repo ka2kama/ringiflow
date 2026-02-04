@@ -276,6 +276,11 @@ pub struct WorkflowState<D, I, S, U, C> {
    pub usecase: WorkflowUseCaseImpl<D, I, S, U, C>,
 }
 
+/// ハンドラ関数の State 型エイリアス
+///
+/// `State<Arc<WorkflowState<D, I, S, U, C>>>` のネストを軽減する。
+type AppState<D, I, S, U, C> = State<Arc<WorkflowState<D, I, S, U, C>>>;
+
 /// ワークフローを作成する（下書き）
 ///
 /// ## エンドポイント
@@ -286,7 +291,7 @@ pub struct WorkflowState<D, I, S, U, C> {
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
 pub async fn create_workflow<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Json(req): Json<CreateWorkflowRequest>,
 ) -> Result<Response, CoreError>
 where
@@ -334,7 +339,7 @@ where
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
 pub async fn submit_workflow<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Path(id): Path<Uuid>,
    Json(req): Json<SubmitWorkflowRequest>,
 ) -> Result<Response, CoreError>
@@ -380,7 +385,7 @@ where
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
 pub async fn list_workflow_definitions<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError>
 where
@@ -415,7 +420,7 @@ where
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
 pub async fn get_workflow_definition<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Path(id): Path<Uuid>,
    Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError>
@@ -449,7 +454,7 @@ where
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
 pub async fn list_my_workflows<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Query(query): Query<UserQuery>,
 ) -> Result<Response, CoreError>
 where
@@ -494,7 +499,7 @@ where
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
 pub async fn get_workflow<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Path(id): Path<Uuid>,
    Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError>
@@ -538,7 +543,7 @@ where
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
 pub async fn approve_step<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Path(params): Path<StepPathParams>,
    Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError>
@@ -591,7 +596,7 @@ where
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
 pub async fn reject_step<D, I, S, U, C>(
-   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
+   State(state): AppState<D, I, S, U, C>,
    Path(params): Path<StepPathParams>,
    Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError>

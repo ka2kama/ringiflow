@@ -525,7 +525,7 @@ mod tests {
    // DisplayIdEntityType のテスト
 
    #[test]
-   fn test_エンティティ種別のDB文字列_ワークフローインスタンス() {
+   fn test_エンティティ種別の_db文字列_ワークフローインスタンス() {
       assert_eq!(
          DisplayIdEntityType::WorkflowInstance.as_str(),
          "workflow_instance"
@@ -533,7 +533,7 @@ mod tests {
    }
 
    #[test]
-   fn test_エンティティ種別のDB文字列_ワークフローステップ() {
+   fn test_エンティティ種別の_db文字列_ワークフローステップ() {
       assert_eq!(DisplayIdEntityType::WorkflowStep.as_str(), "workflow_step");
    }
 
@@ -550,19 +550,19 @@ mod tests {
    // DisplayId のテスト
 
    #[test]
-   fn test_表示用IDの表示形式_ワークフロー() {
+   fn test_表示用_idの表示形式_ワークフロー() {
       let id = DisplayId::new("WF", DisplayNumber::new(42).unwrap());
       assert_eq!(id.to_string(), "WF-42");
    }
 
    #[test]
-   fn test_表示用IDの表示形式_ステップ() {
+   fn test_表示用_idの表示形式_ステップ() {
       let id = DisplayId::new("STEP", DisplayNumber::new(7).unwrap());
       assert_eq!(id.to_string(), "STEP-7");
    }
 
    #[test]
-   fn test_表示用IDのJSONシリアライズは文字列() {
+   fn test_表示用_idの_jsonシリアライズは文字列() {
       let id = DisplayId::new("WF", DisplayNumber::new(42).unwrap());
       let json = serde_json::to_string(&id).unwrap();
       assert_eq!(json, "\"WF-42\"");
