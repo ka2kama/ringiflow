@@ -19,15 +19,16 @@ if [ "$PREV_DATE" = "$DATE_PART" ] && [ -n "$PREV_TIME" ]; then
     PREV_M=$(echo "$PREV_TIME" | cut -d: -f2)
     PREV_S=$(echo "$PREV_TIME" | cut -d: -f3)
     # 10# で基数を明示（08, 09 等の先頭ゼロを8進数として解釈させない）
-    PREV_SECONDS=$((10#$PREV_H * 3600 + 10#$PREV_M * 60 + 10#$PREV_S))
+    # :-0 は防御的デフォルト（外側の -n ガードで空文字列は到達しないが念のため）
+    PREV_SECONDS=$((10#${PREV_H:-0} * 3600 + 10#${PREV_M:-0} * 60 + 10#${PREV_S:-0}))
 
     if [ $PREV_SECONDS -ge 75600 ]; then  # 75600 = 21:00:00
-        # 前のコミットから 1〜15 分後
-        INCREMENT=$((60 + RANDOM % 840))
+        # 前のコミットから 1〜15 分後（60-900秒）
+        INCREMENT=$((60 + RANDOM % 841))
         NEW_SECONDS=$((PREV_SECONDS + INCREMENT))
 
         # 23:59:59（86399秒）を超えたら丸める
-        if [ $NEW_SECONDS -ge 86399 ]; then
+        if [ $NEW_SECONDS -gt 86399 ]; then
             NEW_SECONDS=86399
         fi
 
@@ -35,13 +36,15 @@ if [ "$PREV_DATE" = "$DATE_PART" ] && [ -n "$PREV_TIME" ]; then
         MINUTE=$(((NEW_SECONDS % 3600) / 60))
         SECOND=$((NEW_SECONDS % 60))
     else
-        # 前のコミットが 21:00 より前（hook 導入前等）→ 新規開始
+        # 前のコミットが 21:00 より前（hook 導入前等）→ 21:00-21:29 で新規開始
+        # 後続コミットの単調増加に余地を残すため、範囲を前半に限定する
         HOUR=21
         MINUTE=$((RANDOM % 30))
         SECOND=$((RANDOM % 60))
     fi
 else
-    # 前のコミットが別の日 or 存在しない → 新規開始
+    # 前のコミットが別の日 or 存在しない → 21:00-21:29 で新規開始
+    # 後続コミットの単調増加に余地を残すため、範囲を前半に限定する
     HOUR=21
     MINUTE=$((RANDOM % 30))
     SECOND=$((RANDOM % 60))
