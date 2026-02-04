@@ -21,3 +21,9 @@ prepare-commit-msg:
   scripts:
     "add-issue-number.sh":
       runner: bash
+
+# コミット時刻を夜の時間帯に正規化（生活パターンの推測を抑制）
+post-commit:
+  scripts:
+    "normalize-time.sh":
+      runner: bash
