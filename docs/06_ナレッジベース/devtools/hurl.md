@@ -170,6 +170,37 @@ cookie "session_id" exists
 cookie "session_id[HttpOnly]" exists
 ```
 
+## アサーション一覧と使い分け
+
+→ ルール: [`.claude/rules/api-test.md`](../../../.claude/rules/api-test.md)
+
+### アサーション種別
+
+| アサーション | 対象型 | 用途 | 例 |
+|-------------|--------|------|-----|
+| `==` | 全型 | 厳密一致。決定的な値に使う | `jsonpath "$.status" == "Draft"` |
+| `matches` | 文字列 | 正規表現パターン検証。非決定的な値の形式確認に使う | `jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"` |
+| `contains` | 文字列 | 部分文字列の包含確認。ヘッダー値の検証に使う | `header "Set-Cookie" contains "HttpOnly"` |
+| `startsWith` | 文字列 | プレフィックス一致 | `jsonpath "$.id" startsWith "WF-"` |
+| `count` | 配列 | 要素数の検証。配列型の確認に使う | `jsonpath "$.roles" count >= 0` |
+| `exists` | 全型 | フィールドの存在確認（null でも通る）。最終手段 | `jsonpath "$.data.id" exists` |
+| `not exists` | 全型 | フィールドの非存在確認 | `jsonpath "$.errors" not exists` |
+| `isString` | 全型 | 型チェック（`isInteger`, `isBoolean`, `isCollection` 等もあり） | `jsonpath "$.name" isString` |
+
+注意:
+- `matches` は**文字列型専用**。配列やオブジェクトには使えない
+- `count` は配列型専用。文字列やオブジェクトには使えない
+- `exists` は null 値でも通るため、「値がある」ことの証明にはならない
+
+### よく使う正規表現パターン
+
+| パターン | 用途 | 正規表現 |
+|---------|------|---------|
+| 表示用 ID | `WF-42` 形式 | `"^WF-\\d+$"` |
+| RFC 3339 タイムスタンプ（先頭） | `2026-01-15T...` 形式 | `"^\\d{4}-\\d{2}-\\d{2}T"` |
+| CSRF トークン | 64文字の16進数 | `"^[a-f0-9]{64}$"` |
+| UUID | `550e8400-...` 形式 | `"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"` |
+
 ## 注意点: Cookie の自動管理
 
 hurl は**同一ファイル内で Cookie を自動管理**する。

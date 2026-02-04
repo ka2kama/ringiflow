@@ -47,9 +47,12 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 204
 [Asserts]
-# Cookie がクリアされる（Max-Age=0 で無効化）
+# Cookie がクリアされる（Max-Age=0 で無効化、セキュリティ属性維持）
 header "Set-Cookie" contains "session_id="
 header "Set-Cookie" contains "Max-Age=0"
+header "Set-Cookie" contains "HttpOnly"
+header "Set-Cookie" contains "SameSite=Lax"
+header "Set-Cookie" contains "Path=/"
 
 
 # =============================================================================
