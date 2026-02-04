@@ -4,11 +4,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use chrono::Utc;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::{DisplayNumber, Version},
+   value_objects::{DisplayIdEntityType, Version},
    workflow::{
       WorkflowDefinition,
       WorkflowDefinitionId,
@@ -22,6 +21,7 @@ use ringiflow_domain::{
 use ringiflow_infra::{
    InfraError,
    repository::{
+      DisplayIdCounterRepository,
       UserRepository,
       WorkflowDefinitionRepository,
       WorkflowInstanceRepository,
@@ -90,27 +90,36 @@ pub(crate) fn collect_user_ids_from_workflow(
 /// ワークフローユースケース実装
 ///
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
-pub struct WorkflowUseCaseImpl<D, I, S, U> {
+pub struct WorkflowUseCaseImpl<D, I, S, U, C> {
    definition_repo: D,
    instance_repo:   I,
    step_repo:       S,
    user_repo:       U,
+   counter_repo:    C,
 }
 
-impl<D, I, S, U> WorkflowUseCaseImpl<D, I, S, U>
+impl<D, I, S, U, C> WorkflowUseCaseImpl<D, I, S, U, C>
 where
    D: WorkflowDefinitionRepository,
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    /// 新しいワークフローユースケースを作成
-   pub fn new(definition_repo: D, instance_repo: I, step_repo: S, user_repo: U) -> Self {
+   pub fn new(
+      definition_repo: D,
+      instance_repo: I,
+      step_repo: S,
+      user_repo: U,
+      counter_repo: C,
+   ) -> Self {
       Self {
          definition_repo,
          instance_repo,
          step_repo,
          user_repo,
+         counter_repo,
       }
    }
 
@@ -158,10 +167,11 @@ where
       }
 
       // 3. WorkflowInstance を draft として作成
-      // TODO: Phase A-2 で採番サービスに置き換え
-      // 暫定: タイムスタンプベースの一意な値を使用（ユニーク制約に対応）
-      let display_number =
-         DisplayNumber::new(Utc::now().timestamp_millis()).expect("タイムスタンプは正の値");
+      let display_number = self
+         .counter_repo
+         .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowInstance)
+         .await
+         .map_err(|e| CoreError::Internal(format!("採番に失敗: {}", e)))?;
       let instance = WorkflowInstance::new(
          tenant_id,
          input.definition_id,
@@ -598,7 +608,7 @@ mod tests {
 
    use ringiflow_domain::{
       user::User,
-      value_objects::{Version, WorkflowName},
+      value_objects::{DisplayNumber, Version, WorkflowName},
       workflow::{WorkflowDefinition, WorkflowDefinitionStatus},
    };
    use ringiflow_infra::error::InfraError;
@@ -877,6 +887,35 @@ mod tests {
       }
    }
 
+   /// テスト用のモック DisplayIdCounterRepository
+   ///
+   /// 呼び出しごとにカウンターをインクリメントして返す。
+   #[derive(Clone)]
+   struct MockDisplayIdCounterRepository {
+      counter: Arc<Mutex<i64>>,
+   }
+
+   impl MockDisplayIdCounterRepository {
+      fn new() -> Self {
+         Self {
+            counter: Arc::new(Mutex::new(0)),
+         }
+      }
+   }
+
+   #[async_trait::async_trait]
+   impl DisplayIdCounterRepository for MockDisplayIdCounterRepository {
+      async fn next_display_number(
+         &self,
+         _tenant_id: &TenantId,
+         _entity_type: DisplayIdEntityType,
+      ) -> Result<DisplayNumber, InfraError> {
+         let mut counter = self.counter.lock().unwrap();
+         *counter += 1;
+         Ok(DisplayNumber::new(*counter).unwrap())
+      }
+   }
+
    #[tokio::test]
    async fn test_create_workflow_正常系() {
       // Arrange
@@ -903,6 +942,7 @@ mod tests {
          instance_repo.clone(),
          step_repo,
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = CreateWorkflowInput {
@@ -946,6 +986,7 @@ mod tests {
          instance_repo,
          step_repo,
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = CreateWorkflowInput {
@@ -1005,6 +1046,7 @@ mod tests {
          instance_repo.clone(),
          step_repo.clone(),
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = ApproveRejectInput {
@@ -1085,6 +1127,7 @@ mod tests {
          instance_repo,
          step_repo,
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = ApproveRejectInput {
@@ -1142,6 +1185,7 @@ mod tests {
          instance_repo,
          step_repo,
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = ApproveRejectInput {
@@ -1198,6 +1242,7 @@ mod tests {
          instance_repo,
          step_repo,
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
@@ -1258,6 +1303,7 @@ mod tests {
          instance_repo.clone(),
          step_repo.clone(),
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = ApproveRejectInput {
@@ -1336,6 +1382,7 @@ mod tests {
          instance_repo.clone(),
          step_repo.clone(),
          MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
       );
 
       let input = SubmitWorkflowInput {

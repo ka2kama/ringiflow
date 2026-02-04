@@ -27,6 +27,7 @@ use ringiflow_domain::{
    },
 };
 use ringiflow_infra::repository::{
+   DisplayIdCounterRepository,
    UserRepository,
    WorkflowDefinitionRepository,
    WorkflowInstanceRepository,
@@ -271,8 +272,8 @@ impl WorkflowInstanceDto {
 }
 
 /// ワークフローハンドラーの State
-pub struct WorkflowState<D, I, S, U> {
-   pub usecase: WorkflowUseCaseImpl<D, I, S, U>,
+pub struct WorkflowState<D, I, S, U, C> {
+   pub usecase: WorkflowUseCaseImpl<D, I, S, U, C>,
 }
 
 /// ワークフローを作成する（下書き）
@@ -284,8 +285,8 @@ pub struct WorkflowState<D, I, S, U> {
 /// 1. リクエストをパース
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
-pub async fn create_workflow<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn create_workflow<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Json(req): Json<CreateWorkflowRequest>,
 ) -> Result<Response, CoreError>
 where
@@ -293,6 +294,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    // ID を変換
    let tenant_id = TenantId::from_uuid(req.tenant_id);
@@ -331,8 +333,8 @@ where
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
-pub async fn submit_workflow<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn submit_workflow<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Path(id): Path<Uuid>,
    Json(req): Json<SubmitWorkflowRequest>,
 ) -> Result<Response, CoreError>
@@ -341,6 +343,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    // ID を変換
    let instance_id = WorkflowInstanceId::from_uuid(id);
@@ -376,8 +379,8 @@ where
 /// 1. クエリパラメータからテナント ID を取得
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
-pub async fn list_workflow_definitions<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn list_workflow_definitions<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError>
 where
@@ -385,6 +388,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    let tenant_id = TenantId::from_uuid(query.tenant_id);
 
@@ -410,8 +414,8 @@ where
 /// 2. クエリパラメータからテナント ID を取得
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
-pub async fn get_workflow_definition<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn get_workflow_definition<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Path(id): Path<Uuid>,
    Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError>
@@ -420,6 +424,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    let definition_id = WorkflowDefinitionId::from_uuid(id);
    let tenant_id = TenantId::from_uuid(query.tenant_id);
@@ -443,8 +448,8 @@ where
 /// 1. クエリパラメータからテナント ID とユーザー ID を取得
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
-pub async fn list_my_workflows<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn list_my_workflows<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Query(query): Query<UserQuery>,
 ) -> Result<Response, CoreError>
 where
@@ -452,6 +457,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    let tenant_id = TenantId::from_uuid(query.tenant_id);
    let user_id = UserId::from_uuid(query.user_id);
@@ -487,8 +493,8 @@ where
 /// 2. クエリパラメータからテナント ID を取得
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
-pub async fn get_workflow<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn get_workflow<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Path(id): Path<Uuid>,
    Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError>
@@ -497,6 +503,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    let instance_id = WorkflowInstanceId::from_uuid(id);
    let tenant_id = TenantId::from_uuid(query.tenant_id);
@@ -530,8 +537,8 @@ where
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
-pub async fn approve_step<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn approve_step<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Path(params): Path<StepPathParams>,
    Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError>
@@ -540,6 +547,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    let step_id = WorkflowStepId::from_uuid(params.step_id);
    let tenant_id = TenantId::from_uuid(req.tenant_id);
@@ -582,8 +590,8 @@ where
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
-pub async fn reject_step<D, I, S, U>(
-   State(state): State<Arc<WorkflowState<D, I, S, U>>>,
+pub async fn reject_step<D, I, S, U, C>(
+   State(state): State<Arc<WorkflowState<D, I, S, U, C>>>,
    Path(params): Path<StepPathParams>,
    Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError>
@@ -592,6 +600,7 @@ where
    I: WorkflowInstanceRepository,
    S: WorkflowStepRepository,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    let step_id = WorkflowStepId::from_uuid(params.step_id);
    let tenant_id = TenantId::from_uuid(req.tenant_id);
