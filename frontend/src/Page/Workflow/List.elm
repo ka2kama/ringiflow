@@ -271,7 +271,8 @@ viewWorkflowTable zone workflows =
     table [ class "w-full border-collapse" ]
         [ thead [ class "border-b border-secondary-100" ]
             [ tr []
-                [ th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "タイトル" ]
+                [ th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ID" ]
+                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "タイトル" ]
                 , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステータス" ]
                 , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "作成日" ]
                 ]
@@ -284,7 +285,8 @@ viewWorkflowTable zone workflows =
 viewWorkflowRow : Time.Zone -> WorkflowInstance -> Html Msg
 viewWorkflowRow zone workflow =
     tr [ class "border-b border-secondary-100" ]
-        [ td [ class "px-4 py-3" ]
+        [ td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text workflow.displayId ]
+        , td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.WorkflowDetail workflow.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text workflow.title ]
             ]

@@ -939,7 +939,7 @@ components:
           description: ワークフローインスタンス ID
         display_id:
           type: string
-          description: 表示用 ID（例: WF-42）
+          description: "表示用 ID（例: WF-42）"
           example: "WF-42"
         title:
           type: string
@@ -1173,7 +1173,7 @@ components:
           description: ワークフローインスタンス ID
         display_id:
           type: string
-          description: ワークフローの表示用 ID（例: WF-42）
+          description: "ワークフローの表示用 ID（例: WF-42）"
           example: "WF-42"
         title:
           type: string

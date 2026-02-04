@@ -104,6 +104,7 @@ type Status
 -}
 type alias WorkflowInstance =
     { id : WorkflowInstanceId
+    , displayId : String
     , title : String
     , definitionId : String
     , status : Status
@@ -353,6 +354,7 @@ decoder : Decoder WorkflowInstance
 decoder =
     Decode.succeed WorkflowInstance
         |> required "id" Decode.string
+        |> required "display_id" Decode.string
         |> required "title" Decode.string
         |> required "definition_id" Decode.string
         |> required "status" statusDecoder
