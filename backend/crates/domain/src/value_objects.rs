@@ -14,6 +14,8 @@
 //! |---|-----------|------|
 //! | [`Version`] | `u32` | エンティティのバージョン番号 |
 //! | [`DisplayNumber`] | `i64` | 表示用連番（テナント内で一意） |
+//! | [`DisplayId`] | `prefix + number` | 表示用 ID（`WF-42` 形式） |
+//! | [`DisplayIdEntityType`] | enum | 表示用 ID の対象エンティティ種別 |
 //! | [`UserName`] | `String` | ユーザー表示名 |
 //! | [`WorkflowName`] | `String` | ワークフロー定義名 |
 
@@ -199,6 +201,112 @@ impl TryFrom<i64> for DisplayNumber {
 impl std::fmt::Display for DisplayNumber {
    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       write!(f, "{}", self.0)
+   }
+}
+
+// =========================================================================
+// display_prefix（表示用 ID プレフィックス定数）
+// =========================================================================
+
+/// 表示用 ID のプレフィックス定数
+///
+/// エンティティ種別ごとに固定の文字列を定義する。
+/// API レスポンスでは `{prefix}-{number}` 形式で使用する。
+pub mod display_prefix {
+   /// ワークフローインスタンスのプレフィックス
+   pub const WORKFLOW_INSTANCE: &str = "WF";
+   /// ワークフローステップのプレフィックス
+   pub const WORKFLOW_STEP: &str = "STEP";
+}
+
+// =========================================================================
+// DisplayIdEntityType（表示用 ID 対象エンティティ種別）
+// =========================================================================
+
+/// 表示用 ID のカウンター対象エンティティ種別
+///
+/// `display_id_counters` テーブルの `entity_type` カラムに対応する。
+/// テナント × エンティティ種別ごとに独立した連番を管理する。
+///
+/// # 使用例
+///
+/// ```rust
+/// use ringiflow_domain::value_objects::DisplayIdEntityType;
+///
+/// let entity_type = DisplayIdEntityType::WorkflowInstance;
+/// assert_eq!(entity_type.as_str(), "workflow_instance");
+/// assert_eq!(entity_type.prefix(), "WF");
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DisplayIdEntityType {
+   /// ワークフローインスタンス
+   WorkflowInstance,
+   /// ワークフローステップ
+   WorkflowStep,
+}
+
+impl DisplayIdEntityType {
+   /// DB に保存する文字列を返す
+   pub fn as_str(&self) -> &'static str {
+      match self {
+         Self::WorkflowInstance => "workflow_instance",
+         Self::WorkflowStep => "workflow_step",
+      }
+   }
+
+   /// 表示用プレフィックスを返す
+   pub fn prefix(&self) -> &'static str {
+      match self {
+         Self::WorkflowInstance => display_prefix::WORKFLOW_INSTANCE,
+         Self::WorkflowStep => display_prefix::WORKFLOW_STEP,
+      }
+   }
+}
+
+// =========================================================================
+// DisplayId（表示用 ID）
+// =========================================================================
+
+/// 表示用 ID（プレフィックス + 連番）
+///
+/// API レスポンスで使用する人間可読な識別子。
+/// DB には `display_number`（連番）のみ保存し、プレフィックスはアプリ層で結合する。
+///
+/// # 不変条件
+///
+/// - `prefix` はコンパイル時に決まる定数
+/// - `number` は 1 以上の正整数（`DisplayNumber` で保証）
+///
+/// # 使用例
+///
+/// ```rust
+/// use ringiflow_domain::value_objects::{DisplayId, DisplayNumber};
+///
+/// let id = DisplayId::new("WF", DisplayNumber::new(42).unwrap());
+/// assert_eq!(id.to_string(), "WF-42");
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct DisplayId {
+   prefix: &'static str,
+   number: DisplayNumber,
+}
+
+impl DisplayId {
+   /// 表示用 ID を作成する
+   pub fn new(prefix: &'static str, number: DisplayNumber) -> Self {
+      Self { prefix, number }
+   }
+}
+
+impl std::fmt::Display for DisplayId {
+   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}-{}", self.prefix, self.number)
+   }
+}
+
+impl Serialize for DisplayId {
+   fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+      serializer.serialize_str(&self.to_string())
    }
 }
 
@@ -412,6 +520,52 @@ mod tests {
    fn test_表示用連番の表示形式は数値のみ() {
       let num = DisplayNumber::new(42).unwrap();
       assert_eq!(num.to_string(), "42");
+   }
+
+   // DisplayIdEntityType のテスト
+
+   #[test]
+   fn test_エンティティ種別のDB文字列_ワークフローインスタンス() {
+      assert_eq!(
+         DisplayIdEntityType::WorkflowInstance.as_str(),
+         "workflow_instance"
+      );
+   }
+
+   #[test]
+   fn test_エンティティ種別のDB文字列_ワークフローステップ() {
+      assert_eq!(DisplayIdEntityType::WorkflowStep.as_str(), "workflow_step");
+   }
+
+   #[test]
+   fn test_エンティティ種別のプレフィックス_ワークフローインスタンス() {
+      assert_eq!(DisplayIdEntityType::WorkflowInstance.prefix(), "WF");
+   }
+
+   #[test]
+   fn test_エンティティ種別のプレフィックス_ワークフローステップ() {
+      assert_eq!(DisplayIdEntityType::WorkflowStep.prefix(), "STEP");
+   }
+
+   // DisplayId のテスト
+
+   #[test]
+   fn test_表示用IDの表示形式_ワークフロー() {
+      let id = DisplayId::new("WF", DisplayNumber::new(42).unwrap());
+      assert_eq!(id.to_string(), "WF-42");
+   }
+
+   #[test]
+   fn test_表示用IDの表示形式_ステップ() {
+      let id = DisplayId::new("STEP", DisplayNumber::new(7).unwrap());
+      assert_eq!(id.to_string(), "STEP-7");
+   }
+
+   #[test]
+   fn test_表示用IDのJSONシリアライズは文字列() {
+      let id = DisplayId::new("WF", DisplayNumber::new(42).unwrap());
+      let json = serde_json::to_string(&id).unwrap();
+      assert_eq!(json, "\"WF-42\"");
    }
 
    // UserName のテスト
