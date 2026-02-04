@@ -1,7 +1,7 @@
 ---
 name: review-and-merge
 description: Claude Code Action のレビューコメントを確認し、対応が必要なものは半自動で修正、問題なければマージする。
-argument-hint: <省略可。PR 番号を指定>
+argument-hint: <PR番号（省略時は現在のブランチの PR）>
 user-invocable: true
 ---
 
@@ -59,7 +59,7 @@ REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
 gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
   --jq '[.[] | select(.user.login == "claude[bot]")] | last'
 
-# 2. インラインコメント（コード固有の指摘）
+# 2. Review コメント（コードの特定行への指摘）
 gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments" \
   --jq '[.[] | select(.user.login == "claude[bot]")]'
 
@@ -74,12 +74,12 @@ gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
 ## レビュー結果サマリー
 
 レビュー状態: APPROVED / CHANGES_REQUESTED
-インラインコメント: N 件
+Review コメント: N 件
 
 ### 全体フィードバック
 （PR レベルコメントの内容）
 
-### インラインコメント一覧
+### Review コメント一覧
 1. `ファイルパス:行番号` — 内容要約
 2. ...
 ```
@@ -94,7 +94,7 @@ gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
 
 ### Step 4: 対応（半自動）
 
-インラインコメントが存在する場合、各コメントについて以下を行う:
+Review コメントが存在する場合、各コメントについて以下を行う:
 
 1. コメント内容と該当コードを表示（ファイルを読んで前後のコンテキストを含める）
 2. 修正案を提示する
