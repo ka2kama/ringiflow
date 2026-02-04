@@ -67,6 +67,7 @@ HTTP 200
 [Asserts]
 # ワークフローのステータスが更新される
 jsonpath "$.data.id" == "{{workflow_id}}"
+jsonpath "$.data.display_id" exists
 jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.current_step_id" exists
