@@ -43,7 +43,7 @@ gh pr checks
 
 | 状態 | 対応 |
 |------|------|
-| pending / in_progress | 「レビュー実行中です。完了まで待ちますか？」と確認。待つ場合は定期的にポーリング |
+| pending / in_progress | 「レビュー実行中です。完了まで待ちますか？」と確認。待つ場合は 20〜30 秒間隔でポーリング |
 | success / failure | Step 3 へ |
 | 見つからない | 「Claude Auto Review は CI 完了後にトリガーされます。CI の状態を確認してください」と案内 |
 
