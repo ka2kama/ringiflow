@@ -53,18 +53,19 @@ HTTP 201
 [Asserts]
 # ワークフローインスタンスの情報が正しく返される
 jsonpath "$.data.id" exists
-jsonpath "$.data.display_id" exists
+jsonpath "$.data.display_id" matches "^WF-\\d+$"
 jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "Draft"
+jsonpath "$.data.version" == 1
 jsonpath "$.data.form_data.title" == "交通費"
 jsonpath "$.data.form_data.description" == "出張時の交通費"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data.current_step_id" == null
 jsonpath "$.data.submitted_at" == null
-jsonpath "$.data.created_at" exists
-jsonpath "$.data.updated_at" exists
+jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 [Captures]
 workflow_id: jsonpath "$.data.id"

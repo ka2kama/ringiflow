@@ -46,6 +46,7 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 workflow_id: jsonpath "$.data.id"
+workflow_display_id: jsonpath "$.data.display_id"
 
 # =============================================================================
 # 正常系: ワークフローを申請できる
@@ -67,11 +68,12 @@ HTTP 200
 [Asserts]
 # ワークフローのステータスが更新される
 jsonpath "$.data.id" == "{{workflow_id}}"
-jsonpath "$.data.display_id" exists
+jsonpath "$.data.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.status" == "InProgress"
-jsonpath "$.data.current_step_id" exists
-jsonpath "$.data.submitted_at" exists
+jsonpath "$.data.version" == 2
+jsonpath "$.data.current_step_id" == "approval"
+jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 

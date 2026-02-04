@@ -37,7 +37,7 @@ jsonpath "$.data.id" exists
 jsonpath "$.data.email" == "user@example.com"
 jsonpath "$.data.name" == "一般ユーザー"
 jsonpath "$.data.tenant_id" == "00000000-0000-0000-0000-000000000001"
-jsonpath "$.data.tenant_name" exists
-# フロントエンドでの権限チェックに使用
-jsonpath "$.data.roles" exists
-jsonpath "$.data.permissions" exists
+jsonpath "$.data.tenant_name" == "Development Tenant"
+# フロントエンドでの権限チェックに使用（配列型であることを検証）
+jsonpath "$.data.roles" count >= 0
+jsonpath "$.data.permissions" count >= 0

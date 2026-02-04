@@ -26,9 +26,11 @@ jsonpath "$.data.user.email" == "admin@example.com"
 jsonpath "$.data.user.name" == "管理者"
 jsonpath "$.data.user.tenant_id" == "00000000-0000-0000-0000-000000000001"
 jsonpath "$.data.user.roles" exists
-# セッション Cookie が HttpOnly で設定される（XSS 対策）
+# セッション Cookie がセキュリティ属性付きで設定される
 header "Set-Cookie" contains "session_id="
 header "Set-Cookie" contains "HttpOnly"
+header "Set-Cookie" contains "SameSite=Lax"
+header "Set-Cookie" contains "Path=/"
 
 
 # =============================================================================
