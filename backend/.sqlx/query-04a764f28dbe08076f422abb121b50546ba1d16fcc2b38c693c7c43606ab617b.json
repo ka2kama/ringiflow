@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n         UPDATE display_id_counters\n         SET last_number = $3\n         WHERE tenant_id = $1 AND entity_type = $2\n         ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "04a764f28dbe08076f422abb121b50546ba1d16fcc2b38c693c7c43606ab617b"
+}
