@@ -53,6 +53,7 @@ HTTP 201
 [Asserts]
 # ワークフローインスタンスの情報が正しく返される
 jsonpath "$.data.id" exists
+jsonpath "$.data.display_id" exists
 jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "Draft"

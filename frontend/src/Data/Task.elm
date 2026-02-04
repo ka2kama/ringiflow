@@ -39,6 +39,7 @@ import Json.Decode.Pipeline exposing (optional, required)
 -}
 type alias WorkflowSummary =
     { id : String
+    , displayId : String
     , title : String
     , status : String
     , initiatedBy : UserRef
@@ -86,6 +87,7 @@ workflowSummaryDecoder : Decoder WorkflowSummary
 workflowSummaryDecoder =
     Decode.succeed WorkflowSummary
         |> required "id" Decode.string
+        |> required "display_id" Decode.string
         |> required "title" Decode.string
         |> required "status" Decode.string
         |> required "initiated_by" Data.UserRef.decoder

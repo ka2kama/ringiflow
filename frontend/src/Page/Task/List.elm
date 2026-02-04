@@ -195,7 +195,7 @@ viewTaskRow zone task =
             [ a [ href (Route.toString (Route.TaskDetail task.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text task.stepName ]
             ]
-        , td [ class "px-4 py-3" ] [ text task.workflow.title ]
+        , td [ class "px-4 py-3" ] [ text (task.workflow.displayId ++ " " ++ task.workflow.title) ]
         , td [ class "px-4 py-3" ]
             [ Badge.view
                 { colorClass = WorkflowInstance.stepStatusToCssClass task.status

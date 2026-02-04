@@ -209,6 +209,7 @@ decoderTests =
                         """
                         {
                             "id": "inst-001",
+                            "display_id": "WF-1",
                             "title": "経費精算申請",
                             "definition_id": "def-001",
                             "status": "Draft",
@@ -225,6 +226,7 @@ decoderTests =
                     |> Result.map
                         (\i ->
                             { id = i.id
+                            , displayId = i.displayId
                             , title = i.title
                             , status = i.status
                             }
@@ -232,6 +234,7 @@ decoderTests =
                     |> Expect.equal
                         (Ok
                             { id = "inst-001"
+                            , displayId = "WF-1"
                             , title = "経費精算申請"
                             , status = Draft
                             }
@@ -243,6 +246,7 @@ decoderTests =
                         """
                         {
                             "id": "inst-002",
+                            "display_id": "WF-2",
                             "title": "休暇申請",
                             "definition_id": "def-002",
                             "status": "Pending",
@@ -275,6 +279,7 @@ decoderTests =
                         """
                         {
                             "id": "inst-003",
+                            "display_id": "WF-3",
                             "title": "購買申請",
                             "definition_id": "def-003",
                             "status": "Approved",
@@ -305,6 +310,7 @@ decoderTests =
                         """
                         {
                             "id": "inst-001",
+                            "display_id": "WF-1",
                             "title": "テスト",
                             "definition_id": "def-001",
                             "status": \""""
@@ -386,6 +392,7 @@ listDecoderTests =
                             "data": [
                                 {
                                     "id": "inst-001",
+                                    "display_id": "WF-1",
                                     "title": "経費精算",
                                     "definition_id": "def-001",
                                     "status": "Draft",
@@ -396,6 +403,7 @@ listDecoderTests =
                                 },
                                 {
                                     "id": "inst-002",
+                                    "display_id": "WF-2",
                                     "title": "休暇申請",
                                     "definition_id": "def-002",
                                     "status": "Approved",

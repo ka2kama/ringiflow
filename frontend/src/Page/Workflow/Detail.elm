@@ -386,7 +386,10 @@ viewWorkflowDetail workflow maybeDefinition comment isSubmitting shared =
 
 viewTitle : WorkflowInstance -> Html Msg
 viewTitle workflow =
-    h1 [ class "text-2xl font-bold text-secondary-900" ] [ text workflow.title ]
+    h1 [ class "text-2xl font-bold text-secondary-900" ]
+        [ span [ class "text-secondary-400 mr-2" ] [ text workflow.displayId ]
+        , text workflow.title
+        ]
 
 
 viewStatus : WorkflowInstance -> Html Msg

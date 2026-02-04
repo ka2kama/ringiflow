@@ -923,6 +923,7 @@ components:
       type: object
       required:
         - id
+        - display_id
         - title
         - definition_id
         - status
@@ -936,6 +937,10 @@ components:
           type: string
           format: uuid
           description: ワークフローインスタンス ID
+        display_id:
+          type: string
+          description: "表示用 ID（例: WF-42）"
+          example: "WF-42"
         title:
           type: string
           description: ワークフロータイトル
@@ -1157,6 +1162,7 @@ components:
       description: タスク一覧で表示するワークフロー概要情報
       required:
         - id
+        - display_id
         - title
         - status
         - initiated_by
@@ -1165,6 +1171,10 @@ components:
           type: string
           format: uuid
           description: ワークフローインスタンス ID
+        display_id:
+          type: string
+          description: "ワークフローの表示用 ID（例: WF-42）"
+          example: "WF-42"
         title:
           type: string
           description: ワークフロータイトル

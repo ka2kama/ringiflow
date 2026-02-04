@@ -40,6 +40,7 @@ use crate::client::{CoreServiceClient, CoreServiceError};
 #[derive(Debug, Serialize)]
 pub struct TaskWorkflowSummaryData {
    pub id:           String,
+   pub display_id:   String,
    pub title:        String,
    pub status:       String,
    pub initiated_by: UserRefData,
@@ -50,6 +51,7 @@ impl From<crate::client::TaskWorkflowSummaryDto> for TaskWorkflowSummaryData {
    fn from(dto: crate::client::TaskWorkflowSummaryDto) -> Self {
       Self {
          id:           dto.id,
+         display_id:   dto.display_id,
          title:        dto.title,
          status:       dto.status,
          initiated_by: UserRefData::from(dto.initiated_by),

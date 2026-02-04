@@ -16,7 +16,7 @@ use axum::{
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::Version,
+   value_objects::{DisplayId, Version, display_prefix},
    workflow::{
       WorkflowDefinition,
       WorkflowDefinitionId,
@@ -209,6 +209,7 @@ impl WorkflowStepDto {
 #[derive(Debug, Serialize)]
 pub struct WorkflowInstanceDto {
    pub id: String,
+   pub display_id: String,
    pub title: String,
    pub definition_id: String,
    pub status: String,
@@ -228,6 +229,8 @@ impl WorkflowInstanceDto {
    fn from_instance(instance: &WorkflowInstance, user_names: &HashMap<UserId, String>) -> Self {
       Self {
          id: instance.id().to_string(),
+         display_id: DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
+            .to_string(),
          title: instance.title().to_string(),
          definition_id: instance.definition_id().to_string(),
          status: format!("{:?}", instance.status()),
@@ -251,6 +254,8 @@ impl WorkflowInstanceDto {
       let instance = &data.instance;
       Self {
          id: instance.id().to_string(),
+         display_id: DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
+            .to_string(),
          title: instance.title().to_string(),
          definition_id: instance.definition_id().to_string(),
          status: format!("{:?}", instance.status()),
