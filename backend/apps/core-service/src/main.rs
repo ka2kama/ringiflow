@@ -89,6 +89,7 @@ use handler::{
 use ringiflow_infra::{
    db,
    repository::{
+      display_id_counter_repository::PostgresDisplayIdCounterRepository,
       user_repository::PostgresUserRepository,
       workflow_definition_repository::PostgresWorkflowDefinitionRepository,
       workflow_instance_repository::PostgresWorkflowInstanceRepository,
@@ -141,11 +142,13 @@ async fn main() -> anyhow::Result<()> {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
    let workflow_user_repo = PostgresUserRepository::new(pool.clone());
+   let counter_repo = PostgresDisplayIdCounterRepository::new(pool.clone());
    let workflow_usecase = WorkflowUseCaseImpl::new(
       definition_repo,
       instance_repo,
       step_repo,
       workflow_user_repo,
+      counter_repo,
    );
    let workflow_state = Arc::new(WorkflowState {
       usecase: workflow_usecase,
@@ -190,6 +193,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )
@@ -201,6 +205,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )
@@ -213,6 +218,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             )
             .post(
@@ -221,6 +227,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )
@@ -232,6 +239,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )
@@ -243,6 +251,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )
@@ -254,6 +263,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )
@@ -265,6 +275,7 @@ async fn main() -> anyhow::Result<()> {
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
                >,
             ),
          )

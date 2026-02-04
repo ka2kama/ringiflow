@@ -25,7 +25,7 @@ use ringiflow_domain::{
    user::UserId,
    workflow::{WorkflowInstance, WorkflowInstanceId},
 };
-use ringiflow_infra::repository::UserRepository;
+use ringiflow_infra::repository::{DisplayIdCounterRepository, UserRepository};
 pub use task::TaskUseCaseImpl;
 pub use workflow::{
    ApproveRejectInput,
@@ -111,12 +111,13 @@ pub trait WorkflowUseCase: Send + Sync {
 
 /// WorkflowUseCaseImpl に WorkflowUseCase トレイトを実装
 #[async_trait]
-impl<D, I, S, U> WorkflowUseCase for WorkflowUseCaseImpl<D, I, S, U>
+impl<D, I, S, U, C> WorkflowUseCase for WorkflowUseCaseImpl<D, I, S, U, C>
 where
    D: ringiflow_infra::repository::WorkflowDefinitionRepository + Send + Sync,
    I: ringiflow_infra::repository::WorkflowInstanceRepository + Send + Sync,
    S: ringiflow_infra::repository::WorkflowStepRepository + Send + Sync,
    U: UserRepository,
+   C: DisplayIdCounterRepository,
 {
    async fn create_workflow(
       &self,

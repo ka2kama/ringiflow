@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n         SELECT last_number\n         FROM display_id_counters\n         WHERE tenant_id = $1 AND entity_type = $2\n         FOR UPDATE\n         ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "last_number",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7b45f9c6cf8a9facab4f19b3cd6110290c0c7fe10846955f42e1f59b9c38fd30"
+}

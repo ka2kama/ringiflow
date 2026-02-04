@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n      INSERT INTO display_id_counters (tenant_id, entity_type, last_number)\n      VALUES ($1, $2, $3)\n      ON CONFLICT (tenant_id, entity_type) DO UPDATE SET last_number = $3\n      ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "18cfe13d6f54bbbbb3780dc0723bd5f30f6a942e90218e32e2386ece13dd2344"
+}
