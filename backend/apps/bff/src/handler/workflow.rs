@@ -178,6 +178,7 @@ impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
 #[derive(Debug, Serialize)]
 pub struct WorkflowData {
    pub id: String,
+   pub display_id: String,
    pub title: String,
    pub definition_id: String,
    pub status: String,
@@ -206,6 +207,7 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
    fn from(dto: crate::client::WorkflowInstanceDto) -> Self {
       Self {
          id: dto.id,
+         display_id: dto.display_id,
          title: dto.title,
          definition_id: dto.definition_id,
          status: dto.status,

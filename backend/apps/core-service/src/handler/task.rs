@@ -16,6 +16,7 @@ use axum::{
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
+   value_objects::{DisplayId, display_prefix},
    workflow::{WorkflowInstance, WorkflowStepId},
 };
 use ringiflow_infra::repository::{
@@ -56,6 +57,7 @@ pub struct TaskItemDto {
 #[derive(Debug, Serialize)]
 pub struct WorkflowSummaryDto {
    pub id:           String,
+   pub display_id:   String,
    pub title:        String,
    pub status:       String,
    pub initiated_by: UserRefDto,
@@ -66,6 +68,8 @@ impl WorkflowSummaryDto {
    fn from_instance(instance: &WorkflowInstance, user_names: &HashMap<UserId, String>) -> Self {
       Self {
          id:           instance.id().to_string(),
+         display_id:   DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
+            .to_string(),
          title:        instance.title().to_string(),
          status:       format!("{:?}", instance.status()),
          initiated_by: to_user_ref(instance.initiated_by(), user_names),

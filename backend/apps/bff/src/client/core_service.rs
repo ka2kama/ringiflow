@@ -143,6 +143,7 @@ pub struct WorkflowStepDto {
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowInstanceDto {
    pub id: String,
+   pub display_id: String,
    pub title: String,
    pub definition_id: String,
    pub status: String,
@@ -178,6 +179,7 @@ pub struct WorkflowDefinitionDto {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TaskWorkflowSummaryDto {
    pub id:           String,
+   pub display_id:   String,
    pub title:        String,
    pub status:       String,
    pub initiated_by: UserRefDto,
