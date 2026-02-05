@@ -446,6 +446,26 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
   - 途中の Phase では「最終 Phase 完了後に確認」と記載
 - **単一 PR で完結する場合**: 実装したテストと手動テストの手順を記載
 
+### PR 完了フロー
+
+実装完了から Ready for Review までの手順。順番を守ること。
+
+1. 実装完了、`just check-all` 通過
+2. 自己検証チェックリスト完了（[self-review.md](.claude/rules/self-review.md)）
+3. Draft PR 作成（`gh pr create --draft`）
+4. `/wrap-up` でドキュメント整備
+5. ユーザーに確認を求める（「Ready にしてよいですか？」）
+6. ユーザー承認後、`gh pr ready` で Ready にする
+
+**禁止:**
+
+- Draft なしで PR を作成すること
+- ユーザー確認なしに `gh pr ready` を実行すること
+
+改善の経緯:
+- [PR を Draft で作成しなかった](prompts/improvements/2026-02/2026-02-05_2104_PRをDraftで作成しなかった.md)
+- [ユーザー確認なしに PR を Ready にした](prompts/improvements/2026-02/2026-02-05_2104_ユーザー確認なしにPRをReadyにした.md)
+
 ### Ready for Review
 
 ```bash
