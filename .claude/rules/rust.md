@@ -267,8 +267,9 @@ pub fn validate(&self, user: User) -> Result<(), DomainError> {
 ```rust
 use derive_more::Display;
 
-// Good: derive で自動生成
+// Good: derive で自動生成（Newtype パターンでは #[display] 属性が必要）
 #[derive(Display)]
+#[display("{_0}")]
 pub struct UserId(Uuid);
 
 // Bad: 手動実装
