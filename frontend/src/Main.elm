@@ -202,10 +202,10 @@ initPage route shared =
             in
             ( TasksPage model, Cmd.map TasksMsg cmd )
 
-        Route.TaskDetail id ->
+        Route.TaskDetail workflowDisplayNumber stepDisplayNumber ->
             let
                 ( model, cmd ) =
-                    TaskDetail.init shared id
+                    TaskDetail.init shared workflowDisplayNumber stepDisplayNumber
             in
             ( TaskDetailPage model, Cmd.map TaskDetailMsg cmd )
 
@@ -507,7 +507,7 @@ pageTitle route =
         Route.Tasks ->
             "タスク一覧"
 
-        Route.TaskDetail _ ->
+        Route.TaskDetail _ _ ->
             "タスク詳細"
 
         Route.NotFound ->

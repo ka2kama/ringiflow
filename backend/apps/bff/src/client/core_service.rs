@@ -181,10 +181,11 @@ pub struct WorkflowDefinitionDto {
 /// ワークフロー概要 DTO（タスク一覧用）
 #[derive(Debug, Clone, Deserialize)]
 pub struct TaskWorkflowSummaryDto {
-   pub id:           String,
-   pub display_id:   String,
-   pub title:        String,
-   pub status:       String,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub title: String,
+   pub status: String,
    pub initiated_by: UserRefDto,
    pub submitted_at: Option<String>,
 }
@@ -192,15 +193,16 @@ pub struct TaskWorkflowSummaryDto {
 /// タスク一覧の要素 DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct TaskItemDto {
-   pub id:          String,
-   pub step_name:   String,
-   pub status:      String,
-   pub version:     i32,
+   pub id: String,
+   pub display_number: i64,
+   pub step_name: String,
+   pub status: String,
+   pub version: i32,
    pub assigned_to: Option<UserRefDto>,
-   pub due_date:    Option<String>,
-   pub started_at:  Option<String>,
-   pub created_at:  String,
-   pub workflow:    TaskWorkflowSummaryDto,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
+   pub created_at: String,
+   pub workflow: TaskWorkflowSummaryDto,
 }
 
 /// タスク詳細 DTO

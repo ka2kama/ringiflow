@@ -68,9 +68,9 @@ Route はカスタム型（Tagged Union / Sum Type）として定義。
   - `Home`: トップページ（`/`）
   - `Workflows`: 申請一覧（`/workflows`）
   - `WorkflowNew`: 新規申請（`/workflows/new`）
-  - `WorkflowDetail`: 申請詳細（`/workflows/{id}`）
+  - `WorkflowDetail`: 申請詳細（`/workflows/{displayNumber}`）
   - `Tasks`: タスク一覧（`/tasks`）
-  - `TaskDetail`: タスク詳細（`/tasks/{id}`）
+  - `TaskDetail`: タスク詳細（`/workflows/{workflowDisplayNumber}/tasks/{stepDisplayNumber}`）
   - `NotFound`: 存在しないパス
 
 -}
@@ -80,7 +80,7 @@ type Route
     | WorkflowNew
     | WorkflowDetail Int
     | Tasks
-    | TaskDetail String
+    | TaskDetail Int Int
     | NotFound
 
 
@@ -126,9 +126,9 @@ parser =
     oneOf
         [ Parser.map Home top
         , Parser.map WorkflowNew (s "workflows" </> s "new")
+        , Parser.map TaskDetail (s "workflows" </> int </> s "tasks" </> int)
         , Parser.map WorkflowDetail (s "workflows" </> int)
         , Parser.map Workflows (s "workflows")
-        , Parser.map TaskDetail (s "tasks" </> string)
         , Parser.map Tasks (s "tasks")
         ]
 
@@ -193,8 +193,8 @@ toString route =
         Tasks ->
             "/tasks"
 
-        TaskDetail id ->
-            "/tasks/" ++ id
+        TaskDetail workflowDisplayNumber stepDisplayNumber ->
+            "/workflows/" ++ String.fromInt workflowDisplayNumber ++ "/tasks/" ++ String.fromInt stepDisplayNumber
 
         NotFound ->
             "/not-found"
@@ -226,7 +226,7 @@ isRouteActive navRoute currentRoute =
         ( Tasks, Tasks ) ->
             True
 
-        ( Tasks, TaskDetail _ ) ->
+        ( Tasks, TaskDetail _ _ ) ->
             True
 
         _ ->

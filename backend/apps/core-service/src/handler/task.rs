@@ -49,24 +49,26 @@ pub struct TaskState<I, S, U> {
 /// タスク一覧の要素 DTO
 #[derive(Debug, Serialize)]
 pub struct TaskItemDto {
-   pub id:          String,
-   pub step_name:   String,
-   pub status:      String,
-   pub version:     i32,
+   pub id: String,
+   pub display_number: i64,
+   pub step_name: String,
+   pub status: String,
+   pub version: i32,
    pub assigned_to: Option<UserRefDto>,
-   pub due_date:    Option<String>,
-   pub started_at:  Option<String>,
-   pub created_at:  String,
-   pub workflow:    WorkflowSummaryDto,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
+   pub created_at: String,
+   pub workflow: WorkflowSummaryDto,
 }
 
 /// ワークフロー概要 DTO（タスク一覧に含める最小限の情報）
 #[derive(Debug, Serialize)]
 pub struct WorkflowSummaryDto {
-   pub id:           String,
-   pub display_id:   String,
-   pub title:        String,
-   pub status:       String,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub title: String,
+   pub status: String,
    pub initiated_by: UserRefDto,
    pub submitted_at: Option<String>,
 }
@@ -74,11 +76,12 @@ pub struct WorkflowSummaryDto {
 impl WorkflowSummaryDto {
    fn from_instance(instance: &WorkflowInstance, user_names: &HashMap<UserId, String>) -> Self {
       Self {
-         id:           instance.id().to_string(),
-         display_id:   DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
+         id: instance.id().to_string(),
+         display_id: DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
             .to_string(),
-         title:        instance.title().to_string(),
-         status:       format!("{:?}", instance.status()),
+         display_number: instance.display_number().as_i64(),
+         title: instance.title().to_string(),
+         status: format!("{:?}", instance.status()),
          initiated_by: to_user_ref(instance.initiated_by(), user_names),
          submitted_at: instance.submitted_at().map(|t| t.to_rfc3339()),
       }
@@ -88,15 +91,16 @@ impl WorkflowSummaryDto {
 impl TaskItemDto {
    fn from_task_item(item: &TaskItem, user_names: &HashMap<UserId, String>) -> Self {
       Self {
-         id:          item.step.id().to_string(),
-         step_name:   item.step.step_name().to_string(),
-         status:      format!("{:?}", item.step.status()),
-         version:     item.step.version().as_i32(),
+         id: item.step.id().to_string(),
+         display_number: item.step.display_number().as_i64(),
+         step_name: item.step.step_name().to_string(),
+         status: format!("{:?}", item.step.status()),
+         version: item.step.version().as_i32(),
          assigned_to: item.step.assigned_to().map(|u| to_user_ref(u, user_names)),
-         due_date:    item.step.due_date().map(|t| t.to_rfc3339()),
-         started_at:  item.step.started_at().map(|t| t.to_rfc3339()),
-         created_at:  item.step.created_at().to_rfc3339(),
-         workflow:    WorkflowSummaryDto::from_instance(&item.workflow, user_names),
+         due_date: item.step.due_date().map(|t| t.to_rfc3339()),
+         started_at: item.step.started_at().map(|t| t.to_rfc3339()),
+         created_at: item.step.created_at().to_rfc3339(),
+         workflow: WorkflowSummaryDto::from_instance(&item.workflow, user_names),
       }
    }
 }

@@ -1,4 +1,4 @@
-module Api.Task exposing (getTask, listMyTasks)
+module Api.Task exposing (getTaskByDisplayNumbers, listMyTasks)
 
 {-| タスク API クライアント
 
@@ -16,9 +16,10 @@ BFF の `/api/v1/tasks` エンドポイントへのアクセスを提供。
         }
 
     -- タスク詳細を取得
-    TaskApi.getTask
+    TaskApi.getTaskByDisplayNumbers
         { config = requestConfig
-        , id = "step-uuid"
+        , workflowDisplayNumber = 1
+        , stepDisplayNumber = 1
         , toMsg = GotTaskDetail
         }
 
@@ -52,22 +53,23 @@ listMyTasks { config, toMsg } =
 
 {-| タスク詳細を取得
 
-`GET /api/v1/tasks/{id}`
+`GET /api/v1/workflows/{workflowDisplayNumber}/tasks/{stepDisplayNumber}`
 
-指定された ID のタスク詳細（承認ステップ + ワークフロー全体）を取得。
+ワークフローとステップの表示用番号を使ってタスク詳細を取得。
 タスク詳細画面で使用。
 
 -}
-getTask :
+getTaskByDisplayNumbers :
     { config : RequestConfig
-    , id : String
+    , workflowDisplayNumber : Int
+    , stepDisplayNumber : Int
     , toMsg : Result ApiError TaskDetail -> msg
     }
     -> Cmd msg
-getTask { config, id, toMsg } =
+getTaskByDisplayNumbers { config, workflowDisplayNumber, stepDisplayNumber, toMsg } =
     Api.get
         { config = config
-        , url = "/api/v1/tasks/" ++ id
+        , url = "/api/v1/workflows/" ++ String.fromInt workflowDisplayNumber ++ "/tasks/" ++ String.fromInt stepDisplayNumber
         , decoder = Task.detailDecoder
         , toMsg = toMsg
         }

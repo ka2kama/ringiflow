@@ -36,10 +36,11 @@ use crate::client::CoreServiceClient;
 /// ワークフロー概要データ（タスク一覧用）
 #[derive(Debug, Serialize)]
 pub struct TaskWorkflowSummaryData {
-   pub id:           String,
-   pub display_id:   String,
-   pub title:        String,
-   pub status:       String,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub title: String,
+   pub status: String,
    pub initiated_by: UserRefData,
    pub submitted_at: Option<String>,
 }
@@ -47,10 +48,11 @@ pub struct TaskWorkflowSummaryData {
 impl From<crate::client::TaskWorkflowSummaryDto> for TaskWorkflowSummaryData {
    fn from(dto: crate::client::TaskWorkflowSummaryDto) -> Self {
       Self {
-         id:           dto.id,
-         display_id:   dto.display_id,
-         title:        dto.title,
-         status:       dto.status,
+         id: dto.id,
+         display_id: dto.display_id,
+         display_number: dto.display_number,
+         title: dto.title,
+         status: dto.status,
          initiated_by: UserRefData::from(dto.initiated_by),
          submitted_at: dto.submitted_at,
       }
@@ -60,29 +62,31 @@ impl From<crate::client::TaskWorkflowSummaryDto> for TaskWorkflowSummaryData {
 /// タスク一覧の要素データ
 #[derive(Debug, Serialize)]
 pub struct TaskItemData {
-   pub id:          String,
-   pub step_name:   String,
-   pub status:      String,
-   pub version:     i32,
+   pub id: String,
+   pub display_number: i64,
+   pub step_name: String,
+   pub status: String,
+   pub version: i32,
    pub assigned_to: Option<UserRefData>,
-   pub due_date:    Option<String>,
-   pub started_at:  Option<String>,
-   pub created_at:  String,
-   pub workflow:    TaskWorkflowSummaryData,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
+   pub created_at: String,
+   pub workflow: TaskWorkflowSummaryData,
 }
 
 impl From<crate::client::TaskItemDto> for TaskItemData {
    fn from(dto: crate::client::TaskItemDto) -> Self {
       Self {
-         id:          dto.id,
-         step_name:   dto.step_name,
-         status:      dto.status,
-         version:     dto.version,
+         id: dto.id,
+         display_number: dto.display_number,
+         step_name: dto.step_name,
+         status: dto.status,
+         version: dto.version,
          assigned_to: dto.assigned_to.map(UserRefData::from),
-         due_date:    dto.due_date,
-         started_at:  dto.started_at,
-         created_at:  dto.created_at,
-         workflow:    TaskWorkflowSummaryData::from(dto.workflow),
+         due_date: dto.due_date,
+         started_at: dto.started_at,
+         created_at: dto.created_at,
+         workflow: TaskWorkflowSummaryData::from(dto.workflow),
       }
    }
 }
