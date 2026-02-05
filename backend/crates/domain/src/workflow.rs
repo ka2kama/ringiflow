@@ -715,93 +715,98 @@ impl std::str::FromStr for StepDecision {
 /// 担当者への割り当てと判断結果を保持する。
 #[derive(Debug, Clone)]
 pub struct WorkflowStep {
-   id:           WorkflowStepId,
-   instance_id:  WorkflowInstanceId,
-   step_id:      String,
-   step_name:    String,
-   step_type:    String,
-   status:       WorkflowStepStatus,
-   version:      Version,
-   assigned_to:  Option<UserId>,
-   decision:     Option<StepDecision>,
-   comment:      Option<String>,
-   due_date:     Option<DateTime<Utc>>,
-   started_at:   Option<DateTime<Utc>>,
+   id: WorkflowStepId,
+   instance_id: WorkflowInstanceId,
+   display_number: DisplayNumber,
+   step_id: String,
+   step_name: String,
+   step_type: String,
+   status: WorkflowStepStatus,
+   version: Version,
+   assigned_to: Option<UserId>,
+   decision: Option<StepDecision>,
+   comment: Option<String>,
+   due_date: Option<DateTime<Utc>>,
+   started_at: Option<DateTime<Utc>>,
    completed_at: Option<DateTime<Utc>>,
-   created_at:   DateTime<Utc>,
-   updated_at:   DateTime<Utc>,
+   created_at: DateTime<Utc>,
+   updated_at: DateTime<Utc>,
 }
 
 /// ワークフローステップの新規作成パラメータ
 pub struct NewWorkflowStep {
-   pub id:          WorkflowStepId,
+   pub id: WorkflowStepId,
    pub instance_id: WorkflowInstanceId,
-   pub step_id:     String,
-   pub step_name:   String,
-   pub step_type:   String,
+   pub display_number: DisplayNumber,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
    pub assigned_to: Option<UserId>,
-   pub now:         DateTime<Utc>,
+   pub now: DateTime<Utc>,
 }
 
 /// ワークフローステップの DB 復元パラメータ
 pub struct WorkflowStepRecord {
-   pub id:           WorkflowStepId,
-   pub instance_id:  WorkflowInstanceId,
-   pub step_id:      String,
-   pub step_name:    String,
-   pub step_type:    String,
-   pub status:       WorkflowStepStatus,
-   pub version:      Version,
-   pub assigned_to:  Option<UserId>,
-   pub decision:     Option<StepDecision>,
-   pub comment:      Option<String>,
-   pub due_date:     Option<DateTime<Utc>>,
-   pub started_at:   Option<DateTime<Utc>>,
+   pub id: WorkflowStepId,
+   pub instance_id: WorkflowInstanceId,
+   pub display_number: DisplayNumber,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
+   pub status: WorkflowStepStatus,
+   pub version: Version,
+   pub assigned_to: Option<UserId>,
+   pub decision: Option<StepDecision>,
+   pub comment: Option<String>,
+   pub due_date: Option<DateTime<Utc>>,
+   pub started_at: Option<DateTime<Utc>>,
    pub completed_at: Option<DateTime<Utc>>,
-   pub created_at:   DateTime<Utc>,
-   pub updated_at:   DateTime<Utc>,
+   pub created_at: DateTime<Utc>,
+   pub updated_at: DateTime<Utc>,
 }
 
 impl WorkflowStep {
    /// 新しいワークフローステップを作成する
    pub fn new(params: NewWorkflowStep) -> Self {
       Self {
-         id:           params.id,
-         instance_id:  params.instance_id,
-         step_id:      params.step_id,
-         step_name:    params.step_name,
-         step_type:    params.step_type,
-         status:       WorkflowStepStatus::Pending,
-         version:      Version::initial(),
-         assigned_to:  params.assigned_to,
-         decision:     None,
-         comment:      None,
-         due_date:     None,
-         started_at:   None,
+         id: params.id,
+         instance_id: params.instance_id,
+         display_number: params.display_number,
+         step_id: params.step_id,
+         step_name: params.step_name,
+         step_type: params.step_type,
+         status: WorkflowStepStatus::Pending,
+         version: Version::initial(),
+         assigned_to: params.assigned_to,
+         decision: None,
+         comment: None,
+         due_date: None,
+         started_at: None,
          completed_at: None,
-         created_at:   params.now,
-         updated_at:   params.now,
+         created_at: params.now,
+         updated_at: params.now,
       }
    }
 
    /// 既存のデータから復元する
    pub fn from_db(record: WorkflowStepRecord) -> Self {
       Self {
-         id:           record.id,
-         instance_id:  record.instance_id,
-         step_id:      record.step_id,
-         step_name:    record.step_name,
-         step_type:    record.step_type,
-         status:       record.status,
-         version:      record.version,
-         assigned_to:  record.assigned_to,
-         decision:     record.decision,
-         comment:      record.comment,
-         due_date:     record.due_date,
-         started_at:   record.started_at,
+         id: record.id,
+         instance_id: record.instance_id,
+         display_number: record.display_number,
+         step_id: record.step_id,
+         step_name: record.step_name,
+         step_type: record.step_type,
+         status: record.status,
+         version: record.version,
+         assigned_to: record.assigned_to,
+         decision: record.decision,
+         comment: record.comment,
+         due_date: record.due_date,
+         started_at: record.started_at,
          completed_at: record.completed_at,
-         created_at:   record.created_at,
-         updated_at:   record.updated_at,
+         created_at: record.created_at,
+         updated_at: record.updated_at,
       }
    }
 
@@ -813,6 +818,10 @@ impl WorkflowStep {
 
    pub fn instance_id(&self) -> &WorkflowInstanceId {
       &self.instance_id
+   }
+
+   pub fn display_number(&self) -> DisplayNumber {
+      self.display_number
    }
 
    pub fn step_id(&self) -> &str {
@@ -1010,6 +1019,7 @@ mod tests {
       WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id,
+         display_number: DisplayNumber::new(1).unwrap(),
          step_id: "step_1".to_string(),
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
@@ -1219,21 +1229,22 @@ mod tests {
          let past = DateTime::from_timestamp(1_699_999_000, 0).unwrap();
          let now = test_now();
          let step = WorkflowStep::from_db(WorkflowStepRecord {
-            id:           WorkflowStepId::new(),
-            instance_id:  WorkflowInstanceId::new(),
-            step_id:      "step_1".to_string(),
-            step_name:    "承認".to_string(),
-            step_type:    "approval".to_string(),
-            status:       WorkflowStepStatus::Active,
-            version:      Version::initial(),
-            assigned_to:  Some(UserId::new()),
-            decision:     None,
-            comment:      None,
-            due_date:     Some(past),
-            started_at:   Some(past),
+            id: WorkflowStepId::new(),
+            instance_id: WorkflowInstanceId::new(),
+            display_number: DisplayNumber::new(1).unwrap(),
+            step_id: "step_1".to_string(),
+            step_name: "承認".to_string(),
+            step_type: "approval".to_string(),
+            status: WorkflowStepStatus::Active,
+            version: Version::initial(),
+            assigned_to: Some(UserId::new()),
+            decision: None,
+            comment: None,
+            due_date: Some(past),
+            started_at: Some(past),
             completed_at: None,
-            created_at:   past,
-            updated_at:   past,
+            created_at: past,
+            updated_at: past,
          });
          assert!(step.is_overdue(now));
       }
@@ -1243,21 +1254,22 @@ mod tests {
          let now = test_now();
          let future = DateTime::from_timestamp(1_700_100_000, 0).unwrap();
          let step = WorkflowStep::from_db(WorkflowStepRecord {
-            id:           WorkflowStepId::new(),
-            instance_id:  WorkflowInstanceId::new(),
-            step_id:      "step_1".to_string(),
-            step_name:    "承認".to_string(),
-            step_type:    "approval".to_string(),
-            status:       WorkflowStepStatus::Active,
-            version:      Version::initial(),
-            assigned_to:  Some(UserId::new()),
-            decision:     None,
-            comment:      None,
-            due_date:     Some(future),
-            started_at:   Some(now),
+            id: WorkflowStepId::new(),
+            instance_id: WorkflowInstanceId::new(),
+            display_number: DisplayNumber::new(1).unwrap(),
+            step_id: "step_1".to_string(),
+            step_name: "承認".to_string(),
+            step_type: "approval".to_string(),
+            status: WorkflowStepStatus::Active,
+            version: Version::initial(),
+            assigned_to: Some(UserId::new()),
+            decision: None,
+            comment: None,
+            due_date: Some(future),
+            started_at: Some(now),
             completed_at: None,
-            created_at:   now,
-            updated_at:   now,
+            created_at: now,
+            updated_at: now,
          });
          assert!(!step.is_overdue(now));
       }

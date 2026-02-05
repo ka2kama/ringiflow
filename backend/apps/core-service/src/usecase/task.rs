@@ -445,6 +445,7 @@ mod tests {
       let active_step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
          step_id: "approval".to_string(),
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
@@ -458,6 +459,7 @@ mod tests {
       let pending_step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(2).unwrap(),
          step_id: "review".to_string(),
          step_name: "レビュー".to_string(),
          step_type: "approval".to_string(),
@@ -508,6 +510,7 @@ mod tests {
       let step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
          step_id: "approval".to_string(),
          step_name: "部長承認".to_string(),
          step_type: "approval".to_string(),
@@ -560,6 +563,7 @@ mod tests {
       let step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
          step_id: "approval".to_string(),
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
@@ -628,6 +632,7 @@ mod tests {
       let step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
          step_id: "approval".to_string(),
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
@@ -702,6 +707,7 @@ mod tests {
       let step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
          step_id: "approval".to_string(),
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),

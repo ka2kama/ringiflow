@@ -319,26 +319,28 @@ mod tests {
 
       // Active ステップ（カウント対象）
       let active_step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         Utc::now(),
+         now: Utc::now(),
       })
       .activated(Utc::now());
       step_repo.insert(&active_step).await.unwrap();
 
       // Pending ステップ（カウント対象外）
       let pending_step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "review".to_string(),
-         step_name:   "レビュー".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(2).unwrap(),
+         step_id: "review".to_string(),
+         step_name: "レビュー".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         Utc::now(),
+         now: Utc::now(),
       });
       step_repo.insert(&pending_step).await.unwrap();
 
@@ -446,13 +448,14 @@ mod tests {
 
       // 完了済みステップ（今日 → カウント対象）
       let completed_step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         Utc::now(),
+         now: Utc::now(),
       })
       .activated(Utc::now())
       .approve(Some("OK".to_string()), Utc::now())
@@ -519,13 +522,14 @@ mod tests {
 
       // approver_id にアサインされた Active ステップ
       let step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         Utc::now(),
+         now: Utc::now(),
       })
       .activated(Utc::now());
       step_repo.insert(&step).await.unwrap();

@@ -169,6 +169,7 @@ impl From<WorkflowDefinition> for WorkflowDefinitionDto {
 #[derive(Debug, Serialize)]
 pub struct WorkflowStepDto {
    pub id:           String,
+   pub display_id:   String,
    pub step_id:      String,
    pub step_name:    String,
    pub step_type:    String,
@@ -188,6 +189,8 @@ impl WorkflowStepDto {
    pub(crate) fn from_step(step: &WorkflowStep, user_names: &HashMap<UserId, String>) -> Self {
       Self {
          id:           step.id().to_string(),
+         display_id:   DisplayId::new(display_prefix::WORKFLOW_STEP, step.display_number())
+            .to_string(),
          step_id:      step.step_id().to_string(),
          step_name:    step.step_name().to_string(),
          step_type:    step.step_type().to_string(),

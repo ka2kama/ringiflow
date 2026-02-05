@@ -247,9 +247,15 @@ where
 
       // 4. ステップを作成 (MVP では1段階承認のみ)
       let now = chrono::Utc::now();
+      let display_number = self
+         .counter_repo
+         .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
+         .await
+         .map_err(|e| CoreError::Internal(format!("採番に失敗: {}", e)))?;
       let step = WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: instance_id.clone(),
+         display_number,
          step_id: "approval".to_string(),
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
@@ -1051,13 +1057,14 @@ mod tests {
 
       // Active なステップを作成
       let step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         chrono::Utc::now(),
+         now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
@@ -1137,13 +1144,14 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()), // approver_id に割り当て
-         now:         chrono::Utc::now(),
+         now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
@@ -1200,13 +1208,14 @@ mod tests {
 
       // Pending 状態のステップ（Active ではない）
       let step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         chrono::Utc::now(),
+         now: chrono::Utc::now(),
       });
       // activated() を呼ばないので Pending のまま
       step_repo.insert(&step).await.unwrap();
@@ -1262,13 +1271,14 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         chrono::Utc::now(),
+         now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
@@ -1328,13 +1338,14 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(NewWorkflowStep {
-         id:          WorkflowStepId::new(),
+         id: WorkflowStepId::new(),
          instance_id: instance.id().clone(),
-         step_id:     "approval".to_string(),
-         step_name:   "承認".to_string(),
-         step_type:   "approval".to_string(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now:         chrono::Utc::now(),
+         now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();

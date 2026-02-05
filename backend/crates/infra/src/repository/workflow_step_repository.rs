@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::Version,
+   value_objects::{DisplayNumber, Version},
    workflow::{
       StepDecision,
       WorkflowInstanceId,
@@ -79,15 +79,16 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       sqlx::query!(
          r#"
          INSERT INTO workflow_steps (
-            id, instance_id, step_id, step_name, step_type,
+            id, instance_id, display_number, step_id, step_name, step_type,
             status, version, assigned_to, decision, comment,
             due_date, started_at, completed_at,
             created_at, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          "#,
          step.id().as_uuid(),
          step.instance_id().as_uuid(),
+         step.display_number().as_i64(),
          step.step_id(),
          step.step_name(),
          step.step_type(),
@@ -158,7 +159,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let row = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.step_id, s.step_name, s.step_type,
+            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
             s.status, s.version, s.assigned_to, s.decision, s.comment,
             s.due_date, s.started_at, s.completed_at,
             s.created_at, s.updated_at
@@ -177,28 +178,30 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       };
 
       let step = WorkflowStep::from_db(WorkflowStepRecord {
-         id:           WorkflowStepId::from_uuid(r.id),
-         instance_id:  WorkflowInstanceId::from_uuid(r.instance_id),
-         step_id:      r.step_id,
-         step_name:    r.step_name,
-         step_type:    r.step_type,
-         status:       WorkflowStepStatus::from_str(&r.status)
-            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-         version:      Version::new(r.version as u32)
+         id: WorkflowStepId::from_uuid(r.id),
+         instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
+         display_number: DisplayNumber::new(r.display_number)
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         assigned_to:  r.assigned_to.map(UserId::from_uuid),
-         decision:     r
+         step_id: r.step_id,
+         step_name: r.step_name,
+         step_type: r.step_type,
+         status: WorkflowStepStatus::from_str(&r.status)
+            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+         version: Version::new(r.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         assigned_to: r.assigned_to.map(UserId::from_uuid),
+         decision: r
             .decision
             .as_deref()
             .map(StepDecision::from_str)
             .transpose()
             .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-         comment:      r.comment,
-         due_date:     r.due_date,
-         started_at:   r.started_at,
+         comment: r.comment,
+         due_date: r.due_date,
+         started_at: r.started_at,
          completed_at: r.completed_at,
-         created_at:   r.created_at,
-         updated_at:   r.updated_at,
+         created_at: r.created_at,
+         updated_at: r.updated_at,
       });
 
       Ok(Some(step))
@@ -212,7 +215,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let rows = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.step_id, s.step_name, s.step_type,
+            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
             s.status, s.version, s.assigned_to, s.decision, s.comment,
             s.due_date, s.started_at, s.completed_at,
             s.created_at, s.updated_at
@@ -231,28 +234,30 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          .into_iter()
          .map(|r| -> Result<WorkflowStep, InfraError> {
             Ok(WorkflowStep::from_db(WorkflowStepRecord {
-               id:           WorkflowStepId::from_uuid(r.id),
-               instance_id:  WorkflowInstanceId::from_uuid(r.instance_id),
-               step_id:      r.step_id,
-               step_name:    r.step_name,
-               step_type:    r.step_type,
-               status:       WorkflowStepStatus::from_str(&r.status)
-                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-               version:      Version::new(r.version as u32)
+               id: WorkflowStepId::from_uuid(r.id),
+               instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
+               display_number: DisplayNumber::new(r.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               assigned_to:  r.assigned_to.map(UserId::from_uuid),
-               decision:     r
+               step_id: r.step_id,
+               step_name: r.step_name,
+               step_type: r.step_type,
+               status: WorkflowStepStatus::from_str(&r.status)
+                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+               version: Version::new(r.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               assigned_to: r.assigned_to.map(UserId::from_uuid),
+               decision: r
                   .decision
                   .as_deref()
                   .map(StepDecision::from_str)
                   .transpose()
                   .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-               comment:      r.comment,
-               due_date:     r.due_date,
-               started_at:   r.started_at,
+               comment: r.comment,
+               due_date: r.due_date,
+               started_at: r.started_at,
                completed_at: r.completed_at,
-               created_at:   r.created_at,
-               updated_at:   r.updated_at,
+               created_at: r.created_at,
+               updated_at: r.updated_at,
             }))
          })
          .collect()
@@ -266,7 +271,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let rows = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.step_id, s.step_name, s.step_type,
+            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
             s.status, s.version, s.assigned_to, s.decision, s.comment,
             s.due_date, s.started_at, s.completed_at,
             s.created_at, s.updated_at
@@ -285,28 +290,30 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          .into_iter()
          .map(|r| -> Result<WorkflowStep, InfraError> {
             Ok(WorkflowStep::from_db(WorkflowStepRecord {
-               id:           WorkflowStepId::from_uuid(r.id),
-               instance_id:  WorkflowInstanceId::from_uuid(r.instance_id),
-               step_id:      r.step_id,
-               step_name:    r.step_name,
-               step_type:    r.step_type,
-               status:       WorkflowStepStatus::from_str(&r.status)
-                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-               version:      Version::new(r.version as u32)
+               id: WorkflowStepId::from_uuid(r.id),
+               instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
+               display_number: DisplayNumber::new(r.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               assigned_to:  r.assigned_to.map(UserId::from_uuid),
-               decision:     r
+               step_id: r.step_id,
+               step_name: r.step_name,
+               step_type: r.step_type,
+               status: WorkflowStepStatus::from_str(&r.status)
+                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+               version: Version::new(r.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               assigned_to: r.assigned_to.map(UserId::from_uuid),
+               decision: r
                   .decision
                   .as_deref()
                   .map(StepDecision::from_str)
                   .transpose()
                   .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-               comment:      r.comment,
-               due_date:     r.due_date,
-               started_at:   r.started_at,
+               comment: r.comment,
+               due_date: r.due_date,
+               started_at: r.started_at,
                completed_at: r.completed_at,
-               created_at:   r.created_at,
-               updated_at:   r.updated_at,
+               created_at: r.created_at,
+               updated_at: r.updated_at,
             }))
          })
          .collect()

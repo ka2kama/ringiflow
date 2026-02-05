@@ -101,6 +101,36 @@ paths:
 └── No  → .claude/rules/ + paths 指定
 ```
 
+## ルール追加手順
+
+`.claude/rules/` にルールファイルを作成しただけでは**読み込まれない**。以下のいずれかを行う必要がある。
+
+### 手順
+
+1. ルールファイルを作成（`.claude/rules/xxx.md`）
+2. 適用範囲を決定:
+   - **特定ファイルのみ**: `paths:` フロントマターを追加
+   - **常に適用**: CLAUDE.md から参照を追加
+3. 動作確認: ルールが読み込まれることを確認
+
+### 参照の追加例（CLAUDE.md）
+
+```markdown
+## セクション名
+
+[要約]
+
+→ 詳細: [`.claude/rules/xxx.md`](.claude/rules/xxx.md)
+```
+
+### よくある間違い
+
+| 状態 | 結果 |
+|------|------|
+| ファイル作成のみ（paths なし、参照なし） | **読み込まれない** |
+| paths あり、参照なし | 指定パターンのファイル編集時のみ読み込まれる |
+| paths なし、CLAUDE.md から参照 | 常に読み込まれる |
+
 ## 関連リソース
 
 - [Claude Code Memory Management](https://docs.anthropic.com/en/docs/claude-code/memory)
