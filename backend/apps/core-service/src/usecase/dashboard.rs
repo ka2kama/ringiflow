@@ -111,6 +111,8 @@ mod tests {
       user::UserId,
       value_objects::{DisplayNumber, Version},
       workflow::{
+         NewWorkflowInstance,
+         NewWorkflowStep,
          WorkflowDefinitionId,
          WorkflowInstance,
          WorkflowInstanceId,
@@ -299,45 +301,45 @@ mod tests {
       let step_repo = MockWorkflowStepRepository::new();
 
       let now = Utc::now();
-      let instance = WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         tenant_id.clone(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(100).unwrap(),
-         "テスト申請".to_string(),
-         serde_json::json!({}),
-         user_id.clone(),
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
          now,
-      )
+      })
       .submitted(now)
       .unwrap()
       .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       // Active ステップ（カウント対象）
-      let active_step = WorkflowStep::new(
-         WorkflowStepId::new(),
-         instance.id().clone(),
-         "approval".to_string(),
-         "承認".to_string(),
-         "approval".to_string(),
-         Some(approver_id.clone()),
-         Utc::now(),
-      )
+      let active_step = WorkflowStep::new(NewWorkflowStep {
+         id:          WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         step_id:     "approval".to_string(),
+         step_name:   "承認".to_string(),
+         step_type:   "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now:         Utc::now(),
+      })
       .activated(Utc::now());
       step_repo.insert(&active_step).await.unwrap();
 
       // Pending ステップ（カウント対象外）
-      let pending_step = WorkflowStep::new(
-         WorkflowStepId::new(),
-         instance.id().clone(),
-         "review".to_string(),
-         "レビュー".to_string(),
-         "approval".to_string(),
-         Some(approver_id.clone()),
-         Utc::now(),
-      );
+      let pending_step = WorkflowStep::new(NewWorkflowStep {
+         id:          WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         step_id:     "review".to_string(),
+         step_name:   "レビュー".to_string(),
+         step_type:   "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now:         Utc::now(),
+      });
       step_repo.insert(&pending_step).await.unwrap();
 
       let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
@@ -360,48 +362,48 @@ mod tests {
       let now = Utc::now();
 
       // InProgress インスタンス（カウント対象）
-      let in_progress = WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         tenant_id.clone(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(100).unwrap(),
-         "申請中1".to_string(),
-         serde_json::json!({}),
-         user_id.clone(),
+      let in_progress = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "申請中1".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
          now,
-      )
+      })
       .submitted(now)
       .unwrap()
       .with_current_step("approval".to_string(), now);
       instance_repo.insert(&in_progress).await.unwrap();
 
       // Draft インスタンス（カウント対象外）
-      let draft = WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         tenant_id.clone(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(101).unwrap(),
-         "下書き".to_string(),
-         serde_json::json!({}),
-         user_id.clone(),
+      let draft = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(101).unwrap(),
+         title: "下書き".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
          now,
-      );
+      });
       instance_repo.insert(&draft).await.unwrap();
 
       // Approved インスタンス（カウント対象外）
-      let approved = WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         tenant_id.clone(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(102).unwrap(),
-         "承認済み".to_string(),
-         serde_json::json!({}),
-         user_id.clone(),
+      let approved = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(102).unwrap(),
+         title: "承認済み".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
          now,
-      )
+      })
       .submitted(now)
       .unwrap()
       .approved(now);
@@ -426,32 +428,32 @@ mod tests {
       let step_repo = MockWorkflowStepRepository::new();
 
       let now = Utc::now();
-      let instance = WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         tenant_id.clone(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(100).unwrap(),
-         "テスト申請".to_string(),
-         serde_json::json!({}),
-         user_id.clone(),
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
          now,
-      )
+      })
       .submitted(now)
       .unwrap()
       .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       // 完了済みステップ（今日 → カウント対象）
-      let completed_step = WorkflowStep::new(
-         WorkflowStepId::new(),
-         instance.id().clone(),
-         "approval".to_string(),
-         "承認".to_string(),
-         "approval".to_string(),
-         Some(approver_id.clone()),
-         Utc::now(),
-      )
+      let completed_step = WorkflowStep::new(NewWorkflowStep {
+         id:          WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         step_id:     "approval".to_string(),
+         step_name:   "承認".to_string(),
+         step_type:   "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now:         Utc::now(),
+      })
       .activated(Utc::now())
       .approve(Some("OK".to_string()), Utc::now())
       .unwrap();
@@ -499,32 +501,32 @@ mod tests {
       let now = Utc::now();
 
       // user_id が申請した InProgress インスタンス
-      let instance = WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         tenant_id.clone(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(100).unwrap(),
-         "ユーザーAの申請".to_string(),
-         serde_json::json!({}),
-         user_id.clone(),
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "ユーザーAの申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
          now,
-      )
+      })
       .submitted(now)
       .unwrap()
       .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       // approver_id にアサインされた Active ステップ
-      let step = WorkflowStep::new(
-         WorkflowStepId::new(),
-         instance.id().clone(),
-         "approval".to_string(),
-         "承認".to_string(),
-         "approval".to_string(),
-         Some(approver_id.clone()),
-         Utc::now(),
-      )
+      let step = WorkflowStep::new(NewWorkflowStep {
+         id:          WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         step_id:     "approval".to_string(),
+         step_name:   "承認".to_string(),
+         step_type:   "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now:         Utc::now(),
+      })
       .activated(Utc::now());
       step_repo.insert(&step).await.unwrap();
 

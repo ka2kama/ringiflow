@@ -12,21 +12,22 @@
 //!
 //! ```rust
 //! use ringiflow_domain::workflow::{
-//!     WorkflowDefinition, WorkflowDefinitionId, WorkflowDefinitionStatus
+//!     NewWorkflowDefinition, WorkflowDefinition, WorkflowDefinitionId,
+//!     WorkflowDefinitionStatus,
 //! };
 //! use ringiflow_domain::{tenant::TenantId, user::UserId, value_objects::WorkflowName};
 //! use serde_json::json;
 //!
 //! // ワークフロー定義の作成
-//! let definition = WorkflowDefinition::new(
-//!     WorkflowDefinitionId::new(),
-//!     TenantId::new(),
-//!     WorkflowName::new("汎用申請").unwrap(),
-//!     Some("シンプルな1段階承認".to_string()),
-//!     json!({"steps": []}),
-//!     UserId::new(),
-//!     chrono::Utc::now(),
-//! );
+//! let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+//!     id: WorkflowDefinitionId::new(),
+//!     tenant_id: TenantId::new(),
+//!     name: WorkflowName::new("汎用申請").unwrap(),
+//!     description: Some("シンプルな1段階承認".to_string()),
+//!     definition: json!({"steps": []}),
+//!     created_by: UserId::new(),
+//!     now: chrono::Utc::now(),
+//! });
 //! assert_eq!(definition.status(), WorkflowDefinitionStatus::Draft);
 //! ```
 
@@ -132,56 +133,61 @@ pub struct WorkflowDefinition {
    updated_at:  DateTime<Utc>,
 }
 
+/// ワークフロー定義の新規作成パラメータ
+pub struct NewWorkflowDefinition {
+   pub id:          WorkflowDefinitionId,
+   pub tenant_id:   TenantId,
+   pub name:        WorkflowName,
+   pub description: Option<String>,
+   pub definition:  JsonValue,
+   pub created_by:  UserId,
+   pub now:         DateTime<Utc>,
+}
+
+/// ワークフロー定義の DB 復元パラメータ
+pub struct WorkflowDefinitionRecord {
+   pub id:          WorkflowDefinitionId,
+   pub tenant_id:   TenantId,
+   pub name:        WorkflowName,
+   pub description: Option<String>,
+   pub version:     Version,
+   pub definition:  JsonValue,
+   pub status:      WorkflowDefinitionStatus,
+   pub created_by:  UserId,
+   pub created_at:  DateTime<Utc>,
+   pub updated_at:  DateTime<Utc>,
+}
+
 impl WorkflowDefinition {
    /// 新しいワークフロー定義を作成する
-   pub fn new(
-      id: WorkflowDefinitionId,
-      tenant_id: TenantId,
-      name: WorkflowName,
-      description: Option<String>,
-      definition: JsonValue,
-      created_by: UserId,
-      now: DateTime<Utc>,
-   ) -> Self {
+   pub fn new(params: NewWorkflowDefinition) -> Self {
       Self {
-         id,
-         tenant_id,
-         name,
-         description,
-         version: Version::initial(),
-         definition,
-         status: WorkflowDefinitionStatus::Draft,
-         created_by,
-         created_at: now,
-         updated_at: now,
+         id:          params.id,
+         tenant_id:   params.tenant_id,
+         name:        params.name,
+         description: params.description,
+         version:     Version::initial(),
+         definition:  params.definition,
+         status:      WorkflowDefinitionStatus::Draft,
+         created_by:  params.created_by,
+         created_at:  params.now,
+         updated_at:  params.now,
       }
    }
 
    /// 既存のデータから復元する
-   #[allow(clippy::too_many_arguments)]
-   pub fn from_db(
-      id: WorkflowDefinitionId,
-      tenant_id: TenantId,
-      name: WorkflowName,
-      description: Option<String>,
-      version: Version,
-      definition: JsonValue,
-      status: WorkflowDefinitionStatus,
-      created_by: UserId,
-      created_at: DateTime<Utc>,
-      updated_at: DateTime<Utc>,
-   ) -> Self {
+   pub fn from_db(record: WorkflowDefinitionRecord) -> Self {
       Self {
-         id,
-         tenant_id,
-         name,
-         description,
-         version,
-         definition,
-         status,
-         created_by,
-         created_at,
-         updated_at,
+         id:          record.id,
+         tenant_id:   record.tenant_id,
+         name:        record.name,
+         description: record.description,
+         version:     record.version,
+         definition:  record.definition,
+         status:      record.status,
+         created_by:  record.created_by,
+         created_at:  record.created_at,
+         updated_at:  record.updated_at,
       }
    }
 
@@ -370,74 +376,78 @@ pub struct WorkflowInstance {
    updated_at: DateTime<Utc>,
 }
 
+/// ワークフローインスタンスの新規作成パラメータ
+pub struct NewWorkflowInstance {
+   pub id: WorkflowInstanceId,
+   pub tenant_id: TenantId,
+   pub definition_id: WorkflowDefinitionId,
+   pub definition_version: Version,
+   pub display_number: DisplayNumber,
+   pub title: String,
+   pub form_data: JsonValue,
+   pub initiated_by: UserId,
+   pub now: DateTime<Utc>,
+}
+
+/// ワークフローインスタンスの DB 復元パラメータ
+pub struct WorkflowInstanceRecord {
+   pub id: WorkflowInstanceId,
+   pub tenant_id: TenantId,
+   pub definition_id: WorkflowDefinitionId,
+   pub definition_version: Version,
+   pub display_number: DisplayNumber,
+   pub title: String,
+   pub form_data: JsonValue,
+   pub status: WorkflowInstanceStatus,
+   pub version: Version,
+   pub current_step_id: Option<String>,
+   pub initiated_by: UserId,
+   pub submitted_at: Option<DateTime<Utc>>,
+   pub completed_at: Option<DateTime<Utc>>,
+   pub created_at: DateTime<Utc>,
+   pub updated_at: DateTime<Utc>,
+}
+
 impl WorkflowInstance {
    /// 新しいワークフローインスタンスを作成する
-   #[allow(clippy::too_many_arguments)]
-   pub fn new(
-      id: WorkflowInstanceId,
-      tenant_id: TenantId,
-      definition_id: WorkflowDefinitionId,
-      definition_version: Version,
-      display_number: DisplayNumber,
-      title: String,
-      form_data: JsonValue,
-      initiated_by: UserId,
-      now: DateTime<Utc>,
-   ) -> Self {
+   pub fn new(params: NewWorkflowInstance) -> Self {
       Self {
-         id,
-         tenant_id,
-         definition_id,
-         definition_version,
-         display_number,
-         title,
-         form_data,
+         id: params.id,
+         tenant_id: params.tenant_id,
+         definition_id: params.definition_id,
+         definition_version: params.definition_version,
+         display_number: params.display_number,
+         title: params.title,
+         form_data: params.form_data,
          status: WorkflowInstanceStatus::Draft,
          version: Version::initial(),
          current_step_id: None,
-         initiated_by,
+         initiated_by: params.initiated_by,
          submitted_at: None,
          completed_at: None,
-         created_at: now,
-         updated_at: now,
+         created_at: params.now,
+         updated_at: params.now,
       }
    }
 
    /// 既存のデータから復元する
-   #[allow(clippy::too_many_arguments)]
-   pub fn from_db(
-      id: WorkflowInstanceId,
-      tenant_id: TenantId,
-      definition_id: WorkflowDefinitionId,
-      definition_version: Version,
-      display_number: DisplayNumber,
-      title: String,
-      form_data: JsonValue,
-      status: WorkflowInstanceStatus,
-      version: Version,
-      current_step_id: Option<String>,
-      initiated_by: UserId,
-      submitted_at: Option<DateTime<Utc>>,
-      completed_at: Option<DateTime<Utc>>,
-      created_at: DateTime<Utc>,
-      updated_at: DateTime<Utc>,
-   ) -> Self {
+   pub fn from_db(record: WorkflowInstanceRecord) -> Self {
       Self {
-         id,
-         tenant_id,
-         definition_id,
-         definition_version,
-         display_number,
-         title,
-         form_data,
-         status,
-         version,
-         current_step_id,
-         initiated_by,
-         submitted_at,
-         completed_at,
-         created_at,
-         updated_at,
+         id: record.id,
+         tenant_id: record.tenant_id,
+         definition_id: record.definition_id,
+         definition_version: record.definition_version,
+         display_number: record.display_number,
+         title: record.title,
+         form_data: record.form_data,
+         status: record.status,
+         version: record.version,
+         current_step_id: record.current_step_id,
+         initiated_by: record.initiated_by,
+         submitted_at: record.submitted_at,
+         completed_at: record.completed_at,
+         created_at: record.created_at,
+         updated_at: record.updated_at,
       }
    }
 
@@ -771,71 +781,76 @@ pub struct WorkflowStep {
    updated_at:   DateTime<Utc>,
 }
 
+/// ワークフローステップの新規作成パラメータ
+pub struct NewWorkflowStep {
+   pub id:          WorkflowStepId,
+   pub instance_id: WorkflowInstanceId,
+   pub step_id:     String,
+   pub step_name:   String,
+   pub step_type:   String,
+   pub assigned_to: Option<UserId>,
+   pub now:         DateTime<Utc>,
+}
+
+/// ワークフローステップの DB 復元パラメータ
+pub struct WorkflowStepRecord {
+   pub id:           WorkflowStepId,
+   pub instance_id:  WorkflowInstanceId,
+   pub step_id:      String,
+   pub step_name:    String,
+   pub step_type:    String,
+   pub status:       WorkflowStepStatus,
+   pub version:      Version,
+   pub assigned_to:  Option<UserId>,
+   pub decision:     Option<StepDecision>,
+   pub comment:      Option<String>,
+   pub due_date:     Option<DateTime<Utc>>,
+   pub started_at:   Option<DateTime<Utc>>,
+   pub completed_at: Option<DateTime<Utc>>,
+   pub created_at:   DateTime<Utc>,
+   pub updated_at:   DateTime<Utc>,
+}
+
 impl WorkflowStep {
    /// 新しいワークフローステップを作成する
-   pub fn new(
-      id: WorkflowStepId,
-      instance_id: WorkflowInstanceId,
-      step_id: String,
-      step_name: String,
-      step_type: String,
-      assigned_to: Option<UserId>,
-      now: DateTime<Utc>,
-   ) -> Self {
+   pub fn new(params: NewWorkflowStep) -> Self {
       Self {
-         id,
-         instance_id,
-         step_id,
-         step_name,
-         step_type,
-         status: WorkflowStepStatus::Pending,
-         version: Version::initial(),
-         assigned_to,
-         decision: None,
-         comment: None,
-         due_date: None,
-         started_at: None,
+         id:           params.id,
+         instance_id:  params.instance_id,
+         step_id:      params.step_id,
+         step_name:    params.step_name,
+         step_type:    params.step_type,
+         status:       WorkflowStepStatus::Pending,
+         version:      Version::initial(),
+         assigned_to:  params.assigned_to,
+         decision:     None,
+         comment:      None,
+         due_date:     None,
+         started_at:   None,
          completed_at: None,
-         created_at: now,
-         updated_at: now,
+         created_at:   params.now,
+         updated_at:   params.now,
       }
    }
 
    /// 既存のデータから復元する
-   #[allow(clippy::too_many_arguments)]
-   pub fn from_db(
-      id: WorkflowStepId,
-      instance_id: WorkflowInstanceId,
-      step_id: String,
-      step_name: String,
-      step_type: String,
-      status: WorkflowStepStatus,
-      version: Version,
-      assigned_to: Option<UserId>,
-      decision: Option<StepDecision>,
-      comment: Option<String>,
-      due_date: Option<DateTime<Utc>>,
-      started_at: Option<DateTime<Utc>>,
-      completed_at: Option<DateTime<Utc>>,
-      created_at: DateTime<Utc>,
-      updated_at: DateTime<Utc>,
-   ) -> Self {
+   pub fn from_db(record: WorkflowStepRecord) -> Self {
       Self {
-         id,
-         instance_id,
-         step_id,
-         step_name,
-         step_type,
-         status,
-         version,
-         assigned_to,
-         decision,
-         comment,
-         due_date,
-         started_at,
-         completed_at,
-         created_at,
-         updated_at,
+         id:           record.id,
+         instance_id:  record.instance_id,
+         step_id:      record.step_id,
+         step_name:    record.step_name,
+         step_type:    record.step_type,
+         status:       record.status,
+         version:      record.version,
+         assigned_to:  record.assigned_to,
+         decision:     record.decision,
+         comment:      record.comment,
+         due_date:     record.due_date,
+         started_at:   record.started_at,
+         completed_at: record.completed_at,
+         created_at:   record.created_at,
+         updated_at:   record.updated_at,
       }
    }
 
@@ -1027,29 +1042,29 @@ mod tests {
 
    // ヘルパー関数
    fn create_test_instance() -> WorkflowInstance {
-      WorkflowInstance::new(
-         WorkflowInstanceId::new(),
-         TenantId::new(),
-         WorkflowDefinitionId::new(),
-         Version::initial(),
-         DisplayNumber::new(1).unwrap(),
-         "テスト申請".to_string(),
-         json!({"field": "value"}),
-         UserId::new(),
-         test_now(),
-      )
+      WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: TenantId::new(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: json!({"field": "value"}),
+         initiated_by: UserId::new(),
+         now: test_now(),
+      })
    }
 
    fn create_test_step(instance_id: WorkflowInstanceId) -> WorkflowStep {
-      WorkflowStep::new(
-         WorkflowStepId::new(),
+      WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
          instance_id,
-         "step_1".to_string(),
-         "承認".to_string(),
-         "approval".to_string(),
-         Some(UserId::new()),
-         test_now(),
-      )
+         step_id: "step_1".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(UserId::new()),
+         now: test_now(),
+      })
    }
 
    // =========================================================================
@@ -1252,23 +1267,23 @@ mod tests {
       fn test_is_overdue_期限切れの場合trueを返す() {
          let past = DateTime::from_timestamp(1_699_999_000, 0).unwrap();
          let now = test_now();
-         let step = WorkflowStep::from_db(
-            WorkflowStepId::new(),
-            WorkflowInstanceId::new(),
-            "step_1".to_string(),
-            "承認".to_string(),
-            "approval".to_string(),
-            WorkflowStepStatus::Active,
-            Version::initial(),
-            Some(UserId::new()),
-            None,
-            None,
-            Some(past), // due_date が過去
-            Some(past),
-            None, // completed_at が None
-            past,
-            past,
-         );
+         let step = WorkflowStep::from_db(WorkflowStepRecord {
+            id:           WorkflowStepId::new(),
+            instance_id:  WorkflowInstanceId::new(),
+            step_id:      "step_1".to_string(),
+            step_name:    "承認".to_string(),
+            step_type:    "approval".to_string(),
+            status:       WorkflowStepStatus::Active,
+            version:      Version::initial(),
+            assigned_to:  Some(UserId::new()),
+            decision:     None,
+            comment:      None,
+            due_date:     Some(past),
+            started_at:   Some(past),
+            completed_at: None,
+            created_at:   past,
+            updated_at:   past,
+         });
          assert!(step.is_overdue(now));
       }
 
@@ -1276,23 +1291,23 @@ mod tests {
       fn test_is_overdue_期限内の場合falseを返す() {
          let now = test_now();
          let future = DateTime::from_timestamp(1_700_100_000, 0).unwrap();
-         let step = WorkflowStep::from_db(
-            WorkflowStepId::new(),
-            WorkflowInstanceId::new(),
-            "step_1".to_string(),
-            "承認".to_string(),
-            "approval".to_string(),
-            WorkflowStepStatus::Active,
-            Version::initial(),
-            Some(UserId::new()),
-            None,
-            None,
-            Some(future), // due_date が未来
-            Some(now),
-            None,
-            now,
-            now,
-         );
+         let step = WorkflowStep::from_db(WorkflowStepRecord {
+            id:           WorkflowStepId::new(),
+            instance_id:  WorkflowInstanceId::new(),
+            step_id:      "step_1".to_string(),
+            step_name:    "承認".to_string(),
+            step_type:    "approval".to_string(),
+            status:       WorkflowStepStatus::Active,
+            version:      Version::initial(),
+            assigned_to:  Some(UserId::new()),
+            decision:     None,
+            comment:      None,
+            due_date:     Some(future),
+            started_at:   Some(now),
+            completed_at: None,
+            created_at:   now,
+            updated_at:   now,
+         });
          assert!(!step.is_overdue(now));
       }
 
