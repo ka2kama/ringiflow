@@ -253,7 +253,7 @@ mod tests {
       routing::get,
    };
    use ringiflow_domain::{
-      role::{Permission, Role},
+      role::{Permission, Role, RoleId},
       tenant::TenantId,
       user::{Email, User, UserId, UserStatus},
       value_objects::UserName,
@@ -333,12 +333,14 @@ mod tests {
 
    fn create_user_role() -> Role {
       Role::new_system(
+         RoleId::new(),
          "user".to_string(),
          Some("一般ユーザー".to_string()),
          vec![
             Permission::new("workflow:read"),
             Permission::new("task:read"),
          ],
+         chrono::Utc::now(),
       )
    }
 

@@ -422,7 +422,9 @@ mod tests {
       let step_repo = MockWorkflowStepRepository::new();
 
       // ワークフローインスタンスを作成
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -430,30 +432,35 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       // Active ステップ
       let active_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       step_repo.insert(&active_step).await.unwrap();
 
       // Pending ステップ（同じ approver）
       let pending_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "review".to_string(),
          "レビュー".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       );
       step_repo.insert(&pending_step).await.unwrap();
 
@@ -479,7 +486,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -487,20 +496,23 @@ mod tests {
          "経費精算申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "部長承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       step_repo.insert(&step).await.unwrap();
 
       let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
@@ -526,7 +538,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -534,20 +548,23 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       step_repo.insert(&step).await.unwrap();
 
       let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
@@ -589,7 +606,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -597,20 +616,23 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({"note": "test"}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
@@ -658,7 +680,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -666,20 +690,23 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 

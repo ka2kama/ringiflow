@@ -29,9 +29,11 @@
 //!    Permission::new("task:read"),
 //! ];
 //! let role = Role::new_system(
+//!    RoleId::new(),
 //!    "user".to_string(),
 //!    Some("一般ユーザー".to_string()),
 //!    permissions,
+//!    chrono::Utc::now(),
 //! );
 //!
 //! assert!(role.is_system());
@@ -138,17 +140,20 @@ impl Role {
    ///
    /// # 引数
    ///
+   /// - `id`: ロール ID
    /// - `name`: ロール名
    /// - `description`: 説明
    /// - `permissions`: 権限リスト
+   /// - `now`: 現在日時（呼び出し元から注入）
    pub fn new_system(
+      id: RoleId,
       name: String,
       description: Option<String>,
       permissions: Vec<Permission>,
+      now: DateTime<Utc>,
    ) -> Self {
-      let now = Utc::now();
       Self {
-         id: RoleId::new(),
+         id,
          tenant_id: None,
          name,
          description,
@@ -163,19 +168,22 @@ impl Role {
    ///
    /// # 引数
    ///
+   /// - `id`: ロール ID
    /// - `tenant_id`: テナント ID
    /// - `name`: ロール名
    /// - `description`: 説明
    /// - `permissions`: 権限リスト
+   /// - `now`: 現在日時（呼び出し元から注入）
    pub fn new_tenant(
+      id: RoleId,
       tenant_id: TenantId,
       name: String,
       description: Option<String>,
       permissions: Vec<Permission>,
+      now: DateTime<Utc>,
    ) -> Self {
-      let now = Utc::now();
       Self {
-         id: RoleId::new(),
+         id,
          tenant_id: Some(tenant_id),
          name,
          description,
@@ -258,12 +266,12 @@ pub struct UserRole {
 
 impl UserRole {
    /// 新しいユーザーロール関連を作成する
-   pub fn new(user_id: UserId, role_id: RoleId) -> Self {
+   pub fn new(id: Uuid, user_id: UserId, role_id: RoleId, now: DateTime<Utc>) -> Self {
       Self {
-         id: Uuid::now_v7(),
+         id,
          user_id,
          role_id,
-         created_at: Utc::now(),
+         created_at: now,
       }
    }
 
@@ -296,23 +304,43 @@ impl UserRole {
 
 #[cfg(test)]
 mod tests {
+   use pretty_assertions::assert_eq;
    use rstest::{fixture, rstest};
 
    use super::*;
 
    // フィクスチャ
 
+   /// テスト用の固定タイムスタンプ
    #[fixture]
-   fn システムロール() -> Role {
-      let permissions = vec![Permission::new("workflow:*"), Permission::new("task:read")];
-      Role::new_system("test_role".to_string(), None, permissions)
+   fn now() -> DateTime<Utc> {
+      DateTime::from_timestamp(1_700_000_000, 0).unwrap()
    }
 
    #[fixture]
-   fn テナントロール() -> Role {
+   fn システムロール(now: DateTime<Utc>) -> Role {
+      let permissions = vec![Permission::new("workflow:*"), Permission::new("task:read")];
+      Role::new_system(
+         RoleId::new(),
+         "test_role".to_string(),
+         None,
+         permissions,
+         now,
+      )
+   }
+
+   #[fixture]
+   fn テナントロール(now: DateTime<Utc>) -> Role {
       let tenant_id = TenantId::new();
       let permissions = vec![Permission::new("workflow:read")];
-      Role::new_tenant(tenant_id, "custom_role".to_string(), None, permissions)
+      Role::new_tenant(
+         RoleId::new(),
+         tenant_id,
+         "custom_role".to_string(),
+         None,
+         permissions,
+         now,
+      )
    }
 
    // Role のテスト
@@ -337,5 +365,14 @@ mod tests {
    #[rstest]
    fn test_テナントロールはテナントidを持つ(テナントロール: Role) {
       assert!(テナントロール.tenant_id().is_some());
+   }
+
+   #[rstest]
+   fn test_ロールのcreated_atは注入された値と一致する(
+      now: DateTime<Utc>,
+      システムロール: Role,
+   ) {
+      assert_eq!(システムロール.created_at(), now);
+      assert_eq!(システムロール.updated_at(), now);
    }
 }

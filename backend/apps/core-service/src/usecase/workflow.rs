@@ -167,12 +167,14 @@ where
       }
 
       // 3. WorkflowInstance を draft として作成
+      let now = chrono::Utc::now();
       let display_number = self
          .counter_repo
          .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowInstance)
          .await
          .map_err(|e| CoreError::Internal(format!("採番に失敗: {}", e)))?;
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id,
          input.definition_id,
          definition.version(),
@@ -180,6 +182,7 @@ where
          input.title,
          input.form_data,
          user_id,
+         now,
       );
 
       // 4. リポジトリに保存
@@ -244,25 +247,29 @@ where
          .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
 
       // 4. ステップを作成 (MVP では1段階承認のみ)
+      let now = chrono::Utc::now();
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance_id.clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(input.assigned_to),
+         now,
       );
 
       // 5. ステップを active に設定
-      let active_step = step.activated();
+      let active_step = step.activated(now);
 
       // 6. ワークフローインスタンスを申請済みに遷移
+      let now = chrono::Utc::now();
       let expected_version = instance.version();
       let submitted_instance = instance
-         .submitted()
+         .submitted(now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 7. current_step_id を設定して in_progress に遷移
-      let in_progress_instance = submitted_instance.with_current_step("approval".to_string());
+      let in_progress_instance = submitted_instance.with_current_step("approval".to_string(), now);
 
       // 8. インスタンスとステップを保存
       self
@@ -334,9 +341,10 @@ where
       }
 
       // 4. ステップを承認
+      let now = chrono::Utc::now();
       let step_expected_version = step.version();
       let approved_step = step
-         .approve(input.comment)
+         .approve(input.comment, now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 5. インスタンスを取得して完了に遷移
@@ -349,7 +357,7 @@ where
 
       let instance_expected_version = instance.version();
       let completed_instance = instance
-         .complete_with_approval()
+         .complete_with_approval(now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 6. 楽観的ロック付きで保存
@@ -430,9 +438,10 @@ where
       }
 
       // 4. ステップを却下
+      let now = chrono::Utc::now();
       let step_expected_version = step.version();
       let rejected_step = step
-         .reject(input.comment)
+         .reject(input.comment, now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 5. インスタンスを取得して却下完了に遷移
@@ -445,7 +454,7 @@ where
 
       let instance_expected_version = instance.version();
       let completed_instance = instance
-         .complete_with_rejection()
+         .complete_with_rejection(now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 6. 楽観的ロック付きで保存
@@ -928,13 +937,15 @@ mod tests {
 
       // 公開済みの定義を追加
       let definition = WorkflowDefinition::new(
+         WorkflowDefinitionId::new(),
          tenant_id.clone(),
          WorkflowName::new("汎用申請").unwrap(),
          Some("テスト用定義".to_string()),
          serde_json::json!({"steps": []}),
          user_id.clone(),
+         chrono::Utc::now(),
       );
-      let published_definition = definition.published().unwrap();
+      let published_definition = definition.published(chrono::Utc::now()).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1016,7 +1027,9 @@ mod tests {
       let step_repo = MockWorkflowStepRepository::new();
 
       // InProgress のインスタンスを作成
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -1024,21 +1037,24 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       // Active なステップを作成
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1098,7 +1114,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -1106,20 +1124,23 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()), // approver_id に割り当て
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1155,7 +1176,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -1163,19 +1186,22 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       // Pending 状態のステップ（Active ではない）
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       );
       // activated() を呼ばないので Pending のまま
       step_repo.insert(&step).await.unwrap();
@@ -1213,7 +1239,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -1221,20 +1249,23 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1274,7 +1305,9 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -1282,20 +1315,23 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         now,
       )
-      .submitted()
+      .submitted(now)
       .unwrap()
-      .with_current_step("approval".to_string());
+      .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1356,17 +1392,20 @@ mod tests {
 
       // 公開済みの定義を追加
       let definition = WorkflowDefinition::new(
+         WorkflowDefinitionId::new(),
          tenant_id.clone(),
          WorkflowName::new("汎用申請").unwrap(),
          Some("テスト用定義".to_string()),
          serde_json::json!({"steps": []}),
          user_id.clone(),
+         chrono::Utc::now(),
       );
-      let published_definition = definition.published().unwrap();
+      let published_definition = definition.published(chrono::Utc::now()).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
       // 下書きのインスタンスを作成
       let instance = WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          tenant_id.clone(),
          published_definition.id().clone(),
          Version::initial(),
@@ -1374,6 +1413,7 @@ mod tests {
          "テスト申請".to_string(),
          serde_json::json!({}),
          user_id.clone(),
+         chrono::Utc::now(),
       );
       instance_repo.insert(&instance).await.unwrap();
 
