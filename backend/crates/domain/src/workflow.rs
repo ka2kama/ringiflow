@@ -19,11 +19,13 @@
 //!
 //! // ワークフロー定義の作成
 //! let definition = WorkflowDefinition::new(
+//!     WorkflowDefinitionId::new(),
 //!     TenantId::new(),
 //!     WorkflowName::new("汎用申請").unwrap(),
 //!     Some("シンプルな1段階承認".to_string()),
 //!     json!({"steps": []}),
 //!     UserId::new(),
+//!     chrono::Utc::now(),
 //! );
 //! assert_eq!(definition.status(), WorkflowDefinitionStatus::Draft);
 //! ```
@@ -133,15 +135,16 @@ pub struct WorkflowDefinition {
 impl WorkflowDefinition {
    /// 新しいワークフロー定義を作成する
    pub fn new(
+      id: WorkflowDefinitionId,
       tenant_id: TenantId,
       name: WorkflowName,
       description: Option<String>,
       definition: JsonValue,
       created_by: UserId,
+      now: DateTime<Utc>,
    ) -> Self {
-      let now = Utc::now();
       Self {
-         id: WorkflowDefinitionId::new(),
+         id,
          tenant_id,
          name,
          description,
@@ -235,20 +238,20 @@ impl WorkflowDefinition {
    }
 
    /// 定義を公開した新しいインスタンスを返す
-   pub fn published(self) -> Result<Self, DomainError> {
+   pub fn published(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
       self.can_publish()?;
       Ok(Self {
          status: WorkflowDefinitionStatus::Published,
-         updated_at: Utc::now(),
+         updated_at: now,
          ..self
       })
    }
 
    /// 定義をアーカイブした新しいインスタンスを返す
-   pub fn archived(self) -> Self {
+   pub fn archived(self, now: DateTime<Utc>) -> Self {
       Self {
          status: WorkflowDefinitionStatus::Archived,
-         updated_at: Utc::now(),
+         updated_at: now,
          ..self
       }
    }

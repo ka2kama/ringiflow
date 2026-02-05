@@ -928,13 +928,15 @@ mod tests {
 
       // 公開済みの定義を追加
       let definition = WorkflowDefinition::new(
+         WorkflowDefinitionId::new(),
          tenant_id.clone(),
          WorkflowName::new("汎用申請").unwrap(),
          Some("テスト用定義".to_string()),
          serde_json::json!({"steps": []}),
          user_id.clone(),
+         chrono::Utc::now(),
       );
-      let published_definition = definition.published().unwrap();
+      let published_definition = definition.published(chrono::Utc::now()).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1356,13 +1358,15 @@ mod tests {
 
       // 公開済みの定義を追加
       let definition = WorkflowDefinition::new(
+         WorkflowDefinitionId::new(),
          tenant_id.clone(),
          WorkflowName::new("汎用申請").unwrap(),
          Some("テスト用定義".to_string()),
          serde_json::json!({"steps": []}),
          user_id.clone(),
+         chrono::Utc::now(),
       );
-      let published_definition = definition.published().unwrap();
+      let published_definition = definition.published(chrono::Utc::now()).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
       // 下書きのインスタンスを作成
