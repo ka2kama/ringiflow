@@ -124,6 +124,7 @@ pub struct ApproveRejectRequest {
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowStepDto {
    pub id:           String,
+   pub display_id:   String,
    pub step_id:      String,
    pub step_name:    String,
    pub step_type:    String,

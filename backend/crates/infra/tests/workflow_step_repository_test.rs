@@ -63,6 +63,7 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
    let step = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance.id().clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認".to_string(),
       step_type: "approval".to_string(),
@@ -104,6 +105,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
    let step = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance.id().clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認".to_string(),
       step_type: "approval".to_string(),
@@ -170,6 +172,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
    let step1 = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance_id.clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認1".to_string(),
       step_type: "approval".to_string(),
@@ -179,6 +182,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
    let step2 = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance_id.clone(),
+      display_number: DisplayNumber::new(2).unwrap(),
       step_id: "step2".to_string(),
       step_name: "承認2".to_string(),
       step_type: "approval".to_string(),
@@ -241,6 +245,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
    let step = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance.id().clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認".to_string(),
       step_type: "approval".to_string(),
@@ -286,6 +291,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
    let step = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance.id().clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認".to_string(),
       step_type: "approval".to_string(),
@@ -346,6 +352,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
    let step = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance.id().clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認".to_string(),
       step_type: "approval".to_string(),
@@ -401,6 +408,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
    let step = WorkflowStep::new(NewWorkflowStep {
       id: WorkflowStepId::new(),
       instance_id: instance.id().clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
       step_id: "step1".to_string(),
       step_name: "承認".to_string(),
       step_type: "approval".to_string(),

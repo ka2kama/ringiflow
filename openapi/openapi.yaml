@@ -1004,6 +1004,7 @@ components:
       type: object
       required:
         - id
+        - display_id
         - step_id
         - step_name
         - step_type
@@ -1016,6 +1017,11 @@ components:
           type: string
           format: uuid
           description: ステップインスタンス ID
+        display_id:
+          type: string
+          pattern: '^STEP-\d+$'
+          description: "表示用 ID（例: STEP-42）"
+          example: "STEP-42"
         step_id:
           type: string
           description: ステップ定義 ID（定義内での識別子）

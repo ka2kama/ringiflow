@@ -636,7 +636,10 @@ viewStep : WorkflowStep -> Html Msg
 viewStep step =
     li [ class "rounded-lg border border-secondary-100 p-4" ]
         [ div [ class "flex items-center justify-between" ]
-            [ span [ class "font-medium text-secondary-900" ] [ text step.stepName ]
+            [ span [ class "font-medium text-secondary-900" ]
+                [ span [ class "text-secondary-400 mr-2" ] [ text step.displayId ]
+                , text step.stepName
+                ]
             , span [ class "text-sm text-secondary-500" ] [ text (WorkflowInstance.stepStatusToJapanese step.status) ]
             ]
         , div [ class "mt-2 flex flex-wrap gap-3 text-sm text-secondary-500" ]
