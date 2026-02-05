@@ -42,7 +42,7 @@ async fn test_初回採番で1を返す(pool: PgPool) {
    insert_counter(
       &pool,
       &tenant_id,
-      DisplayIdEntityType::WorkflowStep.as_str(),
+      DisplayIdEntityType::WorkflowStep.into(),
       0,
    )
    .await;
@@ -63,7 +63,7 @@ async fn test_連続採番で連番を返す(pool: PgPool) {
    insert_counter(
       &pool,
       &tenant_id,
-      DisplayIdEntityType::WorkflowStep.as_str(),
+      DisplayIdEntityType::WorkflowStep.into(),
       0,
    )
    .await;
@@ -96,7 +96,7 @@ async fn test_異なるエンティティ型は独立して採番される(pool:
    insert_counter(
       &pool,
       &tenant_id,
-      DisplayIdEntityType::WorkflowStep.as_str(),
+      DisplayIdEntityType::WorkflowStep.into(),
       0,
    )
    .await;

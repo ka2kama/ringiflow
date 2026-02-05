@@ -2,10 +2,7 @@
 //!
 //! Core Service のタスク関連エンドポイントを実装する。
 
-use std::{
-   collections::{HashMap, HashSet},
-   sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
    Json,
@@ -13,6 +10,7 @@ use axum::{
    http::StatusCode,
    response::{IntoResponse, Response},
 };
+use itertools::Itertools;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -120,14 +118,14 @@ where
    let tasks = state.usecase.list_my_tasks(tenant_id, user_id).await?;
 
    // 全タスクのユーザー ID を収集して一括解決
-   let mut user_id_set = HashSet::new();
-   for task in &tasks {
-      user_id_set.insert(task.workflow.initiated_by().clone());
-      if let Some(uid) = task.step.assigned_to() {
-         user_id_set.insert(uid.clone());
-      }
-   }
-   let all_user_ids: Vec<UserId> = user_id_set.into_iter().collect();
+   let all_user_ids: Vec<UserId> = tasks
+      .iter()
+      .flat_map(|task| {
+         std::iter::once(task.workflow.initiated_by().clone())
+            .chain(task.step.assigned_to().cloned())
+      })
+      .unique()
+      .collect();
    let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
 
    let response = ApiResponse::new(
