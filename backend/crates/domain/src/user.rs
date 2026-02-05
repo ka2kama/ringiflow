@@ -38,7 +38,9 @@
 //! ```
 
 use chrono::{DateTime, Utc};
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
+use strum::IntoStaticStr;
 use uuid::Uuid;
 
 use crate::{DomainError, tenant::TenantId, value_objects::UserName};
@@ -47,7 +49,8 @@ use crate::{DomainError, tenant::TenantId, value_objects::UserName};
 ///
 /// UUID v7 を使用し、生成順にソート可能。
 /// Newtype パターンで型安全性を確保。
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct UserId(Uuid);
 
 impl UserId {
@@ -70,12 +73,6 @@ impl UserId {
 impl Default for UserId {
    fn default() -> Self {
       Self::new()
-   }
-}
-
-impl std::fmt::Display for UserId {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
    }
 }
 
@@ -149,8 +146,11 @@ impl std::fmt::Display for Email {
 /// ユーザーステータス
 ///
 /// ユーザーの状態を表現する列挙型。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+   Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, IntoStaticStr, strum::Display,
+)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum UserStatus {
    /// アクティブ（ログイン可能）
    Active,
@@ -158,17 +158,6 @@ pub enum UserStatus {
    Inactive,
    /// 削除済み（論理削除）
    Deleted,
-}
-
-impl UserStatus {
-   /// データベースの VARCHAR 値に変換する
-   pub fn as_str(&self) -> &'static str {
-      match self {
-         Self::Active => "active",
-         Self::Inactive => "inactive",
-         Self::Deleted => "deleted",
-      }
-   }
 }
 
 impl std::str::FromStr for UserStatus {
@@ -184,12 +173,6 @@ impl std::str::FromStr for UserStatus {
             s
          ))),
       }
-   }
-}
-
-impl std::fmt::Display for UserStatus {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.as_str())
    }
 }
 

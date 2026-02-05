@@ -68,6 +68,7 @@ impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
       entity_type: DisplayIdEntityType,
    ) -> Result<DisplayNumber, InfraError> {
       let mut tx = self.pool.begin().await?;
+      let entity_type_str: &str = entity_type.into();
 
       // 悲観的ロック付きでカウンターを取得
       let row = sqlx::query!(
@@ -78,7 +79,7 @@ impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
          FOR UPDATE
          "#,
          tenant_id.as_uuid(),
-         entity_type.as_str(),
+         entity_type_str,
       )
       .fetch_one(&mut *tx)
       .await
@@ -86,7 +87,7 @@ impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
          sqlx::Error::RowNotFound => InfraError::Unexpected(format!(
             "カウンター行が見つかりません: tenant_id={}, entity_type={}",
             tenant_id.as_uuid(),
-            entity_type.as_str()
+            entity_type_str
          )),
          other => InfraError::Database(other),
       })?;
@@ -101,7 +102,7 @@ impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
          WHERE tenant_id = $1 AND entity_type = $2
          "#,
          tenant_id.as_uuid(),
-         entity_type.as_str(),
+         entity_type_str,
          next,
       )
       .execute(&mut *tx)

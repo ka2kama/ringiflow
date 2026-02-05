@@ -61,7 +61,7 @@ impl From<&User> for UserResponse {
          tenant_id: *user.tenant_id().as_uuid(),
          email:     user.email().as_str().to_string(),
          name:      user.name().to_string(),
-         status:    user.status().as_str().to_string(),
+         status:    user.status().to_string(),
       }
    }
 }
@@ -82,11 +82,7 @@ impl From<&Role> for RoleResponse {
       Self {
          id:          *role.id().as_uuid(),
          name:        role.name().to_string(),
-         permissions: role
-            .permissions()
-            .iter()
-            .map(|p| p.as_str().to_string())
-            .collect(),
+         permissions: role.permissions().iter().map(|p| p.to_string()).collect(),
       }
    }
 }
@@ -205,7 +201,7 @@ where
          // 権限を集約
          let permissions: Vec<String> = roles
             .iter()
-            .flat_map(|r| r.permissions().iter().map(|p| p.as_str().to_string()))
+            .flat_map(|r| r.permissions().iter().map(|p| p.to_string()))
             .collect();
 
          let response = ApiResponse::new(UserWithPermissionsData {

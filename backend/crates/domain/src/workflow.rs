@@ -32,8 +32,10 @@
 //! ```
 
 use chrono::{DateTime, Utc};
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use strum::IntoStaticStr;
 use uuid::Uuid;
 
 use crate::{
@@ -48,7 +50,8 @@ use crate::{
 // =========================================================================
 
 /// ワークフロー定義 ID
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct WorkflowDefinitionId(Uuid);
 
 impl WorkflowDefinitionId {
@@ -71,15 +74,10 @@ impl Default for WorkflowDefinitionId {
    }
 }
 
-impl std::fmt::Display for WorkflowDefinitionId {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
-   }
-}
-
 /// ワークフロー定義ステータス
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, IntoStaticStr)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum WorkflowDefinitionStatus {
    /// 下書き（編集中）
    Draft,
@@ -87,16 +85,6 @@ pub enum WorkflowDefinitionStatus {
    Published,
    /// アーカイブ済み（非表示）
    Archived,
-}
-
-impl WorkflowDefinitionStatus {
-   pub fn as_str(&self) -> &'static str {
-      match self {
-         Self::Draft => "draft",
-         Self::Published => "published",
-         Self::Archived => "archived",
-      }
-   }
 }
 
 impl std::str::FromStr for WorkflowDefinitionStatus {
@@ -268,7 +256,8 @@ impl WorkflowDefinition {
 // =========================================================================
 
 /// ワークフローインスタンス ID
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct WorkflowInstanceId(Uuid);
 
 impl WorkflowInstanceId {
@@ -291,15 +280,12 @@ impl Default for WorkflowInstanceId {
    }
 }
 
-impl std::fmt::Display for WorkflowInstanceId {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
-   }
-}
-
 /// ワークフローインスタンスステータス
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+   Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, IntoStaticStr, strum::Display,
+)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
 pub enum WorkflowInstanceStatus {
    /// 下書き
    Draft,
@@ -313,19 +299,6 @@ pub enum WorkflowInstanceStatus {
    Rejected,
    /// 取り消し
    Cancelled,
-}
-
-impl WorkflowInstanceStatus {
-   pub fn as_str(&self) -> &'static str {
-      match self {
-         Self::Draft => "draft",
-         Self::Pending => "pending",
-         Self::InProgress => "in_progress",
-         Self::Approved => "approved",
-         Self::Rejected => "rejected",
-         Self::Cancelled => "cancelled",
-      }
-   }
 }
 
 impl std::str::FromStr for WorkflowInstanceStatus {
@@ -605,7 +578,7 @@ impl WorkflowInstance {
       if self.status != WorkflowInstanceStatus::InProgress {
          return Err(DomainError::Validation(format!(
             "承認完了は処理中状態でのみ可能です（現在: {}）",
-            self.status.as_str()
+            self.status
          )));
       }
 
@@ -630,7 +603,7 @@ impl WorkflowInstance {
       if self.status != WorkflowInstanceStatus::InProgress {
          return Err(DomainError::Validation(format!(
             "却下完了は処理中状態でのみ可能です（現在: {}）",
-            self.status.as_str()
+            self.status
          )));
       }
 
@@ -649,7 +622,8 @@ impl WorkflowInstance {
 // =========================================================================
 
 /// ワークフローステップ ID
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct WorkflowStepId(Uuid);
 
 impl WorkflowStepId {
@@ -672,15 +646,12 @@ impl Default for WorkflowStepId {
    }
 }
 
-impl std::fmt::Display for WorkflowStepId {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
-   }
-}
-
 /// ワークフローステップステータス
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+   Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, IntoStaticStr, strum::Display,
+)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum WorkflowStepStatus {
    /// 待機中
    Pending,
@@ -690,17 +661,6 @@ pub enum WorkflowStepStatus {
    Completed,
    /// スキップ
    Skipped,
-}
-
-impl WorkflowStepStatus {
-   pub fn as_str(&self) -> &'static str {
-      match self {
-         Self::Pending => "pending",
-         Self::Active => "active",
-         Self::Completed => "completed",
-         Self::Skipped => "skipped",
-      }
-   }
 }
 
 impl std::str::FromStr for WorkflowStepStatus {
@@ -721,8 +681,9 @@ impl std::str::FromStr for WorkflowStepStatus {
 }
 
 /// ワークフローステップの判断
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, IntoStaticStr)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "snake_case")]
 pub enum StepDecision {
    /// 承認
    Approved,
@@ -730,16 +691,6 @@ pub enum StepDecision {
    Rejected,
    /// 修正依頼
    RequestChanges,
-}
-
-impl StepDecision {
-   pub fn as_str(&self) -> &'static str {
-      match self {
-         Self::Approved => "approved",
-         Self::Rejected => "rejected",
-         Self::RequestChanges => "request_changes",
-      }
-   }
 }
 
 impl std::str::FromStr for StepDecision {
@@ -972,7 +923,7 @@ impl WorkflowStep {
       if self.status != WorkflowStepStatus::Active {
          return Err(DomainError::Validation(format!(
             "承認はアクティブ状態でのみ可能です（現在: {}）",
-            self.status.as_str()
+            self.status
          )));
       }
 
@@ -999,7 +950,7 @@ impl WorkflowStep {
       if self.status != WorkflowStepStatus::Active {
          return Err(DomainError::Validation(format!(
             "却下はアクティブ状態でのみ可能です（現在: {}）",
-            self.status.as_str()
+            self.status
          )));
       }
 

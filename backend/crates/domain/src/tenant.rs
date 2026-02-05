@@ -43,6 +43,7 @@
 //! println!("テナント: {}", tenant_id);
 //! ```
 
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -64,7 +65,8 @@ use uuid::Uuid;
 ///
 /// テナント ID は認証トークン（JWT）から取得し、クライアントからの
 /// 直接指定は受け付けない。これにより、テナント境界の突破を防ぐ。
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct TenantId(Uuid);
 
 impl TenantId {
@@ -131,15 +133,5 @@ impl Default for TenantId {
    /// デフォルトで新しいテナント ID を生成する
    fn default() -> Self {
       Self::new()
-   }
-}
-
-impl std::fmt::Display for TenantId {
-   /// 人間可読な形式で出力する
-   ///
-   /// ログ出力やデバッグ時に使用される。
-   /// UUID のハイフン区切り形式（例: `550e8400-e29b-41d4-a716-446655440000`）で表示。
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
    }
 }

@@ -74,6 +74,8 @@ impl PostgresWorkflowStepRepository {
 #[async_trait]
 impl WorkflowStepRepository for PostgresWorkflowStepRepository {
    async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+      let status: &str = step.status().into();
+      let decision: Option<&str> = step.decision().map(|d| d.into());
       sqlx::query!(
          r#"
          INSERT INTO workflow_steps (
@@ -89,10 +91,10 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          step.step_id(),
          step.step_name(),
          step.step_type(),
-         step.status().as_str(),
+         status,
          step.version().as_i32(),
          step.assigned_to().map(|u| u.as_uuid()),
-         step.decision().map(|d| d.as_str()),
+         decision,
          step.comment(),
          step.due_date(),
          step.started_at(),
@@ -111,6 +113,8 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       step: &WorkflowStep,
       expected_version: Version,
    ) -> Result<(), InfraError> {
+      let status: &str = step.status().into();
+      let decision: Option<&str> = step.decision().map(|d| d.into());
       let result = sqlx::query!(
          r#"
          UPDATE workflow_steps SET
@@ -123,9 +127,9 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
             updated_at = $7
          WHERE id = $8 AND version = $9
          "#,
-         step.status().as_str(),
+         status,
          step.version().as_i32(),
-         step.decision().map(|d| d.as_str()),
+         decision,
          step.comment(),
          step.started_at(),
          step.completed_at(),

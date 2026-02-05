@@ -151,6 +151,7 @@ impl PostgresWorkflowInstanceRepository {
 #[async_trait]
 impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
    async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+      let status: &str = instance.status().into();
       sqlx::query!(
          r#"
             INSERT INTO workflow_instances (
@@ -168,7 +169,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          instance.display_number().as_i64(),
          instance.title(),
          instance.form_data(),
-         instance.status().as_str(),
+         status,
          instance.version().as_i32(),
          instance.current_step_id(),
          instance.initiated_by().as_uuid(),
@@ -188,6 +189,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       instance: &WorkflowInstance,
       expected_version: Version,
    ) -> Result<(), InfraError> {
+      let status: &str = instance.status().into();
       let result = sqlx::query!(
          r#"
             UPDATE workflow_instances SET
@@ -203,7 +205,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
             "#,
          instance.title(),
          instance.form_data(),
-         instance.status().as_str(),
+         status,
          instance.version().as_i32(),
          instance.current_step_id(),
          instance.submitted_at(),

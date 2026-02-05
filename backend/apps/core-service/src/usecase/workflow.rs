@@ -2,8 +2,9 @@
 //!
 //! ワークフローの作成・取得・申請に関するビジネスロジックを実装する。
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
+use itertools::Itertools;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -79,14 +80,10 @@ pub(crate) fn collect_user_ids_from_workflow(
    instance: &WorkflowInstance,
    steps: &[WorkflowStep],
 ) -> Vec<UserId> {
-   let mut set = HashSet::new();
-   set.insert(instance.initiated_by().clone());
-   for step in steps {
-      if let Some(user_id) = step.assigned_to() {
-         set.insert(user_id.clone());
-      }
-   }
-   set.into_iter().collect()
+   std::iter::once(instance.initiated_by().clone())
+      .chain(steps.iter().filter_map(|s| s.assigned_to().cloned()))
+      .unique()
+      .collect()
 }
 
 /// ワークフローユースケース実装

@@ -20,6 +20,7 @@
 //! | [`WorkflowName`] | `String` | ワークフロー定義名 |
 
 use serde::{Deserialize, Serialize};
+use strum::IntoStaticStr;
 
 use crate::DomainError;
 
@@ -234,10 +235,12 @@ pub mod display_prefix {
 /// use ringiflow_domain::value_objects::DisplayIdEntityType;
 ///
 /// let entity_type = DisplayIdEntityType::WorkflowInstance;
-/// assert_eq!(entity_type.as_str(), "workflow_instance");
+/// let entity_type_str: &str = entity_type.into();
+/// assert_eq!(entity_type_str, "workflow_instance");
 /// assert_eq!(entity_type.prefix(), "WF");
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, IntoStaticStr)]
+#[strum(serialize_all = "snake_case")]
 pub enum DisplayIdEntityType {
    /// ワークフローインスタンス
    WorkflowInstance,
@@ -246,14 +249,6 @@ pub enum DisplayIdEntityType {
 }
 
 impl DisplayIdEntityType {
-   /// DB に保存する文字列を返す
-   pub fn as_str(&self) -> &'static str {
-      match self {
-         Self::WorkflowInstance => "workflow_instance",
-         Self::WorkflowStep => "workflow_step",
-      }
-   }
-
    /// 表示用プレフィックスを返す
    pub fn prefix(&self) -> &'static str {
       match self {
@@ -526,15 +521,14 @@ mod tests {
 
    #[test]
    fn test_エンティティ種別の_db文字列_ワークフローインスタンス() {
-      assert_eq!(
-         DisplayIdEntityType::WorkflowInstance.as_str(),
-         "workflow_instance"
-      );
+      let entity_type_str: &str = DisplayIdEntityType::WorkflowInstance.into();
+      assert_eq!(entity_type_str, "workflow_instance");
    }
 
    #[test]
    fn test_エンティティ種別の_db文字列_ワークフローステップ() {
-      assert_eq!(DisplayIdEntityType::WorkflowStep.as_str(), "workflow_step");
+      let entity_type_str: &str = DisplayIdEntityType::WorkflowStep.into();
+      assert_eq!(entity_type_str, "workflow_step");
    }
 
    #[test]

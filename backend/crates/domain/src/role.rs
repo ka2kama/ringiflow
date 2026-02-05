@@ -40,13 +40,15 @@
 //! ```
 
 use chrono::{DateTime, Utc};
+use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{tenant::TenantId, user::UserId};
 
 /// ロール ID（一意識別子）
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct RoleId(Uuid);
 
 impl RoleId {
@@ -72,12 +74,6 @@ impl Default for RoleId {
    }
 }
 
-impl std::fmt::Display for RoleId {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
-   }
-}
-
 /// 権限（値オブジェクト）
 ///
 /// リソースとアクションを `:` で区切った形式（例: `workflow:read`）。
@@ -87,7 +83,8 @@ impl std::fmt::Display for RoleId {
 /// - `resource:action` - 特定リソースの特定アクション（例: `workflow:create`）
 /// - `resource:*` - 特定リソースのすべてのアクション（例: `workflow:*`）
 /// - `*` - すべてのリソース・アクション（システム管理者用）
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct Permission(String);
 
 impl Permission {
@@ -104,12 +101,6 @@ impl Permission {
    /// 文字列参照を取得する
    pub fn as_str(&self) -> &str {
       &self.0
-   }
-}
-
-impl std::fmt::Display for Permission {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
    }
 }
 

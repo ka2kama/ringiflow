@@ -250,6 +250,116 @@ pub fn validate(&self, user: User) -> Result<(), DomainError> {
 }
 ```
 
+## 推奨クレート
+
+以下のクレートは workspace に追加済み。ボイラープレートコードを避けるため、積極的に活用する。
+
+### derive_more
+
+トレイト実装の自動生成。手動 `impl` より derive を優先する。
+
+| derive | 用途 | 手動実装を避ける |
+|--------|------|-----------------|
+| `Display` | 表示形式 | `impl Display for ...` |
+| `From` | 型変換（単純なラッパー） | `impl From<T> for ...` |
+| `Constructor` | `new()` メソッド生成 | 単純な `fn new(...) -> Self` |
+
+```rust
+use derive_more::Display;
+
+// Good: derive で自動生成
+#[derive(Display)]
+pub struct UserId(Uuid);
+
+// Bad: 手動実装
+impl Display for UserId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+```
+
+### strum
+
+enum と文字列の相互変換。手動 `match` より derive を優先する。
+
+| derive | 用途 | 手動実装を避ける |
+|--------|------|-----------------|
+| `IntoStaticStr` | `enum.into() -> &'static str` | `fn as_str(&self) -> &str { match ... }` |
+| `Display` | `enum.to_string()` | `impl Display for ...`（strum の Display を使う） |
+
+```rust
+use strum::{IntoStaticStr, Display};
+
+// Good: strum で自動生成
+#[derive(IntoStaticStr, Display)]
+#[strum(serialize_all = "lowercase")]
+pub enum UserStatus {
+    Active,
+    Inactive,
+    Deleted,
+}
+
+// 使い方
+let status = UserStatus::Active;
+let status_str: &str = status.into();            // IntoStaticStr（型アノテーション必須）
+assert_eq!(status_str, "active");
+assert_eq!(status.to_string(), "active");        // Display
+```
+
+注意:
+- `IntoStaticStr` は `Into<&'static str>` を実装する。型推論が効かない場合は明示的な型アノテーションが必要
+- `EnumString` はエラー型が `strum::ParseError` になるため、`DomainError` を返したい場合は `FromStr` を手動実装する
+- 旧来の `as_str()` メソッドは `into()` に置き換える（型アノテーション付き）
+
+### itertools
+
+イテレータ操作の拡張。標準ライブラリで冗長になるパターンに活用する。
+
+| メソッド | 用途 | 代替パターン |
+|---------|------|-------------|
+| `unique()` | 重複排除 | `HashSet` 経由で collect |
+| `sorted()` | ソート（新しい Vec を返す） | `collect()` 後に `sort()` |
+| `collect_vec()` | `Vec` への collect | `.collect::<Vec<_>>()` |
+
+```rust
+use itertools::Itertools;
+
+// Good: itertools で簡潔に
+let unique_ids: Vec<_> = ids.into_iter().unique().collect();
+
+// Bad: HashSet 経由で冗長
+let unique_ids: Vec<_> = ids.into_iter().collect::<HashSet<_>>().into_iter().collect();
+```
+
+### maplit
+
+コレクションリテラルのマクロ。テストや設定初期化で活用する。
+
+```rust
+use maplit::{hashmap, hashset};
+
+// Good: マクロで簡潔に
+let permissions = hashset! { "read", "write" };
+let config = hashmap! {
+    "host" => "localhost",
+    "port" => "8080",
+};
+
+// Bad: 手動で insert
+let mut permissions = HashSet::new();
+permissions.insert("read");
+permissions.insert("write");
+```
+
+### 使用しない場面
+
+以下の場合は手動実装を維持する:
+
+- `From` 実装に複雑なロジックがある場合（メソッド呼び出し、条件分岐など）
+- カスタムフォーマットが必要な `Display` 実装
+- `FromStr` でカスタムエラーメッセージが必要な場合
+
 ## ドキュメントコメント
 
 モジュールレベル（`//!`）のコメントには以下を含める:
