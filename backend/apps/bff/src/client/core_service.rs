@@ -516,6 +516,28 @@ pub trait CoreServiceClient: Send + Sync {
       step_display_number: i64,
       req: ApproveRejectRequest,
    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// display_number でタスク詳細を取得する
+   ///
+   /// Core Service の `GET /internal/workflows/by-display-number/{wf_dn}/tasks/{step_dn}` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `workflow_display_number`: ワークフローの表示用連番
+   /// - `step_display_number`: ステップの表示用連番
+   /// - `tenant_id`: テナント ID
+   /// - `user_id`: ユーザー ID
+   ///
+   /// # 戻り値
+   ///
+   /// タスク詳細（ステップ + ワークフロー情報）
+   async fn get_task_by_display_numbers(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError>;
 }
 
 /// Core Service クライアント実装
@@ -1086,6 +1108,40 @@ impl CoreServiceClient for CoreServiceClientImpl {
          reqwest::StatusCode::CONFLICT => {
             let body = response.text().await.unwrap_or_default();
             Err(CoreServiceError::Conflict(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn get_task_by_display_numbers(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      tenant_id: Uuid,
+      user_id: Uuid,
+   ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/tasks/{}?tenant_id={}&user_id={}",
+         self.base_url, workflow_display_number, step_display_number, tenant_id, user_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<ApiResponse<TaskDetailDto>>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
+         reqwest::StatusCode::FORBIDDEN => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Forbidden(body))
          }
          status => {
             let body = response.text().await.unwrap_or_default();

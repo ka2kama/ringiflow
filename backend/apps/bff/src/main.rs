@@ -74,7 +74,7 @@ use handler::{
    create_workflow,
    csrf,
    get_dashboard_stats,
-   get_task,
+   get_task_by_display_numbers,
    get_workflow,
    get_workflow_definition,
    health_check,
@@ -227,8 +227,8 @@ async fn main() -> anyhow::Result<()> {
          get(list_my_tasks::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/api/v1/tasks/{id}",
-         get(get_task::<CoreServiceClientImpl, RedisSessionManager>),
+         "/api/v1/workflows/{display_number}/tasks/{step_display_number}",
+         get(get_task_by_display_numbers::<CoreServiceClientImpl, RedisSessionManager>),
       )
       // ダッシュボード API
       .route(

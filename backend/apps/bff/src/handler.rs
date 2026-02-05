@@ -23,11 +23,12 @@ pub mod workflow;
 pub use auth::{AuthState, csrf, login, logout, me};
 pub use dashboard::get_dashboard_stats;
 pub use health::health_check;
-pub use task::{get_task, list_my_tasks};
+pub use task::list_my_tasks;
 pub use workflow::{
    WorkflowState,
    approve_step,
    create_workflow,
+   get_task_by_display_numbers,
    get_workflow,
    get_workflow_definition,
    list_my_workflows,
