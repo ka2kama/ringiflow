@@ -76,6 +76,7 @@ use handler::{
    create_workflow,
    get_dashboard_stats,
    get_task,
+   get_task_by_display_numbers,
    get_user,
    get_user_by_email,
    get_workflow,
@@ -348,6 +349,16 @@ async fn main() -> anyhow::Result<()> {
             "/internal/tasks/{id}",
             get(
                get_task::<
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+               >,
+            ),
+         )
+         .route(
+            "/internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}",
+            get(
+               get_task_by_display_numbers::<
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,
                   PostgresUserRepository,

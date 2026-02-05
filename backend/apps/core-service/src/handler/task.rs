@@ -14,7 +14,7 @@ use itertools::Itertools;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::{DisplayId, display_prefix},
+   value_objects::{DisplayId, DisplayNumber, display_prefix},
    workflow::{WorkflowInstance, WorkflowStepId},
 };
 use ringiflow_infra::repository::{
@@ -23,7 +23,7 @@ use ringiflow_infra::repository::{
    WorkflowStepRepository,
 };
 use ringiflow_shared::ApiResponse;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
@@ -31,6 +31,15 @@ use crate::{
    handler::workflow::{UserQuery, UserRefDto, WorkflowInstanceDto, WorkflowStepDto, to_user_ref},
    usecase::task::{TaskItem, TaskUseCaseImpl},
 };
+
+/// タスク詳細用パスパラメータ（display_number 版）
+#[derive(Debug, Deserialize)]
+pub struct TaskByDisplayNumberPathParams {
+   /// ワークフローインスタンスの表示用連番
+   pub workflow_display_number: i64,
+   /// ステップの表示用連番
+   pub step_display_number:     i64,
+}
 
 /// タスクハンドラーの State
 pub struct TaskState<I, S, U> {
@@ -157,6 +166,53 @@ where
    let user_id = UserId::from_uuid(query.user_id);
 
    let detail = state.usecase.get_task(step_id, tenant_id, user_id).await?;
+
+   // ユーザー名を解決
+   let user_ids =
+      crate::usecase::workflow::collect_user_ids_from_workflow(&detail.workflow, &detail.steps);
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(TaskDetailDto {
+      step:     WorkflowStepDto::from_step(&detail.step, &user_names),
+      workflow: WorkflowInstanceDto::from_workflow_with_steps(
+         &crate::usecase::workflow::WorkflowWithSteps {
+            instance: detail.workflow,
+            steps:    detail.steps,
+         },
+         &user_names,
+      ),
+   });
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// display_number でタスク詳細を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}?tenant_id={tenant_id}&user_id={user_id}
+pub async fn get_task_by_display_numbers<I, S, U>(
+   State(state): State<Arc<TaskState<I, S, U>>>,
+   Path(params): Path<TaskByDisplayNumberPathParams>,
+   Query(query): Query<UserQuery>,
+) -> Result<Response, CoreError>
+where
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+   U: UserRepository,
+{
+   let workflow_dn = DisplayNumber::new(params.workflow_display_number).map_err(|_| {
+      CoreError::BadRequest("workflow_display_number は正の整数である必要があります".to_string())
+   })?;
+   let step_dn = DisplayNumber::new(params.step_display_number).map_err(|_| {
+      CoreError::BadRequest("step_display_number は正の整数である必要があります".to_string())
+   })?;
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+   let user_id = UserId::from_uuid(query.user_id);
+
+   let detail = state
+      .usecase
+      .get_task_by_display_numbers(workflow_dn, step_dn, tenant_id, user_id)
+      .await?;
 
    // ユーザー名を解決
    let user_ids =
