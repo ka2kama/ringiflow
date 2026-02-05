@@ -26,9 +26,11 @@
 //!
 //! // 新規ユーザー作成
 //! let user = User::new(
+//!    UserId::new(),
 //!    TenantId::new(),
 //!    Email::new("user@example.com").unwrap(),
 //!    UserName::new("山田太郎").unwrap(),
+//!    chrono::Utc::now(),
 //! );
 //!
 //! // ステータス確認
@@ -218,18 +220,25 @@ impl User {
    ///
    /// # 引数
    ///
+   /// - `id`: ユーザー ID
    /// - `tenant_id`: テナント ID
    /// - `email`: メールアドレス
    /// - `name`: 表示名
+   /// - `now`: 現在日時（呼び出し元から注入）
    ///
    /// # 不変条件
    ///
    /// - 作成時のステータスは `Active`
    /// - `last_login_at` は None
-   pub fn new(tenant_id: TenantId, email: Email, name: UserName) -> Self {
-      let now = Utc::now();
+   pub fn new(
+      id: UserId,
+      tenant_id: TenantId,
+      email: Email,
+      name: UserName,
+      now: DateTime<Utc>,
+   ) -> Self {
       Self {
-         id: UserId::new(),
+         id,
          tenant_id,
          email,
          name,
@@ -313,28 +322,28 @@ impl User {
    }
 
    /// 最終ログイン日時を更新した新しいインスタンスを返す
-   pub fn with_last_login_updated(self) -> Self {
+   pub fn with_last_login_updated(self, now: DateTime<Utc>) -> Self {
       Self {
-         last_login_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         last_login_at: Some(now),
+         updated_at: now,
          ..self
       }
    }
 
    /// ユーザーステータスを変更した新しいインスタンスを返す
-   pub fn with_status(self, status: UserStatus) -> Self {
+   pub fn with_status(self, status: UserStatus, now: DateTime<Utc>) -> Self {
       Self {
          status,
-         updated_at: Utc::now(),
+         updated_at: now,
          ..self
       }
    }
 
    /// 論理削除した新しいインスタンスを返す
-   pub fn deleted(self) -> Self {
+   pub fn deleted(self, now: DateTime<Utc>) -> Self {
       Self {
          status: UserStatus::Deleted,
-         updated_at: Utc::now(),
+         updated_at: now,
          ..self
       }
    }
@@ -349,12 +358,21 @@ mod tests {
 
    // フィクスチャ
 
+   /// テスト用の固定タイムスタンプ
    #[fixture]
-   fn アクティブなユーザー() -> User {
-      let tenant_id = TenantId::new();
-      let email = Email::new("user@example.com").unwrap();
-      let name = UserName::new("Test User").unwrap();
-      User::new(tenant_id, email, name)
+   fn now() -> DateTime<Utc> {
+      DateTime::from_timestamp(1_700_000_000, 0).unwrap()
+   }
+
+   #[fixture]
+   fn アクティブなユーザー(now: DateTime<Utc>) -> User {
+      User::new(
+         UserId::new(),
+         TenantId::new(),
+         Email::new("user@example.com").unwrap(),
+         UserName::new("Test User").unwrap(),
+         now,
+      )
    }
 
    // Email のテスト
@@ -398,17 +416,29 @@ mod tests {
    }
 
    #[rstest]
+   fn test_新規ユーザーのcreated_atとupdated_atは注入された値と一致する(
+      now: DateTime<Utc>,
+      アクティブなユーザー: User,
+   ) {
+      assert_eq!(アクティブなユーザー.created_at(), now);
+      assert_eq!(アクティブなユーザー.updated_at(), now);
+   }
+
+   #[rstest]
    fn test_ステータス変更で状態が更新される(アクティブなユーザー: User) {
-      let updated = アクティブなユーザー.with_status(UserStatus::Inactive);
+      let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+      let updated = アクティブなユーザー.with_status(UserStatus::Inactive, transition_time);
 
       assert_eq!(updated.status(), UserStatus::Inactive);
+      assert_eq!(updated.updated_at(), transition_time);
    }
 
    #[rstest]
    fn test_非アクティブユーザーはアクティブでない(
       アクティブなユーザー: User
    ) {
-      let updated = アクティブなユーザー.with_status(UserStatus::Inactive);
+      let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+      let updated = アクティブなユーザー.with_status(UserStatus::Inactive, transition_time);
 
       assert!(!updated.is_active());
    }
@@ -417,24 +447,29 @@ mod tests {
    fn test_削除されたユーザーのステータスは削除済み(
       アクティブなユーザー: User,
    ) {
-      let deleted = アクティブなユーザー.deleted();
+      let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+      let deleted = アクティブなユーザー.deleted(transition_time);
 
       assert_eq!(deleted.status(), UserStatus::Deleted);
+      assert_eq!(deleted.updated_at(), transition_time);
    }
 
    #[rstest]
    fn test_削除されたユーザーはログインできない(
       アクティブなユーザー: User
    ) {
-      let deleted = アクティブなユーザー.deleted();
+      let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+      let deleted = アクティブなユーザー.deleted(transition_time);
 
       assert!(!deleted.can_login());
    }
 
    #[rstest]
    fn test_最終ログイン日時を更新できる(アクティブなユーザー: User) {
-      let updated = アクティブなユーザー.with_last_login_updated();
+      let login_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+      let updated = アクティブなユーザー.with_last_login_updated(login_time);
 
-      assert!(updated.last_login_at().is_some());
+      assert_eq!(updated.last_login_at(), Some(login_time));
+      assert_eq!(updated.updated_at(), login_time);
    }
 }
