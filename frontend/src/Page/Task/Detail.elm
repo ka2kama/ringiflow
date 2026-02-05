@@ -224,8 +224,8 @@ approveStep model step =
         Success taskDetail ->
             WorkflowApi.approveStep
                 { config = Shared.toRequestConfig model.shared
-                , workflowId = taskDetail.workflow.id
-                , stepId = step.id
+                , workflowDisplayNumber = taskDetail.workflow.displayNumber
+                , stepDisplayNumber = step.displayNumber
                 , body =
                     { version = step.version
                     , comment = nonEmptyComment model.comment
@@ -245,8 +245,8 @@ rejectStep model step =
         Success taskDetail ->
             WorkflowApi.rejectStep
                 { config = Shared.toRequestConfig model.shared
-                , workflowId = taskDetail.workflow.id
-                , stepId = step.id
+                , workflowDisplayNumber = taskDetail.workflow.displayNumber
+                , stepDisplayNumber = step.displayNumber
                 , body =
                     { version = step.version
                     , comment = nonEmptyComment model.comment

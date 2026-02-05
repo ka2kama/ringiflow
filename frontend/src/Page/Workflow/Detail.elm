@@ -76,7 +76,7 @@ type alias Model =
       shared : Shared
 
     -- パラメータ
-    , workflowId : String
+    , workflowDisplayNumber : Int
 
     -- API データ
     , workflow : RemoteData ApiError WorkflowInstance
@@ -93,10 +93,10 @@ type alias Model =
 
 {-| 初期化
 -}
-init : Shared -> String -> ( Model, Cmd Msg )
-init shared workflowId =
+init : Shared -> Int -> ( Model, Cmd Msg )
+init shared workflowDisplayNumber =
     ( { shared = shared
-      , workflowId = workflowId
+      , workflowDisplayNumber = workflowDisplayNumber
       , workflow = Loading
       , definition = NotAsked
       , comment = ""
@@ -107,7 +107,7 @@ init shared workflowId =
       }
     , WorkflowApi.getWorkflow
         { config = Shared.toRequestConfig shared
-        , id = workflowId
+        , displayNumber = workflowDisplayNumber
         , toMsg = GotWorkflow
         }
     )
@@ -186,7 +186,7 @@ update msg model =
               }
             , WorkflowApi.getWorkflow
                 { config = Shared.toRequestConfig model.shared
-                , id = model.workflowId
+                , displayNumber = model.workflowDisplayNumber
                 , toMsg = GotWorkflow
                 }
             )
@@ -210,8 +210,8 @@ update msg model =
                     ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
                     , WorkflowApi.approveStep
                         { config = Shared.toRequestConfig model.shared
-                        , workflowId = model.workflowId
-                        , stepId = step.id
+                        , workflowDisplayNumber = model.workflowDisplayNumber
+                        , stepDisplayNumber = step.displayNumber
                         , body = { version = step.version, comment = nonEmptyComment model.comment }
                         , toMsg = GotApproveResult
                         }
@@ -221,8 +221,8 @@ update msg model =
                     ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
                     , WorkflowApi.rejectStep
                         { config = Shared.toRequestConfig model.shared
-                        , workflowId = model.workflowId
-                        , stepId = step.id
+                        , workflowDisplayNumber = model.workflowDisplayNumber
+                        , stepDisplayNumber = step.displayNumber
                         , body = { version = step.version, comment = nonEmptyComment model.comment }
                         , toMsg = GotRejectResult
                         }

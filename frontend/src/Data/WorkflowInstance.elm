@@ -58,6 +58,7 @@ type alias WorkflowInstanceId =
 type alias WorkflowStep =
     { id : String
     , displayId : String
+    , displayNumber : Int
     , stepName : String
     , status : StepStatus
     , decision : Maybe Decision
@@ -106,6 +107,7 @@ type Status
 type alias WorkflowInstance =
     { id : WorkflowInstanceId
     , displayId : String
+    , displayNumber : Int
     , title : String
     , definitionId : String
     , status : Status
@@ -342,6 +344,7 @@ stepDecoder =
     Decode.succeed WorkflowStep
         |> required "id" Decode.string
         |> required "display_id" Decode.string
+        |> required "display_number" Decode.int
         |> required "step_name" Decode.string
         |> required "status" stepStatusDecoder
         |> optional "decision" (Decode.nullable decisionDecoder) Nothing
@@ -357,6 +360,7 @@ decoder =
     Decode.succeed WorkflowInstance
         |> required "id" Decode.string
         |> required "display_id" Decode.string
+        |> required "display_number" Decode.int
         |> required "title" Decode.string
         |> required "definition_id" Decode.string
         |> required "status" statusDecoder

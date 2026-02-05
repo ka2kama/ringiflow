@@ -177,42 +177,44 @@ impl From<WorkflowDefinition> for WorkflowDefinitionDto {
 /// ワークフローステップ DTO
 #[derive(Debug, Serialize)]
 pub struct WorkflowStepDto {
-   pub id:           String,
-   pub display_id:   String,
-   pub step_id:      String,
-   pub step_name:    String,
-   pub step_type:    String,
-   pub status:       String,
-   pub version:      i32,
-   pub assigned_to:  Option<UserRefDto>,
-   pub decision:     Option<String>,
-   pub comment:      Option<String>,
-   pub due_date:     Option<String>,
-   pub started_at:   Option<String>,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
+   pub status: String,
+   pub version: i32,
+   pub assigned_to: Option<UserRefDto>,
+   pub decision: Option<String>,
+   pub comment: Option<String>,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
    pub completed_at: Option<String>,
-   pub created_at:   String,
-   pub updated_at:   String,
+   pub created_at: String,
+   pub updated_at: String,
 }
 
 impl WorkflowStepDto {
    pub(crate) fn from_step(step: &WorkflowStep, user_names: &HashMap<UserId, String>) -> Self {
       Self {
-         id:           step.id().to_string(),
-         display_id:   DisplayId::new(display_prefix::WORKFLOW_STEP, step.display_number())
+         id: step.id().to_string(),
+         display_id: DisplayId::new(display_prefix::WORKFLOW_STEP, step.display_number())
             .to_string(),
-         step_id:      step.step_id().to_string(),
-         step_name:    step.step_name().to_string(),
-         step_type:    step.step_type().to_string(),
-         status:       format!("{:?}", step.status()),
-         version:      step.version().as_i32(),
-         assigned_to:  step.assigned_to().map(|u| to_user_ref(u, user_names)),
-         decision:     step.decision().map(|d| format!("{:?}", d)),
-         comment:      step.comment().map(|s| s.to_string()),
-         due_date:     step.due_date().map(|t| t.to_rfc3339()),
-         started_at:   step.started_at().map(|t| t.to_rfc3339()),
+         display_number: step.display_number().as_i64(),
+         step_id: step.step_id().to_string(),
+         step_name: step.step_name().to_string(),
+         step_type: step.step_type().to_string(),
+         status: format!("{:?}", step.status()),
+         version: step.version().as_i32(),
+         assigned_to: step.assigned_to().map(|u| to_user_ref(u, user_names)),
+         decision: step.decision().map(|d| format!("{:?}", d)),
+         comment: step.comment().map(|s| s.to_string()),
+         due_date: step.due_date().map(|t| t.to_rfc3339()),
+         started_at: step.started_at().map(|t| t.to_rfc3339()),
          completed_at: step.completed_at().map(|t| t.to_rfc3339()),
-         created_at:   step.created_at().to_rfc3339(),
-         updated_at:   step.updated_at().to_rfc3339(),
+         created_at: step.created_at().to_rfc3339(),
+         updated_at: step.updated_at().to_rfc3339(),
       }
    }
 }
@@ -222,6 +224,7 @@ impl WorkflowStepDto {
 pub struct WorkflowInstanceDto {
    pub id: String,
    pub display_id: String,
+   pub display_number: i64,
    pub title: String,
    pub definition_id: String,
    pub status: String,
@@ -243,6 +246,7 @@ impl WorkflowInstanceDto {
          id: instance.id().to_string(),
          display_id: DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
             .to_string(),
+         display_number: instance.display_number().as_i64(),
          title: instance.title().to_string(),
          definition_id: instance.definition_id().to_string(),
          status: format!("{:?}", instance.status()),
@@ -268,6 +272,7 @@ impl WorkflowInstanceDto {
          id: instance.id().to_string(),
          display_id: DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
             .to_string(),
+         display_number: instance.display_number().as_i64(),
          title: instance.title().to_string(),
          definition_id: instance.definition_id().to_string(),
          status: format!("{:?}", instance.status()),

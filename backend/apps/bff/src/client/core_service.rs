@@ -123,21 +123,22 @@ pub struct ApproveRejectRequest {
 /// ワークフローステップ DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowStepDto {
-   pub id:           String,
-   pub display_id:   String,
-   pub step_id:      String,
-   pub step_name:    String,
-   pub step_type:    String,
-   pub status:       String,
-   pub version:      i32,
-   pub assigned_to:  Option<UserRefDto>,
-   pub decision:     Option<String>,
-   pub comment:      Option<String>,
-   pub due_date:     Option<String>,
-   pub started_at:   Option<String>,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
+   pub status: String,
+   pub version: i32,
+   pub assigned_to: Option<UserRefDto>,
+   pub decision: Option<String>,
+   pub comment: Option<String>,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
    pub completed_at: Option<String>,
-   pub created_at:   String,
-   pub updated_at:   String,
+   pub created_at: String,
+   pub updated_at: String,
 }
 
 /// ワークフローインスタンス DTO
@@ -145,6 +146,7 @@ pub struct WorkflowStepDto {
 pub struct WorkflowInstanceDto {
    pub id: String,
    pub display_id: String,
+   pub display_number: i64,
    pub title: String,
    pub definition_id: String,
    pub status: String,

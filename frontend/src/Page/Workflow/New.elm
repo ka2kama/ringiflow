@@ -253,7 +253,7 @@ update msg model =
                             | submitting = True
                             , saveMessage = Nothing
                           }
-                        , submitWorkflow model.shared workflow.id model.approverInput
+                        , submitWorkflow model.shared workflow.displayNumber model.approverInput
                         )
 
                     Nothing ->
@@ -291,7 +291,7 @@ update msg model =
                 Ok workflow ->
                     -- 保存成功 → 続けて申請
                     ( { model | savedWorkflow = Just workflow }
-                    , submitWorkflow model.shared workflow.id approverInput
+                    , submitWorkflow model.shared workflow.displayNumber approverInput
                     )
 
                 Err _ ->
@@ -418,11 +418,11 @@ encodeFormValues values =
 
 {-| ワークフローを申請
 -}
-submitWorkflow : Shared -> String -> String -> Cmd Msg
-submitWorkflow shared workflowId approverInput =
+submitWorkflow : Shared -> Int -> String -> Cmd Msg
+submitWorkflow shared workflowDisplayNumber approverInput =
     WorkflowApi.submitWorkflow
         { config = Shared.toRequestConfig shared
-        , id = workflowId
+        , displayNumber = workflowDisplayNumber
         , body = { assignedTo = String.trim approverInput }
         , toMsg = GotSubmitResult
         }
