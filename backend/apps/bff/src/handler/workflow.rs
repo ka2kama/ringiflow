@@ -109,13 +109,13 @@ pub struct ApproveRejectRequest {
    pub comment: Option<String>,
 }
 
-/// ステップパスパラメータ
+/// ステップパスパラメータ（display_number 用）
 #[derive(Debug, Deserialize)]
 pub struct StepPathParams {
-   /// ワークフローインスタンス ID
-   pub id:      Uuid,
-   /// ステップ ID
-   pub step_id: Uuid,
+   /// ワークフローの表示用連番
+   pub display_number:      i64,
+   /// ステップの表示用連番
+   pub step_display_number: i64,
 }
 
 /// ユーザー参照データ（フロントエンドへの Serialize 用）
@@ -137,41 +137,43 @@ impl From<crate::client::UserRefDto> for UserRefData {
 /// ワークフローステップデータ
 #[derive(Debug, Serialize)]
 pub struct WorkflowStepData {
-   pub id:           String,
-   pub display_id:   String,
-   pub step_id:      String,
-   pub step_name:    String,
-   pub step_type:    String,
-   pub status:       String,
-   pub version:      i32,
-   pub assigned_to:  Option<UserRefData>,
-   pub decision:     Option<String>,
-   pub comment:      Option<String>,
-   pub due_date:     Option<String>,
-   pub started_at:   Option<String>,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
+   pub status: String,
+   pub version: i32,
+   pub assigned_to: Option<UserRefData>,
+   pub decision: Option<String>,
+   pub comment: Option<String>,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
    pub completed_at: Option<String>,
-   pub created_at:   String,
-   pub updated_at:   String,
+   pub created_at: String,
+   pub updated_at: String,
 }
 
 impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
    fn from(dto: crate::client::WorkflowStepDto) -> Self {
       Self {
-         id:           dto.id,
-         display_id:   dto.display_id,
-         step_id:      dto.step_id,
-         step_name:    dto.step_name,
-         step_type:    dto.step_type,
-         status:       dto.status,
-         version:      dto.version,
-         assigned_to:  dto.assigned_to.map(UserRefData::from),
-         decision:     dto.decision,
-         comment:      dto.comment,
-         due_date:     dto.due_date,
-         started_at:   dto.started_at,
+         id: dto.id,
+         display_id: dto.display_id,
+         display_number: dto.display_number,
+         step_id: dto.step_id,
+         step_name: dto.step_name,
+         step_type: dto.step_type,
+         status: dto.status,
+         version: dto.version,
+         assigned_to: dto.assigned_to.map(UserRefData::from),
+         decision: dto.decision,
+         comment: dto.comment,
+         due_date: dto.due_date,
+         started_at: dto.started_at,
          completed_at: dto.completed_at,
-         created_at:   dto.created_at,
-         updated_at:   dto.updated_at,
+         created_at: dto.created_at,
+         updated_at: dto.updated_at,
       }
    }
 }
@@ -181,6 +183,7 @@ impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
 pub struct WorkflowData {
    pub id: String,
    pub display_id: String,
+   pub display_number: i64,
    pub title: String,
    pub definition_id: String,
    pub status: String,
@@ -210,6 +213,7 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
       Self {
          id: dto.id,
          display_id: dto.display_id,
+         display_number: dto.display_number,
          title: dto.title,
          definition_id: dto.definition_id,
          status: dto.status,
@@ -316,26 +320,31 @@ where
    }
 }
 
-/// POST /api/v1/workflows/{id}/submit
+/// POST /api/v1/workflows/{display_number}/submit
 ///
 /// ワークフローを申請する
 ///
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id` を取得
-/// 2. Core Service の `POST /internal/workflows/{id}/submit` を呼び出し
+/// 2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出し
 /// 3. レスポンスを返す
 pub async fn submit_workflow<C, S>(
    State(state): State<Arc<WorkflowState<C, S>>>,
    headers: HeaderMap,
    jar: CookieJar,
-   Path(workflow_id): Path<Uuid>,
+   Path(display_number): Path<i64>,
    Json(req): Json<SubmitWorkflowRequest>,
 ) -> impl IntoResponse
 where
    C: CoreServiceClient,
    S: SessionManager,
 {
+   // display_number の検証
+   if display_number <= 0 {
+      return validation_error_response("display_number は 1 以上である必要があります");
+   }
+
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -356,7 +365,7 @@ where
 
    match state
       .core_service_client
-      .submit_workflow(workflow_id, core_req)
+      .submit_workflow_by_display_number(display_number, core_req)
       .await
    {
       Ok(core_response) => {
@@ -664,25 +673,30 @@ where
    }
 }
 
-/// GET /api/v1/workflows/{id}
+/// GET /api/v1/workflows/{display_number}
 ///
 /// ワークフローの詳細を取得する
 ///
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id` を取得
-/// 2. Core Service の `GET /internal/workflows/{id}` を呼び出し
+/// 2. Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出し
 /// 3. レスポンスを返す
 pub async fn get_workflow<C, S>(
    State(state): State<Arc<WorkflowState<C, S>>>,
    headers: HeaderMap,
    jar: CookieJar,
-   Path(workflow_id): Path<Uuid>,
+   Path(display_number): Path<i64>,
 ) -> impl IntoResponse
 where
    C: CoreServiceClient,
    S: SessionManager,
 {
+   // display_number の検証
+   if display_number <= 0 {
+      return validation_error_response("display_number は 1 以上である必要があります");
+   }
+
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -698,7 +712,7 @@ where
    // Core Service を呼び出し
    match state
       .core_service_client
-      .get_workflow(workflow_id, *session_data.tenant_id().as_uuid())
+      .get_workflow_by_display_number(display_number, *session_data.tenant_id().as_uuid())
       .await
    {
       Ok(core_response) => {
@@ -719,14 +733,14 @@ where
 
 // ===== 承認/却下ハンドラ =====
 
-/// POST /api/v1/workflows/{id}/steps/{step_id}/approve
+/// POST /api/v1/workflows/{display_number}/steps/{step_display_number}/approve
 ///
 /// ワークフローステップを承認する
 ///
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/{id}/steps/{step_id}/approve` を呼び出し
+/// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
 pub async fn approve_step<C, S>(
    State(state): State<Arc<WorkflowState<C, S>>>,
@@ -739,6 +753,14 @@ where
    C: CoreServiceClient,
    S: SessionManager,
 {
+   // display_number の検証
+   if params.display_number <= 0 {
+      return validation_error_response("display_number は 1 以上である必要があります");
+   }
+   if params.step_display_number <= 0 {
+      return validation_error_response("step_display_number は 1 以上である必要があります");
+   }
+
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -761,7 +783,7 @@ where
 
    match state
       .core_service_client
-      .approve_step(params.id, params.step_id, core_req)
+      .approve_step_by_display_number(params.display_number, params.step_display_number, core_req)
       .await
    {
       Ok(core_response) => {
@@ -773,6 +795,11 @@ where
          "Step Not Found",
          "ステップが見つかりません",
       ),
+      Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "Workflow Instance Not Found",
+         "ワークフローインスタンスが見つかりません",
+      ),
       Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
       Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
       Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
@@ -783,14 +810,14 @@ where
    }
 }
 
-/// POST /api/v1/workflows/{id}/steps/{step_id}/reject
+/// POST /api/v1/workflows/{display_number}/steps/{step_display_number}/reject
 ///
 /// ワークフローステップを却下する
 ///
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/{id}/steps/{step_id}/reject` を呼び出し
+/// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
 pub async fn reject_step<C, S>(
    State(state): State<Arc<WorkflowState<C, S>>>,
@@ -803,6 +830,14 @@ where
    C: CoreServiceClient,
    S: SessionManager,
 {
+   // display_number の検証
+   if params.display_number <= 0 {
+      return validation_error_response("display_number は 1 以上である必要があります");
+   }
+   if params.step_display_number <= 0 {
+      return validation_error_response("step_display_number は 1 以上である必要があります");
+   }
+
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -825,7 +860,7 @@ where
 
    match state
       .core_service_client
-      .reject_step(params.id, params.step_id, core_req)
+      .reject_step_by_display_number(params.display_number, params.step_display_number, core_req)
       .await
    {
       Ok(core_response) => {
@@ -836,6 +871,11 @@ where
          "https://ringiflow.example.com/errors/step-not-found",
          "Step Not Found",
          "ステップが見つかりません",
+      ),
+      Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "Workflow Instance Not Found",
+         "ワークフローインスタンスが見つかりません",
       ),
       Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
       Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),

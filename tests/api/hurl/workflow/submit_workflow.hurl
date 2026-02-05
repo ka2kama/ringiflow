@@ -1,5 +1,5 @@
 # ワークフロー申請 API テスト
-# POST /api/v1/workflows/{id}/submit
+# POST /api/v1/workflows/{display_number}/submit
 #
 # ワークフロー申請の E2E テスト。BFF → Core Service の連携を検証する。
 
@@ -47,6 +47,7 @@ HTTP 201
 [Captures]
 workflow_id: jsonpath "$.data.id"
 workflow_display_id: jsonpath "$.data.display_id"
+workflow_display_number: jsonpath "$.data.display_number"
 
 # =============================================================================
 # 正常系: ワークフローを申請できる
@@ -55,7 +56,7 @@ workflow_display_id: jsonpath "$.data.display_id"
 # When: 承認者を指定してワークフローを申請する
 # Then: ステータスが Pending に変わり、current_step_id が設定される
 
-POST {{bff_url}}/api/v1/workflows/{{workflow_id}}/submit
+POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{csrf_token}}
 Cookie: session_id={{session_cookie}}
@@ -69,6 +70,7 @@ HTTP 200
 # ワークフローのステータスが更新される
 jsonpath "$.data.id" == "{{workflow_id}}"
 jsonpath "$.data.display_id" == "{{workflow_display_id}}"
+jsonpath "$.data.display_number" == {{workflow_display_number}}
 jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.version" == 2
@@ -84,7 +86,7 @@ jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 # When: ワークフロー申請を試みる
 # Then: 403 Forbidden が返される（CSRF ミドルウェアが先にチェック）
 
-POST {{bff_url}}/api/v1/workflows/{{workflow_id}}/submit
+POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
@@ -103,7 +105,7 @@ jsonpath "$.status" == 403
 # When: ワークフロー申請を試みる
 # Then: 403 Forbidden が返される
 
-POST {{bff_url}}/api/v1/workflows/{{workflow_id}}/submit
+POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
 X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 Content-Type: application/json
@@ -119,11 +121,11 @@ jsonpath "$.status" == 403
 # =============================================================================
 # 異常系: 存在しないワークフローは申請できない
 # =============================================================================
-# Given: 存在しないワークフロー ID
+# Given: 存在しない display_number
 # When: ワークフロー申請を試みる
 # Then: 404 Not Found が返される
 
-POST {{bff_url}}/api/v1/workflows/99999999-9999-9999-9999-999999999999/submit
+POST {{bff_url}}/api/v1/workflows/99999999/submit
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{csrf_token}}
 Cookie: session_id={{session_cookie}}

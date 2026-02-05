@@ -290,6 +290,20 @@ mod tests {
             .cloned()
             .collect())
       }
+
+      async fn find_by_display_number(
+         &self,
+         display_number: DisplayNumber,
+         tenant_id: &TenantId,
+      ) -> Result<Option<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|i| i.display_number() == display_number && i.tenant_id() == tenant_id)
+            .cloned())
+      }
    }
 
    #[derive(Clone)]
@@ -362,6 +376,21 @@ mod tests {
             .filter(|s| s.assigned_to() == Some(user_id))
             .cloned()
             .collect())
+      }
+
+      async fn find_by_display_number(
+         &self,
+         display_number: DisplayNumber,
+         instance_id: &WorkflowInstanceId,
+         _tenant_id: &TenantId,
+      ) -> Result<Option<WorkflowStep>, InfraError> {
+         Ok(self
+            .steps
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.display_number() == display_number && s.instance_id() == instance_id)
+            .cloned())
       }
    }
 

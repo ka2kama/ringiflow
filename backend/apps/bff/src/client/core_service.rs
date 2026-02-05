@@ -123,21 +123,22 @@ pub struct ApproveRejectRequest {
 /// ワークフローステップ DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowStepDto {
-   pub id:           String,
-   pub display_id:   String,
-   pub step_id:      String,
-   pub step_name:    String,
-   pub step_type:    String,
-   pub status:       String,
-   pub version:      i32,
-   pub assigned_to:  Option<UserRefDto>,
-   pub decision:     Option<String>,
-   pub comment:      Option<String>,
-   pub due_date:     Option<String>,
-   pub started_at:   Option<String>,
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
+   pub status: String,
+   pub version: i32,
+   pub assigned_to: Option<UserRefDto>,
+   pub decision: Option<String>,
+   pub comment: Option<String>,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
    pub completed_at: Option<String>,
-   pub created_at:   String,
-   pub updated_at:   String,
+   pub created_at: String,
+   pub updated_at: String,
 }
 
 /// ワークフローインスタンス DTO
@@ -145,6 +146,7 @@ pub struct WorkflowStepDto {
 pub struct WorkflowInstanceDto {
    pub id: String,
    pub display_id: String,
+   pub display_number: i64,
    pub title: String,
    pub definition_id: String,
    pub status: String,
@@ -436,6 +438,84 @@ pub trait CoreServiceClient: Send + Sync {
       tenant_id: Uuid,
       user_id: Uuid,
    ) -> Result<ApiResponse<DashboardStatsDto>, CoreServiceError>;
+
+   // ===== display_number 対応メソッド =====
+
+   /// display_number でワークフローの詳細を取得する
+   ///
+   /// Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `display_number`: 表示用連番
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// ワークフローインスタンス
+   async fn get_workflow_by_display_number(
+      &self,
+      display_number: i64,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// display_number でワークフローを申請する
+   ///
+   /// Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `display_number`: 表示用連番
+   /// - `req`: ワークフロー申請リクエスト
+   ///
+   /// # 戻り値
+   ///
+   /// 更新されたワークフローインスタンス
+   async fn submit_workflow_by_display_number(
+      &self,
+      display_number: i64,
+      req: SubmitWorkflowRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// display_number でワークフローステップを承認する
+   ///
+   /// Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `workflow_display_number`: ワークフローの表示用連番
+   /// - `step_display_number`: ステップの表示用連番
+   /// - `req`: 承認リクエスト
+   ///
+   /// # 戻り値
+   ///
+   /// 更新されたワークフローインスタンス（ステップ情報含む）
+   async fn approve_step_by_display_number(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// display_number でワークフローステップを却下する
+   ///
+   /// Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `workflow_display_number`: ワークフローの表示用連番
+   /// - `step_display_number`: ステップの表示用連番
+   /// - `req`: 却下リクエスト
+   ///
+   /// # 戻り値
+   ///
+   /// 更新されたワークフローインスタンス（ステップ情報含む）
+   async fn reject_step_by_display_number(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 }
 
 /// Core Service クライアント実装
@@ -858,6 +938,154 @@ impl CoreServiceClient for CoreServiceClientImpl {
          status if status.is_success() => {
             let body = response.json::<ApiResponse<DashboardStatsDto>>().await?;
             Ok(body)
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   // ===== display_number 対応メソッドの実装 =====
+
+   async fn get_workflow_by_display_number(
+      &self,
+      display_number: i64,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}?tenant_id={}",
+         self.base_url, display_number, tenant_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::ValidationError(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn submit_workflow_by_display_number(
+      &self,
+      display_number: i64,
+      req: SubmitWorkflowRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/submit",
+         self.base_url, display_number
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::ValidationError(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn approve_step_by_display_number(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/steps/by-display-number/{}/approve",
+         self.base_url, workflow_display_number, step_display_number
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::ValidationError(body))
+         }
+         reqwest::StatusCode::FORBIDDEN => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Forbidden(body))
+         }
+         reqwest::StatusCode::CONFLICT => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Conflict(body))
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn reject_step_by_display_number(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/steps/by-display-number/{}/reject",
+         self.base_url, workflow_display_number, step_display_number
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::ValidationError(body))
+         }
+         reqwest::StatusCode::FORBIDDEN => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Forbidden(body))
+         }
+         reqwest::StatusCode::CONFLICT => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Conflict(body))
          }
          status => {
             let body = response.text().await.unwrap_or_default();

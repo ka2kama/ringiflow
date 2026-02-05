@@ -47,7 +47,7 @@ Route 型
 -}
 
 import Url exposing (Url)
-import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string, top)
+import Url.Parser as Parser exposing ((</>), Parser, int, oneOf, s, string, top)
 
 
 {-| アプリケーションのルート（画面）を表す型
@@ -78,7 +78,7 @@ type Route
     = Home
     | Workflows
     | WorkflowNew
-    | WorkflowDetail String
+    | WorkflowDetail Int
     | Tasks
     | TaskDetail String
     | NotFound
@@ -126,7 +126,7 @@ parser =
     oneOf
         [ Parser.map Home top
         , Parser.map WorkflowNew (s "workflows" </> s "new")
-        , Parser.map WorkflowDetail (s "workflows" </> string)
+        , Parser.map WorkflowDetail (s "workflows" </> int)
         , Parser.map Workflows (s "workflows")
         , Parser.map TaskDetail (s "tasks" </> string)
         , Parser.map Tasks (s "tasks")
@@ -187,8 +187,8 @@ toString route =
         WorkflowNew ->
             "/workflows/new"
 
-        WorkflowDetail id ->
-            "/workflows/" ++ id
+        WorkflowDetail displayNumber ->
+            "/workflows/" ++ String.fromInt displayNumber
 
         Tasks ->
             "/tasks"

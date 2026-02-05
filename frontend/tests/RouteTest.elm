@@ -39,10 +39,14 @@ fromUrlTests =
             \_ ->
                 parseUrl "/workflows"
                     |> Expect.equal Workflows
-        , test "/workflows/{id} → WorkflowDetail id" <|
+        , test "/workflows/{display_number} → WorkflowDetail display_number" <|
+            \_ ->
+                parseUrl "/workflows/42"
+                    |> Expect.equal (WorkflowDetail 42)
+        , test "/workflows/{non-integer} → NotFound" <|
             \_ ->
                 parseUrl "/workflows/abc-123-def"
-                    |> Expect.equal (WorkflowDetail "abc-123-def")
+                    |> Expect.equal NotFound
         , test "/unknown → NotFound" <|
             \_ ->
                 parseUrl "/unknown/path"
@@ -69,10 +73,10 @@ toStringTests =
             \_ ->
                 Route.toString Workflows
                     |> Expect.equal "/workflows"
-        , test "WorkflowDetail id → /workflows/{id}" <|
+        , test "WorkflowDetail display_number → /workflows/{display_number}" <|
             \_ ->
-                Route.toString (WorkflowDetail "abc-123-def")
-                    |> Expect.equal "/workflows/abc-123-def"
+                Route.toString (WorkflowDetail 42)
+                    |> Expect.equal "/workflows/42"
         , test "NotFound → /not-found" <|
             \_ ->
                 Route.toString NotFound

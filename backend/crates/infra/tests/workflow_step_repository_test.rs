@@ -379,6 +379,165 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
    );
 }
 
+// ============================================================================
+// find_by_display_number テスト
+// ============================================================================
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_display_number_存在するdisplay_numberで検索できる(pool: PgPool) {
+   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let step_repo = PostgresWorkflowStepRepository::new(pool);
+
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
+
+   // インスタンスを作成
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
+      now,
+   });
+   let instance_id = instance.id().clone();
+   instance_repo.insert(&instance).await.unwrap();
+
+   // ステップを作成（display_number: 1）
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance_id.clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
+      now,
+   });
+   let step_id = step.id().clone();
+   step_repo.insert(&step).await.unwrap();
+
+   // display_number で検索
+   let display_number = DisplayNumber::new(1).unwrap();
+   let result = step_repo
+      .find_by_display_number(display_number, &instance_id, &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   let found = result.unwrap();
+   assert!(found.is_some());
+   let found = found.unwrap();
+   assert_eq!(found.id(), &step_id);
+   assert_eq!(found.display_number().as_i64(), 1);
+   assert_eq!(found.step_id(), "step1");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_display_number_存在しない場合はnoneを返す(pool: PgPool) {
+   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let step_repo = PostgresWorkflowStepRepository::new(pool);
+
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
+
+   // インスタンスを作成（ステップは作成しない）
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
+      now,
+   });
+   let instance_id = instance.id().clone();
+   instance_repo.insert(&instance).await.unwrap();
+
+   // 存在しない display_number で検索
+   let display_number = DisplayNumber::new(999).unwrap();
+   let result = step_repo
+      .find_by_display_number(display_number, &instance_id, &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_none());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_display_number_別のinstance_idでは見つからない(pool: PgPool) {
+   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let step_repo = PostgresWorkflowStepRepository::new(pool);
+
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
+
+   // インスタンス A を作成
+   let instance_a = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id: definition_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "申請A".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
+      now,
+   });
+   let instance_a_id = instance_a.id().clone();
+   instance_repo.insert(&instance_a).await.unwrap();
+
+   // インスタンス B を作成
+   let instance_b = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(101).unwrap(),
+      title: "申請B".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
+      now,
+   });
+   let instance_b_id = instance_b.id().clone();
+   instance_repo.insert(&instance_b).await.unwrap();
+
+   // インスタンス A にステップを作成（display_number: 1）
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance_a_id.clone(),
+      display_number: DisplayNumber::new(1).unwrap(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
+      now,
+   });
+   step_repo.insert(&step).await.unwrap();
+
+   // インスタンス B の display_number: 1 を検索 → 見つからないはず
+   let display_number = DisplayNumber::new(1).unwrap();
+   let result = step_repo
+      .find_by_display_number(display_number, &instance_b_id, &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_none());
+}
+
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_ステップを完了できる(pool: PgPool) {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());

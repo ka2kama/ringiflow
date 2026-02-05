@@ -316,13 +316,13 @@ paths:
                 status: 404
                 detail: ワークフロー定義が見つかりません
 
-  /api/v1/workflows/{id}:
+  /api/v1/workflows/{display_number}:
     get:
       tags:
         - workflows
       summary: ワークフロー詳細取得
       description: |
-        指定された ID のワークフローインスタンスを取得する。
+        指定された表示用番号のワークフローインスタンスを取得する。
 
         申請詳細の表示に使用する。
       operationId: getWorkflow
@@ -330,13 +330,13 @@ paths:
         - sessionAuth: []
       parameters:
         - $ref: '#/components/parameters/XTenantId'
-        - name: id
+        - name: display_number
           in: path
           required: true
-          description: ワークフローインスタンス ID
+          description: ワークフローインスタンスの表示用番号
           schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 1
       responses:
         '200':
           description: ワークフロー詳細
@@ -358,7 +358,7 @@ paths:
                 status: 404
                 detail: ワークフローインスタンスが見つかりません
 
-  /api/v1/workflows/{id}/submit:
+  /api/v1/workflows/{display_number}/submit:
     post:
       tags:
         - workflows
@@ -374,13 +374,13 @@ paths:
       parameters:
         - $ref: '#/components/parameters/XTenantId'
         - $ref: '#/components/parameters/XCsrfToken'
-        - name: id
+        - name: display_number
           in: path
           required: true
-          description: ワークフローインスタンス ID
+          description: ワークフローインスタンスの表示用番号
           schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 1
       requestBody:
         required: true
         content:
@@ -421,7 +421,7 @@ paths:
                 status: 404
                 detail: ワークフローインスタンスが見つかりません
 
-  /api/v1/workflows/{id}/steps/{step_id}/approve:
+  /api/v1/workflows/{display_number}/steps/{step_display_number}/approve:
     post:
       tags:
         - workflows
@@ -439,20 +439,20 @@ paths:
       parameters:
         - $ref: '#/components/parameters/XTenantId'
         - $ref: '#/components/parameters/XCsrfToken'
-        - name: id
+        - name: display_number
           in: path
           required: true
-          description: ワークフローインスタンス ID
+          description: ワークフローインスタンスの表示用番号
           schema:
-            type: string
-            format: uuid
-        - name: step_id
+            type: integer
+            minimum: 1
+        - name: step_display_number
           in: path
           required: true
-          description: ワークフローステップ ID
+          description: ワークフローステップの表示用番号
           schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 1
       requestBody:
         required: true
         content:
@@ -507,7 +507,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /api/v1/workflows/{id}/steps/{step_id}/reject:
+  /api/v1/workflows/{display_number}/steps/{step_display_number}/reject:
     post:
       tags:
         - workflows
@@ -525,20 +525,20 @@ paths:
       parameters:
         - $ref: '#/components/parameters/XTenantId'
         - $ref: '#/components/parameters/XCsrfToken'
-        - name: id
+        - name: display_number
           in: path
           required: true
-          description: ワークフローインスタンス ID
+          description: ワークフローインスタンスの表示用番号
           schema:
-            type: string
-            format: uuid
-        - name: step_id
+            type: integer
+            minimum: 1
+        - name: step_display_number
           in: path
           required: true
-          description: ワークフローステップ ID
+          description: ワークフローステップの表示用番号
           schema:
-            type: string
-            format: uuid
+            type: integer
+            minimum: 1
       requestBody:
         required: true
         content:
@@ -924,6 +924,7 @@ components:
       required:
         - id
         - display_id
+        - display_number
         - title
         - definition_id
         - status
@@ -941,6 +942,11 @@ components:
           type: string
           description: "表示用 ID（例: WF-42）"
           example: "WF-42"
+        display_number:
+          type: integer
+          minimum: 1
+          description: 表示用番号（URL パスパラメータに使用）
+          example: 42
         title:
           type: string
           description: ワークフロータイトル
@@ -1005,6 +1011,7 @@ components:
       required:
         - id
         - display_id
+        - display_number
         - step_id
         - step_name
         - step_type
@@ -1022,6 +1029,11 @@ components:
           pattern: '^STEP-\d+$'
           description: "表示用 ID（例: STEP-42）"
           example: "STEP-42"
+        display_number:
+          type: integer
+          minimum: 1
+          description: 表示用番号（URL パスパラメータに使用）
+          example: 1
         step_id:
           type: string
           description: ステップ定義 ID（定義内での識別子）

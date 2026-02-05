@@ -25,11 +25,15 @@ pub use task::{TaskState, get_task, list_my_tasks};
 pub use workflow::{
    WorkflowState,
    approve_step,
+   approve_step_by_display_number,
    create_workflow,
    get_workflow,
+   get_workflow_by_display_number,
    get_workflow_definition,
    list_my_workflows,
    list_workflow_definitions,
    reject_step,
+   reject_step_by_display_number,
    submit_workflow,
+   submit_workflow_by_display_number,
 };

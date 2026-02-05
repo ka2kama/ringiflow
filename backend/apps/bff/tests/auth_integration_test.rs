@@ -249,6 +249,44 @@ impl CoreServiceClient for StubCoreServiceClient {
       // 認証テストでは未使用
       unimplemented!("get_dashboard_stats is not used in auth tests")
    }
+
+   async fn get_workflow_by_display_number(
+      &self,
+      _display_number: i64,
+      _tenant_id: Uuid,
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("get_workflow_by_display_number is not used in auth tests")
+   }
+
+   async fn submit_workflow_by_display_number(
+      &self,
+      _display_number: i64,
+      _req: SubmitWorkflowRequest,
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("submit_workflow_by_display_number is not used in auth tests")
+   }
+
+   async fn approve_step_by_display_number(
+      &self,
+      _workflow_display_number: i64,
+      _step_display_number: i64,
+      _req: ringiflow_bff::client::ApproveRejectRequest,
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("approve_step_by_display_number is not used in auth tests")
+   }
+
+   async fn reject_step_by_display_number(
+      &self,
+      _workflow_display_number: i64,
+      _step_display_number: i64,
+      _req: ringiflow_bff::client::ApproveRejectRequest,
+   ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowInstanceDto>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("reject_step_by_display_number is not used in auth tests")
+   }
 }
 
 // --- Auth Service スタブ ---

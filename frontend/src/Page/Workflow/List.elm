@@ -287,7 +287,7 @@ viewWorkflowRow zone workflow =
     tr [ class "border-b border-secondary-100" ]
         [ td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text workflow.displayId ]
         , td [ class "px-4 py-3" ]
-            [ a [ href (Route.toString (Route.WorkflowDetail workflow.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
+            [ a [ href (Route.toString (Route.WorkflowDetail workflow.displayNumber)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text workflow.title ]
             ]
         , td [ class "px-4 py-3" ]

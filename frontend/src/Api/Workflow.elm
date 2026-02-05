@@ -63,22 +63,22 @@ listMyWorkflows { config, toMsg } =
 
 {-| ワークフロー詳細を取得
 
-`GET /api/v1/workflows/{id}`
+`GET /api/v1/workflows/{display_number}`
 
-指定された ID のワークフローインスタンスを取得。
+指定された display\_number のワークフローインスタンスを取得。
 申請詳細画面で使用。
 
 -}
 getWorkflow :
     { config : RequestConfig
-    , id : String
+    , displayNumber : Int
     , toMsg : Result ApiError WorkflowInstance -> msg
     }
     -> Cmd msg
-getWorkflow { config, id, toMsg } =
+getWorkflow { config, displayNumber, toMsg } =
     Api.get
         { config = config
-        , url = "/api/v1/workflows/" ++ id
+        , url = "/api/v1/workflows/" ++ String.fromInt displayNumber
         , decoder = Decode.field "data" WorkflowInstance.decoder
         , toMsg = toMsg
         }
@@ -110,7 +110,7 @@ createWorkflow { config, body, toMsg } =
 
 {-| ワークフローを申請（承認依頼）
 
-`POST /api/v1/workflows/{id}/submit`
+`POST /api/v1/workflows/{display_number}/submit`
 
 Draft 状態のワークフローを Pending 状態に遷移させ、
 承認フローを開始する。
@@ -118,15 +118,15 @@ Draft 状態のワークフローを Pending 状態に遷移させ、
 -}
 submitWorkflow :
     { config : RequestConfig
-    , id : String
+    , displayNumber : Int
     , body : SubmitWorkflowRequest
     , toMsg : Result ApiError WorkflowInstance -> msg
     }
     -> Cmd msg
-submitWorkflow { config, id, body, toMsg } =
+submitWorkflow { config, displayNumber, body, toMsg } =
     Api.post
         { config = config
-        , url = "/api/v1/workflows/" ++ id ++ "/submit"
+        , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/submit"
         , body = Http.jsonBody (encodeSubmitRequest body)
         , decoder = submitResponseDecoder
         , toMsg = toMsg
@@ -135,7 +135,7 @@ submitWorkflow { config, id, body, toMsg } =
 
 {-| ステップを承認
 
-`POST /api/v1/workflows/{id}/steps/{stepId}/approve`
+`POST /api/v1/workflows/{display_number}/steps/{step_display_number}/approve`
 
 指定されたステップを承認する。
 楽観的ロックにより、バージョン不一致の場合は 409 Conflict が返る。
@@ -143,16 +143,21 @@ submitWorkflow { config, id, body, toMsg } =
 -}
 approveStep :
     { config : RequestConfig
-    , workflowId : String
-    , stepId : String
+    , workflowDisplayNumber : Int
+    , stepDisplayNumber : Int
     , body : ApproveRejectRequest
     , toMsg : Result ApiError WorkflowInstance -> msg
     }
     -> Cmd msg
-approveStep { config, workflowId, stepId, body, toMsg } =
+approveStep { config, workflowDisplayNumber, stepDisplayNumber, body, toMsg } =
     Api.post
         { config = config
-        , url = "/api/v1/workflows/" ++ workflowId ++ "/steps/" ++ stepId ++ "/approve"
+        , url =
+            "/api/v1/workflows/"
+                ++ String.fromInt workflowDisplayNumber
+                ++ "/steps/"
+                ++ String.fromInt stepDisplayNumber
+                ++ "/approve"
         , body = Http.jsonBody (encodeApproveRejectRequest body)
         , decoder = Decode.field "data" WorkflowInstance.decoder
         , toMsg = toMsg
@@ -161,7 +166,7 @@ approveStep { config, workflowId, stepId, body, toMsg } =
 
 {-| ステップを却下
 
-`POST /api/v1/workflows/{id}/steps/{stepId}/reject`
+`POST /api/v1/workflows/{display_number}/steps/{step_display_number}/reject`
 
 指定されたステップを却下する。
 楽観的ロックにより、バージョン不一致の場合は 409 Conflict が返る。
@@ -169,16 +174,21 @@ approveStep { config, workflowId, stepId, body, toMsg } =
 -}
 rejectStep :
     { config : RequestConfig
-    , workflowId : String
-    , stepId : String
+    , workflowDisplayNumber : Int
+    , stepDisplayNumber : Int
     , body : ApproveRejectRequest
     , toMsg : Result ApiError WorkflowInstance -> msg
     }
     -> Cmd msg
-rejectStep { config, workflowId, stepId, body, toMsg } =
+rejectStep { config, workflowDisplayNumber, stepDisplayNumber, body, toMsg } =
     Api.post
         { config = config
-        , url = "/api/v1/workflows/" ++ workflowId ++ "/steps/" ++ stepId ++ "/reject"
+        , url =
+            "/api/v1/workflows/"
+                ++ String.fromInt workflowDisplayNumber
+                ++ "/steps/"
+                ++ String.fromInt stepDisplayNumber
+                ++ "/reject"
         , body = Http.jsonBody (encodeApproveRejectRequest body)
         , decoder = Decode.field "data" WorkflowInstance.decoder
         , toMsg = toMsg

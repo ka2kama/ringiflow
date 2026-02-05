@@ -54,6 +54,7 @@ HTTP 201
 # ワークフローインスタンスの情報が正しく返される
 jsonpath "$.data.id" exists
 jsonpath "$.data.display_id" matches "^WF-\\d+$"
+jsonpath "$.data.display_number" >= 1
 jsonpath "$.data.title" == "経費申請"
 jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "Draft"
@@ -69,6 +70,7 @@ jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 [Captures]
 workflow_id: jsonpath "$.data.id"
+workflow_display_number: jsonpath "$.data.display_number"
 
 # =============================================================================
 # 異常系: 未認証では作成できない（CSRF トークンなしで 403）

@@ -206,19 +206,19 @@ async fn main() -> anyhow::Result<()> {
             .post(create_workflow::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/api/v1/workflows/{id}",
+         "/api/v1/workflows/{display_number}",
          get(get_workflow::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/api/v1/workflows/{id}/submit",
+         "/api/v1/workflows/{display_number}/submit",
          post(submit_workflow::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/api/v1/workflows/{id}/steps/{step_id}/approve",
+         "/api/v1/workflows/{display_number}/steps/{step_display_number}/approve",
          post(approve_step::<CoreServiceClientImpl, RedisSessionManager>),
       )
       .route(
-         "/api/v1/workflows/{id}/steps/{step_id}/reject",
+         "/api/v1/workflows/{display_number}/steps/{step_display_number}/reject",
          post(reject_step::<CoreServiceClientImpl, RedisSessionManager>),
       )
       // タスク API
