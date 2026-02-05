@@ -31,6 +31,7 @@ ISO 8601 日時文字列をタイムゾーン変換し、UI 表示用にフォ�
 -}
 
 import Iso8601
+import Maybe.Extra
 import Time
 
 
@@ -56,12 +57,7 @@ Nothing の場合は "-" を返す。
 -}
 formatMaybeDate : Time.Zone -> Maybe String -> String
 formatMaybeDate zone maybeDate =
-    case maybeDate of
-        Just isoString ->
-            formatDate zone isoString
-
-        Nothing ->
-            "-"
+    Maybe.Extra.unwrap "-" (formatDate zone) maybeDate
 
 
 {-| ISO 8601 日時文字列からタイムゾーン変換した日時を取得
@@ -88,12 +84,7 @@ Nothing の場合は "-" を返す。
 -}
 formatMaybeDateTime : Time.Zone -> Maybe String -> String
 formatMaybeDateTime zone maybeDateTime =
-    case maybeDateTime of
-        Just dateTime ->
-            formatDateTime zone dateTime
-
-        Nothing ->
-            "-"
+    Maybe.Extra.unwrap "-" (formatDateTime zone) maybeDateTime
 
 
 
