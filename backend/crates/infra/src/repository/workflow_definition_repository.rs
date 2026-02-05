@@ -15,7 +15,12 @@ use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
    value_objects::{Version, WorkflowName},
-   workflow::{WorkflowDefinition, WorkflowDefinitionId, WorkflowDefinitionStatus},
+   workflow::{
+      WorkflowDefinition,
+      WorkflowDefinitionId,
+      WorkflowDefinitionRecord,
+      WorkflowDefinitionStatus,
+   },
 };
 use sqlx::PgPool;
 
@@ -104,21 +109,23 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
       let definitions = rows
          .into_iter()
          .map(|row| -> Result<WorkflowDefinition, InfraError> {
-            Ok(WorkflowDefinition::from_db(
-               WorkflowDefinitionId::from_uuid(row.id),
-               TenantId::from_uuid(row.tenant_id),
-               WorkflowName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.description,
-               Version::new(row.version as u32)
+            Ok(WorkflowDefinition::from_db(WorkflowDefinitionRecord {
+               id:          WorkflowDefinitionId::from_uuid(row.id),
+               tenant_id:   TenantId::from_uuid(row.tenant_id),
+               name:        WorkflowName::new(&row.name)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.definition,
-               row.status
+               description: row.description,
+               version:     Version::new(row.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               definition:  row.definition,
+               status:      row
+                  .status
                   .parse::<WorkflowDefinitionStatus>()
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               UserId::from_uuid(row.created_by),
-               row.created_at,
-               row.updated_at,
-            ))
+               created_by:  UserId::from_uuid(row.created_by),
+               created_at:  row.created_at,
+               updated_at:  row.updated_at,
+            }))
          })
          .collect::<Result<Vec<_>, InfraError>>()?;
 
@@ -156,20 +163,23 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
          return Ok(None);
       };
 
-      let definition = WorkflowDefinition::from_db(
-         WorkflowDefinitionId::from_uuid(row.id),
-         TenantId::from_uuid(row.tenant_id),
-         WorkflowName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.description,
-         Version::new(row.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.definition,
-         row.status
+      let definition = WorkflowDefinition::from_db(WorkflowDefinitionRecord {
+         id:          WorkflowDefinitionId::from_uuid(row.id),
+         tenant_id:   TenantId::from_uuid(row.tenant_id),
+         name:        WorkflowName::new(&row.name)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         description: row.description,
+         version:     Version::new(row.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         definition:  row.definition,
+         status:      row
+            .status
             .parse::<WorkflowDefinitionStatus>()
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         UserId::from_uuid(row.created_by),
-         row.created_at,
-         row.updated_at,
-      );
+         created_by:  UserId::from_uuid(row.created_by),
+         created_at:  row.created_at,
+         updated_at:  row.updated_at,
+      });
 
       Ok(Some(definition))
    }

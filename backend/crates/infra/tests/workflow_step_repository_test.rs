@@ -15,6 +15,8 @@ use ringiflow_domain::{
    user::UserId,
    value_objects::{DisplayNumber, Version},
    workflow::{
+      NewWorkflowInstance,
+      NewWorkflowStep,
       StepDecision,
       WorkflowDefinitionId,
       WorkflowInstance,
@@ -44,29 +46,29 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
-   let step = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance.id().clone(),
-      "step1".to_string(),
-      "承認".to_string(),
-      "approval".to_string(),
-      Some(user_id),
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance.id().clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
       now,
-   );
+   });
 
    let result = step_repo.insert(&step).await;
 
@@ -85,29 +87,29 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
-   let step = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance.id().clone(),
-      "step1".to_string(),
-      "承認".to_string(),
-      "approval".to_string(),
-      Some(user_id),
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance.id().clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
       now,
-   );
+   });
    let step_id = step.id().clone();
    step_repo.insert(&step).await.unwrap();
 
@@ -150,39 +152,39 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    let instance_id = instance.id().clone();
    instance_repo.insert(&instance).await.unwrap();
 
    // 複数のステップを作成
-   let step1 = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance_id.clone(),
-      "step1".to_string(),
-      "承認1".to_string(),
-      "approval".to_string(),
-      Some(user_id.clone()),
+   let step1 = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance_id.clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認1".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id.clone()),
       now,
-   );
-   let step2 = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance_id.clone(),
-      "step2".to_string(),
-      "承認2".to_string(),
-      "approval".to_string(),
-      Some(user_id),
+   });
+   let step2 = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance_id.clone(),
+      step_id: "step2".to_string(),
+      step_name: "承認2".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
       now,
-   );
+   });
    step_repo.insert(&step1).await.unwrap();
    step_repo.insert(&step2).await.unwrap();
 
@@ -222,29 +224,29 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
-   let step = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance.id().clone(),
-      "step1".to_string(),
-      "承認".to_string(),
-      "approval".to_string(),
-      Some(user_id.clone()),
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance.id().clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id.clone()),
       now,
-   );
+   });
    step_repo.insert(&step).await.unwrap();
 
    // 検索
@@ -267,29 +269,29 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成して INSERT
-   let step = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance.id().clone(),
-      "step1".to_string(),
-      "承認".to_string(),
-      "approval".to_string(),
-      Some(user_id),
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance.id().clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
       now,
-   );
+   });
    let step_id = step.id().clone();
    let expected_version = step.version();
    step_repo.insert(&step).await.unwrap();
@@ -327,29 +329,29 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成して INSERT
-   let step = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance.id().clone(),
-      "step1".to_string(),
-      "承認".to_string(),
-      "approval".to_string(),
-      Some(user_id),
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance.id().clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
       now,
-   );
+   });
    step_repo.insert(&step).await.unwrap();
 
    // アクティブ化（バージョンインクリメント）
@@ -382,29 +384,29 @@ async fn test_ステップを完了できる(pool: PgPool) {
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
    instance_repo.insert(&instance).await.unwrap();
 
    // ステップを作成
-   let step = WorkflowStep::new(
-      WorkflowStepId::new(),
-      instance.id().clone(),
-      "step1".to_string(),
-      "承認".to_string(),
-      "approval".to_string(),
-      Some(user_id),
+   let step = WorkflowStep::new(NewWorkflowStep {
+      id: WorkflowStepId::new(),
+      instance_id: instance.id().clone(),
+      step_id: "step1".to_string(),
+      step_name: "承認".to_string(),
+      step_type: "approval".to_string(),
+      assigned_to: Some(user_id),
       now,
-   );
+   });
    let step_id = step.id().clone();
    let v1 = step.version();
    step_repo.insert(&step).await.unwrap();

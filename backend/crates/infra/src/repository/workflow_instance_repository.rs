@@ -15,7 +15,13 @@ use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
    value_objects::{DisplayNumber, Version},
-   workflow::{WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId, WorkflowInstanceStatus},
+   workflow::{
+      WorkflowDefinitionId,
+      WorkflowInstance,
+      WorkflowInstanceId,
+      WorkflowInstanceRecord,
+      WorkflowInstanceStatus,
+   },
 };
 use sqlx::PgPool;
 
@@ -244,27 +250,29 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          return Ok(None);
       };
 
-      let instance = WorkflowInstance::from_db(
-         WorkflowInstanceId::from_uuid(row.id),
-         TenantId::from_uuid(row.tenant_id),
-         WorkflowDefinitionId::from_uuid(row.definition_id),
-         Version::new(row.definition_version as u32)
+      let instance = WorkflowInstance::from_db(WorkflowInstanceRecord {
+         id: WorkflowInstanceId::from_uuid(row.id),
+         tenant_id: TenantId::from_uuid(row.tenant_id),
+         definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
+         definition_version: Version::new(row.definition_version as u32)
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         DisplayNumber::try_from(row.display_number)
+         display_number: DisplayNumber::try_from(row.display_number)
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.title,
-         row.form_data,
-         row.status
+         title: row.title,
+         form_data: row.form_data,
+         status: row
+            .status
             .parse::<WorkflowInstanceStatus>()
             .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         Version::new(row.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         row.current_step_id,
-         UserId::from_uuid(row.initiated_by),
-         row.submitted_at,
-         row.completed_at,
-         row.created_at,
-         row.updated_at,
-      );
+         version: Version::new(row.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         current_step_id: row.current_step_id,
+         initiated_by: UserId::from_uuid(row.initiated_by),
+         submitted_at: row.submitted_at,
+         completed_at: row.completed_at,
+         created_at: row.created_at,
+         updated_at: row.updated_at,
+      });
 
       Ok(Some(instance))
    }
@@ -292,28 +300,29 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       let instances = rows
          .into_iter()
          .map(|row| -> Result<WorkflowInstance, InfraError> {
-            Ok(WorkflowInstance::from_db(
-               WorkflowInstanceId::from_uuid(row.id),
-               TenantId::from_uuid(row.tenant_id),
-               WorkflowDefinitionId::from_uuid(row.definition_id),
-               Version::new(row.definition_version as u32)
+            Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
+               id: WorkflowInstanceId::from_uuid(row.id),
+               tenant_id: TenantId::from_uuid(row.tenant_id),
+               definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
+               definition_version: Version::new(row.definition_version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               DisplayNumber::try_from(row.display_number)
+               display_number: DisplayNumber::try_from(row.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.title,
-               row.form_data,
-               row.status
+               title: row.title,
+               form_data: row.form_data,
+               status: row
+                  .status
                   .parse::<WorkflowInstanceStatus>()
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               Version::new(row.version as u32)
+               version: Version::new(row.version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.current_step_id,
-               UserId::from_uuid(row.initiated_by),
-               row.submitted_at,
-               row.completed_at,
-               row.created_at,
-               row.updated_at,
-            ))
+               current_step_id: row.current_step_id,
+               initiated_by: UserId::from_uuid(row.initiated_by),
+               submitted_at: row.submitted_at,
+               completed_at: row.completed_at,
+               created_at: row.created_at,
+               updated_at: row.updated_at,
+            }))
          })
          .collect::<Result<Vec<_>, InfraError>>()?;
 
@@ -345,28 +354,29 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       let instances = rows
          .into_iter()
          .map(|row| -> Result<WorkflowInstance, InfraError> {
-            Ok(WorkflowInstance::from_db(
-               WorkflowInstanceId::from_uuid(row.id),
-               TenantId::from_uuid(row.tenant_id),
-               WorkflowDefinitionId::from_uuid(row.definition_id),
-               Version::new(row.definition_version as u32)
+            Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
+               id: WorkflowInstanceId::from_uuid(row.id),
+               tenant_id: TenantId::from_uuid(row.tenant_id),
+               definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
+               definition_version: Version::new(row.definition_version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               DisplayNumber::try_from(row.display_number)
+               display_number: DisplayNumber::try_from(row.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.title,
-               row.form_data,
-               row.status
+               title: row.title,
+               form_data: row.form_data,
+               status: row
+                  .status
                   .parse::<WorkflowInstanceStatus>()
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               Version::new(row.version as u32)
+               version: Version::new(row.version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.current_step_id,
-               UserId::from_uuid(row.initiated_by),
-               row.submitted_at,
-               row.completed_at,
-               row.created_at,
-               row.updated_at,
-            ))
+               current_step_id: row.current_step_id,
+               initiated_by: UserId::from_uuid(row.initiated_by),
+               submitted_at: row.submitted_at,
+               completed_at: row.completed_at,
+               created_at: row.created_at,
+               updated_at: row.updated_at,
+            }))
          })
          .collect::<Result<Vec<_>, InfraError>>()?;
 
@@ -404,28 +414,29 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       let instances = rows
          .into_iter()
          .map(|row| -> Result<WorkflowInstance, InfraError> {
-            Ok(WorkflowInstance::from_db(
-               WorkflowInstanceId::from_uuid(row.id),
-               TenantId::from_uuid(row.tenant_id),
-               WorkflowDefinitionId::from_uuid(row.definition_id),
-               Version::new(row.definition_version as u32)
+            Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
+               id: WorkflowInstanceId::from_uuid(row.id),
+               tenant_id: TenantId::from_uuid(row.tenant_id),
+               definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
+               definition_version: Version::new(row.definition_version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               DisplayNumber::try_from(row.display_number)
+               display_number: DisplayNumber::try_from(row.display_number)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.title,
-               row.form_data,
-               row.status
+               title: row.title,
+               form_data: row.form_data,
+               status: row
+                  .status
                   .parse::<WorkflowInstanceStatus>()
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               Version::new(row.version as u32)
+               version: Version::new(row.version as u32)
                   .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               row.current_step_id,
-               UserId::from_uuid(row.initiated_by),
-               row.submitted_at,
-               row.completed_at,
-               row.created_at,
-               row.updated_at,
-            ))
+               current_step_id: row.current_step_id,
+               initiated_by: UserId::from_uuid(row.initiated_by),
+               submitted_at: row.submitted_at,
+               completed_at: row.completed_at,
+               created_at: row.created_at,
+               updated_at: row.updated_at,
+            }))
          })
          .collect::<Result<Vec<_>, InfraError>>()?;
 

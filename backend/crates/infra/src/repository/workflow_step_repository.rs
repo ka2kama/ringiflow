@@ -9,7 +9,14 @@ use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
    value_objects::Version,
-   workflow::{StepDecision, WorkflowInstanceId, WorkflowStep, WorkflowStepId, WorkflowStepStatus},
+   workflow::{
+      StepDecision,
+      WorkflowInstanceId,
+      WorkflowStep,
+      WorkflowStepId,
+      WorkflowStepRecord,
+      WorkflowStepStatus,
+   },
 };
 use sqlx::PgPool;
 
@@ -165,28 +172,30 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          return Ok(None);
       };
 
-      let step = WorkflowStep::from_db(
-         WorkflowStepId::from_uuid(r.id),
-         WorkflowInstanceId::from_uuid(r.instance_id),
-         r.step_id,
-         r.step_name,
-         r.step_type,
-         WorkflowStepStatus::from_str(&r.status)
+      let step = WorkflowStep::from_db(WorkflowStepRecord {
+         id:           WorkflowStepId::from_uuid(r.id),
+         instance_id:  WorkflowInstanceId::from_uuid(r.instance_id),
+         step_id:      r.step_id,
+         step_name:    r.step_name,
+         step_type:    r.step_type,
+         status:       WorkflowStepStatus::from_str(&r.status)
             .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-         Version::new(r.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         r.assigned_to.map(UserId::from_uuid),
-         r.decision
+         version:      Version::new(r.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         assigned_to:  r.assigned_to.map(UserId::from_uuid),
+         decision:     r
+            .decision
             .as_deref()
             .map(StepDecision::from_str)
             .transpose()
             .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-         r.comment,
-         r.due_date,
-         r.started_at,
-         r.completed_at,
-         r.created_at,
-         r.updated_at,
-      );
+         comment:      r.comment,
+         due_date:     r.due_date,
+         started_at:   r.started_at,
+         completed_at: r.completed_at,
+         created_at:   r.created_at,
+         updated_at:   r.updated_at,
+      });
 
       Ok(Some(step))
    }
@@ -217,28 +226,30 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       rows
          .into_iter()
          .map(|r| -> Result<WorkflowStep, InfraError> {
-            Ok(WorkflowStep::from_db(
-               WorkflowStepId::from_uuid(r.id),
-               WorkflowInstanceId::from_uuid(r.instance_id),
-               r.step_id,
-               r.step_name,
-               r.step_type,
-               WorkflowStepStatus::from_str(&r.status)
+            Ok(WorkflowStep::from_db(WorkflowStepRecord {
+               id:           WorkflowStepId::from_uuid(r.id),
+               instance_id:  WorkflowInstanceId::from_uuid(r.instance_id),
+               step_id:      r.step_id,
+               step_name:    r.step_name,
+               step_type:    r.step_type,
+               status:       WorkflowStepStatus::from_str(&r.status)
                   .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-               Version::new(r.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               r.assigned_to.map(UserId::from_uuid),
-               r.decision
+               version:      Version::new(r.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               assigned_to:  r.assigned_to.map(UserId::from_uuid),
+               decision:     r
+                  .decision
                   .as_deref()
                   .map(StepDecision::from_str)
                   .transpose()
                   .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-               r.comment,
-               r.due_date,
-               r.started_at,
-               r.completed_at,
-               r.created_at,
-               r.updated_at,
-            ))
+               comment:      r.comment,
+               due_date:     r.due_date,
+               started_at:   r.started_at,
+               completed_at: r.completed_at,
+               created_at:   r.created_at,
+               updated_at:   r.updated_at,
+            }))
          })
          .collect()
    }
@@ -269,28 +280,30 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       rows
          .into_iter()
          .map(|r| -> Result<WorkflowStep, InfraError> {
-            Ok(WorkflowStep::from_db(
-               WorkflowStepId::from_uuid(r.id),
-               WorkflowInstanceId::from_uuid(r.instance_id),
-               r.step_id,
-               r.step_name,
-               r.step_type,
-               WorkflowStepStatus::from_str(&r.status)
+            Ok(WorkflowStep::from_db(WorkflowStepRecord {
+               id:           WorkflowStepId::from_uuid(r.id),
+               instance_id:  WorkflowInstanceId::from_uuid(r.instance_id),
+               step_id:      r.step_id,
+               step_name:    r.step_name,
+               step_type:    r.step_type,
+               status:       WorkflowStepStatus::from_str(&r.status)
                   .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-               Version::new(r.version as u32).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               r.assigned_to.map(UserId::from_uuid),
-               r.decision
+               version:      Version::new(r.version as u32)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               assigned_to:  r.assigned_to.map(UserId::from_uuid),
+               decision:     r
+                  .decision
                   .as_deref()
                   .map(StepDecision::from_str)
                   .transpose()
                   .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-               r.comment,
-               r.due_date,
-               r.started_at,
-               r.completed_at,
-               r.created_at,
-               r.updated_at,
-            ))
+               comment:      r.comment,
+               due_date:     r.due_date,
+               started_at:   r.started_at,
+               completed_at: r.completed_at,
+               created_at:   r.created_at,
+               updated_at:   r.updated_at,
+            }))
          })
          .collect()
    }

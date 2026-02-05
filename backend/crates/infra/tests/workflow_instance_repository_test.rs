@@ -16,7 +16,7 @@ use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
    value_objects::{DisplayNumber, Version},
-   workflow::{WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId},
+   workflow::{NewWorkflowInstance, WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId},
 };
 use ringiflow_infra::repository::{PostgresWorkflowInstanceRepository, WorkflowInstanceRepository};
 use serde_json::json;
@@ -31,17 +31,17 @@ async fn test_insert_で新規インスタンスを作成できる(pool: PgPool)
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({"field": "value"}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({"field": "value"}),
+      initiated_by: user_id,
       now,
-   );
+   });
 
    let result = repo.insert(&instance).await;
 
@@ -57,17 +57,17 @@ async fn test_find_by_id_でインスタンスを取得できる(pool: PgPool) {
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({"field": "value"}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({"field": "value"}),
+      initiated_by: user_id,
       now,
-   );
+   });
    let instance_id = instance.id().clone();
 
    repo.insert(&instance).await.unwrap();
@@ -104,28 +104,28 @@ async fn test_find_by_tenant_テナント内の一覧を取得できる(pool: Pg
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // 2つのインスタンスを作成
-   let instance1 = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
-      definition_id.clone(),
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "申請1".to_string(),
-      json!({}),
-      user_id.clone(),
+   let instance1 = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id: definition_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "申請1".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
-   let instance2 = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   });
+   let instance2 = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(101).unwrap(),
-      "申請2".to_string(),
-      json!({}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(101).unwrap(),
+      title: "申請2".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
       now,
-   );
+   });
 
    repo.insert(&instance1).await.unwrap();
    repo.insert(&instance2).await.unwrap();
@@ -162,17 +162,17 @@ async fn test_find_by_initiated_by_申請者によるインスタンスを取得
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "自分の申請".to_string(),
-      json!({}),
-      user_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "自分の申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
+   });
 
    repo.insert(&instance).await.unwrap();
 
@@ -192,17 +192,17 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
       now,
-   );
+   });
    let instance_id = instance.id().clone();
    let expected_version = instance.version();
 
@@ -239,17 +239,17 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
       now,
-   );
+   });
 
    // INSERT で保存
    repo.insert(&instance).await.unwrap();
@@ -294,28 +294,28 @@ async fn test_find_by_ids_存在するidを渡すとインスタンスが返る(
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance1 = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
-      definition_id.clone(),
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "申請1".to_string(),
-      json!({}),
-      user_id.clone(),
+   let instance1 = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id: definition_id.clone(),
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "申請1".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id.clone(),
       now,
-   );
-   let instance2 = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   });
+   let instance2 = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(101).unwrap(),
-      "申請2".to_string(),
-      json!({}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(101).unwrap(),
+      title: "申請2".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
       now,
-   );
+   });
    let id1 = instance1.id().clone();
    let id2 = instance2.id().clone();
 
@@ -346,17 +346,17 @@ async fn test_find_by_ids_存在しないidを含んでも存在するものの�
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
       now,
-   );
+   });
    let existing_id = instance.id().clone();
    let nonexistent_id = WorkflowInstanceId::new();
 
@@ -382,17 +382,17 @@ async fn test_find_by_ids_テナントidでフィルタされる(pool: PgPool) {
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
-   let instance = WorkflowInstance::new(
-      WorkflowInstanceId::new(),
-      tenant_id.clone(),
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
       definition_id,
-      Version::initial(),
-      DisplayNumber::new(100).unwrap(),
-      "テスト申請".to_string(),
-      json!({}),
-      user_id,
+      definition_version: Version::initial(),
+      display_number: DisplayNumber::new(100).unwrap(),
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
       now,
-   );
+   });
    let instance_id = instance.id().clone();
 
    repo.insert(&instance).await.unwrap();
