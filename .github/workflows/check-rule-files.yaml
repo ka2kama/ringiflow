@@ -1,0 +1,30 @@
+# Check Rule Files
+#
+# .claude/rules/ 内のルールファイルが適切に参照されているかチェックする。
+# 各ファイルは以下のいずれかを満たす必要がある:
+# - paths: フロントマターを持つ
+# - CLAUDE.md から参照されている
+
+name: Check Rule Files
+
+on:
+  push:
+    paths:
+      - ".claude/rules/**"
+      - "CLAUDE.md"
+  pull_request:
+    paths:
+      - ".claude/rules/**"
+      - "CLAUDE.md"
+
+jobs:
+  check-rule-files:
+    name: Check rule file references
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check rule files are properly referenced
+        run: ./scripts/check-rule-files.sh
