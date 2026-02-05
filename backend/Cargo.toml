@@ -54,6 +54,18 @@ chrono = { version = "0.4", features = ["serde"] }
 time = "0.3"
 dotenvy = "0.15"
 urlencoding = "2.1"
+itertools = "0.14"
+regex = "1"
+config = "0.15"
+maplit = "1"
+bytes = "1"
+rand = "0.9"
+url = "2"
+
+# derive マクロ拡張
+derive_more = { version = "2", features = ["from", "display", "deref", "constructor"] }
+strum = { version = "0.27", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 # パスワード検証
 argon2 = "0.5"
@@ -65,6 +77,7 @@ subtle = "2.6"
 tokio-test = "0.4"
 pretty_assertions = "1.4"
 rstest = "0.26"
+insta = "1"
 
 # 内部クレート
 ringiflow-domain = { path = "crates/domain" }

@@ -289,6 +289,9 @@ Rust コードを実装する際:
    - 手順:
      1. workspace の `Cargo.toml` の `[workspace.dependencies]` に追加
      2. 使用するクレートの `Cargo.toml` で `<crate>.workspace = true` と参照
+   - バージョン指定ルール:
+     - 1.x 以上: メジャーのみ（`"1"`）— semver 準拠が期待できる
+     - 0.x 系: マイナーまで（`"0.14"`）— 破壊的変更がありうるため
    - バージョンの確認方法:
      - `cargo search <crate>` で最新のstableバージョンを確認
      - または crates.io で確認
