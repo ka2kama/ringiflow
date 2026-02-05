@@ -373,6 +373,7 @@ pub struct WorkflowInstance {
 impl WorkflowInstance {
    /// 新しいワークフローインスタンスを作成する
    pub fn new(
+      id: WorkflowInstanceId,
       tenant_id: TenantId,
       definition_id: WorkflowDefinitionId,
       definition_version: Version,
@@ -380,10 +381,10 @@ impl WorkflowInstance {
       title: String,
       form_data: JsonValue,
       initiated_by: UserId,
+      now: DateTime<Utc>,
    ) -> Self {
-      let now = Utc::now();
       Self {
-         id: WorkflowInstanceId::new(),
+         id,
          tenant_id,
          definition_id,
          definition_version,
@@ -514,7 +515,7 @@ impl WorkflowInstance {
    }
 
    /// インスタンスを申請した新しいインスタンスを返す
-   pub fn submitted(self) -> Result<Self, DomainError> {
+   pub fn submitted(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
       if self.status != WorkflowInstanceStatus::Draft {
          return Err(DomainError::Validation(
             "下書き状態でのみ申請可能です".to_string(),
@@ -523,34 +524,34 @@ impl WorkflowInstance {
 
       Ok(Self {
          status: WorkflowInstanceStatus::Pending,
-         submitted_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         submitted_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
 
    /// インスタンスを承認完了にした新しいインスタンスを返す
-   pub fn approved(self) -> Self {
+   pub fn approved(self, now: DateTime<Utc>) -> Self {
       Self {
          status: WorkflowInstanceStatus::Approved,
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       }
    }
 
    /// インスタンスを却下した新しいインスタンスを返す
-   pub fn rejected(self) -> Self {
+   pub fn rejected(self, now: DateTime<Utc>) -> Self {
       Self {
          status: WorkflowInstanceStatus::Rejected,
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       }
    }
 
    /// インスタンスを取り消した新しいインスタンスを返す
-   pub fn cancelled(self) -> Result<Self, DomainError> {
+   pub fn cancelled(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
       if matches!(
          self.status,
          WorkflowInstanceStatus::Approved
@@ -564,19 +565,19 @@ impl WorkflowInstance {
 
       Ok(Self {
          status: WorkflowInstanceStatus::Cancelled,
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
 
    /// 現在のステップを更新した新しいインスタンスを返す
-   pub fn with_current_step(self, step_id: String) -> Self {
+   pub fn with_current_step(self, step_id: String, now: DateTime<Utc>) -> Self {
       Self {
          current_step_id: Some(step_id),
          status: WorkflowInstanceStatus::InProgress,
          version: self.version.next(),
-         updated_at: Utc::now(),
+         updated_at: now,
          ..self
       }
    }
@@ -589,7 +590,7 @@ impl WorkflowInstance {
    /// # Errors
    ///
    /// - `DomainError::Validation`: InProgress 以外の状態で呼び出した場合
-   pub fn complete_with_approval(self) -> Result<Self, DomainError> {
+   pub fn complete_with_approval(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
       if self.status != WorkflowInstanceStatus::InProgress {
          return Err(DomainError::Validation(format!(
             "承認完了は処理中状態でのみ可能です（現在: {}）",
@@ -600,8 +601,8 @@ impl WorkflowInstance {
       Ok(Self {
          status: WorkflowInstanceStatus::Approved,
          version: self.version.next(),
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
@@ -614,7 +615,7 @@ impl WorkflowInstance {
    /// # Errors
    ///
    /// - `DomainError::Validation`: InProgress 以外の状態で呼び出した場合
-   pub fn complete_with_rejection(self) -> Result<Self, DomainError> {
+   pub fn complete_with_rejection(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
       if self.status != WorkflowInstanceStatus::InProgress {
          return Err(DomainError::Validation(format!(
             "却下完了は処理中状態でのみ可能です（現在: {}）",
@@ -625,8 +626,8 @@ impl WorkflowInstance {
       Ok(Self {
          status: WorkflowInstanceStatus::Rejected,
          version: self.version.next(),
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
@@ -1016,9 +1017,15 @@ mod tests {
 
    use super::*;
 
+   /// テスト用の固定タイムスタンプ
+   fn test_now() -> DateTime<Utc> {
+      DateTime::from_timestamp(1_700_000_000, 0).unwrap()
+   }
+
    // ヘルパー関数
    fn create_test_instance() -> WorkflowInstance {
       WorkflowInstance::new(
+         WorkflowInstanceId::new(),
          TenantId::new(),
          WorkflowDefinitionId::new(),
          Version::initial(),
@@ -1026,6 +1033,7 @@ mod tests {
          "テスト申請".to_string(),
          json!({"field": "value"}),
          UserId::new(),
+         test_now(),
       )
    }
 
@@ -1054,55 +1062,76 @@ mod tests {
       }
 
       #[test]
-      fn test_承認完了でステータスがApprovedになる() {
-         let instance = create_test_instance()
-            .submitted()
-            .unwrap()
-            .with_current_step("step_1".to_string());
+      fn test_新規作成時のcreated_atとupdated_atは注入された値と一致する() {
+         let instance = create_test_instance();
+         assert_eq!(instance.created_at(), test_now());
+         assert_eq!(instance.updated_at(), test_now());
+      }
 
-         let result = instance.complete_with_approval();
+      #[test]
+      fn test_submitted後のsubmitted_atは注入された値と一致する() {
+         let now = test_now();
+         let submitted = create_test_instance().submitted(now).unwrap();
+         assert_eq!(submitted.submitted_at(), Some(now));
+         assert_eq!(submitted.updated_at(), now);
+      }
+
+      #[test]
+      fn test_承認完了でステータスがApprovedになる() {
+         let now = test_now();
+         let instance = create_test_instance()
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+
+         let result = instance.complete_with_approval(now);
 
          assert!(result.is_ok());
          let approved = result.unwrap();
          assert_eq!(approved.status(), WorkflowInstanceStatus::Approved);
+         assert_eq!(approved.completed_at(), Some(now));
       }
 
       #[test]
       fn test_承認完了でversionがインクリメントされる() {
+         let now = test_now();
          let instance = create_test_instance()
-            .submitted()
+            .submitted(now)
             .unwrap()
-            .with_current_step("step_1".to_string());
+            .with_current_step("step_1".to_string(), now);
          let original_version = instance.version();
 
-         let approved = instance.complete_with_approval().unwrap();
+         let approved = instance.complete_with_approval(now).unwrap();
 
          assert_eq!(approved.version().as_u32(), original_version.as_u32() + 1);
       }
 
       #[test]
       fn test_却下完了でステータスがRejectedになる() {
+         let now = test_now();
          let instance = create_test_instance()
-            .submitted()
+            .submitted(now)
             .unwrap()
-            .with_current_step("step_1".to_string());
+            .with_current_step("step_1".to_string(), now);
 
-         let result = instance.complete_with_rejection();
+         let result = instance.complete_with_rejection(now);
 
          assert!(result.is_ok());
          let rejected = result.unwrap();
          assert_eq!(rejected.status(), WorkflowInstanceStatus::Rejected);
+         assert_eq!(rejected.completed_at(), Some(now));
       }
 
       #[test]
       fn test_却下完了でversionがインクリメントされる() {
+         let now = test_now();
          let instance = create_test_instance()
-            .submitted()
+            .submitted(now)
             .unwrap()
-            .with_current_step("step_1".to_string());
+            .with_current_step("step_1".to_string(), now);
          let original_version = instance.version();
 
-         let rejected = instance.complete_with_rejection().unwrap();
+         let rejected = instance.complete_with_rejection(now).unwrap();
 
          assert_eq!(rejected.version().as_u32(), original_version.as_u32() + 1);
       }
@@ -1111,7 +1140,7 @@ mod tests {
       fn test_InProgress以外で承認完了するとエラー() {
          let instance = create_test_instance(); // Draft 状態
 
-         let result = instance.complete_with_approval();
+         let result = instance.complete_with_approval(test_now());
 
          assert!(result.is_err());
       }
@@ -1120,7 +1149,7 @@ mod tests {
       fn test_InProgress以外で却下完了するとエラー() {
          let instance = create_test_instance(); // Draft 状態
 
-         let result = instance.complete_with_rejection();
+         let result = instance.complete_with_rejection(test_now());
 
          assert!(result.is_err());
       }

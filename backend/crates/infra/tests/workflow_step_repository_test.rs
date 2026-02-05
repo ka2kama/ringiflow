@@ -9,6 +9,7 @@
 //! cd backend && cargo test -p ringiflow-infra --test workflow_step_repository_test
 //! ```
 
+use chrono::Utc;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -43,6 +44,7 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -50,6 +52,7 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -79,6 +82,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -86,6 +90,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -139,6 +144,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -146,6 +152,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    let instance_id = instance.id().clone();
    instance_repo.insert(&instance).await.unwrap();
@@ -204,6 +211,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -211,6 +219,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -244,6 +253,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -251,6 +261,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -299,6 +310,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -306,6 +318,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -349,6 +362,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
+      WorkflowInstanceId::new(),
       tenant_id.clone(),
       definition_id,
       Version::initial(),
@@ -356,6 +370,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
+      Utc::now(),
    );
    instance_repo.insert(&instance).await.unwrap();
 
