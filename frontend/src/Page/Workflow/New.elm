@@ -41,6 +41,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
 import Json.Encode as Encode
+import List.Extra
 import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 
@@ -388,11 +389,7 @@ validateFormWithApprover model =
 getSelectedDefinition : Maybe String -> List WorkflowDefinition -> Maybe WorkflowDefinition
 getSelectedDefinition maybeId definitions =
     maybeId
-        |> Maybe.andThen
-            (\defId ->
-                List.filter (\d -> d.id == defId) definitions
-                    |> List.head
-            )
+        |> Maybe.andThen (\defId -> List.Extra.find (\d -> d.id == defId) definitions)
 
 
 {-| 下書き保存 API を呼び出す
@@ -546,11 +543,7 @@ viewForm model definitions =
         -- 選択された定義を取得
         selectedDefinition =
             model.selectedDefinitionId
-                |> Maybe.andThen
-                    (\defId ->
-                        List.filter (\d -> d.id == defId) definitions
-                            |> List.head
-                    )
+                |> Maybe.andThen (\defId -> List.Extra.find (\d -> d.id == defId) definitions)
     in
     div []
         [ -- Step 1: ワークフロー定義選択
