@@ -58,6 +58,16 @@ pub trait WorkflowStepRepository: Send + Sync {
       tenant_id: &TenantId,
       user_id: &UserId,
    ) -> Result<Vec<WorkflowStep>, InfraError>;
+
+   /// 表示用連番でステップを検索する
+   ///
+   /// `display_number` はインスタンススコープでユニーク。
+   async fn find_by_display_number(
+      &self,
+      display_number: DisplayNumber,
+      instance_id: &WorkflowInstanceId,
+      tenant_id: &TenantId,
+   ) -> Result<Option<WorkflowStep>, InfraError>;
 }
 
 /// PostgreSQL 実装
@@ -317,6 +327,64 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
             }))
          })
          .collect()
+   }
+
+   async fn find_by_display_number(
+      &self,
+      display_number: DisplayNumber,
+      instance_id: &WorkflowInstanceId,
+      tenant_id: &TenantId,
+   ) -> Result<Option<WorkflowStep>, InfraError> {
+      let row = sqlx::query!(
+         r#"
+         SELECT
+            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
+            s.status, s.version, s.assigned_to, s.decision, s.comment,
+            s.due_date, s.started_at, s.completed_at,
+            s.created_at, s.updated_at
+         FROM workflow_steps s
+         INNER JOIN workflow_instances i ON s.instance_id = i.id
+         WHERE s.display_number = $1 AND s.instance_id = $2 AND i.tenant_id = $3
+         "#,
+         display_number.as_i64(),
+         instance_id.as_uuid(),
+         tenant_id.as_uuid()
+      )
+      .fetch_optional(&self.pool)
+      .await?;
+
+      let Some(r) = row else {
+         return Ok(None);
+      };
+
+      let step = WorkflowStep::from_db(WorkflowStepRecord {
+         id: WorkflowStepId::from_uuid(r.id),
+         instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
+         display_number: DisplayNumber::new(r.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         step_id: r.step_id,
+         step_name: r.step_name,
+         step_type: r.step_type,
+         status: WorkflowStepStatus::from_str(&r.status)
+            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+         version: Version::new(r.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         assigned_to: r.assigned_to.map(UserId::from_uuid),
+         decision: r
+            .decision
+            .as_deref()
+            .map(StepDecision::from_str)
+            .transpose()
+            .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
+         comment: r.comment,
+         due_date: r.due_date,
+         started_at: r.started_at,
+         completed_at: r.completed_at,
+         created_at: r.created_at,
+         updated_at: r.updated_at,
+      });
+
+      Ok(Some(step))
    }
 }
 

@@ -8,7 +8,7 @@ use itertools::Itertools;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::{DisplayIdEntityType, Version},
+   value_objects::{DisplayIdEntityType, DisplayNumber, Version},
    workflow::{
       NewWorkflowInstance,
       NewWorkflowStep,
@@ -614,6 +614,184 @@ where
 
       Ok(WorkflowWithSteps { instance, steps })
    }
+
+   // ===== display_number 対応メソッド =====
+
+   /// display_number でワークフローインスタンスの詳細を取得する
+   ///
+   /// BFF が公開 API で display_number を使う場合に、
+   /// 1回の呼び出しでワークフロー詳細を返す。
+   ///
+   /// ## 引数
+   ///
+   /// - `display_number`: 表示用連番
+   /// - `tenant_id`: テナント ID
+   ///
+   /// ## 戻り値
+   ///
+   /// - `Ok(workflow)`: ワークフロー詳細（インスタンス + ステップ）
+   /// - `Err(NotFound)`: インスタンスが見つからない場合
+   /// - `Err(_)`: データベースエラー
+   pub async fn get_workflow_by_display_number(
+      &self,
+      display_number: DisplayNumber,
+      tenant_id: TenantId,
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      let instance = self
+         .instance_repo
+         .find_by_display_number(display_number, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      let steps = self
+         .step_repo
+         .find_by_instance(instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      Ok(WorkflowWithSteps { instance, steps })
+   }
+
+   /// display_number でワークフローを申請する
+   ///
+   /// BFF が公開 API で display_number を使う場合に、
+   /// 1回の呼び出しで申請を完了する。
+   ///
+   /// ## 引数
+   ///
+   /// - `input`: 申請入力
+   /// - `display_number`: 表示用連番
+   /// - `tenant_id`: テナント ID
+   ///
+   /// ## 戻り値
+   ///
+   /// - `Ok(instance)`: 申請後のワークフローインスタンス
+   /// - `Err(NotFound)`: インスタンスが見つからない場合
+   /// - `Err(_)`: データベースエラー
+   pub async fn submit_workflow_by_display_number(
+      &self,
+      input: SubmitWorkflowInput,
+      display_number: DisplayNumber,
+      tenant_id: TenantId,
+   ) -> Result<WorkflowInstance, CoreError> {
+      // display_number → WorkflowInstanceId を解決
+      let instance = self
+         .instance_repo
+         .find_by_display_number(display_number, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      // 既存の submit_workflow を呼び出し
+      self
+         .submit_workflow(input, instance.id().clone(), tenant_id)
+         .await
+   }
+
+   /// display_number でワークフローステップを承認する
+   ///
+   /// BFF が公開 API で display_number を使う場合に、
+   /// 1回の呼び出しでステップ承認を完了する。
+   ///
+   /// ## 引数
+   ///
+   /// - `input`: 承認入力
+   /// - `workflow_display_number`: ワークフローの表示用連番
+   /// - `step_display_number`: ステップの表示用連番
+   /// - `tenant_id`: テナント ID
+   /// - `user_id`: 操作ユーザー ID
+   ///
+   /// ## 戻り値
+   ///
+   /// - `Ok(workflow)`: 承認後のワークフロー詳細
+   /// - `Err(NotFound)`: インスタンスまたはステップが見つからない場合
+   /// - `Err(_)`: データベースエラー
+   pub async fn approve_step_by_display_number(
+      &self,
+      input: ApproveRejectInput,
+      workflow_display_number: DisplayNumber,
+      step_display_number: DisplayNumber,
+      tenant_id: TenantId,
+      user_id: UserId,
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      // display_number → WorkflowInstanceId を解決
+      let instance = self
+         .instance_repo
+         .find_by_display_number(workflow_display_number, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      // display_number → WorkflowStepId を解決
+      let step = self
+         .step_repo
+         .find_by_display_number(step_display_number, instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+
+      // 既存の approve_step を呼び出し
+      self
+         .approve_step(input, step.id().clone(), tenant_id, user_id)
+         .await
+   }
+
+   /// display_number でワークフローステップを却下する
+   ///
+   /// BFF が公開 API で display_number を使う場合に、
+   /// 1回の呼び出しでステップ却下を完了する。
+   ///
+   /// ## 引数
+   ///
+   /// - `input`: 却下入力
+   /// - `workflow_display_number`: ワークフローの表示用連番
+   /// - `step_display_number`: ステップの表示用連番
+   /// - `tenant_id`: テナント ID
+   /// - `user_id`: 操作ユーザー ID
+   ///
+   /// ## 戻り値
+   ///
+   /// - `Ok(workflow)`: 却下後のワークフロー詳細
+   /// - `Err(NotFound)`: インスタンスまたはステップが見つからない場合
+   /// - `Err(_)`: データベースエラー
+   pub async fn reject_step_by_display_number(
+      &self,
+      input: ApproveRejectInput,
+      workflow_display_number: DisplayNumber,
+      step_display_number: DisplayNumber,
+      tenant_id: TenantId,
+      user_id: UserId,
+   ) -> Result<WorkflowWithSteps, CoreError> {
+      // display_number → WorkflowInstanceId を解決
+      let instance = self
+         .instance_repo
+         .find_by_display_number(workflow_display_number, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      // display_number → WorkflowStepId を解決
+      let step = self
+         .step_repo
+         .find_by_display_number(step_display_number, instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+
+      // 既存の reject_step を呼び出し
+      self
+         .reject_step(input, step.id().clone(), tenant_id, user_id)
+         .await
+   }
 }
 
 #[cfg(test)]
@@ -783,6 +961,20 @@ mod tests {
             .cloned()
             .collect())
       }
+
+      async fn find_by_display_number(
+         &self,
+         display_number: DisplayNumber,
+         tenant_id: &TenantId,
+      ) -> Result<Option<WorkflowInstance>, InfraError> {
+         Ok(self
+            .instances
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|i| i.display_number() == display_number && i.tenant_id() == tenant_id)
+            .cloned())
+      }
    }
 
    #[derive(Clone)]
@@ -867,6 +1059,21 @@ mod tests {
             .filter(|s| s.assigned_to() == Some(user_id))
             .cloned()
             .collect())
+      }
+
+      async fn find_by_display_number(
+         &self,
+         display_number: DisplayNumber,
+         instance_id: &WorkflowInstanceId,
+         _tenant_id: &TenantId,
+      ) -> Result<Option<WorkflowStep>, InfraError> {
+         Ok(self
+            .steps
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.display_number() == display_number && s.instance_id() == instance_id)
+            .cloned())
       }
    }
 

@@ -1,0 +1,107 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id, tenant_id, definition_id, definition_version,\n                display_number, title, form_data, status, version,\n                current_step_id, initiated_by, submitted_at,\n                completed_at, created_at, updated_at\n            FROM workflow_instances\n            WHERE display_number = $1 AND tenant_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "definition_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "definition_version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "display_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "form_data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "status",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "current_step_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "initiated_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "submitted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "completed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "6b5178740c97da9a78bcac1541098ca029cd14d0f5b02b176c04602342e500b6"
+}

@@ -72,19 +72,23 @@ use handler::{
    UserState,
    WorkflowState,
    approve_step,
+   approve_step_by_display_number,
    create_workflow,
    get_dashboard_stats,
    get_task,
    get_user,
    get_user_by_email,
    get_workflow,
+   get_workflow_by_display_number,
    get_workflow_definition,
    health_check,
    list_my_tasks,
    list_my_workflows,
    list_workflow_definitions,
    reject_step,
+   reject_step_by_display_number,
    submit_workflow,
+   submit_workflow_by_display_number,
 };
 use ringiflow_infra::{
    db,
@@ -271,6 +275,55 @@ async fn main() -> anyhow::Result<()> {
             "/internal/workflows/{id}/steps/{step_id}/reject",
             post(
                reject_step::<
+                  PostgresWorkflowDefinitionRepository,
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
+               >,
+            ),
+         )
+         // display_number 対応 API
+         .route(
+            "/internal/workflows/by-display-number/{display_number}",
+            get(
+               get_workflow_by_display_number::<
+                  PostgresWorkflowDefinitionRepository,
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
+               >,
+            ),
+         )
+         .route(
+            "/internal/workflows/by-display-number/{display_number}/submit",
+            post(
+               submit_workflow_by_display_number::<
+                  PostgresWorkflowDefinitionRepository,
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
+               >,
+            ),
+         )
+         .route(
+            "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/approve",
+            post(
+               approve_step_by_display_number::<
+                  PostgresWorkflowDefinitionRepository,
+                  PostgresWorkflowInstanceRepository,
+                  PostgresWorkflowStepRepository,
+                  PostgresUserRepository,
+                  PostgresDisplayIdCounterRepository,
+               >,
+            ),
+         )
+         .route(
+            "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject",
+            post(
+               reject_step_by_display_number::<
                   PostgresWorkflowDefinitionRepository,
                   PostgresWorkflowInstanceRepository,
                   PostgresWorkflowStepRepository,

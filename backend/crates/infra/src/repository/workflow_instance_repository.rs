@@ -133,6 +133,24 @@ pub trait WorkflowInstanceRepository: Send + Sync {
       ids: &[WorkflowInstanceId],
       tenant_id: &TenantId,
    ) -> Result<Vec<WorkflowInstance>, InfraError>;
+
+   /// 表示用連番でインスタンスを取得
+   ///
+   /// # 引数
+   ///
+   /// - `display_number`: 表示用連番
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// - `Ok(Some(instance))`: インスタンスが見つかった場合
+   /// - `Ok(None)`: インスタンスが見つからない場合
+   /// - `Err(_)`: データベースエラー
+   async fn find_by_display_number(
+      &self,
+      display_number: DisplayNumber,
+      tenant_id: &TenantId,
+   ) -> Result<Option<WorkflowInstance>, InfraError>;
 }
 
 /// PostgreSQL 実装の WorkflowInstanceRepository
@@ -443,6 +461,58 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          .collect::<Result<Vec<_>, InfraError>>()?;
 
       Ok(instances)
+   }
+
+   async fn find_by_display_number(
+      &self,
+      display_number: DisplayNumber,
+      tenant_id: &TenantId,
+   ) -> Result<Option<WorkflowInstance>, InfraError> {
+      let row = sqlx::query!(
+         r#"
+            SELECT
+                id, tenant_id, definition_id, definition_version,
+                display_number, title, form_data, status, version,
+                current_step_id, initiated_by, submitted_at,
+                completed_at, created_at, updated_at
+            FROM workflow_instances
+            WHERE display_number = $1 AND tenant_id = $2
+            "#,
+         display_number.as_i64(),
+         tenant_id.as_uuid()
+      )
+      .fetch_optional(&self.pool)
+      .await?;
+
+      let Some(row) = row else {
+         return Ok(None);
+      };
+
+      let instance = WorkflowInstance::from_db(WorkflowInstanceRecord {
+         id: WorkflowInstanceId::from_uuid(row.id),
+         tenant_id: TenantId::from_uuid(row.tenant_id),
+         definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
+         definition_version: Version::new(row.definition_version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         display_number: DisplayNumber::try_from(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         title: row.title,
+         form_data: row.form_data,
+         status: row
+            .status
+            .parse::<WorkflowInstanceStatus>()
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         version: Version::new(row.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         current_step_id: row.current_step_id,
+         initiated_by: UserId::from_uuid(row.initiated_by),
+         submitted_at: row.submitted_at,
+         completed_at: row.completed_at,
+         created_at: row.created_at,
+         updated_at: row.updated_at,
+      });
+
+      Ok(Some(instance))
    }
 }
 

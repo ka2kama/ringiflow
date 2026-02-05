@@ -16,7 +16,7 @@ use axum::{
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
-   value_objects::{DisplayId, Version, display_prefix},
+   value_objects::{DisplayId, DisplayNumber, Version, display_prefix},
    workflow::{
       WorkflowDefinition,
       WorkflowDefinitionId,
@@ -95,6 +95,15 @@ pub struct StepPathParams {
    pub id:      Uuid,
    /// ステップ ID
    pub step_id: Uuid,
+}
+
+/// display_number によるステップパスパラメータ
+#[derive(Debug, Deserialize)]
+pub struct StepByDisplayNumberPathParams {
+   /// ワークフローインスタンスの表示用連番
+   pub display_number:      i64,
+   /// ステップの表示用連番
+   pub step_display_number: i64,
 }
 
 /// テナント指定クエリパラメータ（GET リクエスト用）
@@ -629,6 +638,221 @@ where
    let workflow_with_steps = state
       .usecase
       .reject_step(input, step_id, tenant_id, user_id)
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+// ===== display_number 対応ハンドラ =====
+
+/// display_number でワークフローの詳細を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflows/by-display-number/{display_number}?tenant_id={tenant_id}
+///
+/// ## 処理フロー
+/// 1. パスパラメータから display_number を取得
+/// 2. クエリパラメータからテナント ID を取得
+/// 3. ユースケースを呼び出し
+/// 4. 200 OK + ワークフロー詳細を返す
+pub async fn get_workflow_by_display_number<D, I, S, U, C>(
+   State(state): AppState<D, I, S, U, C>,
+   Path(display_number): Path<i64>,
+   Query(query): Query<TenantQuery>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+   U: UserRepository,
+   C: DisplayIdCounterRepository,
+{
+   let display_number = DisplayNumber::try_from(display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   let workflow_with_steps = state
+      .usecase
+      .get_workflow_by_display_number(display_number, tenant_id)
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// display_number でワークフローを申請する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/by-display-number/{display_number}/submit
+///
+/// ## 処理フロー
+/// 1. パスパラメータから display_number を取得
+/// 2. リクエストをパース
+/// 3. ユースケースを呼び出し
+/// 4. 200 OK + 申請後のワークフローを返す
+pub async fn submit_workflow_by_display_number<D, I, S, U, C>(
+   State(state): AppState<D, I, S, U, C>,
+   Path(display_number): Path<i64>,
+   Json(req): Json<SubmitWorkflowRequest>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+   U: UserRepository,
+   C: DisplayIdCounterRepository,
+{
+   let display_number = DisplayNumber::try_from(display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let assigned_to = UserId::from_uuid(req.assigned_to);
+
+   let input = crate::usecase::SubmitWorkflowInput { assigned_to };
+
+   let instance = state
+      .usecase
+      .submit_workflow_by_display_number(input, display_number, tenant_id)
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(&instance, &[]);
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_instance(&instance, &user_names));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// display_number でワークフローステップを承認する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/approve
+///
+/// ## 処理フロー
+/// 1. パスパラメータから display_number を取得
+/// 2. リクエストをパース
+/// 3. ユースケースを呼び出し
+/// 4. 200 OK + 更新されたワークフローを返す
+pub async fn approve_step_by_display_number<D, I, S, U, C>(
+   State(state): AppState<D, I, S, U, C>,
+   Path(params): Path<StepByDisplayNumberPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+   U: UserRepository,
+   C: DisplayIdCounterRepository,
+{
+   let workflow_display_number = DisplayNumber::try_from(params.display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let step_display_number = DisplayNumber::try_from(params.step_display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な step_display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ApproveRejectInput {
+      version,
+      comment: req.comment,
+   };
+
+   let workflow_with_steps = state
+      .usecase
+      .approve_step_by_display_number(
+         input,
+         workflow_display_number,
+         step_display_number,
+         tenant_id,
+         user_id,
+      )
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// display_number でワークフローステップを却下する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject
+///
+/// ## 処理フロー
+/// 1. パスパラメータから display_number を取得
+/// 2. リクエストをパース
+/// 3. ユースケースを呼び出し
+/// 4. 200 OK + 更新されたワークフローを返す
+pub async fn reject_step_by_display_number<D, I, S, U, C>(
+   State(state): AppState<D, I, S, U, C>,
+   Path(params): Path<StepByDisplayNumberPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> Result<Response, CoreError>
+where
+   D: WorkflowDefinitionRepository,
+   I: WorkflowInstanceRepository,
+   S: WorkflowStepRepository,
+   U: UserRepository,
+   C: DisplayIdCounterRepository,
+{
+   let workflow_display_number = DisplayNumber::try_from(params.display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let step_display_number = DisplayNumber::try_from(params.step_display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な step_display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ApproveRejectInput {
+      version,
+      comment: req.comment,
+   };
+
+   let workflow_with_steps = state
+      .usecase
+      .reject_step_by_display_number(
+         input,
+         workflow_display_number,
+         step_display_number,
+         tenant_id,
+         user_id,
+      )
       .await?;
 
    // ユーザー名を解決

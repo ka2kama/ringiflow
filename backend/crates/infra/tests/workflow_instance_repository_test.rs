@@ -403,3 +403,91 @@ async fn test_find_by_ids_テナントidでフィルタされる(pool: PgPool) {
    assert!(result.is_ok());
    assert!(result.unwrap().is_empty());
 }
+
+// ===== find_by_display_number テスト =====
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_display_number_存在するdisplay_numberで検索できる(pool: PgPool) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
+   let display_number = DisplayNumber::new(42).unwrap();
+
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id,
+      definition_version: Version::initial(),
+      display_number,
+      title: "テスト申請".to_string(),
+      form_data: json!({"field": "value"}),
+      initiated_by: user_id,
+      now,
+   });
+   let instance_id = instance.id().clone();
+
+   repo.insert(&instance).await.unwrap();
+
+   let result = repo
+      .find_by_display_number(display_number, &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   let found = result.unwrap();
+   assert!(found.is_some());
+   let found = found.unwrap();
+   assert_eq!(found.id(), &instance_id);
+   assert_eq!(found.display_number(), display_number);
+   assert_eq!(found.title(), "テスト申請");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_display_number_存在しない場合はnoneを返す(pool: PgPool) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let nonexistent_display_number = DisplayNumber::new(99999).unwrap();
+
+   let result = repo
+      .find_by_display_number(nonexistent_display_number, &tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_none());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_by_display_number_別テナントでは見つからない(pool: PgPool) {
+   let repo = PostgresWorkflowInstanceRepository::new(pool);
+   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let other_tenant_id = TenantId::new();
+   let definition_id =
+      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
+   let display_number = DisplayNumber::new(42).unwrap();
+
+   let instance = WorkflowInstance::new(NewWorkflowInstance {
+      id: WorkflowInstanceId::new(),
+      tenant_id: tenant_id.clone(),
+      definition_id,
+      definition_version: Version::initial(),
+      display_number,
+      title: "テスト申請".to_string(),
+      form_data: json!({}),
+      initiated_by: user_id,
+      now,
+   });
+
+   repo.insert(&instance).await.unwrap();
+
+   // 別のテナント ID で検索
+   let result = repo
+      .find_by_display_number(display_number, &other_tenant_id)
+      .await;
+
+   assert!(result.is_ok());
+   assert!(result.unwrap().is_none());
+}
