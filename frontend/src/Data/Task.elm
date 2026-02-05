@@ -40,6 +40,7 @@ import Json.Decode.Pipeline exposing (optional, required)
 type alias WorkflowSummary =
     { id : String
     , displayId : String
+    , displayNumber : Int
     , title : String
     , status : String
     , initiatedBy : UserRef
@@ -54,6 +55,7 @@ type alias WorkflowSummary =
 -}
 type alias TaskItem =
     { id : String
+    , displayNumber : Int
     , stepName : String
     , status : StepStatus
     , version : Int
@@ -88,6 +90,7 @@ workflowSummaryDecoder =
     Decode.succeed WorkflowSummary
         |> required "id" Decode.string
         |> required "display_id" Decode.string
+        |> required "display_number" Decode.int
         |> required "title" Decode.string
         |> required "status" Decode.string
         |> required "initiated_by" Data.UserRef.decoder
@@ -100,6 +103,7 @@ taskItemDecoder : Decoder TaskItem
 taskItemDecoder =
     Decode.succeed TaskItem
         |> required "id" Decode.string
+        |> required "display_number" Decode.int
         |> required "step_name" Decode.string
         |> required "status" WorkflowInstance.stepStatusDecoder
         |> optional "version" Decode.int 1

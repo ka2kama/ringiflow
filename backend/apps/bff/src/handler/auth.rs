@@ -770,6 +770,17 @@ mod tests {
          // テストスタブでは未使用
          unimplemented!("reject_step_by_display_number is not used in auth tests")
       }
+
+      async fn get_task_by_display_numbers(
+         &self,
+         _workflow_display_number: i64,
+         _step_display_number: i64,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("get_task_by_display_numbers is not used in auth tests")
+      }
    }
 
    struct StubAuthServiceClient {

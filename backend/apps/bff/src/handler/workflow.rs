@@ -886,3 +886,68 @@ where
       }
    }
 }
+
+// ===== タスクハンドラ =====
+
+/// GET /api/v1/workflows/{display_number}/tasks/{step_display_number}
+///
+/// display_number でタスク詳細を取得する
+pub async fn get_task_by_display_numbers<C, S>(
+   State(state): State<Arc<WorkflowState<C, S>>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(params): Path<StepPathParams>,
+) -> impl IntoResponse
+where
+   C: CoreServiceClient,
+   S: SessionManager,
+{
+   // display_number の検証
+   if params.display_number <= 0 {
+      return validation_error_response("display_number は 1 以上である必要があります");
+   }
+   if params.step_display_number <= 0 {
+      return validation_error_response("step_display_number は 1 以上である必要があります");
+   }
+
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   match state
+      .core_service_client
+      .get_task_by_display_numbers(
+         params.display_number,
+         params.step_display_number,
+         *session_data.tenant_id().as_uuid(),
+         *session_data.user_id().as_uuid(),
+      )
+      .await
+   {
+      Ok(core_response) => {
+         let response = ApiResponse::new(super::task::TaskDetailData::from(core_response.data));
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(CoreServiceError::StepNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/task-not-found",
+         "Task Not Found",
+         "タスクが見つかりません",
+      ),
+      Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
+         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "Workflow Instance Not Found",
+         "ワークフローインスタンスが見つかりません",
+      ),
+      Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
+      Err(e) => {
+         tracing::error!("タスク詳細取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}

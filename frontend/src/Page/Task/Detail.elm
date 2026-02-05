@@ -74,7 +74,8 @@ type PendingAction
 -}
 type alias Model =
     { shared : Shared
-    , taskId : String
+    , workflowDisplayNumber : Int
+    , stepDisplayNumber : Int
 
     -- API データ
     , task : RemoteData ApiError TaskDetail
@@ -90,10 +91,11 @@ type alias Model =
 
 {-| 初期化
 -}
-init : Shared -> String -> ( Model, Cmd Msg )
-init shared taskId =
+init : Shared -> Int -> Int -> ( Model, Cmd Msg )
+init shared workflowDisplayNumber stepDisplayNumber =
     ( { shared = shared
-      , taskId = taskId
+      , workflowDisplayNumber = workflowDisplayNumber
+      , stepDisplayNumber = stepDisplayNumber
       , task = Loading
       , comment = ""
       , isSubmitting = False
@@ -101,9 +103,10 @@ init shared taskId =
       , errorMessage = Nothing
       , successMessage = Nothing
       }
-    , TaskApi.getTask
+    , TaskApi.getTaskByDisplayNumbers
         { config = Shared.toRequestConfig shared
-        , id = taskId
+        , workflowDisplayNumber = workflowDisplayNumber
+        , stepDisplayNumber = stepDisplayNumber
         , toMsg = GotTaskDetail
         }
     )
@@ -159,9 +162,10 @@ update msg model =
                 , errorMessage = Nothing
                 , successMessage = Nothing
               }
-            , TaskApi.getTask
+            , TaskApi.getTaskByDisplayNumbers
                 { config = Shared.toRequestConfig model.shared
-                , id = model.taskId
+                , workflowDisplayNumber = model.workflowDisplayNumber
+                , stepDisplayNumber = model.stepDisplayNumber
                 , toMsg = GotTaskDetail
                 }
             )
@@ -295,9 +299,10 @@ handleApprovalResult successMsg result model =
                 , errorMessage = Nothing
                 , comment = ""
               }
-            , TaskApi.getTask
+            , TaskApi.getTaskByDisplayNumbers
                 { config = Shared.toRequestConfig model.shared
-                , id = model.taskId
+                , workflowDisplayNumber = model.workflowDisplayNumber
+                , stepDisplayNumber = model.stepDisplayNumber
                 , toMsg = GotTaskDetail
                 }
             )

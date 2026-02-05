@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
+   value_objects::DisplayNumber,
    workflow::{
       WorkflowInstance,
       WorkflowInstanceId,
@@ -166,6 +167,54 @@ where
       let steps = self
          .step_repo
          .find_by_instance(step.instance_id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップ一覧取得エラー: {}", e)))?;
+
+      Ok(TaskDetail {
+         step,
+         workflow,
+         steps,
+      })
+   }
+
+   /// display_number でタスク詳細を取得する
+   ///
+   /// ワークフローの display_number とステップの display_number を指定して
+   /// タスク詳細を取得する。権限チェックを行い、担当者のみアクセス可能。
+   pub async fn get_task_by_display_numbers(
+      &self,
+      workflow_display_number: DisplayNumber,
+      step_display_number: DisplayNumber,
+      tenant_id: TenantId,
+      user_id: UserId,
+   ) -> Result<TaskDetail, CoreError> {
+      // 1. ワークフローインスタンスを display_number で取得
+      let workflow = self
+         .instance_repo
+         .find_by_display_number(workflow_display_number, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンス取得エラー: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("ワークフローが見つかりません".to_string()))?;
+
+      // 2. ステップを display_number で取得
+      let step = self
+         .step_repo
+         .find_by_display_number(step_display_number, workflow.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップ取得エラー: {}", e)))?
+         .ok_or_else(|| CoreError::NotFound("タスクが見つかりません".to_string()))?;
+
+      // 3. 権限チェック: 担当者のみアクセス可能
+      if step.assigned_to() != Some(&user_id) {
+         return Err(CoreError::Forbidden(
+            "このタスクにアクセスする権限がありません".to_string(),
+         ));
+      }
+
+      // 4. ワークフローの全ステップを取得
+      let steps = self
+         .step_repo
+         .find_by_instance(workflow.id(), &tenant_id)
          .await
          .map_err(|e| CoreError::Internal(format!("ステップ一覧取得エラー: {}", e)))?;
 
@@ -751,6 +800,187 @@ mod tests {
 
       // Act: 別のユーザーで取得
       let result = usecase.get_task(step_id, tenant_id, other_user_id).await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::Forbidden(_))));
+   }
+
+   // ===== get_task_by_display_numbers のテスト =====
+
+   #[tokio::test]
+   async fn test_get_task_by_display_numbers_正常系() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let now = chrono::Utc::now();
+      let workflow_dn = DisplayNumber::new(42).unwrap();
+      let step_dn = DisplayNumber::new(1).unwrap();
+
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: workflow_dn,
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({"note": "test"}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: step_dn,
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now,
+      })
+      .activated(now);
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+
+      // Act
+      let result = usecase
+         .get_task_by_display_numbers(workflow_dn, step_dn, tenant_id, approver_id)
+         .await;
+
+      // Assert
+      assert!(result.is_ok());
+      let detail = result.unwrap();
+      assert_eq!(detail.step.step_name(), "承認");
+      assert_eq!(detail.workflow.title(), "テスト申請");
+      assert_eq!(detail.workflow.display_number(), workflow_dn);
+   }
+
+   #[tokio::test]
+   async fn test_get_task_by_display_numbers_ワークフローが見つからない() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+
+      // Act
+      let result = usecase
+         .get_task_by_display_numbers(
+            DisplayNumber::new(999).unwrap(),
+            DisplayNumber::new(1).unwrap(),
+            tenant_id,
+            user_id,
+         )
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::NotFound(_))));
+   }
+
+   #[tokio::test]
+   async fn test_get_task_by_display_numbers_ステップが見つからない() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let now = chrono::Utc::now();
+      let workflow_dn = DisplayNumber::new(42).unwrap();
+
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: workflow_dn,
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      });
+      instance_repo.insert(&instance).await.unwrap();
+
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+
+      // Act
+      let result = usecase
+         .get_task_by_display_numbers(
+            workflow_dn,
+            DisplayNumber::new(999).unwrap(),
+            tenant_id,
+            user_id,
+         )
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::NotFound(_))));
+   }
+
+   #[tokio::test]
+   async fn test_get_task_by_display_numbers_権限がない() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+      let other_user_id = UserId::new();
+
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let now = chrono::Utc::now();
+      let workflow_dn = DisplayNumber::new(42).unwrap();
+      let step_dn = DisplayNumber::new(1).unwrap();
+
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: workflow_dn,
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: step_dn,
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now,
+      })
+      .activated(now);
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+
+      // Act
+      let result = usecase
+         .get_task_by_display_numbers(workflow_dn, step_dn, tenant_id, other_user_id)
+         .await;
 
       // Assert
       assert!(matches!(result, Err(CoreError::Forbidden(_))));

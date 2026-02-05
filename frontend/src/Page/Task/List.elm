@@ -192,7 +192,7 @@ viewTaskRow : Time.Zone -> TaskItem -> Html Msg
 viewTaskRow zone task =
     tr [ class "border-b border-secondary-100" ]
         [ td [ class "px-4 py-3" ]
-            [ a [ href (Route.toString (Route.TaskDetail task.id)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
+            [ a [ href (Route.toString (Route.TaskDetail task.workflow.displayNumber task.displayNumber)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text task.stepName ]
             ]
         , td [ class "px-4 py-3" ] [ text (task.workflow.displayId ++ " " ++ task.workflow.title) ]
