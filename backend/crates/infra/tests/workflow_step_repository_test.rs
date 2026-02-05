@@ -9,7 +9,7 @@
 //! cd backend && cargo test -p ringiflow-infra --test workflow_step_repository_test
 //! ```
 
-use chrono::Utc;
+use chrono::DateTime;
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -41,6 +41,7 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -52,7 +53,7 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -64,7 +65,7 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id),
-      Utc::now(),
+      now,
    );
 
    let result = step_repo.insert(&step).await;
@@ -81,6 +82,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -92,7 +94,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -104,7 +106,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id),
-      Utc::now(),
+      now,
    );
    let step_id = step.id().clone();
    step_repo.insert(&step).await.unwrap();
@@ -145,6 +147,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -156,7 +159,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    let instance_id = instance.id().clone();
    instance_repo.insert(&instance).await.unwrap();
@@ -169,7 +172,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
       "承認1".to_string(),
       "approval".to_string(),
       Some(user_id.clone()),
-      Utc::now(),
+      now,
    );
    let step2 = WorkflowStep::new(
       WorkflowStepId::new(),
@@ -178,7 +181,7 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
       "承認2".to_string(),
       "approval".to_string(),
       Some(user_id),
-      Utc::now(),
+      now,
    );
    step_repo.insert(&step1).await.unwrap();
    step_repo.insert(&step2).await.unwrap();
@@ -216,6 +219,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -227,7 +231,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -239,7 +243,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id.clone()),
-      Utc::now(),
+      now,
    );
    step_repo.insert(&step).await.unwrap();
 
@@ -260,6 +264,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -271,7 +276,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -283,14 +288,14 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id),
-      Utc::now(),
+      now,
    );
    let step_id = step.id().clone();
    let expected_version = step.version();
    step_repo.insert(&step).await.unwrap();
 
    // アクティブ化（バージョンインクリメント）
-   let activated_step = step.activated(Utc::now());
+   let activated_step = step.activated(now);
 
    // バージョン一致で更新
    let result = step_repo
@@ -319,6 +324,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -330,7 +336,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -342,12 +348,12 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id),
-      Utc::now(),
+      now,
    );
    step_repo.insert(&step).await.unwrap();
 
    // アクティブ化（バージョンインクリメント）
-   let activated_step = step.activated(Utc::now());
+   let activated_step = step.activated(now);
 
    // 不一致バージョン（version 2）で更新を試みる
    let wrong_version = Version::initial().next();
@@ -373,6 +379,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
    let definition_id =
       WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
    let user_id = UserId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let now = DateTime::from_timestamp(1_700_000_000, 0).unwrap();
 
    // インスタンスを作成
    let instance = WorkflowInstance::new(
@@ -384,7 +391,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
       "テスト申請".to_string(),
       json!({}),
       user_id.clone(),
-      Utc::now(),
+      now,
    );
    instance_repo.insert(&instance).await.unwrap();
 
@@ -396,14 +403,14 @@ async fn test_ステップを完了できる(pool: PgPool) {
       "承認".to_string(),
       "approval".to_string(),
       Some(user_id),
-      Utc::now(),
+      now,
    );
    let step_id = step.id().clone();
    let v1 = step.version();
    step_repo.insert(&step).await.unwrap();
 
    // ステップをアクティブ化
-   let active_step = step.activated(Utc::now());
+   let active_step = step.activated(now);
    let v2 = active_step.version();
    step_repo
       .update_with_version_check(&active_step, v1)
@@ -412,11 +419,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
 
    // ステップを完了
    let completed_step = active_step
-      .completed(
-         StepDecision::Approved,
-         Some("承認します".to_string()),
-         Utc::now(),
-      )
+      .completed(StepDecision::Approved, Some("承認します".to_string()), now)
       .unwrap();
    step_repo
       .update_with_version_check(&completed_step, v2)
