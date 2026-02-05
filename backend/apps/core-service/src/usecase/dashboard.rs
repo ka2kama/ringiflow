@@ -317,22 +317,26 @@ mod tests {
 
       // Active ステップ（カウント対象）
       let active_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         Utc::now(),
       )
-      .activated();
+      .activated(Utc::now());
       step_repo.insert(&active_step).await.unwrap();
 
       // Pending ステップ（カウント対象外）
       let pending_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "review".to_string(),
          "レビュー".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         Utc::now(),
       );
       step_repo.insert(&pending_step).await.unwrap();
 
@@ -440,14 +444,16 @@ mod tests {
 
       // 完了済みステップ（今日 → カウント対象）
       let completed_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         Utc::now(),
       )
-      .activated()
-      .approve(Some("OK".to_string()))
+      .activated(Utc::now())
+      .approve(Some("OK".to_string()), Utc::now())
       .unwrap();
       step_repo.insert(&completed_step).await.unwrap();
 
@@ -511,13 +517,15 @@ mod tests {
 
       // approver_id にアサインされた Active ステップ
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         Utc::now(),
       )
-      .activated();
+      .activated(Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);

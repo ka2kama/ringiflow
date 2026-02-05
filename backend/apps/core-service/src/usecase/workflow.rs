@@ -247,16 +247,19 @@ where
          .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
 
       // 4. ステップを作成 (MVP では1段階承認のみ)
+      let now = chrono::Utc::now();
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance_id.clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(input.assigned_to),
+         now,
       );
 
       // 5. ステップを active に設定
-      let active_step = step.activated();
+      let active_step = step.activated(now);
 
       // 6. ワークフローインスタンスを申請済みに遷移
       let now = chrono::Utc::now();
@@ -341,7 +344,7 @@ where
       let now = chrono::Utc::now();
       let step_expected_version = step.version();
       let approved_step = step
-         .approve(input.comment)
+         .approve(input.comment, now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 5. インスタンスを取得して完了に遷移
@@ -438,7 +441,7 @@ where
       let now = chrono::Utc::now();
       let step_expected_version = step.version();
       let rejected_step = step
-         .reject(input.comment)
+         .reject(input.comment, now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
       // 5. インスタンスを取得して却下完了に遷移
@@ -1043,13 +1046,15 @@ mod tests {
 
       // Active なステップを作成
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1127,13 +1132,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()), // approver_id に割り当て
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1188,11 +1195,13 @@ mod tests {
 
       // Pending 状態のステップ（Active ではない）
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       );
       // activated() を呼ばないので Pending のまま
       step_repo.insert(&step).await.unwrap();
@@ -1248,13 +1257,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(
@@ -1312,13 +1323,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         chrono::Utc::now(),
       )
-      .activated();
+      .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
       let usecase = WorkflowUseCaseImpl::new(

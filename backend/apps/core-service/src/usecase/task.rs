@@ -441,22 +441,26 @@ mod tests {
 
       // Active ステップ
       let active_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       step_repo.insert(&active_step).await.unwrap();
 
       // Pending ステップ（同じ approver）
       let pending_step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "review".to_string(),
          "レビュー".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       );
       step_repo.insert(&pending_step).await.unwrap();
 
@@ -500,13 +504,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "部長承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       step_repo.insert(&step).await.unwrap();
 
       let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
@@ -550,13 +556,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       step_repo.insert(&step).await.unwrap();
 
       let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
@@ -616,13 +624,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
@@ -688,13 +698,15 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let step = WorkflowStep::new(
+         WorkflowStepId::new(),
          instance.id().clone(),
          "approval".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(approver_id.clone()),
+         now,
       )
-      .activated();
+      .activated(now);
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 

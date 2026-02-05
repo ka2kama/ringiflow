@@ -372,6 +372,7 @@ pub struct WorkflowInstance {
 
 impl WorkflowInstance {
    /// 新しいワークフローインスタンスを作成する
+   #[allow(clippy::too_many_arguments)]
    pub fn new(
       id: WorkflowInstanceId,
       tenant_id: TenantId,
@@ -773,15 +774,16 @@ pub struct WorkflowStep {
 impl WorkflowStep {
    /// 新しいワークフローステップを作成する
    pub fn new(
+      id: WorkflowStepId,
       instance_id: WorkflowInstanceId,
       step_id: String,
       step_name: String,
       step_type: String,
       assigned_to: Option<UserId>,
+      now: DateTime<Utc>,
    ) -> Self {
-      let now = Utc::now();
       Self {
-         id: WorkflowStepId::new(),
+         id,
          instance_id,
          step_id,
          step_name,
@@ -902,11 +904,11 @@ impl WorkflowStep {
    // ビジネスロジックメソッド
 
    /// ステップをアクティブにした新しいインスタンスを返す
-   pub fn activated(self) -> Self {
+   pub fn activated(self, now: DateTime<Utc>) -> Self {
       Self {
          status: WorkflowStepStatus::Active,
-         started_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         started_at: Some(now),
+         updated_at: now,
          ..self
       }
    }
@@ -916,6 +918,7 @@ impl WorkflowStep {
       self,
       decision: StepDecision,
       comment: Option<String>,
+      now: DateTime<Utc>,
    ) -> Result<Self, DomainError> {
       if self.status != WorkflowStepStatus::Active {
          return Err(DomainError::Validation(
@@ -927,17 +930,17 @@ impl WorkflowStep {
          status: WorkflowStepStatus::Completed,
          decision: Some(decision),
          comment,
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
 
    /// ステップをスキップした新しいインスタンスを返す
-   pub fn skipped(self) -> Self {
+   pub fn skipped(self, now: DateTime<Utc>) -> Self {
       Self {
          status: WorkflowStepStatus::Skipped,
-         updated_at: Utc::now(),
+         updated_at: now,
          ..self
       }
    }
@@ -950,7 +953,7 @@ impl WorkflowStep {
    /// # Errors
    ///
    /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
-   pub fn approve(self, comment: Option<String>) -> Result<Self, DomainError> {
+   pub fn approve(self, comment: Option<String>, now: DateTime<Utc>) -> Result<Self, DomainError> {
       if self.status != WorkflowStepStatus::Active {
          return Err(DomainError::Validation(format!(
             "承認はアクティブ状態でのみ可能です（現在: {}）",
@@ -963,8 +966,8 @@ impl WorkflowStep {
          version: self.version.next(),
          decision: Some(StepDecision::Approved),
          comment,
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
@@ -977,7 +980,7 @@ impl WorkflowStep {
    /// # Errors
    ///
    /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
-   pub fn reject(self, comment: Option<String>) -> Result<Self, DomainError> {
+   pub fn reject(self, comment: Option<String>, now: DateTime<Utc>) -> Result<Self, DomainError> {
       if self.status != WorkflowStepStatus::Active {
          return Err(DomainError::Validation(format!(
             "却下はアクティブ状態でのみ可能です（現在: {}）",
@@ -990,18 +993,18 @@ impl WorkflowStep {
          version: self.version.next(),
          decision: Some(StepDecision::Rejected),
          comment,
-         completed_at: Some(Utc::now()),
-         updated_at: Utc::now(),
+         completed_at: Some(now),
+         updated_at: now,
          ..self
       })
    }
 
    /// ステップが期限切れかチェックする
-   pub fn is_overdue(&self) -> bool {
+   pub fn is_overdue(&self, now: DateTime<Utc>) -> bool {
       if let Some(due) = self.due_date
          && self.completed_at.is_none()
       {
-         return Utc::now() > due;
+         return now > due;
       }
       false
    }
@@ -1039,11 +1042,13 @@ mod tests {
 
    fn create_test_step(instance_id: WorkflowInstanceId) -> WorkflowStep {
       WorkflowStep::new(
+         WorkflowStepId::new(),
          instance_id,
          "step_1".to_string(),
          "承認".to_string(),
          "approval".to_string(),
          Some(UserId::new()),
+         test_now(),
       )
    }
 
@@ -1170,41 +1175,61 @@ mod tests {
       }
 
       #[test]
-      fn test_approveでCompletedとApprovedになる() {
-         let step = create_test_step(WorkflowInstanceId::new()).activated();
+      fn test_新規作成時のcreated_atとupdated_atは注入された値と一致する() {
+         let step = create_test_step(WorkflowInstanceId::new());
+         assert_eq!(step.created_at(), test_now());
+         assert_eq!(step.updated_at(), test_now());
+      }
 
-         let result = step.approve(None);
+      #[test]
+      fn test_activated後のstarted_atは注入された値と一致する() {
+         let now = test_now();
+         let step = create_test_step(WorkflowInstanceId::new()).activated(now);
+         assert_eq!(step.started_at(), Some(now));
+         assert_eq!(step.updated_at(), now);
+      }
+
+      #[test]
+      fn test_approveでCompletedとApprovedになる() {
+         let now = test_now();
+         let step = create_test_step(WorkflowInstanceId::new()).activated(now);
+
+         let result = step.approve(None, now);
 
          assert!(result.is_ok());
          let approved = result.unwrap();
          assert_eq!(approved.status(), WorkflowStepStatus::Completed);
          assert_eq!(approved.decision(), Some(StepDecision::Approved));
+         assert_eq!(approved.completed_at(), Some(now));
       }
 
       #[test]
       fn test_approveでversionがインクリメントされる() {
-         let step = create_test_step(WorkflowInstanceId::new()).activated();
+         let now = test_now();
+         let step = create_test_step(WorkflowInstanceId::new()).activated(now);
          let original_version = step.version();
 
-         let approved = step.approve(None).unwrap();
+         let approved = step.approve(None, now).unwrap();
 
          assert_eq!(approved.version().as_u32(), original_version.as_u32() + 1);
       }
 
       #[test]
       fn test_approveでコメントが設定される() {
-         let step = create_test_step(WorkflowInstanceId::new()).activated();
+         let now = test_now();
+         let step = create_test_step(WorkflowInstanceId::new()).activated(now);
 
-         let approved = step.approve(Some("承認します".to_string())).unwrap();
+         let approved = step.approve(Some("承認します".to_string()), now).unwrap();
 
          assert_eq!(approved.comment(), Some("承認します"));
       }
 
       #[test]
       fn test_rejectでCompletedとRejectedになる() {
-         let step = create_test_step(WorkflowInstanceId::new()).activated();
+         let now = test_now();
+         let step = create_test_step(WorkflowInstanceId::new()).activated(now);
 
-         let result = step.reject(None);
+         let result = step.reject(None, now);
 
          assert!(result.is_ok());
          let rejected = result.unwrap();
@@ -1214,19 +1239,68 @@ mod tests {
 
       #[test]
       fn test_rejectでversionがインクリメントされる() {
-         let step = create_test_step(WorkflowInstanceId::new()).activated();
+         let now = test_now();
+         let step = create_test_step(WorkflowInstanceId::new()).activated(now);
          let original_version = step.version();
 
-         let rejected = step.reject(None).unwrap();
+         let rejected = step.reject(None, now).unwrap();
 
          assert_eq!(rejected.version().as_u32(), original_version.as_u32() + 1);
+      }
+
+      #[test]
+      fn test_is_overdue_期限切れの場合trueを返す() {
+         let past = DateTime::from_timestamp(1_699_999_000, 0).unwrap();
+         let now = test_now();
+         let step = WorkflowStep::from_db(
+            WorkflowStepId::new(),
+            WorkflowInstanceId::new(),
+            "step_1".to_string(),
+            "承認".to_string(),
+            "approval".to_string(),
+            WorkflowStepStatus::Active,
+            Version::initial(),
+            Some(UserId::new()),
+            None,
+            None,
+            Some(past), // due_date が過去
+            Some(past),
+            None, // completed_at が None
+            past,
+            past,
+         );
+         assert!(step.is_overdue(now));
+      }
+
+      #[test]
+      fn test_is_overdue_期限内の場合falseを返す() {
+         let now = test_now();
+         let future = DateTime::from_timestamp(1_700_100_000, 0).unwrap();
+         let step = WorkflowStep::from_db(
+            WorkflowStepId::new(),
+            WorkflowInstanceId::new(),
+            "step_1".to_string(),
+            "承認".to_string(),
+            "approval".to_string(),
+            WorkflowStepStatus::Active,
+            Version::initial(),
+            Some(UserId::new()),
+            None,
+            None,
+            Some(future), // due_date が未来
+            Some(now),
+            None,
+            now,
+            now,
+         );
+         assert!(!step.is_overdue(now));
       }
 
       #[test]
       fn test_Active以外でapproveするとエラー() {
          let step = create_test_step(WorkflowInstanceId::new()); // Pending 状態
 
-         let result = step.approve(None);
+         let result = step.approve(None, test_now());
 
          assert!(result.is_err());
       }
@@ -1235,7 +1309,7 @@ mod tests {
       fn test_Active以外でrejectするとエラー() {
          let step = create_test_step(WorkflowInstanceId::new()); // Pending 状態
 
-         let result = step.reject(None);
+         let result = step.reject(None, test_now());
 
          assert!(result.is_err());
       }
