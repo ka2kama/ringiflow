@@ -2,6 +2,7 @@ module Page.Workflow.New exposing
     ( Model
     , Msg
     , init
+    , isDirty
     , update
     , updateShared
     , view
@@ -45,6 +46,7 @@ import Html.Events
 import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra
+import Ports
 import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 
@@ -88,6 +90,9 @@ type alias Model =
 
     -- 操作状態
     , submitting : Bool
+
+    -- dirty 状態（未保存の変更があるか）
+    , isDirty_ : Bool
     }
 
 
@@ -119,6 +124,7 @@ init shared =
       , savedWorkflow = Nothing
       , saveMessage = Nothing
       , submitting = False
+      , isDirty_ = False
       }
     , Cmd.batch
         [ fetchDefinitions shared
@@ -155,6 +161,46 @@ Main.elm から新しい共有状態（CSRF トークン取得後など）を受
 updateShared : Shared -> Model -> Model
 updateShared shared model =
     { model | shared = shared }
+
+
+{-| フォームに未保存の変更があるかを返す
+-}
+isDirty : Model -> Bool
+isDirty model =
+    model.isDirty_
+
+
+{-| フォーム入力時の dirty 状態更新
+
+isDirty が False → True に変わるときのみ beforeunload を有効にする。
+既に dirty な場合は余分な Port 通信を避ける。
+
+-}
+markDirty : Model -> ( Model, Cmd Msg )
+markDirty model =
+    if model.isDirty_ then
+        ( model, Cmd.none )
+
+    else
+        ( { model | isDirty_ = True }
+        , Ports.setBeforeUnloadEnabled True
+        )
+
+
+{-| 保存/送信成功時の dirty リセット
+
+isDirty が True → False に変わるときのみ beforeunload を無効にする。
+
+-}
+clearDirty : Model -> ( Model, Cmd Msg )
+clearDirty model =
+    if model.isDirty_ then
+        ( { model | isDirty_ = False }
+        , Ports.setBeforeUnloadEnabled False
+        )
+
+    else
+        ( model, Cmd.none )
 
 
 
@@ -218,22 +264,34 @@ update msg model =
                     )
 
         SelectDefinition definitionId ->
-            ( { model
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    markDirty model
+            in
+            ( { dirtyModel
                 | selectedDefinitionId = Just definitionId
                 , formValues = Dict.empty
                 , validationErrors = Dict.empty
               }
-            , Cmd.none
+            , dirtyCmd
             )
 
         UpdateTitle newTitle ->
-            ( { model | title = newTitle }
-            , Cmd.none
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    markDirty model
+            in
+            ( { dirtyModel | title = newTitle }
+            , dirtyCmd
             )
 
         UpdateField fieldId value ->
-            ( { model | formValues = Dict.insert fieldId value model.formValues }
-            , Cmd.none
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    markDirty model
+            in
+            ( { dirtyModel | formValues = Dict.insert fieldId value model.formValues }
+            , dirtyCmd
             )
 
         UpdateApproverSearch query ->
@@ -246,24 +304,32 @@ update msg model =
             )
 
         SelectApprover user ->
-            ( { model
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    markDirty model
+            in
+            ( { dirtyModel
                 | approverSelection = Selected user
                 , approverSearch = ""
                 , approverDropdownOpen = False
                 , approverHighlightIndex = 0
-                , validationErrors = Dict.remove "approver" model.validationErrors
+                , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
               }
-            , Cmd.none
+            , dirtyCmd
             )
 
         ClearApprover ->
-            ( { model
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    markDirty model
+            in
+            ( { dirtyModel
                 | approverSelection = NotSelected
                 , approverSearch = ""
                 , approverDropdownOpen = False
                 , approverHighlightIndex = 0
               }
-            , Cmd.none
+            , dirtyCmd
             )
 
         ApproverKeyDown key ->
@@ -304,12 +370,16 @@ update msg model =
         GotSaveResult result ->
             case result of
                 Ok workflow ->
-                    ( { model
+                    let
+                        ( cleanModel, cleanCmd ) =
+                            clearDirty model
+                    in
+                    ( { cleanModel
                         | submitting = False
                         , savedWorkflow = Just workflow
                         , saveMessage = Just (SaveSuccess "下書きを保存しました")
                       }
-                    , Cmd.none
+                    , cleanCmd
                     )
 
                 Err _ ->
@@ -374,9 +444,16 @@ update msg model =
         GotSaveAndSubmitResult approverInput result ->
             case result of
                 Ok workflow ->
-                    -- 保存成功 → 続けて申請
-                    ( { model | savedWorkflow = Just workflow }
-                    , submitWorkflow model.shared workflow.displayNumber approverInput
+                    -- 保存成功 → 続けて申請（データは永続化済みなので dirty リセット）
+                    let
+                        ( cleanModel, cleanCmd ) =
+                            clearDirty model
+                    in
+                    ( { cleanModel | savedWorkflow = Just workflow }
+                    , Cmd.batch
+                        [ submitWorkflow cleanModel.shared workflow.displayNumber approverInput
+                        , cleanCmd
+                        ]
                     )
 
                 Err _ ->
@@ -390,12 +467,16 @@ update msg model =
         GotSubmitResult result ->
             case result of
                 Ok workflow ->
-                    ( { model
+                    let
+                        ( cleanModel, cleanCmd ) =
+                            clearDirty model
+                    in
+                    ( { cleanModel
                         | submitting = False
                         , savedWorkflow = Just workflow
                         , saveMessage = Just (SaveSuccess "申請が完了しました")
                       }
-                    , Cmd.none
+                    , cleanCmd
                     )
 
                 Err _ ->
@@ -514,14 +595,18 @@ handleApproverKeyDown key model =
         "Enter" ->
             case List.Extra.getAt model.approverHighlightIndex candidates of
                 Just user ->
-                    ( { model
+                    let
+                        ( dirtyModel, dirtyCmd ) =
+                            markDirty model
+                    in
+                    ( { dirtyModel
                         | approverSelection = Selected user
                         , approverSearch = ""
                         , approverDropdownOpen = False
                         , approverHighlightIndex = 0
-                        , validationErrors = Dict.remove "approver" model.validationErrors
+                        , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
                       }
-                    , Cmd.none
+                    , dirtyCmd
                     )
 
                 Nothing ->

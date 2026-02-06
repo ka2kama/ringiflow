@@ -1,6 +1,7 @@
 port module Ports exposing
     ( receiveMessage
     , sendMessage
+    , setBeforeUnloadEnabled
     )
 
 {-| JavaScript との通信用 Ports モジュール
@@ -34,3 +35,18 @@ port sendMessage : Encode.Value -> Cmd msg
 
 -}
 port receiveMessage : (Encode.Value -> msg) -> Sub msg
+
+
+{-| ブラウザの beforeunload イベントの有効/無効を制御
+
+フォーム入力中の未保存データ損失を防ぐため、
+ページ離脱時にブラウザの警告ダイアログを表示する。
+
+    -- フォームが dirty になったとき
+    Ports.setBeforeUnloadEnabled True
+
+    -- 保存/送信成功時
+    Ports.setBeforeUnloadEnabled False
+
+-}
+port setBeforeUnloadEnabled : Bool -> Cmd msg

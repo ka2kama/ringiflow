@@ -198,13 +198,30 @@ const app = Elm.Main.init({
  * ```
  */
 
-// 現在は Ports を使用していないが、将来の実装のために
-// 以下のようなパターンで拡張可能:
-//
-// if (app.ports.sendMessage) {
-//   app.ports.sendMessage.subscribe(handleElmMessage);
-// }
-//
-// function handleElmMessage(data) {
-//   // メッセージ処理
-// }
+/**
+ * beforeunload イベント制御（Ports: setBeforeUnloadEnabled）
+ *
+ * フォーム入力中にタブ閉じやリロードを行った場合に、
+ * ブラウザの警告ダイアログを表示してデータ損失を防ぐ。
+ *
+ * Elm 側で isDirty 状態が変わるたびに呼ばれる:
+ * - true: beforeunload リスナーを登録
+ * - false: beforeunload リスナーを解除
+ */
+if (app.ports.setBeforeUnloadEnabled) {
+  let beforeUnloadHandler = null;
+
+  app.ports.setBeforeUnloadEnabled.subscribe((enabled) => {
+    if (enabled && !beforeUnloadHandler) {
+      beforeUnloadHandler = (e) => {
+        e.preventDefault();
+        // モダンブラウザでは returnValue の設定が必要
+        e.returnValue = "";
+      };
+      window.addEventListener("beforeunload", beforeUnloadHandler);
+    } else if (!enabled && beforeUnloadHandler) {
+      window.removeEventListener("beforeunload", beforeUnloadHandler);
+      beforeUnloadHandler = null;
+    }
+  });
+}
