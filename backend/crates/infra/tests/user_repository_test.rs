@@ -9,6 +9,9 @@
 //! cd backend && cargo test -p ringiflow-infra --test user_repository_test
 //! ```
 
+mod common;
+
+use common::{assign_role, setup_test_data};
 use ringiflow_domain::{
    tenant::TenantId,
    user::{Email, UserId},
@@ -16,54 +19,6 @@ use ringiflow_domain::{
 use ringiflow_infra::repository::{PostgresUserRepository, UserRepository};
 use sqlx::PgPool;
 use uuid::Uuid;
-
-/// テスト用のテナントとユーザーをセットアップ
-async fn setup_test_data(pool: &PgPool) -> (TenantId, UserId) {
-   let tenant_id = TenantId::from_uuid(Uuid::now_v7());
-   let user_id = UserId::from_uuid(Uuid::now_v7());
-
-   // テナント作成
-   sqlx::query!(
-      r#"
-        INSERT INTO tenants (id, name, subdomain, plan, status)
-        VALUES ($1, 'Test Tenant', 'test', 'free', 'active')
-        "#,
-      tenant_id.as_uuid()
-   )
-   .execute(pool)
-   .await
-   .expect("テナント作成に失敗");
-
-   // ユーザー作成
-   sqlx::query!(
-      r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 1, 'test@example.com', 'Test User', 'active')
-        "#,
-      user_id.as_uuid(),
-      tenant_id.as_uuid()
-   )
-   .execute(pool)
-   .await
-   .expect("ユーザー作成に失敗");
-
-   (tenant_id, user_id)
-}
-
-/// ロールをユーザーに割り当て
-async fn assign_role(pool: &PgPool, user_id: &UserId) {
-   // システムロール（user）を取得して割り当て
-   sqlx::query!(
-      r#"
-        INSERT INTO user_roles (user_id, role_id)
-        SELECT $1, id FROM roles WHERE name = 'user' AND is_system = true
-        "#,
-      user_id.as_uuid()
-   )
-   .execute(pool)
-   .await
-   .expect("ロール割り当てに失敗");
-}
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_メールアドレスでユーザーを取得できる(pool: PgPool) {

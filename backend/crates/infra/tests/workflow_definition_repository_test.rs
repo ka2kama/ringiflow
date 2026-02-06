@@ -9,6 +9,9 @@
 //! cd backend && cargo test -p ringiflow-infra --test workflow_definition_repository_test
 //! ```
 
+mod common;
+
+use common::{seed_definition_id, seed_tenant_id};
 use ringiflow_domain::{tenant::TenantId, workflow::WorkflowDefinitionId};
 use ringiflow_infra::repository::{
    PostgresWorkflowDefinitionRepository,
@@ -19,7 +22,7 @@ use sqlx::PgPool;
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_published_by_tenant_returns_published_definitions(pool: PgPool) {
    let repo = PostgresWorkflowDefinitionRepository::new(pool);
-   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let tenant_id = seed_tenant_id();
 
    let result = repo.find_published_by_tenant(&tenant_id).await;
 
@@ -43,9 +46,8 @@ async fn test_find_published_by_tenant_filters_by_tenant(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_id_returns_definition_when_exists(pool: PgPool) {
    let repo = PostgresWorkflowDefinitionRepository::new(pool);
-   let definition_id =
-      WorkflowDefinitionId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
-   let tenant_id = TenantId::from_uuid("00000000-0000-0000-0000-000000000001".parse().unwrap());
+   let definition_id = seed_definition_id();
+   let tenant_id = seed_tenant_id();
 
    let result = repo.find_by_id(&definition_id, &tenant_id).await;
 
