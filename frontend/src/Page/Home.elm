@@ -12,6 +12,7 @@ import Api.Dashboard as DashboardApi
 import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.Dashboard exposing (DashboardStats)
+import Data.WorkflowInstance exposing (Status(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import RemoteData exposing (RemoteData(..))
@@ -116,30 +117,60 @@ viewStats remoteStats =
 
 {-| KPI カードの描画
 
-3 つの統計値をカードとして横並びに表示する。
+3 つの統計値をクリック可能なカードとして横並びに表示する。
+各カードは対応するフィルタ付き一覧ページにリンクする。
 
 -}
 viewStatsCards : DashboardStats -> Html Msg
 viewStatsCards stats =
     div [ class "mt-4 grid gap-4 sm:grid-cols-3" ]
-        [ viewStatCard "承認待ちタスク" stats.pendingTasks "bg-primary-50" "text-primary-600"
-        , viewStatCard "申請中" stats.myWorkflowsInProgress "bg-warning-50" "text-warning-600"
-        , viewStatCard "本日完了" stats.completedToday "bg-success-50" "text-success-600"
+        [ viewStatCardLink
+            { label = "承認待ちタスク"
+            , value = stats.pendingTasks
+            , bgColorClass = "bg-primary-50"
+            , textColorClass = "text-primary-600"
+            , route = Route.Tasks
+            }
+        , viewStatCardLink
+            { label = "申請中"
+            , value = stats.myWorkflowsInProgress
+            , bgColorClass = "bg-warning-50"
+            , textColorClass = "text-warning-600"
+            , route = Route.Workflows { status = Just InProgress, completedToday = False }
+            }
+        , viewStatCardLink
+            { label = "本日完了"
+            , value = stats.completedToday
+            , bgColorClass = "bg-success-50"
+            , textColorClass = "text-success-600"
+            , route = Route.Workflows { status = Nothing, completedToday = True }
+            }
         ]
 
 
-{-| 統計カード（単体）
+{-| クリック可能な統計カード
 
-TODO(human): カードのデザインを改善してください
+`<a>` 要素としてレンダリングし、対応するフィルタ付きページにリンクする。
+ホバー時にシャドウエフェクトでクリック可能であることを示す。
 
 -}
-viewStatCard : String -> Int -> String -> String -> Html Msg
-viewStatCard label value bgColorClass textColorClass =
-    div [ class ("rounded-xl p-6 text-center " ++ bgColorClass) ]
-        [ div [ class ("text-3xl font-bold " ++ textColorClass) ]
-            [ text (String.fromInt value) ]
+viewStatCardLink :
+    { label : String
+    , value : Int
+    , bgColorClass : String
+    , textColorClass : String
+    , route : Route.Route
+    }
+    -> Html Msg
+viewStatCardLink config =
+    a
+        [ href (Route.toString config.route)
+        , class ("block rounded-xl p-6 text-center no-underline transition-shadow hover:shadow-md " ++ config.bgColorClass)
+        ]
+        [ div [ class ("text-3xl font-bold " ++ config.textColorClass) ]
+            [ text (String.fromInt config.value) ]
         , div [ class "mt-2 text-sm text-secondary-500" ]
-            [ text label ]
+            [ text config.label ]
         ]
 
 
