@@ -9,7 +9,7 @@
 #   ./backup.sh --restore    # 最新バックアップからリストア
 #
 # cron 設定例（毎日 AM 3:00）:
-#   0 3 * * * /home/ubuntu/ringiflow/backup.sh >> /home/ubuntu/ringiflow/logs/backup.log 2>&1
+#   0 3 * * * /home/ec2-user/ringiflow/backup.sh >> /home/ec2-user/ringiflow/logs/backup.log 2>&1
 
 set -euo pipefail
 

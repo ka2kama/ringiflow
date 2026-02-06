@@ -57,7 +57,7 @@ graph TB
 |------|--------|
 | リージョン | 東京 (ap-northeast-1) |
 | プラットフォーム | Linux/Unix |
-| ブループリント | OS のみ → Ubuntu 24.04 LTS |
+| ブループリント | OS のみ → AlmaLinux 9.4 |
 | インスタンスプラン | $10 USD/月（2GB RAM, 60GB SSD） |
 | インスタンス名 | ringiflow-prod |
 
@@ -85,14 +85,14 @@ HTTPS (443) は不要（Cloudflare で終端するため）。
 
 ```bash
 # SSH 接続
-ssh -i ~/.ssh/lightsail-key.pem ubuntu@<LIGHTSAIL_IP>
+ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
 
 # セットアップスクリプトを実行
 curl -fsSL https://raw.githubusercontent.com/ka2kama/ringiflow/main/infra/lightsail/setup.sh | bash
 
 # 一度ログアウトして再ログイン（docker グループを有効化）
 exit
-ssh -i ~/.ssh/lightsail-key.pem ubuntu@<LIGHTSAIL_IP>
+ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
 
 # Docker が使えることを確認
 docker --version
@@ -184,7 +184,7 @@ vim .env
 
 ```bash
 LIGHTSAIL_HOST=<LIGHTSAIL_IP または ドメイン>
-LIGHTSAIL_USER=ubuntu
+LIGHTSAIL_USER=ec2-user
 LIGHTSAIL_SSH_KEY=~/.ssh/lightsail-key.pem
 ```
 
@@ -220,7 +220,7 @@ curl https://your-domain.com/api/health
 ローカルから:
 
 ```bash
-scp -i ~/.ssh/lightsail-key.pem -r backend/migrations/ ubuntu@<LIGHTSAIL_IP>:~/ringiflow/migrations/
+scp -i ~/.ssh/lightsail-key.pem -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~/ringiflow/migrations/
 ```
 
 #### 7.2 マイグレーション実行
@@ -228,13 +228,13 @@ scp -i ~/.ssh/lightsail-key.pem -r backend/migrations/ ubuntu@<LIGHTSAIL_IP>:~/r
 Lightsail 上で Docker 経由で実行:
 
 ```bash
-ssh -i ~/.ssh/lightsail-key.pem ubuntu@<LIGHTSAIL_IP>
+ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 
 # sqlx-cli を含む Rust イメージでマイグレーション実行
 docker run --rm \
     --network ringiflow-backend \
-    -v "$(pwd)/migrations:/app/migrations" \
+    -v "$(pwd)/migrations:/app/migrations:z" \
     -e DATABASE_URL="postgres://<POSTGRES_USER>:<POSTGRES_PASSWORD>@postgres:5432/<POSTGRES_DB>" \
     rust:1.84-slim-bookworm \
     bash -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run --source /app/migrations"
@@ -247,7 +247,7 @@ docker run --rm \
 ### ログ確認
 
 ```bash
-ssh -i ~/.ssh/lightsail-key.pem ubuntu@<LIGHTSAIL_IP>
+ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 
 # 全サービスのログ
@@ -265,7 +265,7 @@ docker compose logs -f nginx
 手動実行:
 
 ```bash
-ssh -i ~/.ssh/lightsail-key.pem ubuntu@<LIGHTSAIL_IP>
+ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 ./backup.sh
 ```
@@ -275,7 +275,7 @@ cd ~/ringiflow
 ```bash
 crontab -e
 # 以下を追加（毎日 AM 3:00）
-0 3 * * * /home/ubuntu/ringiflow/backup.sh >> /home/ubuntu/ringiflow/logs/backup.log 2>&1
+0 3 * * * /home/ec2-user/ringiflow/backup.sh >> /home/ec2-user/ringiflow/logs/backup.log 2>&1
 ```
 
 ### リストア
@@ -337,6 +337,24 @@ docker exec ringiflow-bff bash -c 'echo > /dev/tcp/auth-service/13002 && echo OK
 1. DNS 設定を確認（プロキシ状態がオレンジ雲になっているか）
 2. SSL/TLS モードが Full になっているか確認
 3. Lightsail のファイアウォールで Port 80 が開いているか確認
+
+### SELinux 関連のエラー
+
+AlmaLinux では SELinux がデフォルト有効。バインドマウントでパーミッションエラーが出る場合:
+
+```bash
+# SELinux の状態確認
+getenforce
+
+# 拒否ログを確認
+sudo ausearch -m avc -ts recent
+
+# Docker のバインドマウントに :z または :Z フラグが付いているか確認
+docker compose config | grep -A2 volumes
+```
+
+docker-compose.yml と deploy.sh のバインドマウントには `:Z`（プライベート）または `:z`（共有）フラグが設定済み。
+手動でボリュームマウントする場合は、同様にフラグを付けること。
 
 ### ディスク容量が不足
 

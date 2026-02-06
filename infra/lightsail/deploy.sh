@@ -156,7 +156,7 @@ echo "[INFO] Frontend ボリュームを更新中..."
 docker volume create ringiflow-frontend-dist 2>/dev/null || true
 docker run --rm \
     -v ringiflow-frontend-dist:/dist \
-    -v ~/ringiflow/frontend:/src:ro \
+    -v ~/ringiflow/frontend:/src:ro,z \
     busybox sh -c "rm -rf /dist/* && cp -r /src/* /dist/"
 
 echo "[INFO] コンテナを起動中..."

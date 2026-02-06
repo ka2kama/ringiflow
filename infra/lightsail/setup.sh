@@ -1,15 +1,15 @@
 #!/bin/bash
-# RingiFlow Lightsail 初期セットアップスクリプト
+# RingiFlow Lightsail 初期セットアップスクリプト（AlmaLinux 9）
 #
 # このスクリプトは Lightsail インスタンス上で実行する。
 # Docker と Docker Compose をインストールし、ディレクトリ構造を作成する。
 #
 # 使い方:
-#   ssh ubuntu@your-lightsail-instance
+#   ssh ec2-user@your-lightsail-instance
 #   curl -fsSL https://raw.githubusercontent.com/ka2kama/ringiflow/main/infra/lightsail/setup.sh | bash
 #   または
-#   scp setup.sh ubuntu@your-lightsail-instance:~
-#   ssh ubuntu@your-lightsail-instance 'bash setup.sh'
+#   scp setup.sh ec2-user@your-lightsail-instance:~
+#   ssh ec2-user@your-lightsail-instance 'bash setup.sh'
 
 set -euo pipefail
 
@@ -40,8 +40,7 @@ error() {
 # 1. システムアップデート
 # ==========================================================
 info "システムをアップデート中..."
-sudo apt-get update
-sudo apt-get upgrade -y
+sudo dnf update -y
 
 # ==========================================================
 # 2. Docker インストール
@@ -52,31 +51,21 @@ else
     info "Docker をインストール中..."
 
     # 古いバージョンを削除
-    sudo apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+    sudo dnf remove -y docker docker-client docker-client-latest \
+        docker-common docker-latest docker-latest-logrotate \
+        docker-logrotate docker-engine 2>/dev/null || true
 
-    # 必要なパッケージをインストール
-    sudo apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release
+    # dnf-plugins-core をインストール（config-manager コマンドに必要）
+    sudo dnf install -y dnf-plugins-core
 
-    # Docker の公式 GPG キーを追加
-    sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-    # Docker リポジトリを追加
-    # shellcheck disable=SC1091
-    echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    # Docker 公式リポジトリを追加（AlmaLinux は CentOS リポジトリを使用）
+    sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
     # Docker をインストール
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Docker サービスを起動・有効化
+    sudo systemctl enable --now docker
 
     # 現在のユーザーを docker グループに追加
     sudo usermod -aG docker "$USER"
@@ -122,16 +111,31 @@ echo "  # 毎日 AM 3:00 にバックアップ"
 echo "  0 3 * * * $RINGIFLOW_DIR/backup.sh >> $RINGIFLOW_DIR/logs/backup.log 2>&1"
 
 # ==========================================================
-# 6. ファイアウォール設定
+# 6. ファイアウォール設定（firewalld）
 # ==========================================================
-if command -v ufw &> /dev/null; then
-    info "UFW ファイアウォールを設定中..."
-    sudo ufw allow 22/tcp   # SSH
-    sudo ufw allow 80/tcp   # HTTP（Cloudflare からのアクセス）
-    sudo ufw --force enable
-    sudo ufw status
+if command -v firewall-cmd &> /dev/null; then
+    info "firewalld を設定中..."
+    sudo systemctl enable --now firewalld
+    sudo firewall-cmd --permanent --add-service=ssh
+    sudo firewall-cmd --permanent --add-port=80/tcp
+    sudo firewall-cmd --reload
+    sudo firewall-cmd --list-all
 else
-    warn "UFW が見つかりません。Lightsail コンソールでファイアウォールを設定してください。"
+    warn "firewalld が見つかりません。Lightsail コンソールでファイアウォールを設定してください。"
+fi
+
+# ==========================================================
+# 7. SELinux 状態の確認
+# ==========================================================
+info "SELinux の状態を確認中..."
+if command -v getenforce &> /dev/null; then
+    SELINUX_STATUS=$(getenforce)
+    info "SELinux: $SELINUX_STATUS"
+    if [ "$SELINUX_STATUS" = "Enforcing" ]; then
+        info "SELinux は有効です。Docker のバインドマウントには :z/:Z フラグが設定済みです。"
+    fi
+else
+    warn "SELinux コマンドが見つかりません。"
 fi
 
 # ==========================================================
