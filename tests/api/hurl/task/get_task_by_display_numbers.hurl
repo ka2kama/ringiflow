@@ -114,15 +114,19 @@ jsonpath "$.data.step.comment" == null
 jsonpath "$.data.step.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.step.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
-# ワークフロー情報
+# ワークフロー情報（WorkflowInstance required フィールド）
 jsonpath "$.data.workflow.id" == "{{workflow_id}}"
 jsonpath "$.data.workflow.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.workflow.display_number" == {{workflow_display_number}}
 jsonpath "$.data.workflow.title" == "経費申請（タスク詳細テスト用）"
+jsonpath "$.data.workflow.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.workflow.status" == "InProgress"
 jsonpath "$.data.workflow.version" == 2
+jsonpath "$.data.workflow.form_data" exists
 jsonpath "$.data.workflow.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.workflow.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.data.workflow.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.workflow.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.workflow.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.workflow.steps" count == 1
 
