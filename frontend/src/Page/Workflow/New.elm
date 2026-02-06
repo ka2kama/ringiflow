@@ -28,10 +28,12 @@ module Page.Workflow.New exposing
 -}
 
 import Api exposing (ApiError)
+import Api.User as UserApi
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
+import Data.UserItem as UserItem exposing (UserItem)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance exposing (WorkflowInstance)
 import Dict exposing (Dict)
@@ -40,6 +42,7 @@ import Form.Validation as Validation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
+import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra
 import RemoteData exposing (RemoteData(..))
@@ -48,6 +51,13 @@ import Shared exposing (Shared)
 
 
 -- MODEL
+
+
+{-| 承認者の選択状態
+-}
+type ApproverSelection
+    = NotSelected
+    | Selected UserItem
 
 
 {-| ページの状態
@@ -59,6 +69,7 @@ type alias Model =
     -- API データ
     , definitions : RemoteData ApiError (List WorkflowDefinition)
     , selectedDefinitionId : Maybe String
+    , users : RemoteData ApiError (List UserItem)
 
     -- フォーム状態
     , title : String
@@ -66,7 +77,10 @@ type alias Model =
     , validationErrors : Dict String String
 
     -- 承認者選択
-    , approverInput : String
+    , approverSearch : String
+    , approverSelection : ApproverSelection
+    , approverDropdownOpen : Bool
+    , approverHighlightIndex : Int
 
     -- 保存状態
     , savedWorkflow : Maybe WorkflowInstance
@@ -94,15 +108,22 @@ init shared =
     ( { shared = shared
       , definitions = Loading
       , selectedDefinitionId = Nothing
+      , users = Loading
       , title = ""
       , formValues = Dict.empty
       , validationErrors = Dict.empty
-      , approverInput = ""
+      , approverSearch = ""
+      , approverSelection = NotSelected
+      , approverDropdownOpen = False
+      , approverHighlightIndex = 0
       , savedWorkflow = Nothing
       , saveMessage = Nothing
       , submitting = False
       }
-    , fetchDefinitions shared
+    , Cmd.batch
+        [ fetchDefinitions shared
+        , fetchUsers shared
+        ]
     )
 
 
@@ -113,6 +134,16 @@ fetchDefinitions shared =
     WorkflowDefinitionApi.listDefinitions
         { config = Shared.toRequestConfig shared
         , toMsg = GotDefinitions
+        }
+
+
+{-| テナント内ユーザー一覧を取得
+-}
+fetchUsers : Shared -> Cmd Msg
+fetchUsers shared =
+    UserApi.listUsers
+        { config = Shared.toRequestConfig shared
+        , toMsg = GotUsers
         }
 
 
@@ -135,13 +166,18 @@ updateShared shared model =
 type Msg
     = -- 初期化
       GotDefinitions (Result ApiError (List WorkflowDefinition))
+    | GotUsers (Result ApiError (List UserItem))
       -- ワークフロー定義選択
     | SelectDefinition String
       -- フォーム入力
     | UpdateTitle String
     | UpdateField String String
       -- 承認者選択
-    | UpdateApproverInput String
+    | UpdateApproverSearch String
+    | SelectApprover UserItem
+    | ClearApprover
+    | ApproverKeyDown String
+    | CloseApproverDropdown
       -- 保存・申請
     | SaveDraft
     | GotSaveResult (Result ApiError WorkflowInstance)
@@ -169,6 +205,18 @@ update msg model =
                     , Cmd.none
                     )
 
+        GotUsers result ->
+            case result of
+                Ok users ->
+                    ( { model | users = Success users }
+                    , Cmd.none
+                    )
+
+                Err error ->
+                    ( { model | users = Failure error }
+                    , Cmd.none
+                    )
+
         SelectDefinition definitionId ->
             ( { model
                 | selectedDefinitionId = Just definitionId
@@ -188,8 +236,41 @@ update msg model =
             , Cmd.none
             )
 
-        UpdateApproverInput value ->
-            ( { model | approverInput = value }
+        UpdateApproverSearch query ->
+            ( { model
+                | approverSearch = query
+                , approverDropdownOpen = not (String.isEmpty (String.trim query))
+                , approverHighlightIndex = 0
+              }
+            , Cmd.none
+            )
+
+        SelectApprover user ->
+            ( { model
+                | approverSelection = Selected user
+                , approverSearch = ""
+                , approverDropdownOpen = False
+                , approverHighlightIndex = 0
+                , validationErrors = Dict.remove "approver" model.validationErrors
+              }
+            , Cmd.none
+            )
+
+        ClearApprover ->
+            ( { model
+                | approverSelection = NotSelected
+                , approverSearch = ""
+                , approverDropdownOpen = False
+                , approverHighlightIndex = 0
+              }
+            , Cmd.none
+            )
+
+        ApproverKeyDown key ->
+            handleApproverKeyDown key model
+
+        CloseApproverDropdown ->
+            ( { model | approverDropdownOpen = False }
             , Cmd.none
             )
 
@@ -246,17 +327,17 @@ update msg model =
                     validateFormWithApprover model
             in
             if Dict.isEmpty validationErrors then
-                case model.savedWorkflow of
-                    Just workflow ->
+                case ( model.approverSelection, model.savedWorkflow ) of
+                    ( Selected approver, Just workflow ) ->
                         -- 既に下書き保存済みならそのまま申請
                         ( { model
                             | submitting = True
                             , saveMessage = Nothing
                           }
-                        , submitWorkflow model.shared workflow.displayNumber model.approverInput
+                        , submitWorkflow model.shared workflow.displayNumber approver.id
                         )
 
-                    Nothing ->
+                    ( Selected approver, Nothing ) ->
                         -- 未保存の場合、まず保存してから申請
                         case model.selectedDefinitionId of
                             Just definitionId ->
@@ -268,7 +349,7 @@ update msg model =
                                     definitionId
                                     model.title
                                     model.formValues
-                                    model.approverInput
+                                    approver.id
                                 )
 
                             Nothing ->
@@ -277,6 +358,10 @@ update msg model =
                                   }
                                 , Cmd.none
                                 )
+
+                    ( NotSelected, _ ) ->
+                        -- バリデーションで弾かれるはずだが念のため
+                        ( model, Cmd.none )
 
             else
                 ( { model
@@ -375,13 +460,80 @@ validateFormWithApprover model =
             validateForm model
 
         approverErrors =
-            if String.isEmpty (String.trim model.approverInput) then
-                Dict.singleton "approver" "承認者を入力してください"
+            case model.approverSelection of
+                NotSelected ->
+                    Dict.singleton "approver" "承認者を選択してください"
 
-            else
-                Dict.empty
+                Selected _ ->
+                    Dict.empty
     in
     Dict.union formErrors approverErrors
+
+
+{-| 承認者検索のキーボードイベントを処理
+-}
+handleApproverKeyDown : String -> Model -> ( Model, Cmd Msg )
+handleApproverKeyDown key model =
+    let
+        candidates =
+            case model.users of
+                Success users ->
+                    UserItem.filterUsers model.approverSearch users
+
+                _ ->
+                    []
+
+        candidateCount =
+            List.length candidates
+    in
+    case key of
+        "ArrowDown" ->
+            ( { model
+                | approverHighlightIndex =
+                    if candidateCount == 0 then
+                        0
+
+                    else
+                        modBy candidateCount (model.approverHighlightIndex + 1)
+              }
+            , Cmd.none
+            )
+
+        "ArrowUp" ->
+            ( { model
+                | approverHighlightIndex =
+                    if candidateCount == 0 then
+                        0
+
+                    else
+                        modBy candidateCount (model.approverHighlightIndex - 1 + candidateCount)
+              }
+            , Cmd.none
+            )
+
+        "Enter" ->
+            case List.Extra.getAt model.approverHighlightIndex candidates of
+                Just user ->
+                    ( { model
+                        | approverSelection = Selected user
+                        , approverSearch = ""
+                        , approverDropdownOpen = False
+                        , approverHighlightIndex = 0
+                        , validationErrors = Dict.remove "approver" model.validationErrors
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        "Escape" ->
+            ( { model | approverDropdownOpen = False }
+            , Cmd.none
+            )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 {-| 選択されたワークフロー定義を取得
@@ -660,27 +812,135 @@ viewApproverSection model =
         [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 3: 承認者選択" ]
         , div [ class "mb-6" ]
             [ label
-                [ for "approver"
+                [ for "approver-search"
                 , class "block mb-2 font-medium"
                 ]
-                [ text "承認者（ユーザー ID）"
+                [ text "承認者"
                 , span [ class "text-error-600" ] [ text " *" ]
                 ]
-            , input
-                [ type_ "text"
-                , id "approver"
-                , Html.Attributes.value model.approverInput
-                , Html.Events.onInput UpdateApproverInput
-                , placeholder "承認者のユーザー ID を入力"
-                , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
-                ]
-                []
+            , case model.approverSelection of
+                Selected user ->
+                    viewSelectedApprover user
+
+                NotSelected ->
+                    viewApproverSearchInput model
             , viewApproverError model
-            , p
-                [ class "mt-2 text-sm text-secondary-500" ]
-                [ text "※ 将来的にはユーザー検索機能を実装予定です" ]
             ]
         ]
+
+
+{-| 選択済みの承認者を表示
+-}
+viewSelectedApprover : UserItem -> Html Msg
+viewSelectedApprover user =
+    div
+        [ class "flex items-center justify-between rounded-lg border border-primary-200 bg-primary-50 p-3" ]
+        [ div []
+            [ span [ class "font-medium" ] [ text user.name ]
+            , span [ class "ml-2 text-sm text-secondary-500" ] [ text user.displayId ]
+            ]
+        , button
+            [ Html.Events.onClick ClearApprover
+            , class "border-0 bg-transparent cursor-pointer text-secondary-400 hover:text-secondary-600 text-xl"
+            , type_ "button"
+            ]
+            [ text "×" ]
+        ]
+
+
+{-| 承認者検索入力とドロップダウン
+-}
+viewApproverSearchInput : Model -> Html Msg
+viewApproverSearchInput model =
+    let
+        candidates =
+            case model.users of
+                Success users ->
+                    UserItem.filterUsers model.approverSearch users
+
+                _ ->
+                    []
+    in
+    div [ class "relative" ]
+        [ input
+            [ type_ "text"
+            , id "approver-search"
+            , Html.Attributes.value model.approverSearch
+            , Html.Events.onInput UpdateApproverSearch
+            , Html.Events.onBlur CloseApproverDropdown
+            , Html.Events.preventDefaultOn "keydown"
+                (Decode.field "key" Decode.string
+                    |> Decode.map
+                        (\key ->
+                            ( ApproverKeyDown key
+                            , key == "ArrowDown" || key == "ArrowUp"
+                            )
+                        )
+                )
+            , placeholder "名前で検索..."
+            , Html.Attributes.autocomplete False
+            , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+            ]
+            []
+        , if model.approverDropdownOpen && not (List.isEmpty candidates) then
+            viewApproverDropdown candidates model.approverHighlightIndex
+
+          else if model.approverDropdownOpen && not (String.isEmpty (String.trim model.approverSearch)) then
+            viewNoResults
+
+          else
+            text ""
+        , case model.users of
+            Loading ->
+                p [ class "mt-2 text-sm text-secondary-500" ] [ text "ユーザー情報を読み込み中..." ]
+
+            Failure _ ->
+                p [ class "mt-2 text-sm text-error-600" ] [ text "ユーザー情報の取得に失敗しました" ]
+
+            _ ->
+                text ""
+        ]
+
+
+{-| 候補ドロップダウン
+-}
+viewApproverDropdown : List UserItem -> Int -> Html Msg
+viewApproverDropdown candidates highlightIndex =
+    ul
+        [ class "absolute z-10 mt-1 w-full rounded-lg border border-secondary-200 bg-white shadow-lg max-h-60 overflow-y-auto"
+        ]
+        (List.indexedMap (viewApproverCandidate highlightIndex) candidates)
+
+
+{-| 候補アイテム
+-}
+viewApproverCandidate : Int -> Int -> UserItem -> Html Msg
+viewApproverCandidate highlightIndex index user =
+    li
+        [ Html.Events.onMouseDown (SelectApprover user)
+        , class
+            ("px-3 py-2 cursor-pointer"
+                ++ (if index == highlightIndex then
+                        " bg-primary-50"
+
+                    else
+                        " hover:bg-primary-50"
+                   )
+            )
+        ]
+        [ div [ class "font-medium" ] [ text user.name ]
+        , div [ class "text-sm text-secondary-500" ]
+            [ text (user.displayId ++ " · " ++ user.email) ]
+        ]
+
+
+{-| 候補なし表示
+-}
+viewNoResults : Html Msg
+viewNoResults =
+    div
+        [ class "absolute z-10 mt-1 w-full rounded-lg border border-secondary-200 bg-white shadow-lg px-3 py-2 text-sm text-secondary-500" ]
+        [ text "該当するユーザーが見つかりません" ]
 
 
 {-| 承認者エラー表示

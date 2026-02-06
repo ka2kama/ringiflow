@@ -43,7 +43,11 @@ use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
 use uuid::Uuid;
 
-use crate::{DomainError, tenant::TenantId, value_objects::UserName};
+use crate::{
+   DomainError,
+   tenant::TenantId,
+   value_objects::{DisplayNumber, UserName},
+};
 
 /// ユーザー ID（一意識別子）
 ///
@@ -185,11 +189,13 @@ impl std::str::FromStr for UserStatus {
 /// # 不変条件
 ///
 /// - `email` はテナント内で一意
+/// - `display_number` はテナント内で一意
 /// - `status` が `Deleted` の場合、ログイン不可
 #[derive(Debug, Clone)]
 pub struct User {
    id: UserId,
    tenant_id: TenantId,
+   display_number: DisplayNumber,
    email: Email,
    name: UserName,
    status: UserStatus,
@@ -205,6 +211,7 @@ impl User {
    ///
    /// - `id`: ユーザー ID
    /// - `tenant_id`: テナント ID
+   /// - `display_number`: 表示用連番（採番済み）
    /// - `email`: メールアドレス
    /// - `name`: 表示名
    /// - `now`: 現在日時（呼び出し元から注入）
@@ -216,6 +223,7 @@ impl User {
    pub fn new(
       id: UserId,
       tenant_id: TenantId,
+      display_number: DisplayNumber,
       email: Email,
       name: UserName,
       now: DateTime<Utc>,
@@ -223,6 +231,7 @@ impl User {
       Self {
          id,
          tenant_id,
+         display_number,
          email,
          name,
          status: UserStatus::Active,
@@ -237,6 +246,7 @@ impl User {
    pub fn from_db(
       id: UserId,
       tenant_id: TenantId,
+      display_number: DisplayNumber,
       email: Email,
       name: UserName,
       status: UserStatus,
@@ -247,6 +257,7 @@ impl User {
       Self {
          id,
          tenant_id,
+         display_number,
          email,
          name,
          status,
@@ -264,6 +275,10 @@ impl User {
 
    pub fn tenant_id(&self) -> &TenantId {
       &self.tenant_id
+   }
+
+   pub fn display_number(&self) -> DisplayNumber {
+      self.display_number
    }
 
    pub fn email(&self) -> &Email {
@@ -338,6 +353,7 @@ mod tests {
    use rstest::{fixture, rstest};
 
    use super::*;
+   use crate::value_objects::DisplayNumber;
 
    // フィクスチャ
 
@@ -352,6 +368,7 @@ mod tests {
       User::new(
          UserId::new(),
          TenantId::new(),
+         DisplayNumber::new(42).unwrap(),
          Email::new("user@example.com").unwrap(),
          UserName::new("Test User").unwrap(),
          now,
@@ -454,5 +471,12 @@ mod tests {
 
       assert_eq!(updated.last_login_at(), Some(login_time));
       assert_eq!(updated.updated_at(), login_time);
+   }
+
+   #[rstest]
+   fn test_ユーザーから表示用連番を取得できる(
+      アクティブなユーザー: User
+   ) {
+      assert_eq!(アクティブなユーザー.display_number().as_i64(), 42);
    }
 }

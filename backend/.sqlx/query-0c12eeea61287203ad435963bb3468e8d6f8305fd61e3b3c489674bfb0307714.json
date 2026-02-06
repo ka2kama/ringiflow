@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                tenant_id,\n                email,\n                name,\n                status,\n                last_login_at,\n                created_at,\n                updated_at\n            FROM users\n            WHERE id = $1\n            ",
+  "query": "\n            SELECT\n                id,\n                tenant_id,\n                display_number,\n                email,\n                name,\n                status,\n                last_login_at,\n                created_at,\n                updated_at\n            FROM users\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -15,31 +15,36 @@
       },
       {
         "ordinal": 2,
+        "name": "display_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
         "name": "email",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "last_login_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -55,10 +60,11 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false
     ]
   },
-  "hash": "7a4558c2ae4f16fa03c86ba42c3d0a7df5ac4bd8b3489f188bea491aae94c4b2"
+  "hash": "0c12eeea61287203ad435963bb3468e8d6f8305fd61e3b3c489674bfb0307714"
 }

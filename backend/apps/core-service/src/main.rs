@@ -85,6 +85,7 @@ use handler::{
    health_check,
    list_my_tasks,
    list_my_workflows,
+   list_users,
    list_workflow_definitions,
    reject_step,
    reject_step_by_display_number,
@@ -180,6 +181,10 @@ async fn main() -> anyhow::Result<()> {
    let app =
       Router::new()
          .route("/health", get(health_check))
+         .route(
+            "/internal/users",
+            get(list_users::<PostgresUserRepository>),
+         )
          .route(
             "/internal/users/by-email",
             get(get_user_by_email::<PostgresUserRepository>),

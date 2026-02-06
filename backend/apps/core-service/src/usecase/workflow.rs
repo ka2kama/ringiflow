@@ -1109,6 +1109,13 @@ mod tests {
          Ok(Vec::new())
       }
 
+      async fn find_all_active_by_tenant(
+         &self,
+         _tenant_id: &TenantId,
+      ) -> Result<Vec<User>, InfraError> {
+         Ok(Vec::new())
+      }
+
       async fn update_last_login(&self, _id: &UserId) -> Result<(), InfraError> {
          Ok(())
       }

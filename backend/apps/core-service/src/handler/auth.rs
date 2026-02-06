@@ -4,6 +4,7 @@
 //!
 //! ## エンドポイント
 //!
+//! - `GET /internal/users` - テナント内のアクティブユーザー一覧
 //! - `GET /internal/users/by-email` - メールアドレスでユーザーを検索
 //! - `GET /internal/users/{user_id}` - ユーザー情報を取得
 //!
@@ -21,6 +22,7 @@ use ringiflow_domain::{
    role::Role,
    tenant::TenantId,
    user::{Email, User, UserId},
+   value_objects::{DisplayId, display_prefix},
 };
 use ringiflow_infra::repository::user_repository::UserRepository;
 use ringiflow_shared::ApiResponse;
@@ -105,7 +107,81 @@ pub struct ErrorResponse {
    pub detail:     String,
 }
 
+/// ユーザー一覧の要素 DTO
+#[derive(Debug, Serialize)]
+pub struct UserItemDto {
+   pub id: Uuid,
+   pub display_id: String,
+   pub display_number: i64,
+   pub name: String,
+   pub email: String,
+}
+
+impl UserItemDto {
+   fn from_user(user: &User) -> Self {
+      Self {
+         id: *user.id().as_uuid(),
+         display_id: DisplayId::new(display_prefix::USER, user.display_number()).to_string(),
+         display_number: user.display_number().as_i64(),
+         name: user.name().to_string(),
+         email: user.email().as_str().to_string(),
+      }
+   }
+}
+
+/// テナント ID クエリパラメータ
+#[derive(Debug, Deserialize)]
+pub struct TenantQuery {
+   pub tenant_id: Uuid,
+}
+
 // --- ハンドラ ---
+
+/// GET /internal/users
+///
+/// テナント内のアクティブユーザー一覧を取得する。
+///
+/// ## クエリパラメータ
+///
+/// - `tenant_id`: テナント ID
+///
+/// ## レスポンス
+///
+/// - `200 OK`: ユーザー一覧
+pub async fn list_users<R>(
+   State(state): State<Arc<UserState<R>>>,
+   Query(query): Query<TenantQuery>,
+) -> impl IntoResponse
+where
+   R: UserRepository,
+{
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   match state
+      .user_repository
+      .find_all_active_by_tenant(&tenant_id)
+      .await
+   {
+      Ok(users) => {
+         let response =
+            ApiResponse::new(users.iter().map(UserItemDto::from_user).collect::<Vec<_>>());
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(e) => {
+         tracing::error!("ユーザー一覧取得で内部エラー: {}", e);
+         (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+               error_type: "https://ringiflow.example.com/errors/internal-error".to_string(),
+               title:      "Internal Server Error".to_string(),
+               status:     500,
+               detail:     "内部エラーが発生しました".to_string(),
+            }),
+         )
+            .into_response()
+      }
+   }
+}
 
 /// GET /internal/users/by-email
 ///
@@ -252,7 +328,7 @@ mod tests {
       role::{Permission, Role, RoleId},
       tenant::TenantId,
       user::{Email, User, UserId, UserStatus},
-      value_objects::UserName,
+      value_objects::{DisplayNumber, UserName},
    };
    use ringiflow_infra::InfraError;
    use tower::ServiceExt;
@@ -307,6 +383,13 @@ mod tests {
          Ok(self.user.clone().into_iter().collect())
       }
 
+      async fn find_all_active_by_tenant(
+         &self,
+         _tenant_id: &TenantId,
+      ) -> Result<Vec<User>, InfraError> {
+         Ok(self.user.clone().into_iter().collect())
+      }
+
       async fn update_last_login(&self, _id: &UserId) -> Result<(), InfraError> {
          Ok(())
       }
@@ -318,6 +401,7 @@ mod tests {
       User::from_db(
          UserId::new(),
          tenant_id.clone(),
+         DisplayNumber::new(1).unwrap(),
          Email::new("user@example.com").unwrap(),
          UserName::new("Test User").unwrap(),
          UserStatus::Active,

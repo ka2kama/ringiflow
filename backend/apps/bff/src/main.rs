@@ -80,6 +80,7 @@ use handler::{
    health_check,
    list_my_tasks,
    list_my_workflows,
+   list_users,
    list_workflow_definitions,
    login,
    logout,
@@ -229,6 +230,11 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/api/v1/workflows/{display_number}/tasks/{step_display_number}",
          get(get_task_by_display_numbers::<CoreServiceClientImpl, RedisSessionManager>),
+      )
+      // ユーザー API
+      .route(
+         "/api/v1/users",
+         get(list_users::<CoreServiceClientImpl, RedisSessionManager>),
       )
       // ダッシュボード API
       .route(

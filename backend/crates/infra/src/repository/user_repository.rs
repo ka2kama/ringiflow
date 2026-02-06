@@ -15,7 +15,7 @@ use ringiflow_domain::{
    role::{Permission, Role, RoleId},
    tenant::TenantId,
    user::{Email, User, UserId, UserStatus},
-   value_objects::UserName,
+   value_objects::{DisplayNumber, UserName},
 };
 use sqlx::PgPool;
 
@@ -61,6 +61,13 @@ pub trait UserRepository: Send + Sync {
    /// 空の配列を渡した場合は空の Vec を返す。
    async fn find_by_ids(&self, ids: &[UserId]) -> Result<Vec<User>, InfraError>;
 
+   /// テナント内のアクティブユーザー一覧を取得
+   ///
+   /// ステータスが `active` のユーザーのみを返す。
+   /// 承認者選択などで使用する。
+   async fn find_all_active_by_tenant(&self, tenant_id: &TenantId)
+   -> Result<Vec<User>, InfraError>;
+
    /// 最終ログイン日時を更新
    async fn update_last_login(&self, id: &UserId) -> Result<(), InfraError>;
 }
@@ -90,6 +97,7 @@ impl UserRepository for PostgresUserRepository {
             SELECT
                 id,
                 tenant_id,
+                display_number,
                 email,
                 name,
                 status,
@@ -112,6 +120,8 @@ impl UserRepository for PostgresUserRepository {
       let user = User::from_db(
          UserId::from_uuid(row.id),
          TenantId::from_uuid(row.tenant_id),
+         DisplayNumber::new(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.status
@@ -131,6 +141,7 @@ impl UserRepository for PostgresUserRepository {
             SELECT
                 id,
                 tenant_id,
+                display_number,
                 email,
                 name,
                 status,
@@ -152,6 +163,8 @@ impl UserRepository for PostgresUserRepository {
       let user = User::from_db(
          UserId::from_uuid(row.id),
          TenantId::from_uuid(row.tenant_id),
+         DisplayNumber::new(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.status
@@ -233,6 +246,7 @@ impl UserRepository for PostgresUserRepository {
             SELECT
                 id,
                 tenant_id,
+                display_number,
                 email,
                 name,
                 status,
@@ -253,6 +267,54 @@ impl UserRepository for PostgresUserRepository {
             Ok(User::from_db(
                UserId::from_uuid(row.id),
                TenantId::from_uuid(row.tenant_id),
+               DisplayNumber::new(row.display_number)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               row.status
+                  .parse::<UserStatus>()
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+               row.last_login_at,
+               row.created_at,
+               row.updated_at,
+            ))
+         })
+         .collect()
+   }
+
+   async fn find_all_active_by_tenant(
+      &self,
+      tenant_id: &TenantId,
+   ) -> Result<Vec<User>, InfraError> {
+      let rows = sqlx::query!(
+         r#"
+            SELECT
+                id,
+                tenant_id,
+                display_number,
+                email,
+                name,
+                status,
+                last_login_at,
+                created_at,
+                updated_at
+            FROM users
+            WHERE tenant_id = $1 AND status = 'active'
+            ORDER BY display_number
+            "#,
+         tenant_id.as_uuid()
+      )
+      .fetch_all(&self.pool)
+      .await?;
+
+      rows
+         .into_iter()
+         .map(|row| {
+            Ok(User::from_db(
+               UserId::from_uuid(row.id),
+               TenantId::from_uuid(row.tenant_id),
+               DisplayNumber::new(row.display_number)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
                UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.status

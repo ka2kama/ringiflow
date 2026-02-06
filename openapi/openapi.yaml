@@ -594,6 +594,34 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   # ============================================================
+  # ユーザー API
+  # ============================================================
+  /api/v1/users:
+    get:
+      tags:
+        - users
+      summary: テナント内ユーザー一覧取得
+      description: |
+        テナント内のアクティブなユーザー一覧を取得する。
+
+        承認者選択 UI など、テナント内のユーザーを選択する場面で使用する。
+        同姓同名のユーザーを区別するため、表示用 ID（USER-N）とメールアドレスを返す。
+      operationId: listUsers
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+      responses:
+        '200':
+          description: ユーザー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
   # タスク API
   # ============================================================
   /api/v1/tasks/my:
@@ -1250,6 +1278,58 @@ components:
         workflow:
           $ref: '#/components/schemas/WorkflowInstance'
           description: 関連するワークフローインスタンス（全ステップ含む）
+
+    # ============================================================
+    # ユーザー関連
+    # ============================================================
+    UserListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserItem'
+
+    UserItem:
+      type: object
+      description: |
+        ユーザー一覧の要素。
+
+        承認者選択 UI などで同姓同名ユーザーを区別するため、
+        表示用 ID（USER-N 形式）とメールアドレスを含む。
+      required:
+        - id
+        - display_id
+        - display_number
+        - name
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザー ID
+        display_id:
+          type: string
+          pattern: '^USER-\d+$'
+          description: "表示用 ID（例: USER-5）"
+          example: "USER-5"
+        display_number:
+          type: integer
+          format: int64
+          minimum: 1
+          description: 表示用連番（テナント内で一意）
+          example: 5
+        name:
+          type: string
+          description: ユーザー名
+          example: "山田太郎"
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          example: "yamada.taro@example.com"
 
     # ============================================================
     # ダッシュボード関連

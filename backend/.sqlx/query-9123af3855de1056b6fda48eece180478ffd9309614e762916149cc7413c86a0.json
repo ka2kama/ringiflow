@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                tenant_id,\n                email,\n                name,\n                status,\n                last_login_at,\n                created_at,\n                updated_at\n            FROM users\n            WHERE id = ANY($1)\n            ",
+  "query": "\n            SELECT\n                id,\n                tenant_id,\n                display_number,\n                email,\n                name,\n                status,\n                last_login_at,\n                created_at,\n                updated_at\n            FROM users\n            WHERE tenant_id = $1 AND status = 'active'\n            ORDER BY display_number\n            ",
   "describe": {
     "columns": [
       {
@@ -15,41 +15,47 @@
       },
       {
         "ordinal": 2,
+        "name": "display_number",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
         "name": "email",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "status",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "last_login_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "UuidArray"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -60,5 +66,5 @@
       false
     ]
   },
-  "hash": "36edbce14ede0a881f76530ca7d61b8ddc9b43e20bee46e5d521a24553df26ef"
+  "hash": "9123af3855de1056b6fda48eece180478ffd9309614e762916149cc7413c86a0"
 }
