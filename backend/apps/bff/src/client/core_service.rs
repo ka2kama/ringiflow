@@ -83,6 +83,16 @@ pub struct UserWithPermissionsData {
    pub permissions: Vec<String>,
 }
 
+/// ユーザー一覧の要素 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserItemDto {
+   pub id: Uuid,
+   pub display_id: String,
+   pub display_number: i64,
+   pub name: String,
+   pub email: String,
+}
+
 // --- ユーザー参照型 ---
 
 /// ユーザー参照 DTO（Core Service からのデシリアライズ用）
@@ -227,6 +237,22 @@ pub struct DashboardStatsDto {
 /// テスト時にスタブを使用できるようトレイトで定義。
 #[async_trait]
 pub trait CoreServiceClient: Send + Sync {
+   /// テナント内のアクティブユーザー一覧を取得する
+   ///
+   /// Core Service の `GET /internal/users` を呼び出す。
+   ///
+   /// # 引数
+   ///
+   /// - `tenant_id`: テナント ID
+   ///
+   /// # 戻り値
+   ///
+   /// アクティブユーザーの一覧
+   async fn list_users(
+      &self,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<Vec<UserItemDto>>, CoreServiceError>;
+
    /// メールアドレスでユーザーを検索する
    ///
    /// Core Service の `GET /internal/users/by-email` を呼び出す。
@@ -565,6 +591,29 @@ impl CoreServiceClientImpl {
 
 #[async_trait]
 impl CoreServiceClient for CoreServiceClientImpl {
+   async fn list_users(
+      &self,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<Vec<UserItemDto>>, CoreServiceError> {
+      let url = format!("{}/internal/users?tenant_id={}", self.base_url, tenant_id);
+
+      let response = self.client.get(&url).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<ApiResponse<Vec<UserItemDto>>>().await?;
+            Ok(body)
+         }
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(CoreServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
    async fn get_user_by_email(
       &self,
       tenant_id: Uuid,

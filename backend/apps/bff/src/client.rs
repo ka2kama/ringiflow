@@ -22,6 +22,7 @@ pub use core_service::{
    TaskDetailDto,
    TaskItemDto,
    TaskWorkflowSummaryDto,
+   UserItemDto,
    UserRefDto,
    UserResponse,
    UserWithPermissionsData,

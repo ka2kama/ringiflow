@@ -298,6 +298,14 @@ impl CoreServiceClient for StubCoreServiceClient {
       // 認証テストでは未使用
       unimplemented!("get_task_by_display_numbers is not used in auth tests")
    }
+
+   async fn list_users(
+      &self,
+      _tenant_id: Uuid,
+   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::UserItemDto>>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("list_users is not used in auth tests")
+   }
 }
 
 // --- Auth Service スタブ ---

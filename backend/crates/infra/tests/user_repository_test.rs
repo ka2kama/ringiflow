@@ -226,3 +226,106 @@ async fn test_最終ログイン日時を更新できる(pool: PgPool) {
    let user_after = repo.find_by_id(&user_id).await.unwrap().unwrap();
    assert!(user_after.last_login_at().is_some());
 }
+
+// ===== find_all_active_by_tenant テスト =====
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_テナント内のアクティブユーザー一覧を取得できる(pool: PgPool) {
+   let (tenant_id, user_id1) = setup_test_data(&pool).await;
+
+   // 2人目のユーザーを追加
+   let user_id2 = UserId::from_uuid(Uuid::now_v7());
+   sqlx::query!(
+      r#"
+        INSERT INTO users (id, tenant_id, display_number, email, name, status)
+        VALUES ($1, $2, 2, 'user2@example.com', 'User Two', 'active')
+        "#,
+      user_id2.as_uuid(),
+      tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("ユーザー2作成に失敗");
+
+   let repo = PostgresUserRepository::new(pool);
+
+   let result = repo.find_all_active_by_tenant(&tenant_id).await;
+
+   assert!(result.is_ok());
+   let users = result.unwrap();
+   assert_eq!(users.len(), 2);
+   let ids: Vec<&UserId> = users.iter().map(|u| u.id()).collect();
+   assert!(ids.contains(&&user_id1));
+   assert!(ids.contains(&&user_id2));
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_非アクティブユーザーは除外される(pool: PgPool) {
+   let (tenant_id, _active_user_id) = setup_test_data(&pool).await;
+
+   // 非アクティブユーザーを追加
+   let inactive_user_id = UserId::from_uuid(Uuid::now_v7());
+   sqlx::query!(
+      r#"
+        INSERT INTO users (id, tenant_id, display_number, email, name, status)
+        VALUES ($1, $2, 2, 'inactive@example.com', 'Inactive User', 'inactive')
+        "#,
+      inactive_user_id.as_uuid(),
+      tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("非アクティブユーザー作成に失敗");
+
+   let repo = PostgresUserRepository::new(pool);
+
+   let result = repo.find_all_active_by_tenant(&tenant_id).await;
+
+   assert!(result.is_ok());
+   let users = result.unwrap();
+   // アクティブユーザーのみ
+   assert_eq!(users.len(), 1);
+   assert_eq!(users[0].status().to_string(), "active");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_他テナントのユーザーは含まれない(pool: PgPool) {
+   let (tenant_id, _user_id) = setup_test_data(&pool).await;
+
+   // 別テナントを作成
+   let other_tenant_id = TenantId::from_uuid(Uuid::now_v7());
+   sqlx::query!(
+      r#"
+        INSERT INTO tenants (id, name, subdomain, plan, status)
+        VALUES ($1, 'Other Tenant', 'other', 'free', 'active')
+        "#,
+      other_tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("別テナント作成に失敗");
+
+   // 別テナントのユーザーを追加
+   let other_user_id = UserId::from_uuid(Uuid::now_v7());
+   sqlx::query!(
+      r#"
+        INSERT INTO users (id, tenant_id, display_number, email, name, status)
+        VALUES ($1, $2, 1, 'other@example.com', 'Other User', 'active')
+        "#,
+      other_user_id.as_uuid(),
+      other_tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("別テナントユーザー作成に失敗");
+
+   let repo = PostgresUserRepository::new(pool);
+
+   let result = repo.find_all_active_by_tenant(&tenant_id).await;
+
+   assert!(result.is_ok());
+   let users = result.unwrap();
+   // 自テナントのユーザーのみ
+   assert_eq!(users.len(), 1);
+   assert_eq!(users[0].email().as_str(), "test@example.com");
+}

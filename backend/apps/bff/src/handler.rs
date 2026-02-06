@@ -18,12 +18,14 @@ pub mod auth;
 pub mod dashboard;
 pub mod health;
 pub mod task;
+pub mod user;
 pub mod workflow;
 
 pub use auth::{AuthState, csrf, login, logout, me};
 pub use dashboard::get_dashboard_stats;
 pub use health::health_check;
 pub use task::list_my_tasks;
+pub use user::list_users;
 pub use workflow::{
    WorkflowState,
    approve_step,

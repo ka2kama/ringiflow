@@ -618,6 +618,14 @@ mod tests {
 
    #[async_trait]
    impl CoreServiceClient for StubCoreServiceClient {
+      async fn list_users(
+         &self,
+         _tenant_id: Uuid,
+      ) -> Result<ApiResponse<Vec<crate::client::UserItemDto>>, CoreServiceError> {
+         // テストスタブでは未使用
+         unimplemented!("list_users is not used in auth tests")
+      }
+
       async fn get_user_by_email(
          &self,
          _tenant_id: Uuid,
