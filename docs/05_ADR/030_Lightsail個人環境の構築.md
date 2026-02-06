@@ -1,4 +1,4 @@
-# ADR-020: Lightsail 個人環境の構築
+# ADR-030: Lightsail 個人環境の構築
 
 ## ステータス
 
@@ -37,9 +37,10 @@ Cloudflare (SSL終端、CDN、DDoS防御)
 Lightsail ($10/月)
     ├── Nginx (リバースプロキシ)
     ├── BFF (セッション管理)
-    ├── Core API (ビジネスロジック)
+    ├── Core Service (ビジネスロジック)
+    ├── Auth Service (認証)
     ├── PostgreSQL (データベース)
-    └── Redis (セッション/キャッシュ)
+    └── Redis (セッション)
 ```
 
 評価:
@@ -145,7 +146,7 @@ EC2 t3.micro（無料枠または $8-10/月）を使用。
 
 - 設計書: 未作成（本 ADR で方針決定）
 - 実装:
-  - `backend/Dockerfile` - バックエンド Docker イメージ
+  - `backend/Dockerfile` - バックエンド Docker イメージ（BFF / Core Service / Auth Service）
   - `frontend/Dockerfile` - フロントエンド Docker イメージ
   - `infra/lightsail/docker-compose.yml` - Lightsail 用 Compose 構成
   - `infra/lightsail/` - デプロイスクリプト群・Nginx 設定

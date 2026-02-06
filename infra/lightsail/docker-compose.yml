@@ -22,8 +22,8 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
       - frontend_dist:/var/www/html:ro
     depends_on:
       bff:
@@ -44,48 +44,78 @@ services:
       # BFF 設定
       BFF_HOST: 0.0.0.0
       BFF_PORT: 13000
-      # Core API 接続
-      CORE_API_URL: http://core-api:13001
+      # Core Service 接続
+      CORE_URL: http://core-service:13001
+      # Auth Service 接続
+      AUTH_URL: http://auth-service:13002
       # Redis 接続（セッション管理）
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      # セッション設定
-      SESSION_SECRET: ${SESSION_SECRET}
-      SESSION_COOKIE_SECURE: "true"
-      SESSION_COOKIE_SAME_SITE: lax
+      # 本番環境設定（Secure cookie を有効化）
+      ENV: production
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:13000/health"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/13000'"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    depends_on:
+      core-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - frontend
       - backend
     restart: unless-stopped
 
   # ==========================================================
-  # Core API（ビジネスロジック）
+  # Core Service（ビジネスロジック）
   # ==========================================================
-  core-api:
+  core-service:
     image: ringiflow-backend:latest
-    container_name: ringiflow-core-api
-    command: ["./ringiflow-core-api"]
+    container_name: ringiflow-core-service
+    command: ["./ringiflow-core-service"]
     environment:
       RUST_LOG: ${RUST_LOG:-info}
-      # Core API 設定
-      CORE_API_HOST: 0.0.0.0
-      CORE_API_PORT: 13001
+      # Core Service 設定
+      CORE_HOST: 0.0.0.0
+      CORE_PORT: 13001
       # PostgreSQL 接続
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      # Redis 接続（キャッシュ）
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/13001'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # ==========================================================
+  # Auth Service（認証）
+  # ==========================================================
+  auth-service:
+    image: ringiflow-backend:latest
+    container_name: ringiflow-auth-service
+    command: ["./ringiflow-auth-service"]
+    environment:
+      RUST_LOG: ${RUST_LOG:-info}
+      # Auth Service 設定
+      AUTH_HOST: 0.0.0.0
+      AUTH_PORT: 13002
+      # PostgreSQL 接続（Core Service と同じ DB）
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:13001/health"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/13002'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -108,7 +138,7 @@ services:
       PGTZ: Asia/Tokyo
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init:/docker-entrypoint-initdb.d:ro
+      - ./config/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -120,7 +150,7 @@ services:
     restart: unless-stopped
 
   # ==========================================================
-  # Redis（セッション + キャッシュ）
+  # Redis（セッション）
   # ==========================================================
   redis:
     image: redis:7-alpine

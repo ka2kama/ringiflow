@@ -28,7 +28,8 @@ graph TB
             BFF["BFF<br/>:13000"]
         end
         subgraph Backend["backend network (internal)"]
-            CoreAPI["Core API<br/>:13001"]
+            CoreService["Core Service<br/>:13001"]
+            AuthService["Auth Service<br/>:13002"]
             Postgres["PostgreSQL<br/>:5432"]
             Redis["Redis<br/>:6379"]
         end
@@ -37,9 +38,10 @@ graph TB
     User -->|HTTPS| CF
     CF -->|HTTP :80| Nginx
     Nginx -->|/api/*| BFF
-    BFF --> CoreAPI
-    CoreAPI --> Postgres
-    CoreAPI --> Redis
+    BFF --> CoreService
+    BFF --> AuthService
+    CoreService --> Postgres
+    AuthService --> Postgres
     BFF --> Redis
 ```
 
@@ -116,9 +118,6 @@ POSTGRES_DB=ringiflow_prod
 
 # Redis（強力なパスワードを生成）
 REDIS_PASSWORD=$(openssl rand -base64 24)
-
-# セッション（32バイト以上のランダム文字列）
-SESSION_SECRET=$(openssl rand -base64 32)
 
 # ログレベル
 RUST_LOG=info
@@ -212,6 +211,37 @@ curl https://your-domain.com/health
 curl https://your-domain.com/api/health
 ```
 
+### 7. マイグレーションの実行
+
+初回デプロイ時およびスキーマ変更があった場合は、マイグレーションを手動実行する。
+
+#### 7.1 マイグレーションファイルの転送
+
+ローカルから:
+
+```bash
+scp -i ~/.ssh/lightsail-key.pem -r backend/migrations/ ubuntu@<LIGHTSAIL_IP>:~/ringiflow/migrations/
+```
+
+#### 7.2 マイグレーション実行
+
+Lightsail 上で Docker 経由で実行:
+
+```bash
+ssh -i ~/.ssh/lightsail-key.pem ubuntu@<LIGHTSAIL_IP>
+cd ~/ringiflow
+
+# sqlx-cli を含む Rust イメージでマイグレーション実行
+docker run --rm \
+    --network ringiflow-backend \
+    -v "$(pwd)/migrations:/app/migrations" \
+    -e DATABASE_URL="postgres://<POSTGRES_USER>:<POSTGRES_PASSWORD>@postgres:5432/<POSTGRES_DB>" \
+    rust:1.84-slim-bookworm \
+    bash -c "cargo install sqlx-cli --no-default-features --features postgres && sqlx migrate run --source /app/migrations"
+```
+
+注意: 初回は sqlx-cli のインストールに時間がかかる。頻繁に実行する場合は sqlx-cli を含む専用イメージの作成を推奨。
+
 ## 運用
 
 ### ログ確認
@@ -225,7 +255,8 @@ docker compose logs -f
 
 # 特定サービスのログ
 docker compose logs -f bff
-docker compose logs -f core-api
+docker compose logs -f core-service
+docker compose logs -f auth-service
 docker compose logs -f nginx
 ```
 
@@ -278,7 +309,8 @@ docker compose ps
 
 # 特定コンテナのログ確認
 docker compose logs bff
-docker compose logs core-api
+docker compose logs core-service
+docker compose logs auth-service
 
 # 環境変数の確認
 docker compose config
@@ -290,11 +322,14 @@ docker compose config
 # Nginx 設定の構文チェック
 docker exec ringiflow-nginx nginx -t
 
-# BFF へ直接アクセス
-docker exec ringiflow-nginx curl http://bff:13000/health
+# BFF へ直接アクセス（Nginx コンテナ内の wget を利用）
+docker exec ringiflow-nginx wget -qO- http://bff:13000/health
 
-# Core API へ直接アクセス
-docker exec ringiflow-bff curl http://core-api:13001/health
+# Core Service の疎通確認（BFF コンテナ内から）
+docker exec ringiflow-bff bash -c 'echo > /dev/tcp/core-service/13001 && echo OK'
+
+# Auth Service の疎通確認（BFF コンテナ内から）
+docker exec ringiflow-bff bash -c 'echo > /dev/tcp/auth-service/13002 && echo OK'
 ```
 
 ### Cloudflare 経由でアクセスできない
@@ -326,5 +361,5 @@ find ~/ringiflow/backup -mtime +7 -delete
 
 ## 関連ドキュメント
 
-- [ADR-020: Lightsail 個人環境の構築](../../docs/05_ADR/020_Lightsail個人環境の構築.md)
+- [ADR-030: Lightsail 個人環境の構築](../../docs/05_ADR/030_Lightsail個人環境の構築.md)
 - [docker-compose.yml](./docker-compose.yml)

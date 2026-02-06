@@ -1,6 +1,6 @@
 # RingiFlow Backend Dockerfile
 #
-# マルチステージビルドで BFF と Core API の両方をビルド。
+# マルチステージビルドで BFF / Core Service / Auth Service をビルド。
 # cargo-chef を使用して依存関係のキャッシュを最適化。
 #
 # ビルド例:
@@ -9,8 +9,11 @@
 # 実行例（BFF）:
 #   docker run -e RUST_LOG=info ringiflow-backend ringiflow-bff
 #
-# 実行例（Core API）:
-#   docker run -e RUST_LOG=info ringiflow-backend ringiflow-core-api
+# 実行例（Core Service）:
+#   docker run -e RUST_LOG=info ringiflow-backend ringiflow-core-service
+#
+# 実行例（Auth Service）:
+#   docker run -e RUST_LOG=info ringiflow-backend ringiflow-auth-service
 
 # ============================================================
 # Stage 1: Chef（依存関係の準備）
@@ -57,7 +60,7 @@ COPY .sqlx/ .sqlx/
 ENV SQLX_OFFLINE=true
 
 # アプリケーションをビルド
-RUN cargo build --release --bin ringiflow-bff --bin ringiflow-core-api
+RUN cargo build --release --bin ringiflow-bff --bin ringiflow-core-service --bin ringiflow-auth-service
 
 # ============================================================
 # Stage 4: Runtime（最小限の実行環境）
@@ -77,13 +80,14 @@ WORKDIR /home/ringiflow
 
 # ビルド成果物をコピー
 COPY --from=builder --chown=ringiflow:ringiflow /app/target/release/ringiflow-bff .
-COPY --from=builder --chown=ringiflow:ringiflow /app/target/release/ringiflow-core-api .
+COPY --from=builder --chown=ringiflow:ringiflow /app/target/release/ringiflow-core-service .
+COPY --from=builder --chown=ringiflow:ringiflow /app/target/release/ringiflow-auth-service .
 
 # 環境変数のデフォルト値
 ENV RUST_LOG=info
 
 # ヘルスチェック用のポート（実行するバイナリに応じて変更）
-EXPOSE 13000 13001
+EXPOSE 13000 13001 13002
 
 # デフォルトは BFF を起動（docker-compose で上書き可能）
 CMD ["./ringiflow-bff"]

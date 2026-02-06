@@ -159,11 +159,6 @@ docker run --rm \
     -v ~/ringiflow/frontend:/src:ro \
     busybox sh -c "rm -rf /dist/* && cp -r /src/* /dist/"
 
-echo "[INFO] Nginx 設定をコピー中..."
-mkdir -p config/nginx/conf.d config/init
-cp -f config/nginx/nginx.conf config/nginx/nginx.conf
-cp -f config/nginx/conf.d/default.conf config/nginx/conf.d/default.conf
-
 echo "[INFO] コンテナを起動中..."
 docker compose -f docker-compose.yml down --remove-orphans 2>/dev/null || true
 docker compose -f docker-compose.yml up -d
