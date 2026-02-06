@@ -201,7 +201,7 @@ pub enum CoreError {
 }
 ```
 
-RFC 7807 Problem Details 形式のエラーレスポンスに変換される。
+RFC 9457 Problem Details 形式のエラーレスポンスに変換される。
 
 ---
 

@@ -12,7 +12,7 @@ module Api exposing
 {-| HTTP リクエスト用ヘルパー
 
 BFF への API リクエストを型安全に行うためのモジュール。
-CSRF トークン、X-Tenant-ID ヘッダーの付与と RFC 7807 エラーハンドリングを提供。
+CSRF トークン、X-Tenant-ID ヘッダーの付与と RFC 9457 エラーハンドリングを提供。
 
 
 ## 使用例
@@ -61,7 +61,7 @@ type ApiError
     | DecodeError String
 
 
-{-| RFC 7807 Problem Details
+{-| RFC 9457 Problem Details
 
 バックエンドが返すエラーレスポンスの標準フォーマット。
 ユーザーフレンドリーなエラーメッセージ表示に使用。
@@ -242,7 +242,7 @@ buildHeaders config includeCsrf =
 
 {-| JSON レスポンスを期待するヘルパー
 
-HTTP エラーを ApiError に変換し、RFC 7807 レスポンスをデコードする。
+HTTP エラーを ApiError に変換し、RFC 9457 レスポンスをデコードする。
 
 -}
 expectJson : (Result ApiError a -> msg) -> Decoder a -> Http.Expect msg
@@ -281,7 +281,7 @@ handleResponse decoder response =
 
 {-| エラーステータスを ApiError に変換
 
-RFC 7807 ProblemDetails をデコードし、適切なエラー型に分類する。
+RFC 9457 ProblemDetails をデコードし、適切なエラー型に分類する。
 
 -}
 handleErrorStatus : Int -> String -> ApiError

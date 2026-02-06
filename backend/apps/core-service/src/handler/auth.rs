@@ -97,7 +97,7 @@ pub struct UserWithPermissionsData {
    pub permissions: Vec<String>,
 }
 
-/// エラーレスポンス（RFC 7807 Problem Details）
+/// エラーレスポンス（RFC 9457 Problem Details）
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
    #[serde(rename = "type")]

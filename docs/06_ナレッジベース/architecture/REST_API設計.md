@@ -113,7 +113,7 @@ POST /api/v1/workflows/{id}/approve
 403 Forbidden:    「あなたには権限がない」（認証済みだがアクセス不可）
 ```
 
-## エラーレスポンス（RFC 7807）
+## エラーレスポンス（RFC 9457）
 
 ```json
 {
@@ -138,7 +138,7 @@ POST /api/v1/workflows/{id}/approve
 }
 ```
 
-詳細は [RFC 7807 セクション](./Rustエラーハンドリング.md#rfc-7807-problem-details) を参照。
+詳細は [RFC 9457 セクション](./Rustエラーハンドリング.md#rfc-9457-problem-details) を参照。
 
 ## ペジネーション
 
@@ -228,7 +228,7 @@ API 設計の詳細は [03_API設計.md](../03_詳細設計書/03_API設計.md) 
 
 ## 関連リソース
 
-- [RFC 7807 - Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/html/rfc7807)
+- [RFC 9457 - Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/rfc9457/)
 - [Microsoft REST API Guidelines](https://github.com/microsoft/api-guidelines)
 - [JSON API Specification](https://jsonapi.org/)
 

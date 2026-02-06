@@ -3,7 +3,7 @@
 ## 概要
 
 Rust における HTTP API のエラーハンドリングパターン。
-`thiserror` + `anyhow` の組み合わせと、RFC 7807 準拠のエラーレスポンスを解説する。
+`thiserror` + `anyhow` の組み合わせと、RFC 9457 準拠のエラーレスポンスを解説する。
 
 ## thiserror vs anyhow
 
@@ -86,7 +86,7 @@ HTTP API のエラーは以下のカテゴリに分類する。
 | 資源枯渇 | 429/503 | リソース制限 | レート制限 |
 | 内部不具合 | 500 | 予期しないエラー | パニック |
 
-## RFC 7807 (Problem Details)
+## RFC 9457 (Problem Details)
 
 HTTP API のエラーレスポンス形式を標準化した仕様。
 
@@ -245,7 +245,7 @@ impl From<DomainError> for ApiError {
 
 ## 関連リソース
 
-- [RFC 7807 - Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/html/rfc7807)
+- [RFC 9457 - Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/rfc9457/)
 - [thiserror ドキュメント](https://docs.rs/thiserror)
 - [anyhow ドキュメント](https://docs.rs/anyhow)
 - [ADR-005: データベースツールキットの選定](../05_ADR/005_データベースツールキットの選定.md)
