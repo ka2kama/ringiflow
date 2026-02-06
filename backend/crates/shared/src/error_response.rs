@@ -99,7 +99,7 @@ mod tests {
    use super::*;
 
    #[test]
-   fn new_で全フィールドが正しく設定される() {
+   fn test_new_で全フィールドが正しく設定される() {
       let error = ErrorResponse::new("custom-error", "Custom Error", 418, "カスタムエラー");
 
       assert_eq!(
@@ -112,7 +112,7 @@ mod tests {
    }
 
    #[test]
-   fn not_found_が404と正しいerror_typeを返す() {
+   fn test_not_found_が404と正しいerror_typeを返す() {
       let error = ErrorResponse::not_found("リソースが見つかりません");
 
       assert_eq!(
@@ -125,7 +125,7 @@ mod tests {
    }
 
    #[test]
-   fn internal_error_が500と固定detailを返す() {
+   fn test_internal_error_が500と固定detailを返す() {
       let error = ErrorResponse::internal_error();
 
       assert_eq!(
@@ -138,7 +138,7 @@ mod tests {
    }
 
    #[test]
-   fn jsonシリアライズでtypeフィールド名が正しい() {
+   fn test_jsonシリアライズでtypeフィールド名が正しい() {
       let error = ErrorResponse::bad_request("不正なリクエスト");
       let json = serde_json::to_value(&error).unwrap();
 
@@ -155,7 +155,7 @@ mod tests {
    }
 
    #[test]
-   fn 全便利コンストラクタのstatusが正しい() {
+   fn test_全便利コンストラクタのstatusが正しい() {
       assert_eq!(ErrorResponse::bad_request("").status, 400);
       assert_eq!(ErrorResponse::unauthorized("").status, 401);
       assert_eq!(ErrorResponse::forbidden("").status, 403);
@@ -167,7 +167,7 @@ mod tests {
    }
 
    #[test]
-   fn jsonデシリアライズが正しく動作する() {
+   fn test_jsonデシリアライズが正しく動作する() {
       let json = r#"{
             "type": "https://ringiflow.example.com/errors/not-found",
             "title": "Not Found",
