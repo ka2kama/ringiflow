@@ -400,11 +400,19 @@ update msg model =
                 case ( model.approverSelection, model.savedWorkflow ) of
                     ( Selected approver, Just workflow ) ->
                         -- 既に下書き保存済みならそのまま申請
-                        ( { model
+                        -- データは永続化済みなので dirty をクリア
+                        let
+                            ( cleanModel, cleanCmd ) =
+                                clearDirty model
+                        in
+                        ( { cleanModel
                             | submitting = True
                             , saveMessage = Nothing
                           }
-                        , submitWorkflow model.shared workflow.displayNumber approver.id
+                        , Cmd.batch
+                            [ submitWorkflow cleanModel.shared workflow.displayNumber approver.id
+                            , cleanCmd
+                            ]
                         )
 
                     ( Selected approver, Nothing ) ->
