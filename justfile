@@ -39,6 +39,7 @@ check-tools:
     @which shellcheck > /dev/null || (echo "ERROR: shellcheck がインストールされていません" && exit 1)
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
+    @which cargo-watch > /dev/null || (echo "ERROR: cargo-watch がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
@@ -115,17 +116,17 @@ dev-deps:
     echo "Redis: localhost:${REDIS_PORT}"
     echo "プロジェクト名: $PROJECT_NAME"
 
-# BFF 開発サーバーを起動（ポート: $BFF_PORT）
+# BFF 開発サーバーを起動（ポート: $BFF_PORT、ファイル変更で自動リビルド）
 dev-bff:
-    cd backend && cargo run -p ringiflow-bff
+    cd backend && cargo watch -x 'run -p ringiflow-bff'
 
-# Core Service 開発サーバーを起動（ポート: $CORE_PORT）
+# Core Service 開発サーバーを起動（ポート: $CORE_PORT、ファイル変更で自動リビルド）
 dev-core-service:
-    cd backend && cargo run -p ringiflow-core-service
+    cd backend && cargo watch -x 'run -p ringiflow-core-service'
 
-# Auth Service 開発サーバーを起動（ポート: $AUTH_PORT）
+# Auth Service 開発サーバーを起動（ポート: $AUTH_PORT、ファイル変更で自動リビルド）
 dev-auth-service:
-    cd backend && cargo run -p ringiflow-auth-service
+    cd backend && cargo watch -x 'run -p ringiflow-auth-service'
 
 # フロントエンド開発サーバーを起動
 dev-web:
