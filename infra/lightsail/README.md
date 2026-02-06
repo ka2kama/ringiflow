@@ -156,11 +156,13 @@ RUST_LOG=info
 #### 5.2 SSL/TLS の設定
 
 1. SSL/TLS → 概要
-2. 暗号化モード: **Full** を選択
+2. 暗号化モード: **Flexible** を選択
 
-Full モードの理由:
-- オリジン（Lightsail）側で証明書管理が不要
-- Cloudflare ↔ オリジン間も暗号化（自己署名証明書 OK）
+Flexible モードの理由:
+- オリジン（Lightsail）側に SSL 設定がないため
+- Full にすると Cloudflare がポート 443 に接続しようとし、522 エラーになる
+
+→ 詳細: [IPv6-only 環境での Docker 運用 > SSL モードの選択](../../docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md#ssl-モードの選択)
 
 #### 5.3 キャッシュルールの設定
 
@@ -241,13 +243,33 @@ scp -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~/ringiflow/migrations/
 
 #### 7.2 マイグレーション実行
 
-Lightsail 上で Docker 経由で実行:
+Lightsail 上でマイグレーションを実行する。環境に応じて方法を選択する。
+
+##### 方法 A: psql で直接実行（IPv6-only 環境向け）
+
+IPv6-only 環境では Docker コンテナからインターネットに出られないため、sqlx-cli のインストールができない。PostgreSQL コンテナ内の psql を使って直接実行する:
 
 ```bash
 ssh ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 
-# sqlx-cli を含む Rust イメージでマイグレーション実行
+# 全マイグレーションをファイル名順に実行
+ls migrations/*.sql | sort | while read f; do
+  echo "Running $f..."
+  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow_prod < "$f"
+done
+```
+
+注意: この方法では sqlx の `_sqlx_migrations` テーブルによる適用履歴管理が行われない。既に適用済みのマイグレーションを再実行しないよう注意すること。
+
+##### 方法 B: sqlx-cli で実行（デュアルスタック環境向け）
+
+コンテナからインターネットにアクセスできる環境（デュアルスタック等）では、sqlx-cli を使用できる:
+
+```bash
+ssh ec2-user@<LIGHTSAIL_IP>
+cd ~/ringiflow
+
 docker run --rm \
     --network ringiflow-backend \
     -v "$(pwd)/migrations:/app/migrations:z" \
@@ -257,6 +279,32 @@ docker run --rm \
 ```
 
 注意: 初回は sqlx-cli のインストールに時間がかかる。頻繁に実行する場合は sqlx-cli を含む専用イメージの作成を推奨。
+
+## IPv6-only 環境の注意事項
+
+現在のインスタンスは IPv6-only（$5/月プラン）で運用している。以下の制約に注意すること。
+
+### Docker コンテナからの外部通信
+
+Docker のデフォルトブリッジネットワークは IPv4 のみで動作するため、コンテナ内からインターネットに出られない。`cargo install`、`npm install` 等のコンテナ内でのパッケージ取得は失敗する。
+
+`docker pull` はデーモンがホストのネットワークスタックを直接使用するため、影響を受けない。
+
+### SCP での IPv6 アドレス
+
+SCP はコロン（`:`）をホストとパスの区切り文字に使用するため、IPv6 アドレスと衝突する。角括弧で IPv6 アドレスを囲む必要がある:
+
+```bash
+# NG
+scp file ec2-user@2406:da14:...:/path
+
+# OK（zsh ではグロブ展開を防ぐため全体をクォート）
+scp file "ec2-user@[2406:da14:...]:/path"
+```
+
+SSH は角括弧なしでそのまま使用できる。
+
+→ 詳細: [IPv6-only 環境での Docker 運用](../../docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md)
 
 ## 運用
 
@@ -351,7 +399,7 @@ docker exec ringiflow-bff bash -c 'echo > /dev/tcp/auth-service/13002 && echo OK
 ### Cloudflare 経由でアクセスできない
 
 1. DNS 設定を確認（プロキシ状態がオレンジ雲になっているか）
-2. SSL/TLS モードが Full になっているか確認
+2. SSL/TLS モードが Flexible になっているか確認
 3. Lightsail のファイアウォールで Port 80 が開いているか確認
 
 ### SELinux 関連のエラー
@@ -396,4 +444,5 @@ find ~/ringiflow/backup -mtime +7 -delete
 ## 関連ドキュメント
 
 - [ADR-030: Lightsail 個人環境の構築](../../docs/05_ADR/030_Lightsail個人環境の構築.md)
+- [IPv6-only 環境での Docker 運用](../../docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md)
 - [docker-compose.yaml](./docker-compose.yaml)
