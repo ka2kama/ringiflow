@@ -59,10 +59,13 @@ source "$ENV_FILE"
 # 必須環境変数のチェック
 : "${LIGHTSAIL_HOST:?LIGHTSAIL_HOST が設定されていません}"
 : "${LIGHTSAIL_USER:?LIGHTSAIL_USER が設定されていません}"
-: "${LIGHTSAIL_SSH_KEY:?LIGHTSAIL_SSH_KEY が設定されていません}"
 
 # SSH オプション（配列として定義）
-SSH_OPTS=(-i "${LIGHTSAIL_SSH_KEY/#\~/$HOME}" -o StrictHostKeyChecking=accept-new)
+# LIGHTSAIL_SSH_KEY が設定されていれば -i で鍵を指定、未設定なら SSH エージェントに委任
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new)
+if [ -n "${LIGHTSAIL_SSH_KEY:-}" ]; then
+    SSH_OPTS+=(-i "${LIGHTSAIL_SSH_KEY/#\~/$HOME}")
+fi
 SSH_TARGET="$LIGHTSAIL_USER@$LIGHTSAIL_HOST"
 REMOTE_DIR="/home/$LIGHTSAIL_USER/ringiflow"
 

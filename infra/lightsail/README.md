@@ -59,14 +59,11 @@ graph TB
 | プラットフォーム | Linux/Unix |
 | ブループリント | OS のみ → AlmaLinux 9.4 |
 | インスタンスプラン | $7 USD/月（1GB RAM, 40GB SSD） |
-| インスタンス名 | ringiflow-prod |
+| インスタンス名 | ringiflow-demo |
 
-4. SSH キーをダウンロードして保存:
-
-```bash
-mv ~/Downloads/LightsailDefaultKey-ap-northeast-1.pem ~/.ssh/lightsail-key.pem
-chmod 600 ~/.ssh/lightsail-key.pem
-```
+4. SSH キーを設定:
+   - 自分の公開鍵を使う場合: インスタンス作成時に「既存のキーを使用」で公開鍵をアップロード
+   - Lightsail デフォルトキーを使う場合: ダウンロードして `~/.ssh/ringiflow-demo.pem` に保存（`chmod 600`）
 
 5. 「ネットワーキング」タブで静的 IP を作成してアタッチ
 
@@ -85,14 +82,14 @@ HTTPS (443) は不要（Cloudflare で終端するため）。
 
 ```bash
 # SSH 接続
-ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
+ssh ec2-user@<LIGHTSAIL_IP>
 
 # セットアップスクリプトを実行
 curl -fsSL https://raw.githubusercontent.com/ka2kama/ringiflow/main/infra/lightsail/setup.sh | bash
 
 # 一度ログアウトして再ログイン（docker グループを有効化）
 exit
-ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
+ssh ec2-user@<LIGHTSAIL_IP>
 
 # Docker が使えることを確認
 docker --version
@@ -185,7 +182,7 @@ vim .env
 ```bash
 LIGHTSAIL_HOST=<LIGHTSAIL_IP または ドメイン>
 LIGHTSAIL_USER=ec2-user
-LIGHTSAIL_SSH_KEY=~/.ssh/lightsail-key.pem
+LIGHTSAIL_SSH_KEY=~/.ssh/ringiflow-demo.pem
 ```
 
 #### 6.2 デプロイ実行
@@ -220,7 +217,7 @@ curl https://your-domain.com/api/health
 ローカルから:
 
 ```bash
-scp -i ~/.ssh/lightsail-key.pem -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~/ringiflow/migrations/
+scp -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~/ringiflow/migrations/
 ```
 
 #### 7.2 マイグレーション実行
@@ -228,7 +225,7 @@ scp -i ~/.ssh/lightsail-key.pem -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~
 Lightsail 上で Docker 経由で実行:
 
 ```bash
-ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
+ssh ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 
 # sqlx-cli を含む Rust イメージでマイグレーション実行
@@ -247,7 +244,7 @@ docker run --rm \
 ### ログ確認
 
 ```bash
-ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
+ssh ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 
 # 全サービスのログ
@@ -265,7 +262,7 @@ docker compose logs -f nginx
 手動実行:
 
 ```bash
-ssh -i ~/.ssh/lightsail-key.pem ec2-user@<LIGHTSAIL_IP>
+ssh ec2-user@<LIGHTSAIL_IP>
 cd ~/ringiflow
 ./backup.sh
 ```
