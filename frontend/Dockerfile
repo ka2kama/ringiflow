@@ -34,6 +34,10 @@ FROM node:22-slim AS builder
 
 RUN corepack enable pnpm
 
+# Elm コンパイラをグローバルインストール
+# ローカル開発環境と同様にグローバルインストールする（ADR-002 参照）
+RUN npm install -g elm
+
 WORKDIR /app
 
 # 依存関係をコピー
