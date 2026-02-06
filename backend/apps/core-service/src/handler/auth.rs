@@ -25,7 +25,7 @@ use ringiflow_domain::{
    value_objects::{DisplayId, display_prefix},
 };
 use ringiflow_infra::repository::user_repository::UserRepository;
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -97,16 +97,6 @@ pub struct UserWithPermissionsData {
    pub permissions: Vec<String>,
 }
 
-/// エラーレスポンス（RFC 9457 Problem Details）
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-   #[serde(rename = "type")]
-   pub error_type: String,
-   pub title:      String,
-   pub status:     u16,
-   pub detail:     String,
-}
-
 /// ユーザー一覧の要素 DTO
 #[derive(Debug, Serialize)]
 pub struct UserItemDto {
@@ -171,12 +161,7 @@ where
          tracing::error!("ユーザー一覧取得で内部エラー: {}", e);
          (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-               error_type: "https://ringiflow.example.com/errors/internal-error".to_string(),
-               title:      "Internal Server Error".to_string(),
-               status:     500,
-               detail:     "内部エラーが発生しました".to_string(),
-            }),
+            Json(ErrorResponse::internal_error()),
          )
             .into_response()
       }
@@ -210,12 +195,9 @@ where
       Err(_) => {
          return (
             StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-               error_type: "https://ringiflow.example.com/errors/validation-error".to_string(),
-               title:      "Validation Error".to_string(),
-               status:     400,
-               detail:     "メールアドレスの形式が不正です".to_string(),
-            }),
+            Json(ErrorResponse::validation_error(
+               "メールアドレスの形式が不正です",
+            )),
          )
             .into_response();
       }
@@ -235,24 +217,14 @@ where
       }
       Ok(None) => (
          StatusCode::NOT_FOUND,
-         Json(ErrorResponse {
-            error_type: "https://ringiflow.example.com/errors/not-found".to_string(),
-            title:      "Not Found".to_string(),
-            status:     404,
-            detail:     "ユーザーが見つかりません".to_string(),
-         }),
+         Json(ErrorResponse::not_found("ユーザーが見つかりません")),
       )
          .into_response(),
       Err(e) => {
          tracing::error!("ユーザー検索で内部エラー: {}", e);
          (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-               error_type: "https://ringiflow.example.com/errors/internal-error".to_string(),
-               title:      "Internal Server Error".to_string(),
-               status:     500,
-               detail:     "内部エラーが発生しました".to_string(),
-            }),
+            Json(ErrorResponse::internal_error()),
          )
             .into_response()
       }
@@ -289,24 +261,14 @@ where
       }
       Ok(None) => (
          StatusCode::NOT_FOUND,
-         Json(ErrorResponse {
-            error_type: "https://ringiflow.example.com/errors/not-found".to_string(),
-            title:      "Not Found".to_string(),
-            status:     404,
-            detail:     "ユーザーが見つかりません".to_string(),
-         }),
+         Json(ErrorResponse::not_found("ユーザーが見つかりません")),
       )
          .into_response(),
       Err(e) => {
          tracing::error!("ユーザー取得で内部エラー: {}", e);
          (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse {
-               error_type: "https://ringiflow.example.com/errors/internal-error".to_string(),
-               title:      "Internal Server Error".to_string(),
-               status:     500,
-               detail:     "内部エラーが発生しました".to_string(),
-            }),
+            Json(ErrorResponse::internal_error()),
          )
             .into_response()
       }

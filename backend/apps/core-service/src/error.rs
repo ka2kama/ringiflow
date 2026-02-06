@@ -7,18 +7,8 @@ use axum::{
    http::StatusCode,
    response::{IntoResponse, Response},
 };
-use serde::Serialize;
+use ringiflow_shared::ErrorResponse;
 use thiserror::Error;
-
-/// エラーレスポンス（RFC 9457 Problem Details）
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-   #[serde(rename = "type")]
-   pub error_type: String,
-   pub title:      String,
-   pub status:     u16,
-   pub detail:     String,
-}
 
 /// Core Service で発生するエラー
 #[derive(Debug, Error)]
@@ -50,60 +40,32 @@ pub enum CoreError {
 
 impl IntoResponse for CoreError {
    fn into_response(self) -> Response {
-      let (status, error_type, title, detail) = match &self {
-         CoreError::NotFound(msg) => (
-            StatusCode::NOT_FOUND,
-            "https://ringiflow.example.com/errors/not-found",
-            "Not Found",
-            msg.clone(),
-         ),
+      let (status, error_response) = match &self {
+         CoreError::NotFound(msg) => (StatusCode::NOT_FOUND, ErrorResponse::not_found(msg.clone())),
          CoreError::BadRequest(msg) => (
             StatusCode::BAD_REQUEST,
-            "https://ringiflow.example.com/errors/bad-request",
-            "Bad Request",
-            msg.clone(),
+            ErrorResponse::bad_request(msg.clone()),
          ),
-         CoreError::Forbidden(msg) => (
-            StatusCode::FORBIDDEN,
-            "https://ringiflow.example.com/errors/forbidden",
-            "Forbidden",
-            msg.clone(),
-         ),
-         CoreError::Conflict(msg) => (
-            StatusCode::CONFLICT,
-            "https://ringiflow.example.com/errors/conflict",
-            "Conflict",
-            msg.clone(),
-         ),
+         CoreError::Forbidden(msg) => {
+            (StatusCode::FORBIDDEN, ErrorResponse::forbidden(msg.clone()))
+         }
+         CoreError::Conflict(msg) => (StatusCode::CONFLICT, ErrorResponse::conflict(msg.clone())),
          CoreError::Database(e) => {
             tracing::error!("データベースエラー: {}", e);
             (
                StatusCode::INTERNAL_SERVER_ERROR,
-               "https://ringiflow.example.com/errors/internal-error",
-               "Internal Server Error",
-               "内部エラーが発生しました".to_string(),
+               ErrorResponse::internal_error(),
             )
          }
          CoreError::Internal(msg) => {
             tracing::error!("内部エラー: {}", msg);
             (
                StatusCode::INTERNAL_SERVER_ERROR,
-               "https://ringiflow.example.com/errors/internal-error",
-               "Internal Server Error",
-               "内部エラーが発生しました".to_string(),
+               ErrorResponse::internal_error(),
             )
          }
       };
 
-      (
-         status,
-         Json(ErrorResponse {
-            error_type: error_type.to_string(),
-            title: title.to_string(),
-            status: status.as_u16(),
-            detail,
-         }),
-      )
-         .into_response()
+      (status, Json(error_response)).into_response()
    }
 }

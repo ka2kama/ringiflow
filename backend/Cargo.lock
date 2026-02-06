@@ -1695,6 +1695,7 @@ dependencies = [
  "pretty_assertions",
  "ringiflow-domain",
  "ringiflow-infra",
+ "ringiflow-shared",
  "serde",
  "serde_json",
  "sqlx",

@@ -25,46 +25,25 @@ use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::client::{
-   AuthServiceClient,
-   AuthServiceError,
-   CoreServiceClient,
-   CoreServiceError,
-   UserWithPermissionsData,
+use crate::{
+   client::{
+      AuthServiceClient,
+      AuthServiceError,
+      CoreServiceClient,
+      CoreServiceError,
+      UserWithPermissionsData,
+   },
+   error::{
+      authentication_failed_response,
+      extract_tenant_id,
+      internal_error_response,
+      service_unavailable_response,
+      unauthorized_response,
+   },
 };
 
 /// Cookie 名
 const SESSION_COOKIE_NAME: &str = "session_id";
-
-// --- エラー型 ---
-
-/// テナント ID 抽出エラー
-#[derive(Debug)]
-pub enum TenantIdError {
-   /// ヘッダーが存在しない
-   Missing,
-   /// UUID の形式が不正
-   InvalidFormat,
-}
-
-impl IntoResponse for TenantIdError {
-   fn into_response(self) -> axum::response::Response {
-      let (status, detail) = match self {
-         TenantIdError::Missing => (StatusCode::BAD_REQUEST, "X-Tenant-ID ヘッダーが必要です"),
-         TenantIdError::InvalidFormat => (StatusCode::BAD_REQUEST, "X-Tenant-ID の形式が不正です"),
-      };
-      (
-         status,
-         Json(ErrorResponse {
-            error_type: "https://ringiflow.example.com/errors/validation-error".to_string(),
-            title:      "Validation Error".to_string(),
-            status:     status.as_u16(),
-            detail:     detail.to_string(),
-         }),
-      )
-         .into_response()
-   }
-}
 
 /// セッション有効期限（秒）
 const SESSION_MAX_AGE: i64 = 28800; // 8時間
@@ -137,16 +116,6 @@ impl From<UserWithPermissionsData> for MeResponseData {
 #[derive(Debug, Serialize)]
 pub struct CsrfResponseData {
    pub token: String,
-}
-
-/// エラーレスポンス（RFC 9457 Problem Details）
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-   #[serde(rename = "type")]
-   pub error_type: String,
-   pub title:      String,
-   pub status:     u16,
-   pub detail:     String,
 }
 
 // --- ハンドラ ---
@@ -465,16 +434,6 @@ where
 
 // --- ヘルパー関数 ---
 
-/// X-Tenant-ID ヘッダーからテナント ID を抽出する
-fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
-   let tenant_id_str = headers
-      .get("X-Tenant-ID")
-      .and_then(|v| v.to_str().ok())
-      .ok_or(TenantIdError::Missing)?;
-
-   Uuid::parse_str(tenant_id_str).map_err(|_| TenantIdError::InvalidFormat)
-}
-
 /// セッション Cookie を構築する
 fn build_session_cookie(session_id: &str) -> axum_extra::extract::cookie::Cookie<'static> {
    use axum_extra::extract::cookie::SameSite;
@@ -505,62 +464,6 @@ fn build_clear_cookie() -> axum_extra::extract::cookie::Cookie<'static> {
       .http_only(true)
       .same_site(axum_extra::extract::cookie::SameSite::Lax)
       .build()
-}
-
-/// 認証失敗レスポンス
-fn authentication_failed_response() -> axum::response::Response {
-   (
-      StatusCode::UNAUTHORIZED,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/authentication-failed".to_string(),
-         title:      "Authentication Failed".to_string(),
-         status:     401,
-         detail:     "メールアドレスまたはパスワードが正しくありません".to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// 未認証レスポンス
-fn unauthorized_response() -> axum::response::Response {
-   (
-      StatusCode::UNAUTHORIZED,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/unauthorized".to_string(),
-         title:      "Unauthorized".to_string(),
-         status:     401,
-         detail:     "認証が必要です".to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// 内部エラーレスポンス
-fn internal_error_response() -> axum::response::Response {
-   (
-      StatusCode::INTERNAL_SERVER_ERROR,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/internal-error".to_string(),
-         title:      "Internal Server Error".to_string(),
-         status:     500,
-         detail:     "内部エラーが発生しました".to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// Auth Service 利用不可レスポンス
-fn service_unavailable_response() -> axum::response::Response {
-   (
-      StatusCode::SERVICE_UNAVAILABLE,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/service-unavailable".to_string(),
-         title:      "Service Unavailable".to_string(),
-         status:     503,
-         detail:     "認証サービスが一時的に利用できません".to_string(),
-      }),
-   )
-      .into_response()
 }
 
 #[cfg(test)]

@@ -26,49 +26,26 @@ use axum::{
    Json,
    extract::{Path, State},
    http::{HeaderMap, StatusCode},
-   response::{IntoResponse, Response},
+   response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::SessionManager;
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::client::{CoreServiceClient, CoreServiceError};
-
-/// Cookie 名
-const SESSION_COOKIE_NAME: &str = "session_id";
-
-// --- エラー型 ---
-
-/// テナント ID 抽出エラー
-#[derive(Debug)]
-pub enum TenantIdError {
-   /// ヘッダーが存在しない
-   Missing,
-   /// UUID の形式が不正
-   InvalidFormat,
-}
-
-impl IntoResponse for TenantIdError {
-   fn into_response(self) -> Response {
-      let (status, detail) = match self {
-         TenantIdError::Missing => (StatusCode::BAD_REQUEST, "X-Tenant-ID ヘッダーが必要です"),
-         TenantIdError::InvalidFormat => (StatusCode::BAD_REQUEST, "X-Tenant-ID の形式が不正です"),
-      };
-      (
-         status,
-         Json(ErrorResponse {
-            error_type: "https://ringiflow.example.com/errors/validation-error".to_string(),
-            title:      "Validation Error".to_string(),
-            status:     status.as_u16(),
-            detail:     detail.to_string(),
-         }),
-      )
-         .into_response()
-   }
-}
+use crate::{
+   client::{CoreServiceClient, CoreServiceError},
+   error::{
+      conflict_response,
+      extract_tenant_id,
+      forbidden_response,
+      get_session,
+      internal_error_response,
+      not_found_response,
+      validation_error_response,
+   },
+};
 
 /// ワークフローハンドラの共有状態
 pub struct WorkflowState<C, S>
@@ -198,16 +175,6 @@ pub struct WorkflowData {
    pub updated_at: String,
 }
 
-/// エラーレスポンス（RFC 9457 Problem Details）
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-   #[serde(rename = "type")]
-   pub error_type: String,
-   pub title:      String,
-   pub status:     u16,
-   pub detail:     String,
-}
-
 impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
    fn from(dto: crate::client::WorkflowInstanceDto) -> Self {
       Self {
@@ -308,7 +275,7 @@ where
          (StatusCode::CREATED, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowDefinitionNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-definition-not-found",
+         "workflow-definition-not-found",
          "Workflow Definition Not Found",
          "ワークフロー定義が見つかりません",
       ),
@@ -373,7 +340,7 @@ where
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "workflow-instance-not-found",
          "Workflow Instance Not Found",
          "ワークフローインスタンスが見つかりません",
       ),
@@ -383,130 +350,6 @@ where
          internal_error_response()
       }
    }
-}
-
-// --- ヘルパー関数 ---
-
-/// X-Tenant-ID ヘッダーからテナント ID を抽出する
-pub(crate) fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
-   let tenant_id_str = headers
-      .get("X-Tenant-ID")
-      .and_then(|v| v.to_str().ok())
-      .ok_or(TenantIdError::Missing)?;
-
-   Uuid::parse_str(tenant_id_str).map_err(|_| TenantIdError::InvalidFormat)
-}
-
-/// セッションを取得する
-pub(crate) async fn get_session<S>(
-   session_manager: &S,
-   jar: &CookieJar,
-   tenant_id: Uuid,
-) -> Result<ringiflow_infra::SessionData, Response>
-where
-   S: SessionManager,
-{
-   // Cookie からセッション ID を取得
-   let session_id = jar
-      .get(SESSION_COOKIE_NAME)
-      .map(|cookie| cookie.value().to_string())
-      .ok_or_else(unauthorized_response)?;
-
-   let tenant_id = TenantId::from_uuid(tenant_id);
-
-   // セッションを取得
-   match session_manager.get(&tenant_id, &session_id).await {
-      Ok(Some(data)) => Ok(data),
-      Ok(None) => Err(unauthorized_response()),
-      Err(e) => {
-         tracing::error!("セッション取得で内部エラー: {}", e);
-         Err(internal_error_response())
-      }
-   }
-}
-
-/// 未認証レスポンス
-fn unauthorized_response() -> Response {
-   (
-      StatusCode::UNAUTHORIZED,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/unauthorized".to_string(),
-         title:      "Unauthorized".to_string(),
-         status:     401,
-         detail:     "認証が必要です".to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// 内部エラーレスポンス
-pub(crate) fn internal_error_response() -> Response {
-   (
-      StatusCode::INTERNAL_SERVER_ERROR,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/internal-error".to_string(),
-         title:      "Internal Server Error".to_string(),
-         status:     500,
-         detail:     "内部エラーが発生しました".to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// 404 Not Found レスポンス
-pub(crate) fn not_found_response(error_type: &str, title: &str, detail: &str) -> Response {
-   (
-      StatusCode::NOT_FOUND,
-      Json(ErrorResponse {
-         error_type: error_type.to_string(),
-         title:      title.to_string(),
-         status:     404,
-         detail:     detail.to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// バリデーションエラーレスポンス
-fn validation_error_response(detail: &str) -> Response {
-   (
-      StatusCode::BAD_REQUEST,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/validation-error".to_string(),
-         title:      "Validation Error".to_string(),
-         status:     400,
-         detail:     detail.to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// 403 Forbidden レスポンス
-pub(crate) fn forbidden_response(detail: &str) -> Response {
-   (
-      StatusCode::FORBIDDEN,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/forbidden".to_string(),
-         title:      "Forbidden".to_string(),
-         status:     403,
-         detail:     detail.to_string(),
-      }),
-   )
-      .into_response()
-}
-
-/// 409 Conflict レスポンス
-fn conflict_response(detail: &str) -> Response {
-   (
-      StatusCode::CONFLICT,
-      Json(ErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/conflict".to_string(),
-         title:      "Conflict".to_string(),
-         status:     409,
-         detail:     detail.to_string(),
-      }),
-   )
-      .into_response()
 }
 
 // ===== GET ハンドラ =====
@@ -606,7 +449,7 @@ where
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowDefinitionNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-definition-not-found",
+         "workflow-definition-not-found",
          "Workflow Definition Not Found",
          "ワークフロー定義が見つかりません",
       ),
@@ -720,7 +563,7 @@ where
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "workflow-instance-not-found",
          "Workflow Instance Not Found",
          "ワークフローインスタンスが見つかりません",
       ),
@@ -791,12 +634,12 @@ where
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::StepNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/step-not-found",
+         "step-not-found",
          "Step Not Found",
          "ステップが見つかりません",
       ),
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "workflow-instance-not-found",
          "Workflow Instance Not Found",
          "ワークフローインスタンスが見つかりません",
       ),
@@ -868,12 +711,12 @@ where
          (StatusCode::OK, Json(response)).into_response()
       }
       Err(CoreServiceError::StepNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/step-not-found",
+         "step-not-found",
          "Step Not Found",
          "ステップが見つかりません",
       ),
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "workflow-instance-not-found",
          "Workflow Instance Not Found",
          "ワークフローインスタンスが見つかりません",
       ),
@@ -934,13 +777,11 @@ where
          let response = ApiResponse::new(super::task::TaskDetailData::from(core_response.data));
          (StatusCode::OK, Json(response)).into_response()
       }
-      Err(CoreServiceError::StepNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/task-not-found",
-         "Task Not Found",
-         "タスクが見つかりません",
-      ),
+      Err(CoreServiceError::StepNotFound) => {
+         not_found_response("task-not-found", "Task Not Found", "タスクが見つかりません")
+      }
       Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-         "https://ringiflow.example.com/errors/workflow-instance-not-found",
+         "workflow-instance-not-found",
          "Workflow Instance Not Found",
          "ワークフローインスタンスが見つかりません",
       ),

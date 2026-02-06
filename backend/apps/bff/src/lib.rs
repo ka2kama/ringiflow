@@ -11,5 +11,6 @@
 
 pub mod client;
 pub mod dev_auth;
+pub mod error;
 pub mod handler;
 pub mod middleware;

@@ -15,7 +15,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::SessionManager;
-use serde::Serialize;
+use ringiflow_shared::ErrorResponse;
 use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
@@ -37,25 +37,15 @@ where
    pub session_manager: S,
 }
 
-/// CSRF エラーレスポンス
-#[derive(Debug, Serialize)]
-struct CsrfErrorResponse {
-   #[serde(rename = "type")]
-   error_type: String,
-   title:      String,
-   status:     u16,
-   detail:     String,
-}
-
 fn csrf_error_response(detail: &str) -> Response {
    (
       StatusCode::FORBIDDEN,
-      Json(CsrfErrorResponse {
-         error_type: "https://ringiflow.example.com/errors/csrf-validation-failed".to_string(),
-         title:      "CSRF Validation Failed".to_string(),
-         status:     403,
-         detail:     detail.to_string(),
-      }),
+      Json(ErrorResponse::new(
+         "csrf-validation-failed",
+         "CSRF Validation Failed",
+         403,
+         detail,
+      )),
    )
       .into_response()
 }

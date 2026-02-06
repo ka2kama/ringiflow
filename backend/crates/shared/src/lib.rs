@@ -9,5 +9,7 @@
 //! - 外部クレートへの依存は最小限に抑える
 
 pub mod api_response;
+pub mod error_response;
 
 pub use api_response::ApiResponse;
+pub use error_response::ErrorResponse;
