@@ -621,7 +621,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/workflows/{display_number}/tasks/{step_display_number}:
+  /api/v1/workflows/{workflow_display_number}/tasks/{step_display_number}:
     get:
       tags:
         - tasks
@@ -639,7 +639,7 @@ paths:
         - sessionAuth: []
       parameters:
         - $ref: '#/components/parameters/XTenantId'
-        - name: display_number
+        - name: workflow_display_number
           in: path
           required: true
           description: ワークフローインスタンスの表示用連番
