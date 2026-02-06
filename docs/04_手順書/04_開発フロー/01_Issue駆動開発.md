@@ -213,7 +213,7 @@ TDD（Red → Green → Refactor）で MVP を積み上げる。
 
 2. **設計・計画チェックリストで検証する**
    - 網羅性、曖昧さ排除、設計判断の完結性、スコープ境界、技術的前提、既存ドキュメント整合
-   - 詳細: [俯瞰・実装リズム](../../../.claude/rules/self-review.md)
+   - 詳細: [俯瞰・実装リズム](../../../.claude/rules/zoom-rhythm.md)
 
 3. **検証結果を計画に記載する**
    - PR 本文または Issue に収束確認セクションを追加
@@ -356,7 +356,7 @@ Issue との整合:
 
 #### 6.3 収束確認結果を PR 本文に記載
 
-[俯瞰・実装リズム](../../../.claude/rules/self-review.md) の実装フェーズ・横断検証フェーズを実施し、結果を **PR 本文の Self-review セクション** に記載する。
+[俯瞰・実装リズム](../../../.claude/rules/zoom-rhythm.md) の実装フェーズ・横断検証フェーズを実施し、結果を **PR 本文の Self-review セクション** に記載する。
 
 ```markdown
 ## Self-review

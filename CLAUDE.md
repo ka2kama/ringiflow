@@ -224,7 +224,7 @@ YAGNI/KISS/MVP は**機能スコープ**の原則であり、**設計品質**を
 
 往復を繰り返した結果、理想状態（To-Be）と現状（As-Is）のギャップがゼロになることで収束する。
 
-→ 詳細: [`.claude/rules/self-review.md`](.claude/rules/self-review.md)
+→ 詳細: [`.claude/rules/zoom-rhythm.md`](.claude/rules/zoom-rhythm.md)
 
 **禁止:** 視点を上げずに実装だけを続けること、収束確認を実施せずに成果物を提示・コミットすること
 
@@ -448,7 +448,7 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 実装完了から Ready for Review までの手順。順番を守ること。
 
 1. 実装完了、`just check-all` 通過
-2. 収束確認完了（[self-review.md](.claude/rules/self-review.md)）
+2. 収束確認完了（[zoom-rhythm.md](.claude/rules/zoom-rhythm.md)）
 3. Draft PR 作成（`gh pr create --draft`）
 4. `/wrap-up` でドキュメント整備
 5. ユーザーに確認を求める（「Ready にしてよいですか？」）
