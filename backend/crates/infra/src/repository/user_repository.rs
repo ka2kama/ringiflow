@@ -15,7 +15,7 @@ use ringiflow_domain::{
    role::{Permission, Role, RoleId},
    tenant::TenantId,
    user::{Email, User, UserId, UserStatus},
-   value_objects::UserName,
+   value_objects::{DisplayNumber, UserName},
 };
 use sqlx::PgPool;
 
@@ -90,6 +90,7 @@ impl UserRepository for PostgresUserRepository {
             SELECT
                 id,
                 tenant_id,
+                display_number,
                 email,
                 name,
                 status,
@@ -112,6 +113,8 @@ impl UserRepository for PostgresUserRepository {
       let user = User::from_db(
          UserId::from_uuid(row.id),
          TenantId::from_uuid(row.tenant_id),
+         DisplayNumber::new(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.status
@@ -131,6 +134,7 @@ impl UserRepository for PostgresUserRepository {
             SELECT
                 id,
                 tenant_id,
+                display_number,
                 email,
                 name,
                 status,
@@ -152,6 +156,8 @@ impl UserRepository for PostgresUserRepository {
       let user = User::from_db(
          UserId::from_uuid(row.id),
          TenantId::from_uuid(row.tenant_id),
+         DisplayNumber::new(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
          Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
          row.status
@@ -233,6 +239,7 @@ impl UserRepository for PostgresUserRepository {
             SELECT
                 id,
                 tenant_id,
+                display_number,
                 email,
                 name,
                 status,
@@ -253,6 +260,8 @@ impl UserRepository for PostgresUserRepository {
             Ok(User::from_db(
                UserId::from_uuid(row.id),
                TenantId::from_uuid(row.tenant_id),
+               DisplayNumber::new(row.display_number)
+                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
                Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
                UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
                row.status

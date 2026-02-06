@@ -37,8 +37,8 @@ async fn setup_test_data(pool: &PgPool) -> (TenantId, UserId) {
    // ユーザー作成
    sqlx::query!(
       r#"
-        INSERT INTO users (id, tenant_id, email, name, status)
-        VALUES ($1, $2, 'test@example.com', 'Test User', 'active')
+        INSERT INTO users (id, tenant_id, display_number, email, name, status)
+        VALUES ($1, $2, 1, 'test@example.com', 'Test User', 'active')
         "#,
       user_id.as_uuid(),
       tenant_id.as_uuid()
@@ -159,8 +159,8 @@ async fn test_複数idでユーザーを一括取得できる(pool: PgPool) {
    let user_id2 = UserId::from_uuid(Uuid::now_v7());
    sqlx::query!(
       r#"
-        INSERT INTO users (id, tenant_id, email, name, status)
-        VALUES ($1, $2, 'user2@example.com', 'User Two', 'active')
+        INSERT INTO users (id, tenant_id, display_number, email, name, status)
+        VALUES ($1, $2, 2, 'user2@example.com', 'User Two', 'active')
         "#,
       user_id2.as_uuid(),
       tenant_id.as_uuid()

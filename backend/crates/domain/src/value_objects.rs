@@ -218,6 +218,8 @@ pub mod display_prefix {
    pub const WORKFLOW_INSTANCE: &str = "WF";
    /// ワークフローステップのプレフィックス
    pub const WORKFLOW_STEP: &str = "STEP";
+   /// ユーザーのプレフィックス
+   pub const USER: &str = "USER";
 }
 
 // =========================================================================
@@ -246,6 +248,8 @@ pub enum DisplayIdEntityType {
    WorkflowInstance,
    /// ワークフローステップ
    WorkflowStep,
+   /// ユーザー
+   User,
 }
 
 impl DisplayIdEntityType {
@@ -254,6 +258,7 @@ impl DisplayIdEntityType {
       match self {
          Self::WorkflowInstance => display_prefix::WORKFLOW_INSTANCE,
          Self::WorkflowStep => display_prefix::WORKFLOW_STEP,
+         Self::User => display_prefix::USER,
       }
    }
 }
@@ -539,6 +544,17 @@ mod tests {
    #[test]
    fn test_エンティティ種別のプレフィックス_ワークフローステップ() {
       assert_eq!(DisplayIdEntityType::WorkflowStep.prefix(), "STEP");
+   }
+
+   #[test]
+   fn test_エンティティ種別の_db文字列_ユーザー() {
+      let entity_type_str: &str = DisplayIdEntityType::User.into();
+      assert_eq!(entity_type_str, "user");
+   }
+
+   #[test]
+   fn test_エンティティ種別のプレフィックス_ユーザー() {
+      assert_eq!(DisplayIdEntityType::User.prefix(), "USER");
    }
 
    // DisplayId のテスト
