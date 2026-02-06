@@ -19,8 +19,11 @@ use ringiflow_infra::SessionManager;
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 
-use super::workflow::{WorkflowState, extract_tenant_id, get_session, internal_error_response};
-use crate::client::{CoreServiceClient, DashboardStatsDto};
+use super::workflow::WorkflowState;
+use crate::{
+   client::{CoreServiceClient, DashboardStatsDto},
+   error::{extract_tenant_id, get_session, internal_error_response},
+};
 
 // --- レスポンス型 ---
 

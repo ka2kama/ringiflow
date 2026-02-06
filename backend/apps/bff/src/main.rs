@@ -51,12 +51,7 @@
 //! BFF_PORT=3000 REDIS_URL=redis://... cargo run -p ringiflow-bff --release
 //! ```
 
-pub mod client;
 mod config;
-mod dev_auth;
-mod error;
-pub mod handler;
-pub mod middleware;
 
 use std::{net::SocketAddr, sync::Arc};
 
@@ -89,6 +84,7 @@ use handler::{
    submit_workflow,
 };
 use middleware::{CsrfState, csrf_middleware};
+use ringiflow_bff::{client, dev_auth, handler, middleware};
 use ringiflow_infra::RedisSessionManager;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;

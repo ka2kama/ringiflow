@@ -7,18 +7,8 @@ use axum::{
    http::StatusCode,
    response::{IntoResponse, Response},
 };
-use serde::Serialize;
+use ringiflow_shared::ErrorResponse;
 use thiserror::Error;
-
-/// エラーレスポンス（RFC 9457 Problem Details）
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-   #[serde(rename = "type")]
-   pub error_type: String,
-   pub title:      String,
-   pub status:     u16,
-   pub detail:     String,
-}
 
 /// Auth Service で発生するエラー
 #[derive(Debug, Error)]
@@ -26,13 +16,6 @@ pub enum AuthError {
    /// 認証失敗
    #[error("認証に失敗しました")]
    AuthenticationFailed,
-
-   /// 認証情報が見つからない
-   // FIXME: `#[allow(dead_code)]` を解消する
-   //        （認証情報取得 API を追加するか、バリアントごと削除する）
-   #[error("認証情報が見つかりません")]
-   #[allow(dead_code)]
-   CredentialNotFound,
 
    /// 認証情報が無効
    #[error("認証情報が無効です")]
@@ -49,54 +32,41 @@ pub enum AuthError {
 
 impl IntoResponse for AuthError {
    fn into_response(self) -> Response {
-      let (status, error_type, title, detail) = match &self {
+      let (status, error_response) = match &self {
          AuthError::AuthenticationFailed => (
             StatusCode::UNAUTHORIZED,
-            "https://ringiflow.example.com/errors/authentication-failed",
-            "Authentication Failed",
-            "認証に失敗しました".to_string(),
-         ),
-         AuthError::CredentialNotFound => (
-            StatusCode::NOT_FOUND,
-            "https://ringiflow.example.com/errors/credential-not-found",
-            "Credential Not Found",
-            "認証情報が見つかりません".to_string(),
+            ErrorResponse::new(
+               "authentication-failed",
+               "Authentication Failed",
+               401,
+               "認証に失敗しました",
+            ),
          ),
          AuthError::CredentialInactive => (
             StatusCode::UNAUTHORIZED,
-            "https://ringiflow.example.com/errors/credential-inactive",
-            "Credential Inactive",
-            "認証情報が無効です".to_string(),
+            ErrorResponse::new(
+               "credential-inactive",
+               "Credential Inactive",
+               401,
+               "認証情報が無効です",
+            ),
          ),
          AuthError::Database(e) => {
             tracing::error!("データベースエラー: {}", e);
             (
                StatusCode::INTERNAL_SERVER_ERROR,
-               "https://ringiflow.example.com/errors/internal-error",
-               "Internal Server Error",
-               "内部エラーが発生しました".to_string(),
+               ErrorResponse::internal_error(),
             )
          }
          AuthError::Internal(msg) => {
             tracing::error!("内部エラー: {}", msg);
             (
                StatusCode::INTERNAL_SERVER_ERROR,
-               "https://ringiflow.example.com/errors/internal-error",
-               "Internal Server Error",
-               "内部エラーが発生しました".to_string(),
+               ErrorResponse::internal_error(),
             )
          }
       };
 
-      (
-         status,
-         Json(ErrorResponse {
-            error_type: error_type.to_string(),
-            title: title.to_string(),
-            status: status.as_u16(),
-            detail,
-         }),
-      )
-         .into_response()
+      (status, Json(error_response)).into_response()
    }
 }
