@@ -337,7 +337,7 @@ view model =
 viewHeader : Html Msg
 viewHeader =
     nav [ class "mb-6 flex items-center gap-2 text-sm" ]
-        [ a [ href (Route.toString Route.Workflows), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "申請一覧" ]
+        [ a [ href (Route.toString (Route.Workflows Route.emptyWorkflowFilter)), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "申請一覧" ]
         , span [ class "text-secondary-400" ] [ text "/" ]
         , span [ class "text-secondary-900 font-medium" ] [ text "申請詳細" ]
         ]
