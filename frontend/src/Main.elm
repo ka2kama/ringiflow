@@ -12,7 +12,10 @@ TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
 import Api exposing (ApiError)
 import Api.Auth as AuthApi
 import Browser
+import Browser.Dom
+import Browser.Events
 import Browser.Navigation as Nav
+import Component.ConfirmDialog as ConfirmDialog
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -23,11 +26,14 @@ import Page.Task.List as TaskList
 import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
+import Ports
 import Route exposing (Route)
 import Shared exposing (Shared)
 import Svg exposing (svg)
 import Svg.Attributes as SvgAttr
+import Task
 import Url exposing (Url)
+import Util.KeyEvent as KeyEvent
 
 
 
@@ -93,6 +99,7 @@ type alias Model =
     , shared : Shared
     , page : Page
     , sidebarOpen : Bool
+    , pendingNavigation : Maybe Url
     }
 
 
@@ -129,6 +136,7 @@ init flags url key =
       , shared = shared
       , page = page
       , sidebarOpen = False
+      , pendingNavigation = Nothing
       }
     , Cmd.batch [ pageCmd, csrfCmd, userCmd ]
     )
@@ -260,6 +268,9 @@ type Msg
     | GotUser (Result ApiError Shared.User)
     | ToggleSidebar
     | CloseSidebar
+    | ConfirmNavigation
+    | CancelNavigation
+    | NoOp
     | HomeMsg Home.Msg
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
@@ -276,7 +287,13 @@ update msg model =
         LinkClicked urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model, Nav.pushUrl model.key (Url.toString url) )
+                    if isCurrentPageDirty model then
+                        ( { model | pendingNavigation = Just url }
+                        , focusDialogCancel
+                        )
+
+                    else
+                        ( model, Nav.pushUrl model.key (Url.toString url) )
 
                 Browser.External href ->
                     ( model, Nav.load href )
@@ -344,6 +361,27 @@ update msg model =
             ( { model | sidebarOpen = False }
             , Cmd.none
             )
+
+        ConfirmNavigation ->
+            case model.pendingNavigation of
+                Just url ->
+                    ( { model | pendingNavigation = Nothing }
+                    , Cmd.batch
+                        [ Nav.pushUrl model.key (Url.toString url)
+                        , Ports.setBeforeUnloadEnabled False
+                        ]
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        CancelNavigation ->
+            ( { model | pendingNavigation = Nothing }
+            , Cmd.none
+            )
+
+        NoOp ->
+            ( model, Cmd.none )
 
         HomeMsg subMsg ->
             case model.page of
@@ -430,6 +468,26 @@ update msg model =
                     ( model, Cmd.none )
 
 
+{-| 現在のページに未保存の変更があるかを判定
+-}
+isCurrentPageDirty : Model -> Bool
+isCurrentPageDirty model =
+    case model.page of
+        WorkflowNewPage subModel ->
+            WorkflowNew.isDirty subModel
+
+        _ ->
+            False
+
+
+{-| ダイアログ表示時にキャンセルボタンへフォーカスを移動
+-}
+focusDialogCancel : Cmd Msg
+focusDialogCancel =
+    Browser.Dom.focus ConfirmDialog.cancelButtonId
+        |> Task.attempt (\_ -> NoOp)
+
+
 
 -- SUBSCRIPTIONS
 
@@ -442,15 +500,23 @@ update msg model =
 -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.page of
-        TaskDetailPage subModel ->
-            Sub.map TaskDetailMsg (TaskDetail.subscriptions subModel)
+    Sub.batch
+        [ case model.page of
+            TaskDetailPage subModel ->
+                Sub.map TaskDetailMsg (TaskDetail.subscriptions subModel)
 
-        WorkflowDetailPage subModel ->
-            Sub.map WorkflowDetailMsg (WorkflowDetail.subscriptions subModel)
+            WorkflowDetailPage subModel ->
+                Sub.map WorkflowDetailMsg (WorkflowDetail.subscriptions subModel)
 
-        _ ->
-            Sub.none
+            _ ->
+                Sub.none
+        , case model.pendingNavigation of
+            Just _ ->
+                Browser.Events.onKeyDown (KeyEvent.escKeyDecoder CancelNavigation)
+
+            Nothing ->
+                Sub.none
+        ]
 
 
 
@@ -483,6 +549,7 @@ view model =
                     ]
                 ]
             ]
+        , viewNavigationConfirmDialog model.pendingNavigation
         ]
     }
 
@@ -673,6 +740,29 @@ viewPage model =
 
         NotFoundPage ->
             Page.NotFound.view
+
+
+{-| ナビゲーション確認ダイアログ
+
+フォームに未保存の変更がある状態でページ離脱を試みた場合に表示する。
+
+-}
+viewNavigationConfirmDialog : Maybe Url -> Html Msg
+viewNavigationConfirmDialog maybePendingUrl =
+    case maybePendingUrl of
+        Just _ ->
+            ConfirmDialog.view
+                { title = "ページを離れますか？"
+                , message = "入力中のデータは保存されません。このページを離れてもよろしいですか？"
+                , confirmLabel = "ページを離れる"
+                , cancelLabel = "このページに留まる"
+                , onConfirm = ConfirmNavigation
+                , onCancel = CancelNavigation
+                , actionStyle = ConfirmDialog.Destructive
+                }
+
+        Nothing ->
+            text ""
 
 
 
