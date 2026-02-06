@@ -182,7 +182,7 @@ initPage route shared =
             in
             ( HomePage model, Cmd.map HomeMsg cmd )
 
-        Route.Workflows ->
+        Route.Workflows _ ->
             let
                 ( model, cmd ) =
                     WorkflowList.init shared
@@ -562,7 +562,7 @@ pageTitle route =
         Route.Home ->
             "ダッシュボード"
 
-        Route.Workflows ->
+        Route.Workflows _ ->
             "申請一覧"
 
         Route.WorkflowNew ->
@@ -612,7 +612,7 @@ viewSidebar currentRoute isOpen shared =
         -- ナビゲーションリンク
         , nav [ class "flex-1 space-y-1 px-3 py-4" ]
             [ viewNavItem currentRoute Route.Home "ダッシュボード" iconDashboard
-            , viewNavItem currentRoute Route.Workflows "申請一覧" iconWorkflows
+            , viewNavItem currentRoute (Route.Workflows Route.emptyWorkflowFilter) "申請一覧" iconWorkflows
             , viewNavItem currentRoute Route.Tasks "タスク一覧" iconTasks
             ]
 

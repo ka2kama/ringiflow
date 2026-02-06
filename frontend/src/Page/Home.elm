@@ -150,7 +150,7 @@ viewQuickActions =
     div [ class "mt-6 flex flex-wrap gap-3" ]
         [ Button.link
             { variant = Button.Success
-            , href = Route.toString Route.Workflows
+            , href = Route.toString (Route.Workflows Route.emptyWorkflowFilter)
             }
             [ text "申請一覧" ]
         , Button.link

@@ -1,4 +1,4 @@
-module Route exposing (Route(..), fromUrl, isRouteActive, toString)
+module Route exposing (Route(..), WorkflowFilter, emptyWorkflowFilter, fromUrl, isRouteActive, toString)
 
 {-| URL ルーティングモジュール
 
@@ -46,8 +46,12 @@ Route 型
 
 -}
 
+import Data.WorkflowInstance exposing (Status(..))
+import Dict
 import Url exposing (Url)
-import Url.Parser as Parser exposing ((</>), Parser, int, oneOf, s, top)
+import Url.Builder as Builder
+import Url.Parser as Parser exposing ((</>), (<?>), Parser, int, oneOf, s, top)
+import Url.Parser.Query as Query
 
 
 {-| アプリケーションのルート（画面）を表す型
@@ -76,12 +80,31 @@ Route はカスタム型（Tagged Union / Sum Type）として定義。
 -}
 type Route
     = Home
-    | Workflows
+    | Workflows WorkflowFilter
     | WorkflowNew
     | WorkflowDetail Int
     | Tasks
     | TaskDetail Int Int
     | NotFound
+
+
+{-| 申請一覧のフィルタ条件
+
+URL クエリパラメータと対応する。
+例: `/workflows?status=in_progress&completed_today=true`
+
+-}
+type alias WorkflowFilter =
+    { status : Maybe Status
+    , completedToday : Bool
+    }
+
+
+{-| フィルタなし（デフォルト状態）
+-}
+emptyWorkflowFilter : WorkflowFilter
+emptyWorkflowFilter =
+    { status = Nothing, completedToday = False }
 
 
 {-| URL パーサー
@@ -128,9 +151,54 @@ parser =
         , Parser.map WorkflowNew (s "workflows" </> s "new")
         , Parser.map TaskDetail (s "workflows" </> int </> s "tasks" </> int)
         , Parser.map WorkflowDetail (s "workflows" </> int)
-        , Parser.map Workflows (s "workflows")
+        , Parser.map Workflows (s "workflows" <?> workflowQueryParser)
         , Parser.map Tasks (s "tasks")
         ]
+
+
+{-| 申請一覧のクエリパラメータパーサー
+
+`status` と `completed_today` をパースする。
+
+-}
+workflowQueryParser : Query.Parser WorkflowFilter
+workflowQueryParser =
+    Query.map2 WorkflowFilter
+        (Query.enum "status"
+            (Dict.fromList
+                [ ( "draft", Draft )
+                , ( "pending", Pending )
+                , ( "in_progress", InProgress )
+                , ( "approved", Approved )
+                , ( "rejected", Rejected )
+                , ( "cancelled", Cancelled )
+                ]
+            )
+        )
+        completedTodayParser
+
+
+{-| `completed_today` クエリパラメータのパーサー
+
+  - キー不在 → `False`
+  - `?completed_today=true` → `True`
+  - その他の値 → `False`
+
+`Query.enum` は `Maybe a` を返すため `Bool` に不適。
+`Query.custom` でキーの全値リストを受け取り、`["true"]` のみ `True` にする。
+
+-}
+completedTodayParser : Query.Parser Bool
+completedTodayParser =
+    Query.custom "completed_today"
+        (\values ->
+            case values of
+                [ "true" ] ->
+                    True
+
+                _ ->
+                    False
+        )
 
 
 {-| URL を Route に変換
@@ -181,8 +249,18 @@ toString route =
         Home ->
             "/"
 
-        Workflows ->
-            "/workflows"
+        Workflows filter ->
+            Builder.absolute [ "workflows" ]
+                (List.filterMap identity
+                    [ filter.status
+                        |> Maybe.map (\st -> Builder.string "status" (statusToQueryValue st))
+                    , if filter.completedToday then
+                        Just (Builder.string "completed_today" "true")
+
+                      else
+                        Nothing
+                    ]
+                )
 
         WorkflowNew ->
             "/workflows/new"
@@ -200,6 +278,30 @@ toString route =
             "/not-found"
 
 
+{-| ワークフローステータスをクエリパラメータ値に変換
+-}
+statusToQueryValue : Status -> String
+statusToQueryValue status =
+    case status of
+        Draft ->
+            "draft"
+
+        Pending ->
+            "pending"
+
+        InProgress ->
+            "in_progress"
+
+        Approved ->
+            "approved"
+
+        Rejected ->
+            "rejected"
+
+        Cancelled ->
+            "cancelled"
+
+
 {-| 現在のルートがナビゲーション項目に対応するかを判定
 
 子ルートの場合、親ルートもアクティブとして扱う:
@@ -214,13 +316,13 @@ isRouteActive navRoute currentRoute =
         ( Home, Home ) ->
             True
 
-        ( Workflows, Workflows ) ->
+        ( Workflows _, Workflows _ ) ->
             True
 
-        ( Workflows, WorkflowNew ) ->
+        ( Workflows _, WorkflowNew ) ->
             True
 
-        ( Workflows, WorkflowDetail _ ) ->
+        ( Workflows _, WorkflowDetail _ ) ->
             True
 
         ( Tasks, Tasks ) ->
