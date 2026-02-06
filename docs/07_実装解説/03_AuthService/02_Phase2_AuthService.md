@@ -237,7 +237,7 @@ impl IntoResponse for AuthError {
             ),
             // ...
         };
-        // RFC 7807 Problem Details 形式
+        // RFC 9457 Problem Details 形式
         (status, Json(ErrorResponse { error_type, title, status, detail })).into_response()
     }
 }
@@ -245,7 +245,7 @@ impl IntoResponse for AuthError {
 
 **なぜこの設計か**:
 
-- **RFC 7807 準拠**: 標準的なエラーレスポンス形式
+- **RFC 9457 準拠**: 標準的なエラーレスポンス形式
 - **ユースケースの分離**: ユースケース層は `AuthError` を返すだけ、HTTP 変換はハンドラ層
 - **セキュリティ**: 内部エラーの詳細は外部に漏らさない（`tracing::error!` でログに記録）
 

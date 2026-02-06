@@ -11,7 +11,7 @@ info:
 
     ## エラーレスポンス
 
-    エラーは RFC 7807 Problem Details 形式で返却される。
+    エラーは RFC 9457 Problem Details 形式で返却される。
   version: 0.1.0
   contact:
     name: RingiFlow Team
@@ -1561,7 +1561,7 @@ components:
     # ============================================================
     ProblemDetails:
       type: object
-      description: RFC 7807 Problem Details
+      description: RFC 9457 Problem Details
       required:
         - type
         - title

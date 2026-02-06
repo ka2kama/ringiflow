@@ -97,9 +97,9 @@ Domain Error → CoreError → HTTP Response
 | ステップ未発見 | `NotFound` | 404 |
 | バージョン不一致 | `Conflict` | 409 |
 
-BFF では Core Service のエラーを RFC 7807 Problem Details 形式でクライアントに返す。
+BFF では Core Service のエラーを RFC 9457 Problem Details 形式でクライアントに返す。
 
-### なぜ RFC 7807 を採用するか
+### なぜ RFC 9457 を採用するか
 
 ```rust
 fn conflict_response(detail: &str) -> Response {
