@@ -621,28 +621,42 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/v1/tasks/{id}:
+  /api/v1/workflows/{display_number}/tasks/{step_display_number}:
     get:
       tags:
         - tasks
       summary: タスク詳細取得
       description: |
-        指定された ID のタスク（承認ステップ）の詳細を取得する。
+        ワークフローと承認ステップの表示用番号でタスク詳細を取得する。
 
         レスポンスにはステップ情報と、関連するワークフローインスタンス（全ステップ含む）が含まれる。
         自分にアサインされたタスクのみ取得可能。
-      operationId: getTask
+
+        URL の構造は `/workflows/{workflow_display_number}/tasks/{step_display_number}` で、
+        ワークフローとステップの階層関係を表現している。
+      operationId: getTaskByDisplayNumbers
       security:
         - sessionAuth: []
       parameters:
         - $ref: '#/components/parameters/XTenantId'
-        - name: id
+        - name: display_number
           in: path
           required: true
-          description: タスク（ワークフローステップ）ID
+          description: ワークフローインスタンスの表示用連番
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+        - name: step_display_number
+          in: path
+          required: true
+          description: ステップの表示用連番（ワークフロー内で一意）
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
       responses:
         '200':
           description: タスク詳細
@@ -1130,6 +1144,7 @@ components:
       description: タスク一覧の要素。承認ステップとワークフロー概要を含む。
       required:
         - id
+        - display_number
         - step_name
         - status
         - version
@@ -1140,6 +1155,12 @@ components:
           type: string
           format: uuid
           description: ステップインスタンス ID
+        display_number:
+          type: integer
+          format: int64
+          minimum: 1
+          description: ステップの表示用連番（ワークフロー内で一意）
+          example: 1
         step_name:
           type: string
           description: ステップ名
@@ -1181,6 +1202,7 @@ components:
       required:
         - id
         - display_id
+        - display_number
         - title
         - status
         - initiated_by
@@ -1193,6 +1215,12 @@ components:
           type: string
           description: "ワークフローの表示用 ID（例: WF-42）"
           example: "WF-42"
+        display_number:
+          type: integer
+          format: int64
+          minimum: 1
+          description: ワークフローの表示用連番
+          example: 42
         title:
           type: string
           description: ワークフロータイトル

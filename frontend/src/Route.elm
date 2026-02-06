@@ -47,7 +47,7 @@ Route 型
 -}
 
 import Url exposing (Url)
-import Url.Parser as Parser exposing ((</>), Parser, int, oneOf, s, string, top)
+import Url.Parser as Parser exposing ((</>), Parser, int, oneOf, s, top)
 
 
 {-| アプリケーションのルート（画面）を表す型
