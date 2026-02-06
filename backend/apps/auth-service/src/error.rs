@@ -17,13 +17,6 @@ pub enum AuthError {
    #[error("認証に失敗しました")]
    AuthenticationFailed,
 
-   /// 認証情報が見つからない
-   // FIXME: `#[allow(dead_code)]` を解消する
-   //        （認証情報取得 API を追加するか、バリアントごと削除する）
-   #[error("認証情報が見つかりません")]
-   #[allow(dead_code)]
-   CredentialNotFound,
-
    /// 認証情報が無効
    #[error("認証情報が無効です")]
    CredentialInactive,
@@ -47,15 +40,6 @@ impl IntoResponse for AuthError {
                "Authentication Failed",
                401,
                "認証に失敗しました",
-            ),
-         ),
-         AuthError::CredentialNotFound => (
-            StatusCode::NOT_FOUND,
-            ErrorResponse::new(
-               "credential-not-found",
-               "Credential Not Found",
-               404,
-               "認証情報が見つかりません",
             ),
          ),
          AuthError::CredentialInactive => (
