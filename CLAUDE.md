@@ -374,6 +374,10 @@ Insight ブロックには、日本語の解説に加えて 1〜2 文の英語�
 
 **禁止:** テストを書かずにプロダクションコードを書き始めること
 
+コードを書く前に、関連する型定義と既存パターンを必ず確認する。推測で書かない。
+
+→ 詳細: [`.claude/rules/pre-implementation.md`](.claude/rules/pre-implementation.md)
+
 → 詳細: [手順書: Issue 駆動開発](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md)
 
 1. Issue を確認または作成
