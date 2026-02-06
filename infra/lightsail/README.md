@@ -80,6 +80,25 @@ HTTPS (443) は不要（Cloudflare で終端するため）。
 
 ### 3. Lightsail インスタンスの初期セットアップ
 
+#### 方法 A: 起動スクリプトとして指定（推奨）
+
+インスタンス作成時に「起動スクリプトの追加」欄に以下を貼り付ける:
+
+```bash
+#!/bin/bash
+curl -fsSL https://raw.githubusercontent.com/ka2kama/ringiflow/main/infra/lightsail/setup.sh | bash
+```
+
+起動スクリプトは root で実行されるが、setup.sh が自動的に ec2-user 用にセットアップする。
+インスタンス起動後、SSH でログインすれば Docker が使える状態になっている。
+
+```bash
+ssh ec2-user@<LIGHTSAIL_IP>
+docker --version
+```
+
+#### 方法 B: SSH ログイン後に手動実行
+
 ```bash
 # SSH 接続
 ssh ec2-user@<LIGHTSAIL_IP>

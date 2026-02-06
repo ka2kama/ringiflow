@@ -4,14 +4,23 @@
 # このスクリプトは Lightsail インスタンス上で実行する。
 # Docker と Docker Compose をインストールし、ディレクトリ構造を作成する。
 #
-# 使い方:
-#   ssh ec2-user@your-lightsail-instance
+# 使い方（SSH ログイン後に実行）:
 #   curl -fsSL https://raw.githubusercontent.com/ka2kama/ringiflow/main/infra/lightsail/setup.sh | bash
-#   または
-#   scp setup.sh ec2-user@your-lightsail-instance:~
-#   ssh ec2-user@your-lightsail-instance 'bash setup.sh'
+#
+# 使い方（Lightsail 起動スクリプトとして指定）:
+#   起動スクリプトは root で実行されるため、自動的に ec2-user 用にセットアップする。
 
 set -euo pipefail
+
+# 実行ユーザーの検出
+# 起動スクリプトとして実行される場合は root なので、ターゲットユーザーを ec2-user に設定
+if [ "$(id -u)" -eq 0 ]; then
+    TARGET_USER="ec2-user"
+    TARGET_HOME="/home/$TARGET_USER"
+else
+    TARGET_USER="$USER"
+    TARGET_HOME="$HOME"
+fi
 
 echo "=========================================="
 echo "RingiFlow Lightsail セットアップ開始"
@@ -36,11 +45,18 @@ error() {
     exit 1
 }
 
+# root 実行時は sudo 不要、一般ユーザー実行時は sudo を付ける
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=""
+else
+    SUDO="sudo"
+fi
+
 # ==========================================================
 # 1. システムアップデート
 # ==========================================================
 info "システムをアップデート中..."
-sudo dnf update -y
+$SUDO dnf update -y
 
 # ==========================================================
 # 2. Docker インストール
@@ -51,24 +67,24 @@ else
     info "Docker をインストール中..."
 
     # 古いバージョンを削除
-    sudo dnf remove -y docker docker-client docker-client-latest \
+    $SUDO dnf remove -y docker docker-client docker-client-latest \
         docker-common docker-latest docker-latest-logrotate \
         docker-logrotate docker-engine 2>/dev/null || true
 
     # dnf-plugins-core をインストール（config-manager コマンドに必要）
-    sudo dnf install -y dnf-plugins-core
+    $SUDO dnf install -y dnf-plugins-core
 
     # Docker 公式リポジトリを追加（AlmaLinux は CentOS リポジトリを使用）
-    sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    $SUDO dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
     # Docker をインストール
-    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    $SUDO dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
     # Docker サービスを起動・有効化
-    sudo systemctl enable --now docker
+    $SUDO systemctl enable --now docker
 
-    # 現在のユーザーを docker グループに追加
-    sudo usermod -aG docker "$USER"
+    # ターゲットユーザーを docker グループに追加
+    $SUDO usermod -aG docker "$TARGET_USER"
 
     info "Docker インストール完了: $(docker --version)"
 fi
@@ -78,11 +94,16 @@ fi
 # ==========================================================
 info "ディレクトリ構造を作成中..."
 
-RINGIFLOW_DIR="$HOME/ringiflow"
+RINGIFLOW_DIR="$TARGET_HOME/ringiflow"
 mkdir -p "$RINGIFLOW_DIR"/{config,backup,logs}
 
 # 設定ファイル用ディレクトリ
 mkdir -p "$RINGIFLOW_DIR/config/nginx/conf.d"
+
+# root 実行時はディレクトリの所有者をターゲットユーザーに変更
+if [ "$(id -u)" -eq 0 ]; then
+    chown -R "$TARGET_USER:$TARGET_USER" "$RINGIFLOW_DIR"
+fi
 
 info "ディレクトリ構造:"
 tree "$RINGIFLOW_DIR" 2>/dev/null || ls -laR "$RINGIFLOW_DIR"
@@ -94,6 +115,11 @@ if [ ! -f "$RINGIFLOW_DIR/.env" ]; then
     info ".env.example をダウンロード中..."
     curl -fsSL https://raw.githubusercontent.com/ka2kama/ringiflow/main/infra/lightsail/.env.example \
         -o "$RINGIFLOW_DIR/.env.example"
+
+    # root 実行時はダウンロードしたファイルの所有者を変更
+    if [ "$(id -u)" -eq 0 ]; then
+        chown "$TARGET_USER:$TARGET_USER" "$RINGIFLOW_DIR/.env.example"
+    fi
 
     warn ".env.example を .env にコピーして設定してください:"
     warn "  cd $RINGIFLOW_DIR"
@@ -115,11 +141,11 @@ echo "  0 3 * * * $RINGIFLOW_DIR/backup.sh >> $RINGIFLOW_DIR/logs/backup.log 2>&
 # ==========================================================
 if command -v firewall-cmd &> /dev/null; then
     info "firewalld を設定中..."
-    sudo systemctl enable --now firewalld
-    sudo firewall-cmd --permanent --add-service=ssh
-    sudo firewall-cmd --permanent --add-port=80/tcp
-    sudo firewall-cmd --reload
-    sudo firewall-cmd --list-all
+    $SUDO systemctl enable --now firewalld
+    $SUDO firewall-cmd --permanent --add-service=ssh
+    $SUDO firewall-cmd --permanent --add-port=80/tcp
+    $SUDO firewall-cmd --reload
+    $SUDO firewall-cmd --list-all
 else
     warn "firewalld が見つかりません。Lightsail コンソールでファイアウォールを設定してください。"
 fi
@@ -147,7 +173,7 @@ echo -e "${GREEN}セットアップ完了！${NC}"
 echo "=========================================="
 echo ""
 echo "次のステップ:"
-echo "  1. 新しいシェルセッションを開く（または再ログイン）して docker グループを有効化"
+echo "  1. $TARGET_USER で SSH ログイン（または再ログイン）して docker グループを有効化"
 echo "  2. .env ファイルを設定"
 echo "     cd $RINGIFLOW_DIR"
 echo "     cp .env.example .env"
