@@ -122,7 +122,7 @@ init flags url key =
                 }
 
         ( page, pageCmd ) =
-            initPage route shared
+            initPage key route shared
 
         csrfCmd =
             fetchCsrfToken shared
@@ -172,8 +172,8 @@ fetchUser shared =
 
 {-| ルートに応じたページを初期化
 -}
-initPage : Route -> Shared -> ( Page, Cmd Msg )
-initPage route shared =
+initPage : Nav.Key -> Route -> Shared -> ( Page, Cmd Msg )
+initPage key route shared =
     case route of
         Route.Home ->
             let
@@ -182,10 +182,10 @@ initPage route shared =
             in
             ( HomePage model, Cmd.map HomeMsg cmd )
 
-        Route.Workflows _ ->
+        Route.Workflows filter ->
             let
                 ( model, cmd ) =
-                    WorkflowList.init shared
+                    WorkflowList.init shared key filter
             in
             ( WorkflowsPage model, Cmd.map WorkflowsMsg cmd )
 
@@ -300,20 +300,38 @@ update msg model =
 
         UrlChanged url ->
             let
-                route =
+                newRoute =
                     Route.fromUrl url
-
-                ( page, pageCmd ) =
-                    initPage route model.shared
             in
-            ( { model
-                | url = url
-                , route = route
-                , page = page
-                , sidebarOpen = False
-              }
-            , pageCmd
-            )
+            case ( model.page, newRoute ) of
+                ( WorkflowsPage subModel, Route.Workflows newFilter ) ->
+                    -- 同一ページ: フィルタのみ更新（データ再取得しない）
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowList.applyFilter newFilter subModel
+                    in
+                    ( { model
+                        | url = url
+                        , route = newRoute
+                        , page = WorkflowsPage newSubModel
+                        , sidebarOpen = False
+                      }
+                    , Cmd.map WorkflowsMsg subCmd
+                    )
+
+                _ ->
+                    let
+                        ( page, pageCmd ) =
+                            initPage model.key newRoute model.shared
+                    in
+                    ( { model
+                        | url = url
+                        , route = newRoute
+                        , page = page
+                        , sidebarOpen = False
+                      }
+                    , pageCmd
+                    )
 
         GotCsrfToken result ->
             case result of
