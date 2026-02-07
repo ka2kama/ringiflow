@@ -45,3 +45,8 @@
   /* Sidebar width */
   --spacing-sidebar: 16rem;
 }
+
+/* 確認ダイアログのバックドロップ */
+#confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
