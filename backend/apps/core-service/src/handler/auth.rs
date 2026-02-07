@@ -19,7 +19,6 @@ use axum::{
    response::IntoResponse,
 };
 use ringiflow_domain::{
-   role::Role,
    tenant::TenantId,
    user::{Email, User, UserId},
    value_objects::{DisplayId, display_prefix},
@@ -64,27 +63,6 @@ impl From<&User> for UserResponse {
          email:     user.email().as_str().to_string(),
          name:      user.name().to_string(),
          status:    user.status().to_string(),
-      }
-   }
-}
-
-/// ロール情報レスポンス
-// FIXME: `#[allow(dead_code)]` を解消する
-//        （ユーザー取得 API でロール詳細を返すか、構造体ごと削除する）
-#[allow(dead_code)]
-#[derive(Debug, Serialize)]
-pub struct RoleResponse {
-   pub id:          Uuid,
-   pub name:        String,
-   pub permissions: Vec<String>,
-}
-
-impl From<&Role> for RoleResponse {
-   fn from(role: &Role) -> Self {
-      Self {
-         id:          *role.id().as_uuid(),
-         name:        role.name().to_string(),
-         permissions: role.permissions().iter().map(|p| p.to_string()).collect(),
       }
    }
 }

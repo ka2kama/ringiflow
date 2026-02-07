@@ -113,7 +113,7 @@ withUser user shared =
 {-| テナント ID を取得
 
 MVP では固定値を返す。
-TODO: User 型に tenantId を追加後、User -> String に変更する。
+TODO(#306): User 型に tenantId を追加後、User -> String に変更する。
 
 -}
 extractTenantId : String
