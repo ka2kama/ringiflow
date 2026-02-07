@@ -87,7 +87,7 @@ view :
 view config =
     Html.node "dialog"
         [ id dialogId
-        , class "fixed inset-0 m-0 max-h-none max-w-none bg-transparent p-0 border-none outline-none"
+        , class "fixed inset-0 m-0 h-full w-full max-h-none max-w-none bg-transparent p-0 border-none outline-none"
         , attribute "aria-labelledby" titleId
         , attribute "aria-describedby" messageId
         , preventDefaultOn "cancel"
