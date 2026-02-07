@@ -1,0 +1,72 @@
+# cargo-deny 設定
+# 依存関係の脆弱性・ライセンス・ソースをチェックする
+#
+# 実行: cargo deny check
+# 参照: https://embarkstudios.github.io/cargo-deny/
+# 選定理由: ADR-033
+
+# =============================================================================
+# advisories: RustSec Advisory DB に基づく脆弱性チェック
+# =============================================================================
+#
+# v0.19.0 以降、vulnerability / unsound / notice は常にエラーとして扱われる。
+# 設定可能なのは unmaintained と yanked のみ。
+[advisories]
+# メンテナンスされていないクレートのチェック対象スコープ
+# "all" = 全依存、"workspace" = ワークスペースメンバーのみ、"none" = 無効
+unmaintained = "workspace"
+# yank されたクレートの扱い
+yanked = "warn"
+
+# =============================================================================
+# licenses: ライセンスチェック
+# =============================================================================
+#
+# v0.19.0 以降、allow リストに含まれないライセンスはデフォルトで拒否される。
+[licenses]
+# SPDX ライセンス推定の確信度しきい値
+confidence-threshold = 0.8
+# 許可するライセンス一覧（cargo deny list の結果に基づく）
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+# r-efi は LGPL-2.1-or-later だが、EFI/UEFI 環境専用のライブラリであり
+# 本プロジェクトでは直接使用しない（Windows ビルドの推移的依存）。
+# allow リストに LGPL を入れると他の LGPL クレートも許可してしまうため、
+# 個別の例外として扱う。
+[[licenses.exceptions]]
+allow = ["LGPL-2.1-or-later"]
+name = "r-efi"
+
+# =============================================================================
+# bans: クレートの禁止・制限
+# =============================================================================
+[bans]
+# 同じクレートの複数バージョンは警告（初期は緩めに設定）
+multiple-versions = "warn"
+# ワイルドカード依存は許可（workspace 内では一般的）
+wildcards = "allow"
+
+# =============================================================================
+# sources: クレートソースの制限
+# =============================================================================
+[sources]
+# 不明なレジストリからのクレートは警告
+unknown-registry = "warn"
+# Git 依存は警告
+unknown-git = "warn"
+# crates.io のみ許可
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

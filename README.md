@@ -1,4 +1,4 @@
-# RingiFlow
+# RingiFlow (稟議フロー)
 
 [![CI](https://github.com/ka2kama/ringiflow/actions/workflows/ci.yaml/badge.svg)](https://github.com/ka2kama/ringiflow/actions/workflows/ci.yaml)
 ![Rust](https://img.shields.io/badge/Rust-1.92-orange?logo=rust)
