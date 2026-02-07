@@ -29,8 +29,6 @@ import Api exposing (ApiError)
 import Api.ErrorMessage as ErrorMessage
 import Api.Task as TaskApi
 import Api.Workflow as WorkflowApi
-import Browser.Dom
-import Browser.Events
 import Component.Badge as Badge
 import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
@@ -47,13 +45,12 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import Json.Decode as Decode
+import Ports
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
-import Task
 import Time
 import Util.DateFormat as DateFormat
-import Util.KeyEvent as KeyEvent
 
 
 
@@ -136,7 +133,6 @@ type Msg
     | GotApproveResult (Result ApiError WorkflowInstance)
     | GotRejectResult (Result ApiError WorkflowInstance)
     | DismissMessage
-    | NoOp
 
 
 {-| 状態更新
@@ -177,12 +173,12 @@ update msg model =
 
         ClickApprove step ->
             ( { model | pendingAction = Just (ConfirmApprove step) }
-            , focusDialogCancel
+            , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ClickReject step ->
             ( { model | pendingAction = Just (ConfirmReject step) }
-            , focusDialogCancel
+            , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ConfirmAction ->
@@ -215,9 +211,6 @@ update msg model =
             ( { model | errorMessage = Nothing, successMessage = Nothing }
             , Cmd.none
             )
-
-        NoOp ->
-            ( model, Cmd.none )
 
 
 {-| 承認 API 呼び出し
@@ -260,17 +253,6 @@ rejectStep model step =
 
         _ ->
             Cmd.none
-
-
-{-| 確認ダイアログのキャンセルボタンにフォーカスを移動
-
-ダイアログ表示時にキーボード操作でアクセスできるようにする。
-
--}
-focusDialogCancel : Cmd Msg
-focusDialogCancel =
-    Browser.Dom.focus ConfirmDialog.cancelButtonId
-        |> Task.attempt (\_ -> NoOp)
 
 
 {-| 空文字列を Nothing に変換
@@ -321,18 +303,10 @@ handleApprovalResult successMsg result model =
 
 
 {-| 外部イベントの購読
-
-確認ダイアログ表示中のみ ESC キーを購読する。
-
 -}
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model.pendingAction of
-        Just _ ->
-            Browser.Events.onKeyDown (KeyEvent.escKeyDecoder CancelAction)
-
-        Nothing ->
-            Sub.none
+subscriptions : Sub Msg
+subscriptions =
+    Sub.none
 
 
 

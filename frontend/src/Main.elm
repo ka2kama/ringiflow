@@ -12,8 +12,6 @@ TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
 import Api exposing (ApiError)
 import Api.Auth as AuthApi
 import Browser
-import Browser.Dom
-import Browser.Events
 import Browser.Navigation as Nav
 import Component.ConfirmDialog as ConfirmDialog
 import Html exposing (..)
@@ -31,9 +29,7 @@ import Route exposing (Route)
 import Shared exposing (Shared)
 import Svg exposing (svg)
 import Svg.Attributes as SvgAttr
-import Task
 import Url exposing (Url)
-import Util.KeyEvent as KeyEvent
 
 
 
@@ -270,7 +266,6 @@ type Msg
     | CloseSidebar
     | ConfirmNavigation
     | CancelNavigation
-    | NoOp
     | HomeMsg Home.Msg
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
@@ -289,7 +284,7 @@ update msg model =
                 Browser.Internal url ->
                     if isCurrentPageDirty model then
                         ( { model | pendingNavigation = Just url }
-                        , focusDialogCancel
+                        , Ports.showModalDialog ConfirmDialog.dialogId
                         )
 
                     else
@@ -398,9 +393,6 @@ update msg model =
             , Cmd.none
             )
 
-        NoOp ->
-            ( model, Cmd.none )
-
         HomeMsg subMsg ->
             case model.page of
                 HomePage subModel ->
@@ -498,14 +490,6 @@ isCurrentPageDirty model =
             False
 
 
-{-| ダイアログ表示時にキャンセルボタンへフォーカスを移動
--}
-focusDialogCancel : Cmd Msg
-focusDialogCancel =
-    Browser.Dom.focus ConfirmDialog.cancelButtonId
-        |> Task.attempt (\_ -> NoOp)
-
-
 
 -- SUBSCRIPTIONS
 
@@ -518,23 +502,15 @@ focusDialogCancel =
 -}
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ case model.page of
-            TaskDetailPage subModel ->
-                Sub.map TaskDetailMsg (TaskDetail.subscriptions subModel)
+    case model.page of
+        TaskDetailPage _ ->
+            Sub.map TaskDetailMsg TaskDetail.subscriptions
 
-            WorkflowDetailPage subModel ->
-                Sub.map WorkflowDetailMsg (WorkflowDetail.subscriptions subModel)
+        WorkflowDetailPage _ ->
+            Sub.map WorkflowDetailMsg WorkflowDetail.subscriptions
 
-            _ ->
-                Sub.none
-        , case model.pendingNavigation of
-            Just _ ->
-                Browser.Events.onKeyDown (KeyEvent.escKeyDecoder CancelNavigation)
-
-            Nothing ->
-                Sub.none
-        ]
+        _ ->
+            Sub.none
 
 
 

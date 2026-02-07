@@ -208,6 +208,29 @@ const app = Elm.Main.init({
  * - true: beforeunload リスナーを登録
  * - false: beforeunload リスナーを解除
  */
+/**
+ * モーダルダイアログ表示（Ports: showModalDialog）
+ *
+ * Elm が <dialog> 要素を DOM に追加した後、showModal() で
+ * モーダル表示する。showModal() はフォーカストラップ、
+ * ESC キー処理、::backdrop 表示をブラウザネイティブで提供する。
+ *
+ * requestAnimationFrame を使用する理由:
+ * Elm の Virtual DOM 更新が完了してから showModal() を呼ぶ必要がある。
+ * Port コマンドは DOM パッチ後に実行されるが、安全マージンとして
+ * 次フレームまで遅延させる。
+ */
+if (app.ports.showModalDialog) {
+  app.ports.showModalDialog.subscribe((dialogId) => {
+    requestAnimationFrame(() => {
+      const dialog = document.getElementById(dialogId);
+      if (dialog && !dialog.open) {
+        dialog.showModal();
+      }
+    });
+  });
+}
+
 if (app.ports.setBeforeUnloadEnabled) {
   let beforeUnloadHandler = null;
 

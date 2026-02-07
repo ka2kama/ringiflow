@@ -2,6 +2,7 @@ port module Ports exposing
     ( receiveMessage
     , sendMessage
     , setBeforeUnloadEnabled
+    , showModalDialog
     )
 
 {-| JavaScript との通信用 Ports モジュール
@@ -50,3 +51,15 @@ port receiveMessage : (Encode.Value -> msg) -> Sub msg
 
 -}
 port setBeforeUnloadEnabled : Bool -> Cmd msg
+
+
+{-| モーダルダイアログを表示
+
+`<dialog>` 要素の `showModal()` を呼び出す。
+引数はダイアログ要素の HTML id。
+
+    -- ConfirmDialog の表示
+    Ports.showModalDialog ConfirmDialog.dialogId
+
+-}
+port showModalDialog : String -> Cmd msg
