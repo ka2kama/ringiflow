@@ -29,6 +29,10 @@ dotenvy.workspace = true
 subtle.workspace = true
 urlencoding.workspace = true
 
+[features]
+default = ["dev-auth"]
+dev-auth = []
+
 [dev-dependencies]
 tokio-test.workspace = true
 pretty_assertions.workspace = true

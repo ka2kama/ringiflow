@@ -84,7 +84,9 @@ use handler::{
    submit_workflow,
 };
 use middleware::{CsrfState, csrf_middleware};
-use ringiflow_bff::{client, dev_auth, handler, middleware};
+#[cfg(feature = "dev-auth")]
+use ringiflow_bff::dev_auth;
+use ringiflow_bff::{client, handler, middleware};
 use ringiflow_infra::RedisSessionManager;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -128,7 +130,8 @@ async fn main() -> anyhow::Result<()> {
    let core_service_client = CoreServiceClientImpl::new(&config.core_url);
    let auth_service_client = AuthServiceClientImpl::new(&config.auth_url);
 
-   // DevAuth の初期化（開発環境のみ）
+   // DevAuth の初期化（dev-auth feature 有効時のみコンパイルされる）
+   #[cfg(feature = "dev-auth")]
    if config.dev_auth_enabled {
       tracing::warn!("========================================");
       tracing::warn!("⚠️  DevAuth が有効です！");

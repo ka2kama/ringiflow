@@ -20,26 +20,18 @@ pub struct BffConfig {
    /// 開発用認証バイパス（DevAuth）の有効化
    ///
    /// `DEV_AUTH_ENABLED=true` のときに有効になる。
-   /// 本番環境では絶対に有効にしないこと。
+   /// 本番ビルドでは `dev-auth` feature が無効化され、このフィールド自体が存在しない。
+   #[cfg(feature = "dev-auth")]
    pub dev_auth_enabled: bool,
 }
 
 impl BffConfig {
    /// 環境変数から設定を読み込む
    pub fn from_env() -> Result<Self, env::VarError> {
+      #[cfg(feature = "dev-auth")]
       let dev_auth_enabled = env::var("DEV_AUTH_ENABLED")
          .map(|v| v.eq_ignore_ascii_case("true"))
          .unwrap_or(false);
-
-      // リリースビルドで DevAuth が有効な場合は panic
-      // 本番環境への誤デプロイを防ぐためのセーフティネット
-      #[cfg(not(debug_assertions))]
-      if dev_auth_enabled {
-         panic!(
-            "DEV_AUTH_ENABLED=true はリリースビルドでは使用できません。\n\
-             本番環境では認証バイパスは許可されません。"
-         );
-      }
 
       Ok(Self {
          host: env::var("BFF_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
@@ -53,12 +45,13 @@ impl BffConfig {
             .expect("CORE_URL が設定されていません（just setup-env を実行してください）"),
          auth_url: env::var("AUTH_URL")
             .expect("AUTH_URL が設定されていません（just setup-env を実行してください）"),
+         #[cfg(feature = "dev-auth")]
          dev_auth_enabled,
       })
    }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "dev-auth"))]
 mod tests {
    // テスト間で環境変数の競合を避けるため、
    // テスト用のパース関数で検証する
