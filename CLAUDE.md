@@ -556,6 +556,18 @@ BFF の公開 API エンドポイントを追加・変更・削除した場合�
 1. `justfile` の `check-tools` タスク
 2. [`docs/04_手順書/01_開発参画/01_開発環境構築.md`](docs/04_手順書/01_開発参画/01_開発環境構築.md)
 
+## CI ワークフロー変更時の必須対応
+
+GitHub Actions ワークフローに新しい Action を追加した場合、以下を実施する。
+
+→ 詳細: [ナレッジベース: GitHub Actions](docs/06_ナレッジベース/devtools/GitHubActions.md#アクション許可設定)
+
+1. [ナレッジベースの許可設定テーブル](docs/06_ナレッジベース/devtools/GitHubActions.md#プロジェクトでの許可設定)に Action のパターンを追記する
+2. 間接依存（Action が内部で呼び出す別の Action）がないか確認し、あれば同様に追記する
+3. GitHub Settings → Actions → General の許可パターンにも追加する（リポジトリ管理者が手動で実施）
+
+**禁止:** 許可設定を更新せずに CI ワークフローに新しい Action を追加すること
+
 ## ドキュメント規約
 
 → [`.claude/rules/docs.md`](.claude/rules/docs.md)
