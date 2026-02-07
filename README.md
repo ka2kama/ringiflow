@@ -43,6 +43,14 @@
 - 不正な状態を型で表現不可能にする
 - 実行時エラーよりコンパイルエラーを選ぶ
 
+### 共通アプローチ: ベストプラクティス起点
+
+2つの理念を実現するため、あらゆる判断において業界ベストプラクティスを起点とし、プロジェクトの現実に合わせて調整する。
+
+- 起点を高く置く（ベストプラクティスから始めて調整する）
+- 全領域に適用（コード設計、UI/UX、セキュリティ、テスト——例外なし）
+- 意識的な調整（外れるときは理由を記録する）
+
 ---
 
 ## 技術スタック
@@ -51,9 +59,8 @@
 |---------|------|----------|
 | バックエンド | **Rust** + axum | 型安全性、メモリ安全性、高パフォーマンス |
 | フロントエンド | **Elm** | 純粋関数型、ランタイムエラーゼロ、The Elm Architecture |
-| データストア | Aurora PostgreSQL, DynamoDB, S3, Redis | CQRS + Event Sourcing に最適化 |
-| インフラ | AWS (ECS Fargate, CloudFront, WAF) | エンタープライズグレードの可用性・セキュリティ |
-| IaC | Terraform | 再現可能なインフラ構築 |
+| データストア | PostgreSQL, Redis | ワークフロー・ユーザー管理、セッション管理 |
+| インフラ | AWS Lightsail, Cloudflare | デモ環境（個人開発向け低コスト構成） |
 
 ## アーキテクチャ
 
@@ -63,26 +70,23 @@ flowchart LR
         Browser["Browser\n(Elm SPA)"]
     end
 
-    subgraph AWS
-        CF["CloudFront\n+ WAF"]
+    subgraph Backend
         BFF["BFF\n(Rust/axum)"]
         Core["Core Service\n(Rust/axum)"]
         Auth["Auth Service\n(Rust/axum)"]
-
-        subgraph Data
-            Aurora["Aurora\nPostgreSQL"]
-            DynamoDB["DynamoDB\n(Event Store)"]
-            Redis["Redis\n(Session)"]
-        end
     end
 
-    Browser --> CF --> BFF
+    subgraph Data
+        PG["PostgreSQL"]
+        Redis["Redis\n(Session)"]
+    end
+
+    Browser --> BFF
     BFF --> Core
     BFF --> Auth
     BFF --> Redis
-    Core --> Aurora
-    Core --> DynamoDB
-    Auth --> Aurora
+    Core --> PG
+    Auth --> PG
 ```
 
 ### 設計パターン
@@ -90,8 +94,8 @@ flowchart LR
 | パターン | 目的 |
 |---------|------|
 | **BFF (Backend for Frontend)** | セキュリティ強化（トークン秘匿）、フロントエンド最適化 API |
-| **CQRS + Event Sourcing** | スケーラビリティ、監査証跡、状態の再構築可能性 |
-| **マルチテナント (RLS)** | Row Level Security による強力なデータ分離 |
+| **マルチテナント (tenant_id)** | アプリケーションレベルのテナントデータ分離 |
+| **レイヤードアーキテクチャ** | domain / infra / apps の責務分離 |
 
 ## 技術的ハイライト
 
@@ -174,24 +178,21 @@ AI エージェント向けのガイドラインは [CLAUDE.md](CLAUDE.md) を�
 # 初回セットアップ（依存関係インストール、DB 起動、マイグレーション）
 just setup
 
-# 開発サーバー起動
-just dev-deps      # PostgreSQL, Redis を起動
-just dev-bff       # BFF 起動
-just dev-core-service  # Core Service 起動
-just dev-web       # フロントエンド起動
+# 開発サーバー起動（BFF, Core Service, Auth Service, Web を一括起動）
+just dev-all
 
-# コミット前チェック（lint + test）
+# コミット前チェック（lint + test + API test）
 just check-all
 ```
 
 ## 開発状況
 
-**Phase 1（MVP）開発中** — ユーザー認証実装済み
+**Phase 2（機能拡張）計画中** — Phase 1 MVP 完了
 
 | Phase | 状態 | 内容 |
 |-------|------|------|
 | Phase 0 | ✅ 完了 | 開発基盤構築（CI/CD、プロジェクト構造、ドキュメント体系） |
-| Phase 1 | 🚧 開発中 | 最小限の動作するワークフローシステム |
+| Phase 1 | ✅ 完了 | 最小限の動作するワークフローシステム |
 | Phase 2 | 📋 計画中 | 機能拡張（マルチテナント、通知、ドキュメント管理） |
 | Phase 3 | 📋 計画中 | エンタープライズ機能（SSO/MFA、複雑なフロー） |
 | Phase 4 | 📋 計画中 | 高度な機能（CQRS/ES、リアルタイム） |
@@ -200,8 +201,8 @@ just check-all
 
 - [x] 認証（メール/パスワードログイン、ログアウト）
 - [x] セッション管理（HTTPOnly Cookie、Redis）
-- [ ] ワークフロー申請・承認
-- [ ] タスク一覧・詳細
-- [ ] ダッシュボード
+- [x] ワークフロー申請・承認
+- [x] タスク一覧・詳細
+- [x] ダッシュボード
 
 詳細: [実装ロードマップ](docs/03_詳細設計書/00_実装ロードマップ.md)
