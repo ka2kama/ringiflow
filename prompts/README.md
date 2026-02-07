@@ -6,6 +6,7 @@
 
 - セッションログ（実施記録）→ [`prompts/runs/`](runs/)
 - 操作パターン集（再現可能な手順）→ [`prompts/recipes/`](recipes/)
+- 計画ファイル（設計の思考過程）→ [`prompts/plans/`](plans/)
 - 定番の制約（出力形式、禁止事項、品質基準、テスト方針）
 - few-shot（代表例：良い例/悪い例、要約版）
 

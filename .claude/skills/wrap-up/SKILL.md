@@ -59,7 +59,7 @@ git diff --stat main...HEAD
 | 操作レシピ | 非自明な操作で問題解決、再利用可能なパターンを発見した | `prompts/recipes/` |
 | 改善記録 | AI 運用上の問題と対策があった | `prompts/improvements/YYYY-MM/` |
 
-注意: Git 管理外の情報源（Plan ファイル `~/.claude/plans/`、auto memory `~/.claude/projects/.../memory/`、会話コンテキスト等）は永続的なドキュメントではない。これらに設計解説や技術知識が含まれていても、ドキュメント作成を省略する理由にならない。判定基準は「リポジトリ（Git 管理下）に形式知として残っているか」である。
+注意: Git 管理外の情報源（auto memory `~/.claude/projects/.../memory/`、会話コンテキスト等）は永続的なドキュメントではない。これらに設計解説や技術知識が含まれていても、ドキュメント作成を省略する理由にならない。判定基準は「リポジトリ（Git 管理下）に形式知として残っているか」である。
 
 ユーザーの確認を得てから Step 3 に進む。
 
@@ -120,7 +120,24 @@ git diff --stat main...HEAD
 2. 構成: 事象 → 原因分析 → 対策 → 次のアクション
 3. 恒久対策がある場合は GitHub Issue を作成し、記録に Issue 番号を記載
 
-### Step 4: 確認と仕上げ
+### Step 4: 計画ファイルのリネーム
+
+セッション中に plan mode を使用した場合、計画ファイルをランダム名から命名規則に従ってリネームする。
+
+→ 命名規則: [`prompts/plans/README.md`](../../../prompts/plans/README.md)
+
+```bash
+# ランダム名の計画ファイルがあるか確認
+ls prompts/plans/ | grep -v '^[0-9]' | grep -v README
+```
+
+ランダム名のファイルがあれば `git mv` でリネームする:
+
+```bash
+git mv prompts/plans/clever-napping-panda.md prompts/plans/288_dev-auth-feature-flag.md
+```
+
+### Step 5: 確認と仕上げ
 
 1. 作成したドキュメントの一覧を提示
 2. コミットするかユーザーに確認
@@ -131,3 +148,4 @@ git diff --stat main...HEAD
    - `Add implementation notes for <機能名>`
    - `Add recipe: <レシピ名>`
    - `Add improvement record: <トピック>`
+   - `Rename plan file for #<Issue番号>`
