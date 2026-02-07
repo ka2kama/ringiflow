@@ -22,7 +22,7 @@ graph TB
         CF["Cloudflare<br/>SSL終端・CDN・DDoS防御"]
     end
 
-    subgraph Lightsail["Lightsail ($7/月)"]
+    subgraph Lightsail["Lightsail ($5/月)"]
         subgraph Frontend["frontend network"]
             Nginx["Nginx<br/>:80"]
             BFF["BFF<br/>:13000"]
@@ -58,7 +58,7 @@ graph TB
 | リージョン | 東京 (ap-northeast-1) |
 | プラットフォーム | Linux/Unix |
 | ブループリント | OS のみ → AlmaLinux 9.4 |
-| インスタンスプラン | $7 USD/月（1GB RAM, 40GB SSD） |
+| インスタンスプラン | $5 USD/月（1GB RAM, 40GB SSD） |
 | インスタンス名 | ringiflow-demo |
 
 4. SSH キーを設定:
@@ -389,9 +389,9 @@ find ~/ringiflow/backup -mtime +7 -delete
 
 | サービス | 月額 |
 |----------|------|
-| Lightsail 1GB | $7 |
+| Lightsail 1GB | $5 |
 | Cloudflare Free | $0 |
-| 合計 | $7 |
+| 合計 | $5 |
 
 ## 関連ドキュメント
 
