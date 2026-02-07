@@ -49,24 +49,25 @@ gh pr checks
 
 ### Step 3: レビューコメント取得・分析
 
-以下の 3 つの API で claude[bot] のレビュー情報を取得する:
+以下の 3 つの API で claude[bot] のレビュー情報を取得する。
+
+注意: 各コマンドは `gh api` で始めること。変数代入を `&&` で繋ぐとパーミッションルール `Bash(gh *)` にマッチしなくなる。
 
 ```bash
-PR_NUMBER=$(gh pr view --json number --jq '.number')
-REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-
 # 1. レビュー状態（APPROVED / CHANGES_REQUESTED）
-gh api "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+gh api "repos/{owner}/{repo}/pulls/{pr_number}/reviews" \
   --jq '[.[] | select(.user.login == "claude[bot]")] | last'
 
 # 2. Review コメント（コードの特定行への指摘）
-gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments" \
+gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments" \
   --jq '[.[] | select(.user.login == "claude[bot]")]'
 
 # 3. PR レベルコメント（全体フィードバック・サマリー）
-gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" \
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
   --jq '[.[] | select(.user.login == "claude[bot]")] | last'
 ```
+
+`{owner}/{repo}` と `{pr_number}` は実際の値に置き換える。`gh pr view --json number --jq '.number'` で PR 番号を、`gh repo view --json nameWithOwner --jq '.nameWithOwner'` でリポジトリ名を取得できる。
 
 取得した情報を以下の形式でユーザーに提示する:
 
@@ -118,11 +119,11 @@ APPROVED（コメントあり）の場合:
 
 ```bash
 # 対応した場合
-gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments/${COMMENT_ID}/replies" \
+gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies" \
   -f body="修正しました。"
 
 # スキップした場合（理由を記載）
-gh api "repos/${REPO}/pulls/${PR_NUMBER}/comments/${COMMENT_ID}/replies" \
+gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies" \
   -f body="（スキップ理由）"
 ```
 
