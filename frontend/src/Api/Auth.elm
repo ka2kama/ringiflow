@@ -88,15 +88,18 @@ csrfTokenDecoder =
 
 {-| ユーザー情報レスポンスのデコーダー
 
-レスポンス形式: `{ "data": { "id": "...", "email": "...", "name": "...", "roles": [...] } }`
+レスポンス形式:
+
+    { "data": { "id": "...", "email": "...", "name": "...", "tenant_id": "...", "roles": [...] } }
 
 -}
 userDecoder : Decoder User
 userDecoder =
     Decode.field "data"
-        (Decode.map4 User
+        (Decode.map5 User
             (Decode.field "id" Decode.string)
             (Decode.field "email" Decode.string)
             (Decode.field "name" Decode.string)
+            (Decode.field "tenant_id" Decode.string)
             (Decode.field "roles" (Decode.list Decode.string))
         )

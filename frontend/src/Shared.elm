@@ -47,6 +47,7 @@ type alias User =
     { id : String
     , email : String
     , name : String
+    , tenantId : String
     , roles : List String
     }
 
@@ -97,28 +98,20 @@ withCsrfToken token shared =
 
 
 {-| ユーザー情報を設定
+
+ログイン後、User から取得した tenantId で Shared.tenantId を更新する。
+
 -}
 withUser : User -> Shared -> Shared
 withUser user shared =
     { shared
         | user = Just user
-        , tenantId = extractTenantId
+        , tenantId = user.tenantId
     }
 
 
 
 -- HELPERS
-
-
-{-| テナント ID を取得
-
-MVP では固定値を返す。
-TODO(#306): User 型に tenantId を追加後、User -> String に変更する。
-
--}
-extractTenantId : String
-extractTenantId =
-    "00000000-0000-0000-0000-000000000001"
 
 
 {-| API リクエスト設定に変換

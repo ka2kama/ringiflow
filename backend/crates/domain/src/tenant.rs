@@ -1,6 +1,6 @@
-//! # テナント識別子
+//! # テナント
 //!
-//! マルチテナント SaaS アーキテクチャにおけるテナント（顧客企業）の識別子。
+//! マルチテナント SaaS アーキテクチャにおけるテナント（顧客企業）のモデル。
 //!
 //! ## マルチテナントとは
 //!
@@ -46,6 +46,8 @@
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::DomainError;
 
 /// テナント（顧客企業）の一意識別子
 ///
@@ -133,5 +135,145 @@ impl Default for TenantId {
    /// デフォルトで新しいテナント ID を生成する
    fn default() -> Self {
       Self::new()
+   }
+}
+
+// =========================================================================
+// TenantName（テナント名）
+// =========================================================================
+
+/// テナント名（値オブジェクト）
+///
+/// テナント（顧客企業）の表示名。
+///
+/// # 不変条件
+///
+/// - 空文字列ではない
+/// - 最大 255 文字（DB: `VARCHAR(255)`）
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display)]
+#[display("{_0}")]
+pub struct TenantName(String);
+
+impl TenantName {
+   /// テナント名を作成する
+   ///
+   /// # バリデーション
+   ///
+   /// - 空文字列ではない
+   /// - 前後の空白はトリミング
+   /// - 最大 255 文字
+   pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
+      let value = value.into().trim().to_string();
+
+      if value.is_empty() {
+         return Err(DomainError::Validation("テナント名は必須です".to_string()));
+      }
+
+      if value.chars().count() > 255 {
+         return Err(DomainError::Validation(
+            "テナント名は 255 文字以内である必要があります".to_string(),
+         ));
+      }
+
+      Ok(Self(value))
+   }
+
+   /// 文字列参照を取得する
+   pub fn as_str(&self) -> &str {
+      &self.0
+   }
+
+   /// 所有権を持つ文字列に変換する
+   pub fn into_string(self) -> String {
+      self.0
+   }
+}
+
+// =========================================================================
+// Tenant（テナントエンティティ）
+// =========================================================================
+
+/// テナント（顧客企業）エンティティ
+///
+/// マルチテナント環境における顧客企業を表現する。
+/// 現時点では ID と名前のみの最小構成。
+///
+/// # 不変条件
+///
+/// - `id` はシステム内で一意
+#[derive(Debug, Clone)]
+pub struct Tenant {
+   id:   TenantId,
+   name: TenantName,
+}
+
+impl Tenant {
+   /// データベースからテナントを復元する
+   pub fn from_db(id: TenantId, name: TenantName) -> Self {
+      Self { id, name }
+   }
+
+   /// テナント ID を取得する
+   pub fn id(&self) -> &TenantId {
+      &self.id
+   }
+
+   /// テナント名を取得する
+   pub fn name(&self) -> &TenantName {
+      &self.name
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   // TenantName のテスト
+
+   #[test]
+   fn test_テナント名は正常な名前を受け入れる() {
+      let name = TenantName::new("Development Tenant");
+      assert!(name.is_ok());
+      assert_eq!(name.unwrap().as_str(), "Development Tenant");
+   }
+
+   #[test]
+   fn test_テナント名は空文字列を拒否する() {
+      assert!(TenantName::new("").is_err());
+   }
+
+   #[test]
+   fn test_テナント名は空白のみの文字列を拒否する() {
+      assert!(TenantName::new("   ").is_err());
+   }
+
+   #[test]
+   fn test_テナント名は前後の空白をトリミングする() {
+      let name = TenantName::new("  Test Tenant  ").unwrap();
+      assert_eq!(name.as_str(), "Test Tenant");
+   }
+
+   #[test]
+   fn test_テナント名は255文字を超えると拒否する() {
+      let long_name = "a".repeat(256);
+      assert!(TenantName::new(long_name).is_err());
+   }
+
+   #[test]
+   fn test_テナント名は255文字以内を受け入れる() {
+      let name = "a".repeat(255);
+      assert!(TenantName::new(name).is_ok());
+   }
+
+   // Tenant のテスト
+
+   #[test]
+   fn test_from_dbでテナントを復元できる() {
+      let id = TenantId::new();
+      let name = TenantName::new("Test Tenant").unwrap();
+      let tenant = Tenant::from_db(id.clone(), name);
+
+      assert_eq!(tenant.id(), &id);
+      assert_eq!(tenant.name().as_str(), "Test Tenant");
    }
 }

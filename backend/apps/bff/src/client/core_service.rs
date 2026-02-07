@@ -79,6 +79,7 @@ pub struct UserResponse {
 #[derive(Debug, Clone, Deserialize)]
 pub struct UserWithPermissionsData {
    pub user:        UserResponse,
+   pub tenant_name: String,
    pub roles:       Vec<String>,
    pub permissions: Vec<String>,
 }

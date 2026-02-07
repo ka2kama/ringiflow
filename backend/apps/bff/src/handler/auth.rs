@@ -104,8 +104,7 @@ impl From<UserWithPermissionsData> for MeResponseData {
          email:       res.user.email,
          name:        res.user.name,
          tenant_id:   res.user.tenant_id,
-         // TODO(#306): Core API にテナント情報取得エンドポイントを追加して取得
-         tenant_name: "Development Tenant".to_string(),
+         tenant_name: res.tenant_name,
          roles:       res.roles,
          permissions: res.permissions,
       }
@@ -505,6 +504,7 @@ mod tests {
             user_by_email_result: Ok(ApiResponse::new(user.clone())),
             get_user_result:      Ok(ApiResponse::new(UserWithPermissionsData {
                user,
+               tenant_name: "Development Tenant".to_string(),
                roles: vec!["user".to_string()],
                permissions: vec!["workflow:read".to_string()],
             })),
@@ -1050,6 +1050,7 @@ mod tests {
 
       assert!(json["data"]["id"].is_string());
       assert_eq!(json["data"]["email"], "user@example.com");
+      assert_eq!(json["data"]["tenant_name"], "Development Tenant");
       assert!(json["data"]["roles"].is_array());
       assert!(json["data"]["permissions"].is_array());
    }
