@@ -20,7 +20,7 @@ if ! grep -q "Co-Authored-By: Claude Code" "$COMMIT_MSG_FILE"; then
 fi
 
 # すでにバージョン/モデル情報が含まれている場合はスキップ
-if grep -q "Co-Authored-By: Claude Code (.*)" "$COMMIT_MSG_FILE"; then
+if grep -qF "Co-Authored-By: Claude Code (" "$COMMIT_MSG_FILE"; then
     exit 0
 fi
 
