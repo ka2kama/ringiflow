@@ -15,10 +15,10 @@ updates:
       - "dependencies"
       - "rust"
 
-  # npm (Elm/Vite): apps/web の依存を管理
+  # npm (Elm/Vite): frontend の依存を管理
   # 注意: Elm パッケージ（elm.json）は Dependabot 非対応
   - package-ecosystem: "npm"
-    directory: "/apps/web"
+    directory: "/frontend"
     schedule:
       interval: "weekly"
       day: "monday"
