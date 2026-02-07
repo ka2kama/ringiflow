@@ -138,7 +138,7 @@ info "Docker イメージを転送中..."
 scp "${SSH_OPTS[@]}" "$EXPORT_DIR/backend.tar.gz" "$SCP_TARGET:$REMOTE_DIR/images/"
 
 info "設定ファイルを転送中..."
-scp "${SSH_OPTS[@]}" infra/lightsail/docker-compose.yml "$SCP_TARGET:$REMOTE_DIR/docker-compose.yml"
+scp "${SSH_OPTS[@]}" infra/lightsail/docker-compose.yaml "$SCP_TARGET:$REMOTE_DIR/docker-compose.yaml"
 scp "${SSH_OPTS[@]}" infra/lightsail/nginx/nginx.conf "$SCP_TARGET:$REMOTE_DIR/config/nginx/"
 scp "${SSH_OPTS[@]}" infra/lightsail/nginx/conf.d/default.conf "$SCP_TARGET:$REMOTE_DIR/config/nginx/conf.d/"
 
@@ -171,11 +171,11 @@ docker run --rm \
     busybox sh -c "rm -rf /dist/* && cp -r /src/* /dist/"
 
 echo "[INFO] コンテナを起動中..."
-docker compose -f docker-compose.yml down --remove-orphans 2>/dev/null || true
-docker compose -f docker-compose.yml up -d
+docker compose -f docker-compose.yaml down --remove-orphans 2>/dev/null || true
+docker compose -f docker-compose.yaml up -d
 
 echo "[INFO] コンテナのステータス:"
-docker compose -f docker-compose.yml ps
+docker compose -f docker-compose.yaml ps
 
 echo "[INFO] ヘルスチェック..."
 sleep 10

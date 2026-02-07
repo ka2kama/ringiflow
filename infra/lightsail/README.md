@@ -369,7 +369,7 @@ sudo ausearch -m avc -ts recent
 docker compose config | grep -A2 volumes
 ```
 
-docker-compose.yml と deploy.sh のバインドマウントには `:Z`（プライベート）または `:z`（共有）フラグが設定済み。
+docker-compose.yaml と deploy.sh のバインドマウントには `:Z`（プライベート）または `:z`（共有）フラグが設定済み。
 手動でボリュームマウントする場合は、同様にフラグを付けること。
 
 ### ディスク容量が不足
@@ -396,4 +396,4 @@ find ~/ringiflow/backup -mtime +7 -delete
 ## 関連ドキュメント
 
 - [ADR-030: Lightsail 個人環境の構築](../../docs/05_ADR/030_Lightsail個人環境の構築.md)
-- [docker-compose.yml](./docker-compose.yml)
+- [docker-compose.yaml](./docker-compose.yaml)

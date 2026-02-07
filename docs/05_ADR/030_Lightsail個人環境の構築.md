@@ -148,7 +148,7 @@ EC2 t3.micro（無料枠または $8-10/月）を使用。
 - 実装:
   - `backend/Dockerfile` - バックエンド Docker イメージ（BFF / Core Service / Auth Service）
   - `frontend/Dockerfile` - フロントエンド Docker イメージ
-  - `infra/lightsail/docker-compose.yml` - Lightsail 用 Compose 構成
+  - `infra/lightsail/docker-compose.yaml` - Lightsail 用 Compose 構成
   - `infra/lightsail/` - デプロイスクリプト群・Nginx 設定
 
 ---
