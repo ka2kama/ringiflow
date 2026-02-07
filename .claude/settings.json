@@ -63,14 +63,9 @@
       "Bash(just redis-get:*)"
     ],
     "ask": [
-      "Bash(git pull:*)",
-      "Bash(git merge:*)",
-      "Bash(git rebase:*)",
-      "Bash(git stash:*)",
       "Bash(terraform apply:*)",
       "Bash(terraform destroy:*)",
       "Bash(docker build:*)",
-      "Bash(cargo install:*)",
       "Edit(/infra/**)"
     ],
     "deny": [
