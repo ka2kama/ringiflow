@@ -54,14 +54,17 @@ Issue #265 に対応し、ConfirmDialog コンポーネントを `div` ベース
 
 コミット:
 - `547abcf` #265 Migrate ConfirmDialog from div to native `<dialog>` element
+- `e8c5907` #265 Fix dialog centering by adding explicit h-full w-full
 
-変更ファイル（10 ファイル、+282/-192 行）:
+変更ファイル（10 ファイル、+720/-192 行）:
 - 変更: `ConfirmDialog.elm`, `Ports.elm`, `main.js`, `styles.css`, `Main.elm`, `Page/Task/Detail.elm`, `Page/Workflow/Detail.elm`
 - 新規: `tests/Component/ConfirmDialogTest.elm`
 - 削除: `Util/KeyEvent.elm`, `tests/Util/KeyEventTest.elm`
 
 ドキュメント:
 - ADR-031: ConfirmDialog の `<dialog>` 要素への移行
+- 実装解説: ConfirmDialog の `<dialog>` 要素への移行
+- 改善記録: Plan ファイルの永続性誤認による実装解説の欠落
 
 PR: #278
 
@@ -75,14 +78,18 @@ Plan mode で 3 つの選択肢（div + JS トラップ、`<dialog>` + `showModa
 
 Phase 2 完了後の `just check` で、elm-review が `subscriptions _ = Sub.none` の未使用パラメータを指摘した。elm-review の自動修正提案に従い、`subscriptions : Model -> Sub Msg`（関数）から `subscriptions : Sub Msg`（値）に変更。Main.elm 側も呼び出し方を調整した。
 
+### ダイアログの中央配置修正
+
+ブラウザ手動確認で、ダイアログが左上に表示される問題を発見。`<dialog>` を `showModal()` で開くとブラウザの top layer に昇格するが、`position: fixed; inset: 0;` だけでは幅・高さが全画面にならない場合がある。`h-full w-full`（`height: 100%; width: 100%;`）を明示指定して解決。
+
 ## 学んだこと
 
 - Elm で `<dialog>` を使うには `Html.node "dialog"` が必要（標準ライブラリにヘルパーなし）
 - `showModal()` は `autofocus` 属性の要素に自動フォーカスするため、`Browser.Dom.focus` + `Task.attempt` の手動フォーカスが不要になる
 - `::backdrop` 疑似要素は CSS スタイリングのみ可能で、DOM イベントはバインドできない。クリック検出には `pointer-events-none`/`pointer-events-auto` と `event.target.nodeName` を組み合わせる
 - `<dialog>` の `cancel` イベントで `preventDefault` しないと、ブラウザがネイティブにダイアログを閉じてしまい、Elm の状態（`pendingAction`）と不整合になる
+- `<dialog>` を `showModal()` で top layer に昇格させた場合、`inset: 0` だけでは全画面に広がらない。明示的に `h-full w-full` が必要
 
 ## 次のステップ
 
-- ブラウザでの手動確認（フォーカストラップ、ESC、backdrop クリック）
 - 将来の検討: ダイアログ閉じた後のフォーカス戻し（WAI-ARIA 推奨だが別 Issue）
