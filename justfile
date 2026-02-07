@@ -40,6 +40,7 @@ check-tools:
     @which hurl > /dev/null || (echo "ERROR: hurl がインストールされていません" && exit 1)
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @which cargo-watch > /dev/null || (echo "ERROR: cargo-watch がインストールされていません" && exit 1)
+    @which cargo-deny > /dev/null || (echo "ERROR: cargo-deny がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
@@ -295,11 +296,19 @@ test-api: api-test-deps api-test-reset-db
     ./scripts/run-api-tests.sh
 
 # =============================================================================
+# セキュリティチェック
+# =============================================================================
+
+# 依存関係の脆弱性・ライセンスチェック（cargo-deny）
+audit:
+    cd backend && cargo deny check
+
+# =============================================================================
 # 全チェック
 # =============================================================================
 
-# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期）
-check: lint test test-rust-integration build-elm sqlx-check
+# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、セキュリティ）
+check: lint test test-rust-integration build-elm sqlx-check audit
 
 # プッシュ前の全チェック（軽量チェック + API テスト）
 check-all: check test-api
