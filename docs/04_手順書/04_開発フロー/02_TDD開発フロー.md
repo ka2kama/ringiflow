@@ -81,7 +81,7 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 テストコード:
 1. テストの意図が名前から読み取れるか確認
 2. 三角測量で追加したテストの中に、一般化後は冗長になったものがないか確認
-3. Arrange / Act / Assert の構造が明確か確認
+3. Given-When-Then（AAA）の構造が明確か確認
 
 **テストが通り続けることを確認しながら** 進める。
 
