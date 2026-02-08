@@ -273,6 +273,7 @@ How（具体的な対策）にこだわりすぎず、常に Want を満たす�
 | 意思決定（WHY） | [`docs/05_ADR/`](docs/05_ADR/) |
 | 技術知識 | [`docs/06_ナレッジベース/`](docs/06_ナレッジベース/) |
 | 実装解説 | [`docs/07_実装解説/`](docs/07_実装解説/) |
+| テスト | [`docs/08_テスト/`](docs/08_テスト/) |
 | 設計の思考過程 | [`prompts/plans/`](prompts/plans/) |
 | セッションログ | [`prompts/runs/`](prompts/runs/) |
 | 操作パターン | [`prompts/recipes/`](prompts/recipes/) |
