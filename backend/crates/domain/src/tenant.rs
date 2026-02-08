@@ -150,7 +150,8 @@ impl Default for TenantId {
 ///
 /// - 空文字列ではない
 /// - 最大 255 文字（DB: `VARCHAR(255)`）
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Display)]
+#[display("{_0}")]
 pub struct TenantName(String);
 
 impl TenantName {
@@ -185,12 +186,6 @@ impl TenantName {
    /// 所有権を持つ文字列に変換する
    pub fn into_string(self) -> String {
       self.0
-   }
-}
-
-impl std::fmt::Display for TenantName {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-      write!(f, "{}", self.0)
    }
 }
 
