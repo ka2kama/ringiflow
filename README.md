@@ -13,11 +13,9 @@
 
 ## プロジェクト理念
 
-このプロジェクトは 2 つの理念を軸に進めている。
-
 ### 学習効果の最大化
 
-単にコードを書くだけでなく、**設計判断の理由**を常に言語化する。
+設計判断の理由を言語化し、記録する。
 
 - なぜその技術・パターンを選んだか
 - 他にどんな選択肢があり、なぜ採用しなかったか
@@ -27,8 +25,6 @@
 - CQRS + Event Sourcing
 - 並行更新と状態整合性（楽観的ロック、競合解決、UI同期）
 - マルチテナントアーキテクチャ
-
-これらを ADR や技術ノートに記録し、後から振り返れるようにしている。
 
 ### 品質の追求
 
@@ -45,11 +41,73 @@
 
 ### 共通アプローチ: ベストプラクティス起点
 
-2つの理念を実現するため、あらゆる判断において業界ベストプラクティスを起点とし、プロジェクトの現実に合わせて調整する。
+業界ベストプラクティスを起点とし、プロジェクトの状況に合わせて調整する。
 
 - 起点を高く置く（ベストプラクティスから始めて調整する）
-- 全領域に適用（コード設計、UI/UX、セキュリティ、テスト——例外なし）
+- 全領域に適用（コード設計、UI/UX、セキュリティ、テスト、開発プロセス——例外なし）
 - 意識的な調整（外れるときは理由を記録する）
+
+---
+
+## AI 駆動開発
+
+AI エージェント（Claude Code）に開発を主導させながら、品質を担保するための仕組みを整備している。
+
+| 役割 | 担当 | 内容 |
+|------|------|------|
+| オーナー | 人間 | 方針決定、レビュー、最終判断 |
+| 実装者 | Claude Code | 設計、実装、テスト、ドキュメント作成 |
+| レビュアー | Claude Code Action | PR の自動レビュー |
+
+### AI の行動規範
+
+[CLAUDE.md](CLAUDE.md)（600行超）と [17 のルールファイル](.claude/rules/) が AI の行動を構造的に規定している。
+「AI が自由に書く」のではなく、「ルールに従って書く」体制。
+
+主要なルール:
+
+- [Issue 駆動開発](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md) / [TDD](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md) の強制 — コードを書く前に Issue を確認し、テストから書き始める
+- [実装前チェックリスト](.claude/rules/pre-implementation.md) — 型定義・既存パターンを確認してから書く。推測で書かない
+- [設計と実装の往復](.claude/rules/zoom-rhythm.md) — 全体と局所を行き来しながら進め、理想と現状のギャップがゼロになったことを確認してから提出
+- [問題解決フレームワーク](.claude/rules/problem-solving.md) — すぐに修正案を出さず、本質的な目的 → 理想状態 → 現状 → 根本原因の順で考える
+- [ベストプラクティス起点](.claude/rules/latest-practices.md) — 技術選定も[方法論設計](.claude/rules/methodology-design.md)も、業界のベストプラクティスから始めて調整する
+- [ドキュメント自動作成](CLAUDE.md#ドキュメント自動作成ルール) — 技術選定には ADR、新パターンにはナレッジベース、設計判断にはセッションログを自発的に作成
+
+### 改善フィードバックループ
+
+```mermaid
+flowchart LR
+    A["AI がミスする"] --> B["原因分析"]
+    B --> C["改善記録に記録"]
+    C --> D["CLAUDE.md / rules を改訂"]
+    D --> E["AI の行動が変わる"]
+    E -.->|次のセッション| A
+```
+
+現在 [30 件以上の改善記録](prompts/improvements/)がある。事例:
+
+| 事例 | 問題 | 対策 |
+|------|------|------|
+| [YAGNI/KISS の拡大解釈](prompts/improvements/2026-02/2026-02-01_0004_YAGNI-KISSの拡大解釈による設計品質低下.md) | AI が YAGNI を設計品質の妥協に使う | 機能スコープと設計品質を区別するルールを追加 |
+| [E2E 視点の完了基準欠如](prompts/improvements/2026-01/2026-01-29_1304_E2E視点の完了基準欠如.md) | API は動くが UI から操作できない | 完了基準に E2E 視点を追加 |
+| [自己検証の自動実行欠如](prompts/improvements/2026-02/2026-02-05_2100_自己検証ループの自動実行欠如.md) | 「検証すること」と指示しても実行されない | 行動規範ではなく成果物要件にして構造的に強制 |
+
+### 2段階の品質チェック
+
+設計レビューと最終チェックの 2 段階に加え、実装中は TDD で品質を維持する。
+
+```mermaid
+flowchart LR
+    A["設計"] --> B["設計レビュー"]
+    B --> C["実装<br/>(TDD)"]
+    C --> D["最終チェック"]
+    D --> E["AI レビュー<br/>マージ"]
+```
+
+- 設計レビュー: [設計レビューの反復](.claude/rules/zoom-rhythm.md#設計ブラッシュアップループ)でギャップをゼロにしてから実装に入る
+- 最終チェック（Ready for Review）: [品質チェックリスト](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#62-品質チェックリスト)で漏れを防ぎ、PR に Self-review を記載する
+
+→ 詳細: [CLAUDE.md](CLAUDE.md)
 
 ---
 
@@ -67,18 +125,18 @@
 ```mermaid
 flowchart LR
     subgraph Client
-        Browser["Browser\n(Elm SPA)"]
+        Browser["Browser<br/>(Elm SPA)"]
     end
 
     subgraph Backend
-        BFF["BFF\n(Rust/axum)"]
-        Core["Core Service\n(Rust/axum)"]
-        Auth["Auth Service\n(Rust/axum)"]
+        BFF["BFF<br/>(Rust/axum)"]
+        Core["Core Service<br/>(Rust/axum)"]
+        Auth["Auth Service<br/>(Rust/axum)"]
     end
 
     subgraph Data
         PG["PostgreSQL"]
-        Redis["Redis\n(Session)"]
+        Redis["Redis<br/>(Session)"]
     end
 
     Browser --> BFF
@@ -135,6 +193,7 @@ ringiflow/
 ├── frontend/          # Elm フロントエンド
 ├── infra/             # Terraform, Docker
 ├── openapi/           # OpenAPI 仕様
+├── prompts/           # AI 運用（セッションログ、改善記録、計画）
 └── docs/              # ドキュメント
     ├── 01_要件定義書/
     ├── 02_基本設計書/
@@ -147,8 +206,6 @@ ringiflow/
 
 ## 開発フロー
 
-### Issue 駆動開発
-
 GitHub Projects + Issue でタスクを管理。
 
 1. Issue を作成または確認
@@ -157,16 +214,6 @@ GitHub Projects + Issue でタスクを管理。
 4. CI + AI レビュー → マージ
 
 → [Project Board](https://github.com/users/ka2kama/projects/1) / [Issues](https://github.com/ka2kama/ringiflow/issues)
-
-### AI 主導の開発
-
-このプロジェクトは AI エージェント（Claude Code）が主導で開発している。
-
-- **オーナー**: 指示・方針決定・レビュー
-- **Claude Code**: 実装・設計判断・ドキュメント作成
-- **Claude Code Action**: PR の自動レビュー
-
-AI エージェント向けのガイドラインは [CLAUDE.md](CLAUDE.md) を参照。
 
 ## Getting Started
 
@@ -196,13 +243,5 @@ just check-all
 | Phase 2 | 📋 計画中 | 機能拡張（マルチテナント、通知、ドキュメント管理） |
 | Phase 3 | 📋 計画中 | エンタープライズ機能（SSO/MFA、複雑なフロー） |
 | Phase 4 | 📋 計画中 | 高度な機能（CQRS/ES、リアルタイム） |
-
-### Phase 1 の進捗
-
-- [x] 認証（メール/パスワードログイン、ログアウト）
-- [x] セッション管理（HTTPOnly Cookie、Redis）
-- [x] ワークフロー申請・承認
-- [x] タスク一覧・詳細
-- [x] ダッシュボード
 
 詳細: [実装ロードマップ](docs/03_詳細設計書/00_実装ロードマップ.md)
