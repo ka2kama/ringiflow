@@ -95,7 +95,6 @@ impl From<bool> for PasswordVerifyResult {
    }
 }
 
-#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
    use rstest::rstest;
@@ -109,7 +108,7 @@ mod tests {
    }
 
    #[rstest]
-   fn test_平文パスワードのDebug出力はマスクされる() {
+   fn test_平文パスワードのdebug出力はマスクされる() {
       let password = PlainPassword::new("secret");
       let debug = format!("{:?}", password);
       assert!(debug.contains("[REDACTED]"));

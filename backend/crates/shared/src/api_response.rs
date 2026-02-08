@@ -37,7 +37,7 @@ mod tests {
    use super::*;
 
    #[test]
-   fn serialize_を正しいjson形状にする() {
+   fn test_serializeを正しいjson形状にする() {
       let response = ApiResponse::new("hello");
       let json = serde_json::to_value(&response).unwrap();
 
@@ -45,7 +45,7 @@ mod tests {
    }
 
    #[test]
-   fn deserialize_でjsonからオブジェクトに変換する() {
+   fn test_deserializeでjsonからオブジェクトに変換する() {
       let json = r#"{"data": "world"}"#;
       let response: ApiResponse<String> = serde_json::from_str(json).unwrap();
 
@@ -53,7 +53,7 @@ mod tests {
    }
 
    #[test]
-   fn serialize_deserialize_のラウンドトリップ() {
+   fn test_serialize_deserializeのラウンドトリップ() {
       let original = ApiResponse::new(42);
       let json = serde_json::to_string(&original).unwrap();
       let deserialized: ApiResponse<i32> = serde_json::from_str(&json).unwrap();
@@ -62,7 +62,7 @@ mod tests {
    }
 
    #[test]
-   fn vec_ペイロードをシリアライズする() {
+   fn test_vecペイロードをシリアライズする() {
       let response = ApiResponse::new(vec!["a", "b", "c"]);
       let json = serde_json::to_value(&response).unwrap();
 
