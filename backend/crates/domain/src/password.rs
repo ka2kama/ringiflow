@@ -95,7 +95,6 @@ impl From<bool> for PasswordVerifyResult {
    }
 }
 
-#[allow(non_snake_case)]
 #[cfg(test)]
 mod tests {
    use rstest::rstest;
