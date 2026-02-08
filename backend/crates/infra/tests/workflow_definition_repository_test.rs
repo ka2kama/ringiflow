@@ -20,7 +20,7 @@ use ringiflow_infra::repository::{
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn test_find_published_by_tenant_returns_published_definitions(pool: PgPool) {
+async fn test_テナントの公開済み定義一覧を取得できる(pool: PgPool) {
    let repo = PostgresWorkflowDefinitionRepository::new(pool);
    let tenant_id = seed_tenant_id();
 
@@ -32,7 +32,7 @@ async fn test_find_published_by_tenant_returns_published_definitions(pool: PgPoo
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn test_find_published_by_tenant_filters_by_tenant(pool: PgPool) {
+async fn test_別テナントの定義は取得できない(pool: PgPool) {
    let repo = PostgresWorkflowDefinitionRepository::new(pool);
    let other_tenant_id = TenantId::new();
 
@@ -44,7 +44,7 @@ async fn test_find_published_by_tenant_filters_by_tenant(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn test_find_by_id_returns_definition_when_exists(pool: PgPool) {
+async fn test_idで定義を取得できる(pool: PgPool) {
    let repo = PostgresWorkflowDefinitionRepository::new(pool);
    let definition_id = seed_definition_id();
    let tenant_id = seed_tenant_id();
@@ -56,7 +56,7 @@ async fn test_find_by_id_returns_definition_when_exists(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../../migrations")]
-async fn test_find_by_id_returns_none_when_not_exists(pool: PgPool) {
+async fn test_存在しないidの場合noneを返す(pool: PgPool) {
    let repo = PostgresWorkflowDefinitionRepository::new(pool);
    let definition_id = WorkflowDefinitionId::new();
    let tenant_id = TenantId::new();
