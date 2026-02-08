@@ -364,7 +364,7 @@ mod tests {
    }
 
    #[fixture]
-   fn アクティブなユーザー(now: DateTime<Utc>) -> User {
+   fn active_user(now: DateTime<Utc>) -> User {
       User::new(
          UserId::new(),
          TenantId::new(),
@@ -399,84 +399,74 @@ mod tests {
    // User のテスト
 
    #[rstest]
-   fn test_新規ユーザーはアクティブ状態(アクティブなユーザー: User) {
-      assert!(アクティブなユーザー.is_active());
+   fn test_新規ユーザーはアクティブ状態(active_user: User) {
+      assert!(active_user.is_active());
    }
 
    #[rstest]
-   fn test_新規ユーザーはログイン可能(アクティブなユーザー: User) {
-      assert!(アクティブなユーザー.can_login());
+   fn test_新規ユーザーはログイン可能(active_user: User) {
+      assert!(active_user.can_login());
    }
 
    #[rstest]
-   fn test_新規ユーザーは最終ログイン日時なし(
-      アクティブなユーザー: User
-   ) {
-      assert_eq!(アクティブなユーザー.last_login_at(), None);
+   fn test_新規ユーザーは最終ログイン日時なし(active_user: User) {
+      assert_eq!(active_user.last_login_at(), None);
    }
 
    #[rstest]
    fn test_新規ユーザーのcreated_atとupdated_atは注入された値と一致する(
       now: DateTime<Utc>,
-      アクティブなユーザー: User,
+      active_user: User,
    ) {
-      assert_eq!(アクティブなユーザー.created_at(), now);
-      assert_eq!(アクティブなユーザー.updated_at(), now);
+      assert_eq!(active_user.created_at(), now);
+      assert_eq!(active_user.updated_at(), now);
    }
 
    #[rstest]
-   fn test_ステータス変更で状態が更新される(アクティブなユーザー: User) {
+   fn test_ステータス変更で状態が更新される(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let updated = アクティブなユーザー.with_status(UserStatus::Inactive, transition_time);
+      let updated = active_user.with_status(UserStatus::Inactive, transition_time);
 
       assert_eq!(updated.status(), UserStatus::Inactive);
       assert_eq!(updated.updated_at(), transition_time);
    }
 
    #[rstest]
-   fn test_非アクティブユーザーはアクティブでない(
-      アクティブなユーザー: User
-   ) {
+   fn test_非アクティブユーザーはアクティブでない(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let updated = アクティブなユーザー.with_status(UserStatus::Inactive, transition_time);
+      let updated = active_user.with_status(UserStatus::Inactive, transition_time);
 
       assert!(!updated.is_active());
    }
 
    #[rstest]
-   fn test_削除されたユーザーのステータスは削除済み(
-      アクティブなユーザー: User,
-   ) {
+   fn test_削除されたユーザーのステータスは削除済み(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let deleted = アクティブなユーザー.deleted(transition_time);
+      let deleted = active_user.deleted(transition_time);
 
       assert_eq!(deleted.status(), UserStatus::Deleted);
       assert_eq!(deleted.updated_at(), transition_time);
    }
 
    #[rstest]
-   fn test_削除されたユーザーはログインできない(
-      アクティブなユーザー: User
-   ) {
+   fn test_削除されたユーザーはログインできない(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let deleted = アクティブなユーザー.deleted(transition_time);
+      let deleted = active_user.deleted(transition_time);
 
       assert!(!deleted.can_login());
    }
 
    #[rstest]
-   fn test_最終ログイン日時を更新できる(アクティブなユーザー: User) {
+   fn test_最終ログイン日時を更新できる(active_user: User) {
       let login_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let updated = アクティブなユーザー.with_last_login_updated(login_time);
+      let updated = active_user.with_last_login_updated(login_time);
 
       assert_eq!(updated.last_login_at(), Some(login_time));
       assert_eq!(updated.updated_at(), login_time);
    }
 
    #[rstest]
-   fn test_ユーザーから表示用連番を取得できる(
-      アクティブなユーザー: User
-   ) {
-      assert_eq!(アクティブなユーザー.display_number().as_i64(), 42);
+   fn test_ユーザーから表示用連番を取得できる(active_user: User) {
+      assert_eq!(active_user.display_number().as_i64(), 42);
    }
 }

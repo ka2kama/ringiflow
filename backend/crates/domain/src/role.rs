@@ -11,7 +11,7 @@
 //!
 //! ## 設計方針
 //!
-//! - **システムロール**: tenant_id が None のロールは全テナント共通
+//! - **system_role**: tenant_id が None のロールは全テナント共通
 //! - **カスタムロール**: tenant_id を持つロールはテナント固有
 //! - **権限の柔軟性**: JSON 配列で権限を表現し、拡張可能に
 //!
@@ -23,7 +23,7 @@
 //!    tenant::TenantId,
 //! };
 //!
-//! // システムロールの作成
+//! // system_roleの作成
 //! let permissions = vec![
 //!    Permission::new("workflow:read"),
 //!    Permission::new("task:read"),
@@ -107,13 +107,13 @@ impl Permission {
 /// ロールエンティティ
 ///
 /// ユーザーに割り当てられる権限の集合。
-/// システムロールとテナント固有ロールの2種類がある。
+/// system_roleとテナント固有ロールの2種類がある。
 ///
 /// # 不変条件
 ///
-/// - システムロール（`is_system == true`）は `tenant_id == None`
+/// - system_role（`is_system == true`）は `tenant_id == None`
 /// - テナントロール（`is_system == false`）は `tenant_id` が必須
-/// - システムロール（`is_system == true`）は DB シードデータで管理
+/// - system_role（`is_system == true`）は DB シードデータで管理
 #[derive(Debug, Clone)]
 pub struct Role {
    id:          RoleId,
@@ -127,7 +127,7 @@ pub struct Role {
 }
 
 impl Role {
-   /// システムロールを作成する
+   /// system_roleを作成する
    ///
    /// # 引数
    ///
@@ -309,7 +309,7 @@ mod tests {
    }
 
    #[fixture]
-   fn システムロール(now: DateTime<Utc>) -> Role {
+   fn system_role(now: DateTime<Utc>) -> Role {
       let permissions = vec![Permission::new("workflow:*"), Permission::new("task:read")];
       Role::new_system(
          RoleId::new(),
@@ -321,7 +321,7 @@ mod tests {
    }
 
    #[fixture]
-   fn テナントロール(now: DateTime<Utc>) -> Role {
+   fn tenant_role(now: DateTime<Utc>) -> Role {
       let tenant_id = TenantId::new();
       let permissions = vec![Permission::new("workflow:read")];
       Role::new_tenant(
@@ -338,32 +338,32 @@ mod tests {
 
    #[rstest]
    fn test_システムロールはシステムロールとして識別される(
-      システムロール: Role,
+      system_role: Role,
    ) {
-      assert!(システムロール.is_system());
+      assert!(system_role.is_system());
    }
 
    #[rstest]
-   fn test_システムロールはテナントidを持たない(システムロール: Role) {
-      assert!(システムロール.tenant_id().is_none());
+   fn test_システムロールはテナントidを持たない(system_role: Role) {
+      assert!(system_role.tenant_id().is_none());
    }
 
    #[rstest]
-   fn test_テナントロールはシステムロールではない(テナントロール: Role) {
-      assert!(!テナントロール.is_system());
+   fn test_テナントロールはシステムロールではない(tenant_role: Role) {
+      assert!(!tenant_role.is_system());
    }
 
    #[rstest]
-   fn test_テナントロールはテナントidを持つ(テナントロール: Role) {
-      assert!(テナントロール.tenant_id().is_some());
+   fn test_テナントロールはテナントidを持つ(tenant_role: Role) {
+      assert!(tenant_role.tenant_id().is_some());
    }
 
    #[rstest]
    fn test_ロールのcreated_atは注入された値と一致する(
       now: DateTime<Utc>,
-      システムロール: Role,
+      system_role: Role,
    ) {
-      assert_eq!(システムロール.created_at(), now);
-      assert_eq!(システムロール.updated_at(), now);
+      assert_eq!(system_role.created_at(), now);
+      assert_eq!(system_role.updated_at(), now);
    }
 }

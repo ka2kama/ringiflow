@@ -1003,7 +1003,7 @@ mod tests {
    }
 
    #[fixture]
-   fn テスト用インスタンス(now: DateTime<Utc>) -> WorkflowInstance {
+   fn test_instance(now: DateTime<Utc>) -> WorkflowInstance {
       WorkflowInstance::new(NewWorkflowInstance {
          id: WorkflowInstanceId::new(),
          tenant_id: TenantId::new(),
@@ -1018,7 +1018,7 @@ mod tests {
    }
 
    #[fixture]
-   fn テスト用ステップ(now: DateTime<Utc>) -> WorkflowStep {
+   fn test_step(now: DateTime<Utc>) -> WorkflowStep {
       WorkflowStep::new(NewWorkflowStep {
          id: WorkflowStepId::new(),
          instance_id: WorkflowInstanceId::new(),
@@ -1039,35 +1039,35 @@ mod tests {
       use super::*;
 
       #[rstest]
-      fn test_新規作成時にversionは1(テスト用インスタンス: WorkflowInstance) {
-         assert_eq!(テスト用インスタンス.version().as_u32(), 1);
+      fn test_新規作成時にversionは1(test_instance: WorkflowInstance) {
+         assert_eq!(test_instance.version().as_u32(), 1);
       }
 
       #[rstest]
       fn test_新規作成時のcreated_atとupdated_atは注入された値と一致する(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         assert_eq!(テスト用インスタンス.created_at(), now);
-         assert_eq!(テスト用インスタンス.updated_at(), now);
+         assert_eq!(test_instance.created_at(), now);
+         assert_eq!(test_instance.updated_at(), now);
       }
 
       #[rstest]
       fn test_申請後のsubmitted_atは注入された値と一致する(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let submitted = テスト用インスタンス.submitted(now).unwrap();
+         let submitted = test_instance.submitted(now).unwrap();
          assert_eq!(submitted.submitted_at(), Some(now));
          assert_eq!(submitted.updated_at(), now);
       }
 
       #[rstest]
       fn test_承認完了でステータスが承認済みになる(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let instance = テスト用インスタンス
+         let instance = test_instance
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
@@ -1082,10 +1082,10 @@ mod tests {
 
       #[rstest]
       fn test_承認完了でversionがインクリメントされる(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let instance = テスト用インスタンス
+         let instance = test_instance
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
@@ -1098,10 +1098,10 @@ mod tests {
 
       #[rstest]
       fn test_却下完了でステータスが却下済みになる(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let instance = テスト用インスタンス
+         let instance = test_instance
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
@@ -1116,10 +1116,10 @@ mod tests {
 
       #[rstest]
       fn test_却下完了でversionがインクリメントされる(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let instance = テスト用インスタンス
+         let instance = test_instance
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
@@ -1132,20 +1132,20 @@ mod tests {
 
       #[rstest]
       fn test_処理中以外で承認完了するとエラー(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let result = テスト用インスタンス.complete_with_approval(now);
+         let result = test_instance.complete_with_approval(now);
 
          assert!(result.is_err());
       }
 
       #[rstest]
       fn test_処理中以外で却下完了するとエラー(
-         テスト用インスタンス: WorkflowInstance,
+         test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let result = テスト用インスタンス.complete_with_rejection(now);
+         let result = test_instance.complete_with_rejection(now);
 
          assert!(result.is_err());
       }
@@ -1159,35 +1159,32 @@ mod tests {
       use super::*;
 
       #[rstest]
-      fn test_新規作成時にversionは1(テスト用ステップ: WorkflowStep) {
-         assert_eq!(テスト用ステップ.version().as_u32(), 1);
+      fn test_新規作成時にversionは1(test_step: WorkflowStep) {
+         assert_eq!(test_step.version().as_u32(), 1);
       }
 
       #[rstest]
       fn test_新規作成時のcreated_atとupdated_atは注入された値と一致する(
-         テスト用ステップ: WorkflowStep,
+         test_step: WorkflowStep,
          now: DateTime<Utc>,
       ) {
-         assert_eq!(テスト用ステップ.created_at(), now);
-         assert_eq!(テスト用ステップ.updated_at(), now);
+         assert_eq!(test_step.created_at(), now);
+         assert_eq!(test_step.updated_at(), now);
       }
 
       #[rstest]
       fn test_アクティブ化後のstarted_atは注入された値と一致する(
-         テスト用ステップ: WorkflowStep,
+         test_step: WorkflowStep,
          now: DateTime<Utc>,
       ) {
-         let step = テスト用ステップ.activated(now);
+         let step = test_step.activated(now);
          assert_eq!(step.started_at(), Some(now));
          assert_eq!(step.updated_at(), now);
       }
 
       #[rstest]
-      fn test_承認で完了と承認済みになる(
-         テスト用ステップ: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
-         let step = テスト用ステップ.activated(now);
+      fn test_承認で完了と承認済みになる(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let step = test_step.activated(now);
 
          let result = step.approve(None, now);
 
@@ -1200,10 +1197,10 @@ mod tests {
 
       #[rstest]
       fn test_承認でversionがインクリメントされる(
-         テスト用ステップ: WorkflowStep,
+         test_step: WorkflowStep,
          now: DateTime<Utc>,
       ) {
-         let step = テスト用ステップ.activated(now);
+         let step = test_step.activated(now);
          let original_version = step.version();
 
          let approved = step.approve(None, now).unwrap();
@@ -1212,11 +1209,8 @@ mod tests {
       }
 
       #[rstest]
-      fn test_承認でコメントが設定される(
-         テスト用ステップ: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
-         let step = テスト用ステップ.activated(now);
+      fn test_承認でコメントが設定される(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let step = test_step.activated(now);
 
          let approved = step.approve(Some("承認します".to_string()), now).unwrap();
 
@@ -1224,11 +1218,8 @@ mod tests {
       }
 
       #[rstest]
-      fn test_却下で完了と却下済みになる(
-         テスト用ステップ: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
-         let step = テスト用ステップ.activated(now);
+      fn test_却下で完了と却下済みになる(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let step = test_step.activated(now);
 
          let result = step.reject(None, now);
 
@@ -1240,10 +1231,10 @@ mod tests {
 
       #[rstest]
       fn test_却下でversionがインクリメントされる(
-         テスト用ステップ: WorkflowStep,
+         test_step: WorkflowStep,
          now: DateTime<Utc>,
       ) {
-         let step = テスト用ステップ.activated(now);
+         let step = test_step.activated(now);
          let original_version = step.version();
 
          let rejected = step.reject(None, now).unwrap();
@@ -1301,20 +1292,20 @@ mod tests {
 
       #[rstest]
       fn test_アクティブ以外で承認するとエラー(
-         テスト用ステップ: WorkflowStep,
+         test_step: WorkflowStep,
          now: DateTime<Utc>,
       ) {
-         let result = テスト用ステップ.approve(None, now);
+         let result = test_step.approve(None, now);
 
          assert!(result.is_err());
       }
 
       #[rstest]
       fn test_アクティブ以外で却下するとエラー(
-         テスト用ステップ: WorkflowStep,
+         test_step: WorkflowStep,
          now: DateTime<Utc>,
       ) {
-         let result = テスト用ステップ.reject(None, now);
+         let result = test_step.reject(None, now);
 
          assert!(result.is_err());
       }
