@@ -41,6 +41,7 @@ check-tools:
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @which cargo-watch > /dev/null || (echo "ERROR: cargo-watch がインストールされていません" && exit 1)
     @which cargo-deny > /dev/null || (echo "ERROR: cargo-deny がインストールされていません" && exit 1)
+    @which cargo-llvm-cov > /dev/null || (echo "ERROR: cargo-llvm-cov がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
@@ -302,6 +303,22 @@ test-api: api-test-deps api-test-reset-db
 # 依存関係の脆弱性・ライセンスチェック（cargo-deny）
 audit:
     cd backend && cargo deny check
+
+# =============================================================================
+# カバレッジ計測
+# =============================================================================
+
+# Rust コードカバレッジを計測し HTML レポートを生成（cargo-llvm-cov）
+# レポートは backend/target/llvm-cov/html/index.html に出力される
+coverage:
+    cd backend && cargo llvm-cov --workspace --html
+    @echo ""
+    @echo "✓ カバレッジレポート生成完了"
+    @echo "  open backend/target/llvm-cov/html/index.html"
+
+# Rust コードカバレッジのサマリーをターミナルに表示
+coverage-summary:
+    cd backend && cargo llvm-cov --workspace
 
 # =============================================================================
 # 全チェック
