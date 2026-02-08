@@ -18,7 +18,7 @@
 # ============================================================
 # Stage 1: Chef（依存関係の準備）
 # ============================================================
-FROM rust:1.92-slim-bookworm AS chef
+FROM rust:1.93-slim-bookworm AS chef
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
