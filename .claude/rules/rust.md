@@ -68,9 +68,9 @@ mod tests {
     use pretty_assertions::assert_eq;
     use rstest::{fixture, rstest};
 
-    // フィクスチャでセットアップを共通化
+    // フィクスチャでセットアップを共通化（英語 snake_case）
     #[fixture]
-    fn アクティブなユーザー() -> User {
+    fn active_user() -> User {
         let tenant_id = TenantId::new();
         let email = Email::new("user@example.com").unwrap();
         User::new(tenant_id, email, "Test User".to_string(), None)
@@ -93,8 +93,8 @@ mod tests {
 
     // フィクスチャを使用したテスト
     #[rstest]
-    fn test_削除されたユーザーはログインできない(アクティブなユーザー: User) {
-        let deleted = アクティブなユーザー.deleted();
+    fn test_削除されたユーザーはログインできない(active_user: User) {
+        let deleted = active_user.deleted();
 
         assert!(!deleted.can_login());
     }
@@ -117,8 +117,8 @@ mod tests {
 ```rust
 // Good: 単一の検証観点
 #[rstest]
-fn test_削除されたユーザーはログインできない(アクティブなユーザー: User) {
-    let deleted = アクティブなユーザー.deleted();
+fn test_削除されたユーザーはログインできない(active_user: User) {
+    let deleted = active_user.deleted();
     assert!(!deleted.can_login());
 }
 
