@@ -144,6 +144,7 @@ impl CoreServiceClient for StubCoreServiceClient {
 
       Ok(ApiResponse::new(UserWithPermissionsData {
          user:        Self::create_user_response(),
+         tenant_name: "Development Tenant".to_string(),
          roles:       vec!["user".to_string()],
          permissions: vec!["workflow:read".to_string()],
       }))
