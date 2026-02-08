@@ -96,6 +96,7 @@ use ringiflow_infra::{
    db,
    repository::{
       display_id_counter_repository::PostgresDisplayIdCounterRepository,
+      tenant_repository::PostgresTenantRepository,
       user_repository::PostgresUserRepository,
       workflow_definition_repository::PostgresWorkflowDefinitionRepository,
       workflow_instance_repository::PostgresWorkflowInstanceRepository,
@@ -141,7 +142,11 @@ async fn main() -> anyhow::Result<()> {
 
    // 依存コンポーネントを初期化
    let user_repository = PostgresUserRepository::new(pool.clone());
-   let user_state = Arc::new(UserState { user_repository });
+   let tenant_repository = PostgresTenantRepository::new(pool.clone());
+   let user_state = Arc::new(UserState {
+      user_repository,
+      tenant_repository,
+   });
 
    // ワークフロー関連の依存コンポーネント
    let definition_repo = PostgresWorkflowDefinitionRepository::new(pool.clone());
@@ -183,15 +188,15 @@ async fn main() -> anyhow::Result<()> {
          .route("/health", get(health_check))
          .route(
             "/internal/users",
-            get(list_users::<PostgresUserRepository>),
+            get(list_users::<PostgresUserRepository, PostgresTenantRepository>),
          )
          .route(
             "/internal/users/by-email",
-            get(get_user_by_email::<PostgresUserRepository>),
+            get(get_user_by_email::<PostgresUserRepository, PostgresTenantRepository>),
          )
          .route(
             "/internal/users/{user_id}",
-            get(get_user::<PostgresUserRepository>),
+            get(get_user::<PostgresUserRepository, PostgresTenantRepository>),
          )
          .with_state(user_state)
          // ワークフロー定義 API
