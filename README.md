@@ -99,9 +99,9 @@ flowchart LR
 ```mermaid
 flowchart LR
     A["設計"] --> B["設計レビュー"]
-    B --> C["実装\n(TDD)"]
+    B --> C["実装<br/>(TDD)"]
     C --> D["最終チェック"]
-    D --> E["AI レビュー\nマージ"]
+    D --> E["AI レビュー<br/>マージ"]
 ```
 
 - 設計レビュー: [設計レビューの反復](.claude/rules/zoom-rhythm.md#設計ブラッシュアップループ)でギャップをゼロにしてから実装に入る
@@ -125,18 +125,18 @@ flowchart LR
 ```mermaid
 flowchart LR
     subgraph Client
-        Browser["Browser\n(Elm SPA)"]
+        Browser["Browser<br/>(Elm SPA)"]
     end
 
     subgraph Backend
-        BFF["BFF\n(Rust/axum)"]
-        Core["Core Service\n(Rust/axum)"]
-        Auth["Auth Service\n(Rust/axum)"]
+        BFF["BFF<br/>(Rust/axum)"]
+        Core["Core Service<br/>(Rust/axum)"]
+        Auth["Auth Service<br/>(Rust/axum)"]
     end
 
     subgraph Data
         PG["PostgreSQL"]
-        Redis["Redis\n(Session)"]
+        Redis["Redis<br/>(Session)"]
     end
 
     Browser --> BFF
