@@ -1149,6 +1149,127 @@ mod tests {
 
          assert!(result.is_err());
       }
+
+      // --- cancelled() テスト ---
+
+      #[rstest]
+      fn test_下書きからの取消でキャンセルになる(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let result = test_instance.cancelled(now);
+
+         assert!(result.is_ok());
+         let cancelled = result.unwrap();
+         assert_eq!(cancelled.status(), WorkflowInstanceStatus::Cancelled);
+         assert_eq!(cancelled.completed_at(), Some(now));
+      }
+
+      #[rstest]
+      fn test_申請済みからの取消でキャンセルになる(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance.submitted(now).unwrap();
+
+         let result = instance.cancelled(now);
+
+         assert!(result.is_ok());
+         let cancelled = result.unwrap();
+         assert_eq!(cancelled.status(), WorkflowInstanceStatus::Cancelled);
+      }
+
+      #[rstest]
+      fn test_処理中からの取消でキャンセルになる(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+
+         let result = instance.cancelled(now);
+
+         assert!(result.is_ok());
+         let cancelled = result.unwrap();
+         assert_eq!(cancelled.status(), WorkflowInstanceStatus::Cancelled);
+      }
+
+      #[rstest]
+      fn test_承認済みからの取消はエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now)
+            .complete_with_approval(now)
+            .unwrap();
+
+         let result = instance.cancelled(now);
+
+         assert!(result.is_err());
+      }
+
+      #[rstest]
+      fn test_却下済みからの取消はエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now)
+            .complete_with_rejection(now)
+            .unwrap();
+
+         let result = instance.cancelled(now);
+
+         assert!(result.is_err());
+      }
+
+      #[rstest]
+      fn test_キャンセル済みからの取消はエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance.cancelled(now).unwrap();
+
+         let result = instance.cancelled(now);
+
+         assert!(result.is_err());
+      }
+
+      // --- submitted() 異常系テスト ---
+
+      #[rstest]
+      fn test_申請済みからの再申請はエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance.submitted(now).unwrap();
+
+         let result = instance.submitted(now);
+
+         assert!(result.is_err());
+      }
+
+      #[rstest]
+      fn test_処理中からの申請はエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+
+         let result = instance.submitted(now);
+
+         assert!(result.is_err());
+      }
    }
 
    // =========================================================================
@@ -1308,6 +1429,83 @@ mod tests {
          let result = test_step.reject(None, now);
 
          assert!(result.is_err());
+      }
+
+      #[rstest]
+      fn test_差戻しで完了と差戻しになる(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let step = test_step.activated(now);
+
+         let result = step.completed(
+            StepDecision::RequestChanges,
+            Some("修正してください".to_string()),
+            now,
+         );
+
+         assert!(result.is_ok());
+         let completed = result.unwrap();
+         assert_eq!(completed.status(), WorkflowStepStatus::Completed);
+         assert_eq!(completed.decision(), Some(StepDecision::RequestChanges));
+         assert_eq!(completed.comment(), Some("修正してください"));
+         assert_eq!(completed.completed_at(), Some(now));
+      }
+   }
+
+   // =========================================================================
+   // WorkflowDefinition のテスト
+   // =========================================================================
+
+   mod workflow_definition {
+      use super::*;
+
+      #[fixture]
+      fn test_definition(now: DateTime<Utc>) -> WorkflowDefinition {
+         WorkflowDefinition::new(NewWorkflowDefinition {
+            id: WorkflowDefinitionId::new(),
+            tenant_id: TenantId::new(),
+            name: WorkflowName::new("テスト定義").unwrap(),
+            description: Some("テスト用".to_string()),
+            definition: json!({"steps": []}),
+            created_by: UserId::new(),
+            now,
+         })
+      }
+
+      #[rstest]
+      fn test_公開でステータスが公開済みになる(
+         test_definition: WorkflowDefinition,
+         now: DateTime<Utc>,
+      ) {
+         let result = test_definition.published(now);
+
+         assert!(result.is_ok());
+         let published = result.unwrap();
+         assert_eq!(published.status(), WorkflowDefinitionStatus::Published);
+         assert_eq!(published.updated_at(), now);
+      }
+
+      #[rstest]
+      fn test_公開済みの再公開はエラー(
+         test_definition: WorkflowDefinition,
+         now: DateTime<Utc>,
+      ) {
+         let published = test_definition.published(now).unwrap();
+
+         let result = published.published(now);
+
+         assert!(result.is_err());
+      }
+
+      #[rstest]
+      fn test_アーカイブでステータスがアーカイブ済みになる(
+         test_definition: WorkflowDefinition,
+         now: DateTime<Utc>,
+      ) {
+         let published = test_definition.published(now).unwrap();
+
+         let archived = published.archived(now);
+
+         assert_eq!(archived.status(), WorkflowDefinitionStatus::Archived);
+         assert_eq!(archived.updated_at(), now);
       }
    }
 }
