@@ -223,7 +223,7 @@ mod tests {
    #[tokio::test]
    async fn test_verify_認証成功() {
       // Given
-      let app = create_test_app(StubAuthUseCase::success());
+      let sut = create_test_app(StubAuthUseCase::success());
 
       let body = serde_json::json!({
           "tenant_id": "550e8400-e29b-41d4-a716-446655440001",
@@ -239,7 +239,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -256,7 +256,7 @@ mod tests {
    #[tokio::test]
    async fn test_verify_認証失敗() {
       // Given
-      let app = create_test_app(StubAuthUseCase::auth_failed());
+      let sut = create_test_app(StubAuthUseCase::auth_failed());
 
       let body = serde_json::json!({
           "tenant_id": "550e8400-e29b-41d4-a716-446655440001",
@@ -272,7 +272,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -281,7 +281,7 @@ mod tests {
    #[tokio::test]
    async fn test_create_credentials_成功() {
       // Given
-      let app = create_test_app(StubAuthUseCase::success());
+      let sut = create_test_app(StubAuthUseCase::success());
 
       let body = serde_json::json!({
           "user_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -298,7 +298,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::CREATED);
@@ -314,7 +314,7 @@ mod tests {
    #[tokio::test]
    async fn test_delete_credentials_成功() {
       // Given
-      let app = create_test_app(StubAuthUseCase::success());
+      let sut = create_test_app(StubAuthUseCase::success());
       let tenant_id = Uuid::now_v7();
       let user_id = Uuid::now_v7();
 
@@ -328,7 +328,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::NO_CONTENT);

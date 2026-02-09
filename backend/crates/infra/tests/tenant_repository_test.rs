@@ -31,9 +31,9 @@ async fn test_idでテナントを取得できる(pool: PgPool) {
    .await
    .expect("テナント作成に失敗");
 
-   let repo = PostgresTenantRepository::new(pool);
+   let sut = PostgresTenantRepository::new(pool);
 
-   let result = repo.find_by_id(&tenant_id).await;
+   let result = sut.find_by_id(&tenant_id).await;
 
    assert!(result.is_ok());
    let tenant = result.unwrap();
@@ -46,9 +46,9 @@ async fn test_idでテナントを取得できる(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_存在しないidの場合noneを返す(pool: PgPool) {
    let nonexistent_id = TenantId::from_uuid(Uuid::now_v7());
-   let repo = PostgresTenantRepository::new(pool);
+   let sut = PostgresTenantRepository::new(pool);
 
-   let result = repo.find_by_id(&nonexistent_id).await;
+   let result = sut.find_by_id(&nonexistent_id).await;
 
    assert!(result.is_ok());
    assert!(result.unwrap().is_none());

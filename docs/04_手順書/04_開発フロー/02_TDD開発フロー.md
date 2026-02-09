@@ -342,13 +342,16 @@ let sut = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
 let result = sut.create_workflow(...).await;
 ```
 
-適用範囲:
+適用範囲: 全レイヤーのテスト（Usecase、Repository、Handler、Session 等）。
 
-| 対象 | 理由 |
-|------|------|
-| Usecase 層のテスト | Arrange 部分が長く（Mock + テストデータ）、テスト対象が道具立てに埋もれやすい |
+| テスト対象 | `sut` の変数 | 依存関係（`sut` にしない） |
+|-----------|-------------|--------------------------|
+| Usecase | `let sut = XxxUseCaseImpl::new(...)` | Mock リポジトリ（`step_repo`, `instance_repo` 等） |
+| Repository | `let sut = PostgresXxxRepository::new(pool)` | 前提データ用の別リポジトリ（`instance_repo` 等） |
+| Handler | `let sut = create_test_app(...)` | スタブクライアント、テストデータ |
+| Session | `let sut = RedisSessionManager::new(...)` | テストデータ |
 
-他のレイヤー（Repository、Handler 等）は必要に応じて拡大する。
+注意: テスト対象のみ `sut` にする。テスト対象の依存関係（Mock リポジトリ等）は意味のある名前を維持する。
 
 出典: Gerard Meszaros『xUnit Test Patterns』（Addison-Wesley, 2007）で体系化された用語。C#/Java 圏で広く浸透している。
 
@@ -395,7 +398,7 @@ flowchart TD
 
 | 日付 | 変更内容 |
 |------|---------|
-| 2026-02-09 | テスト規約セクションを追加: `sut` 命名規約（#330） |
+| 2026-02-09 | テスト規約セクションを追加: `sut` 命名規約を全レイヤーに適用（#330） |
 | 2026-02-08 | Refactor ステップに設計原則レンズを追加。「きれいにする」→「設計を改善する」に再定義（#291） |
 | 2026-02-07 | Refactor ステップにテストのリファクタリングを追加、テストリストの二面性を明記、Phase 完了時のテストレビューを追加（#279） |
 | 2026-01-17 | 初版作成 |

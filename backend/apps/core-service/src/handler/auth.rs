@@ -458,7 +458,7 @@ mod tests {
       let user = create_active_user(&tenant_id);
       let tenant = create_tenant(&tenant_id);
       let roles = vec![create_user_role()];
-      let app = create_test_app(
+      let sut = create_test_app(
          StubUserRepository::with_user(user, roles),
          StubTenantRepository::with_tenant(tenant),
       );
@@ -473,7 +473,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -490,7 +490,7 @@ mod tests {
    #[tokio::test]
    async fn test_get_user_by_email_ユーザーが見つからない() {
       // Given
-      let app = create_test_app(StubUserRepository::empty(), StubTenantRepository::empty());
+      let sut = create_test_app(StubUserRepository::empty(), StubTenantRepository::empty());
       let tenant_id = TenantId::new();
 
       let request = Request::builder()
@@ -503,7 +503,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::NOT_FOUND);
@@ -512,7 +512,7 @@ mod tests {
    #[tokio::test]
    async fn test_get_user_by_email_不正なメールアドレス() {
       // Given
-      let app = create_test_app(StubUserRepository::empty(), StubTenantRepository::empty());
+      let sut = create_test_app(StubUserRepository::empty(), StubTenantRepository::empty());
       let tenant_id = TenantId::new();
 
       let request = Request::builder()
@@ -525,7 +525,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::BAD_REQUEST);
@@ -539,7 +539,7 @@ mod tests {
       let user_id = *user.id().as_uuid();
       let tenant = create_tenant(&tenant_id);
       let roles = vec![create_user_role()];
-      let app = create_test_app(
+      let sut = create_test_app(
          StubUserRepository::with_user(user, roles),
          StubTenantRepository::with_tenant(tenant),
       );
@@ -551,7 +551,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -567,7 +567,7 @@ mod tests {
    #[tokio::test]
    async fn test_get_user_存在しないユーザーで404() {
       // Given
-      let app = create_test_app(StubUserRepository::empty(), StubTenantRepository::empty());
+      let sut = create_test_app(StubUserRepository::empty(), StubTenantRepository::empty());
 
       let user_id = Uuid::now_v7();
       let request = Request::builder()
@@ -577,7 +577,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::NOT_FOUND);
@@ -591,7 +591,7 @@ mod tests {
       let user_id = *user.id().as_uuid();
       let roles = vec![create_user_role()];
       // テナントリポジトリは空（テナントが見つからないケース）
-      let app = create_test_app(
+      let sut = create_test_app(
          StubUserRepository::with_user(user, roles),
          StubTenantRepository::empty(),
       );
@@ -603,7 +603,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);

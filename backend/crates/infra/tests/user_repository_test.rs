@@ -23,10 +23,10 @@ use uuid::Uuid;
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_メールアドレスでユーザーを取得できる(pool: PgPool) {
    let (tenant_id, _user_id) = setup_test_data(&pool).await;
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
    let email = Email::new("test@example.com").unwrap();
 
-   let result = repo.find_by_email(&tenant_id, &email).await;
+   let result = sut.find_by_email(&tenant_id, &email).await;
 
    assert!(result.is_ok());
    let user = result.unwrap();
@@ -39,10 +39,10 @@ async fn test_メールアドレスでユーザーを取得できる(pool: PgPoo
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_存在しないメールアドレスの場合noneを返す(pool: PgPool) {
    let (tenant_id, _user_id) = setup_test_data(&pool).await;
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
    let email = Email::new("nonexistent@example.com").unwrap();
 
-   let result = repo.find_by_email(&tenant_id, &email).await;
+   let result = sut.find_by_email(&tenant_id, &email).await;
 
    assert!(result.is_ok());
    assert!(result.unwrap().is_none());
@@ -65,11 +65,11 @@ async fn test_別テナントのユーザーは取得できない(pool: PgPool) 
    .await
    .expect("別テナント作成に失敗");
 
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
    let email = Email::new("test@example.com").unwrap();
 
    // 別テナントからは取得できない
-   let result = repo.find_by_email(&other_tenant_id, &email).await;
+   let result = sut.find_by_email(&other_tenant_id, &email).await;
 
    assert!(result.is_ok());
    assert!(result.unwrap().is_none());
@@ -78,9 +78,9 @@ async fn test_別テナントのユーザーは取得できない(pool: PgPool) 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_idでユーザーを取得できる(pool: PgPool) {
    let (_tenant_id, user_id) = setup_test_data(&pool).await;
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_by_id(&user_id).await;
+   let result = sut.find_by_id(&user_id).await;
 
    assert!(result.is_ok());
    let user = result.unwrap();
@@ -93,9 +93,9 @@ async fn test_idでユーザーを取得できる(pool: PgPool) {
 async fn test_ユーザーとロールを一緒に取得できる(pool: PgPool) {
    let (_tenant_id, user_id) = setup_test_data(&pool).await;
    assign_role(&pool, &user_id).await;
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_with_roles(&user_id).await;
+   let result = sut.find_with_roles(&user_id).await;
 
    assert!(result.is_ok());
    let data = result.unwrap();
@@ -124,11 +124,9 @@ async fn test_複数idでユーザーを一括取得できる(pool: PgPool) {
    .await
    .expect("ユーザー2作成に失敗");
 
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo
-      .find_by_ids(&[user_id1.clone(), user_id2.clone()])
-      .await;
+   let result = sut.find_by_ids(&[user_id1.clone(), user_id2.clone()]).await;
 
    assert!(result.is_ok());
    let users = result.unwrap();
@@ -142,9 +140,9 @@ async fn test_複数idでユーザーを一括取得できる(pool: PgPool) {
 async fn test_存在しないidが含まれても取得できるものだけ返す(pool: PgPool) {
    let (_tenant_id, user_id) = setup_test_data(&pool).await;
    let nonexistent_id = UserId::from_uuid(Uuid::now_v7());
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_by_ids(&[user_id.clone(), nonexistent_id]).await;
+   let result = sut.find_by_ids(&[user_id.clone(), nonexistent_id]).await;
 
    assert!(result.is_ok());
    let users = result.unwrap();
@@ -155,9 +153,9 @@ async fn test_存在しないidが含まれても取得できるものだけ返�
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_空のid配列を渡すと空vecを返す(pool: PgPool) {
    let (_tenant_id, _user_id) = setup_test_data(&pool).await;
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_by_ids(&[]).await;
+   let result = sut.find_by_ids(&[]).await;
 
    assert!(result.is_ok());
    let users = result.unwrap();
@@ -167,18 +165,18 @@ async fn test_空のid配列を渡すと空vecを返す(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_最終ログイン日時を更新できる(pool: PgPool) {
    let (_tenant_id, user_id) = setup_test_data(&pool).await;
-   let repo = PostgresUserRepository::new(pool.clone());
+   let sut = PostgresUserRepository::new(pool.clone());
 
    // 更新前は last_login_at が None
-   let user_before = repo.find_by_id(&user_id).await.unwrap().unwrap();
+   let user_before = sut.find_by_id(&user_id).await.unwrap().unwrap();
    assert!(user_before.last_login_at().is_none());
 
    // 更新
-   let result = repo.update_last_login(&user_id).await;
+   let result = sut.update_last_login(&user_id).await;
    assert!(result.is_ok());
 
    // 更新後は last_login_at が Some
-   let user_after = repo.find_by_id(&user_id).await.unwrap().unwrap();
+   let user_after = sut.find_by_id(&user_id).await.unwrap().unwrap();
    assert!(user_after.last_login_at().is_some());
 }
 
@@ -202,9 +200,9 @@ async fn test_テナント内のアクティブユーザー一覧を取得でき
    .await
    .expect("ユーザー2作成に失敗");
 
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_all_active_by_tenant(&tenant_id).await;
+   let result = sut.find_all_active_by_tenant(&tenant_id).await;
 
    assert!(result.is_ok());
    let users = result.unwrap();
@@ -232,9 +230,9 @@ async fn test_非アクティブユーザーは除外される(pool: PgPool) {
    .await
    .expect("非アクティブユーザー作成に失敗");
 
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_all_active_by_tenant(&tenant_id).await;
+   let result = sut.find_all_active_by_tenant(&tenant_id).await;
 
    assert!(result.is_ok());
    let users = result.unwrap();
@@ -274,9 +272,9 @@ async fn test_他テナントのユーザーは含まれない(pool: PgPool) {
    .await
    .expect("別テナントユーザー作成に失敗");
 
-   let repo = PostgresUserRepository::new(pool);
+   let sut = PostgresUserRepository::new(pool);
 
-   let result = repo.find_all_active_by_tenant(&tenant_id).await;
+   let result = sut.find_all_active_by_tenant(&tenant_id).await;
 
    assert!(result.is_ok());
    let users = result.unwrap();
