@@ -142,7 +142,7 @@ sequenceDiagram
 | Fork PR で発火 | Yes | Yes | 間接的に Yes |
 | secrets アクセス | No | **Yes** | Yes |
 | Fork コードの実行 | Yes（安全に） | 設定による（**危険**） | No |
-| 用途 | ビルド・テスト | 非推奨 | レビュー・通知 |
+| 用途 | ビルド・テスト | 本プロジェクトでは使用しない | レビュー・通知 |
 | 安全性 | 高い | **低い** | 高い |
 
 ## issue_comment イベント
@@ -225,7 +225,7 @@ flowchart TD
         B["pull_request → CI"]
         C["workflow_run → Claude Auto Review"]
         D["workflow_run → Claude Rules Check"]
-        E["issue_comment → Claude Interactive"]
+        E["push/pull_request → Check Rule Files"]
     end
 
     subgraph "使用していない（危険）"
@@ -239,12 +239,12 @@ flowchart TD
 
 ### 各ワークフローの権限設定
 
-| ワークフロー | contents | pull-requests | issues | secrets 使用 |
-|-------------|----------|---------------|--------|-------------|
-| CI | default | default | default | なし |
-| Claude Auto Review | read | write | write | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Claude Rules Check | read | write | write | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Claude Interactive | read | write | write | `CLAUDE_CODE_OAUTH_TOKEN` |
+| ワークフロー | contents | pull-requests | issues | actions | secrets 使用 |
+|-------------|----------|---------------|--------|---------|-------------|
+| CI | default | default | default | default | なし |
+| Claude Auto Review | read | write | write | read | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Claude Rules Check | read | write | write | read | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Check Rule Files | default | default | default | default | なし |
 
 Claude 系ワークフローは `contents: read` に制限しており、コードの変更はできない。
 
