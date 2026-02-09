@@ -508,7 +508,7 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 Step 5 の検証方法:
 
 ```bash
-git diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"
+git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"
 ```
 
 - ドキュメントコミットが存在すれば Step 6 へ進む
