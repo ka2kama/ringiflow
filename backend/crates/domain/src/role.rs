@@ -359,7 +359,7 @@ mod tests {
    }
 
    #[rstest]
-   fn test_ロールの初期状態が正しい(now: DateTime<Utc>, system_role: Role) {
+   fn test_ロールの初期状態(now: DateTime<Utc>, system_role: Role) {
       let expected = Role::from_db(
          system_role.id().clone(),
          system_role.tenant_id().cloned(),

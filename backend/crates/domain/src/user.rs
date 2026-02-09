@@ -423,9 +423,7 @@ mod tests {
    }
 
    #[rstest]
-   fn test_ステータス変更で全フィールドが正しく更新される(
-      active_user: User,
-   ) {
+   fn test_ステータス変更後の状態(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
       let original = active_user.clone();
       let sut = active_user.with_status(UserStatus::Inactive, transition_time);
@@ -453,7 +451,7 @@ mod tests {
    }
 
    #[rstest]
-   fn test_削除で全フィールドが正しく更新される(active_user: User) {
+   fn test_削除後の状態(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
       let original = active_user.clone();
       let sut = active_user.deleted(transition_time);
@@ -481,9 +479,7 @@ mod tests {
    }
 
    #[rstest]
-   fn test_最終ログイン日時更新で全フィールドが正しく更新される(
-      active_user: User,
-   ) {
+   fn test_最終ログイン日時更新後の状態(active_user: User) {
       let login_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
       let original = active_user.clone();
       let sut = active_user.with_last_login_updated(login_time);

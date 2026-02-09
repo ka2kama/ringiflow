@@ -1041,10 +1041,7 @@ mod tests {
       use super::*;
 
       #[rstest]
-      fn test_新規作成の初期状態が正しい(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
+      fn test_新規作成の初期状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
          let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
             id: test_instance.id().clone(),
             tenant_id: test_instance.tenant_id().clone(),
@@ -1066,10 +1063,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_申請で全フィールドが正しく更新される(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
+      fn test_申請後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
          let before = test_instance.clone();
          let sut = test_instance.submitted(now).unwrap();
 
@@ -1094,10 +1088,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_承認完了で全フィールドが正しく更新される(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
+      fn test_承認完了後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
          let instance = test_instance
             .submitted(now)
             .unwrap()
@@ -1127,10 +1118,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_却下完了で全フィールドが正しく更新される(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
+      fn test_却下完了後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
          let instance = test_instance
             .submitted(now)
             .unwrap()
@@ -1182,7 +1170,7 @@ mod tests {
       // --- cancelled() テスト ---
 
       #[rstest]
-      fn test_下書きからの取消で全フィールドが正しく更新される(
+      fn test_下書きからの取消後の状態(
          test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
@@ -1211,7 +1199,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_申請済みからの取消で全フィールドが正しく更新される(
+      fn test_申請済みからの取消後の状態(
          test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
@@ -1241,7 +1229,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_処理中からの取消で全フィールドが正しく更新される(
+      fn test_処理中からの取消後の状態(
          test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
@@ -1359,7 +1347,7 @@ mod tests {
       use super::*;
 
       #[rstest]
-      fn test_新規作成の初期状態が正しい(test_step: WorkflowStep, now: DateTime<Utc>) {
+      fn test_新規作成の初期状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let expected = WorkflowStep::from_db(WorkflowStepRecord {
             id: test_step.id().clone(),
             instance_id: test_step.instance_id().clone(),
@@ -1382,10 +1370,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_アクティブ化で全フィールドが正しく更新される(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_アクティブ化後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let before = test_step.clone();
          let sut = test_step.activated(now);
 
@@ -1411,10 +1396,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_承認で全フィールドが正しく更新される(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_承認後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
          let before = step.clone();
 
@@ -1442,10 +1424,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_コメント付き承認で全フィールドが正しく更新される(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_コメント付き承認後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
          let before = step.clone();
 
@@ -1473,10 +1452,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_却下で全フィールドが正しく更新される(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_却下後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
          let before = step.clone();
 
@@ -1572,10 +1548,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_差戻しで全フィールドが正しく更新される(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_差戻し後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
          let before = step.clone();
 
@@ -1632,10 +1605,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_公開で全フィールドが正しく更新される(
-         test_definition: WorkflowDefinition,
-         now: DateTime<Utc>,
-      ) {
+      fn test_公開後の状態(test_definition: WorkflowDefinition, now: DateTime<Utc>) {
          let before = test_definition.clone();
 
          let sut = test_definition.published(now).unwrap();
@@ -1668,10 +1638,7 @@ mod tests {
       }
 
       #[rstest]
-      fn test_アーカイブで全フィールドが正しく更新される(
-         test_definition: WorkflowDefinition,
-         now: DateTime<Utc>,
-      ) {
+      fn test_アーカイブ後の状態(test_definition: WorkflowDefinition, now: DateTime<Utc>) {
          let published = test_definition.published(now).unwrap();
          let before = published.clone();
 
