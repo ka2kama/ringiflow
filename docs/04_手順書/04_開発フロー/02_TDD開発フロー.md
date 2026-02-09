@@ -289,10 +289,10 @@ async fn test_login_succeeds_with_valid_credentials() {
     // Given（Arrange）: 前提条件
     let repo = MockUserRepository::new();
     let hasher = MockPasswordHasher::new();
-    let usecase = AuthUseCase::new(repo, hasher);
+    let sut = AuthUseCase::new(repo, hasher);
 
     // When（Act）: 実行
-    let result = usecase.authenticate(&email, &password).await;
+    let result = sut.authenticate(&email, &password).await;
 
     // Then（Assert）: 検証
     assert!(result.is_ok());
@@ -321,6 +321,36 @@ impl UserRepository for InMemoryUserRepository {
     }
 }
 ```
+
+---
+
+## テスト規約
+
+### テスト対象の命名: `sut`
+
+テスト対象オブジェクトの変数名には `sut`（System Under Test）を使用する。
+
+```rust
+// Arrange
+let definition_repo = MockWorkflowDefinitionRepository::new();
+let instance_repo = MockWorkflowInstanceRepository::new();
+let step_repo = MockWorkflowStepRepository::new();
+
+let sut = WorkflowUseCaseImpl::new(definition_repo, instance_repo, step_repo);
+
+// Act
+let result = sut.create_workflow(...).await;
+```
+
+適用範囲:
+
+| 対象 | 理由 |
+|------|------|
+| Usecase 層のテスト | Arrange 部分が長く（Mock + テストデータ）、テスト対象が道具立てに埋もれやすい |
+
+他のレイヤー（Repository、Handler 等）は必要に応じて拡大する。
+
+出典: Gerard Meszaros『xUnit Test Patterns』（Addison-Wesley, 2007）で体系化された用語。C#/Java 圏で広く浸透している。
 
 ---
 
@@ -365,6 +395,7 @@ flowchart TD
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-09 | テスト規約セクションを追加: `sut` 命名規約（#330） |
 | 2026-02-08 | Refactor ステップに設計原則レンズを追加。「きれいにする」→「設計を改善する」に再定義（#291） |
 | 2026-02-07 | Refactor ステップにテストのリファクタリングを追加、テストリストの二面性を明記、Phase 完了時のテストレビューを追加（#279） |
 | 2026-01-17 | 初版作成 |
