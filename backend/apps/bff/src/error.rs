@@ -56,14 +56,11 @@ pub fn extract_tenant_id(headers: &HeaderMap) -> Result<Uuid, TenantIdError> {
 }
 
 /// セッションを取得する
-pub async fn get_session<S>(
-   session_manager: &S,
+pub async fn get_session(
+   session_manager: &dyn SessionManager,
    jar: &CookieJar,
    tenant_id: Uuid,
-) -> Result<ringiflow_infra::SessionData, Response>
-where
-   S: SessionManager,
-{
+) -> Result<ringiflow_infra::SessionData, Response> {
    // Cookie からセッション ID を取得
    let session_id = jar
       .get(SESSION_COOKIE_NAME)

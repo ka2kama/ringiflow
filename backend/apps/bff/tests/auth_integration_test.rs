@@ -366,13 +366,12 @@ impl AuthServiceClient for StubAuthServiceClient {
 async fn create_test_app(
    core_service_config: CoreServiceStubConfig,
    auth_service_config: AuthServiceStubConfig,
-) -> (
-   Router,
-   Arc<AuthState<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>>,
-) {
-   let session_manager = RedisSessionManager::new(&redis_url())
-      .await
-      .expect("Redis への接続に失敗");
+) -> (Router, Arc<AuthState>) {
+   let session_manager: Arc<dyn SessionManager> = Arc::new(
+      RedisSessionManager::new(&redis_url())
+         .await
+         .expect("Redis への接続に失敗"),
+   );
 
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
@@ -380,33 +379,18 @@ async fn create_test_app(
    };
 
    let state = Arc::new(AuthState {
-      core_service_client: StubCoreServiceClient::new(core_service_config),
-      auth_service_client: StubAuthServiceClient::new(auth_service_config),
+      core_service_client: Arc::new(StubCoreServiceClient::new(core_service_config)),
+      auth_service_client: Arc::new(StubAuthServiceClient::new(auth_service_config)),
       session_manager,
    });
 
    let sut = Router::new()
-      .route(
-         "/api/v1/auth/login",
-         post(login::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
-      )
-      .route(
-         "/api/v1/auth/logout",
-         post(logout::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
-      )
-      .route(
-         "/api/v1/auth/me",
-         get(me::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
-      )
-      .route(
-         "/api/v1/auth/csrf",
-         get(csrf::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
-      )
+      .route("/api/v1/auth/login", post(login))
+      .route("/api/v1/auth/logout", post(logout))
+      .route("/api/v1/auth/me", get(me))
+      .route("/api/v1/auth/csrf", get(csrf))
       .with_state(state.clone())
-      .layer(from_fn_with_state(
-         csrf_state,
-         csrf_middleware::<RedisSessionManager>,
-      ));
+      .layer(from_fn_with_state(csrf_state, csrf_middleware));
 
    (sut, state)
 }

@@ -2,7 +2,7 @@
 //!
 //! ワークフローの作成・取得・申請に関するビジネスロジックを実装する。
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use itertools::Itertools;
 use ringiflow_domain::{
@@ -89,29 +89,22 @@ pub(crate) fn collect_user_ids_from_workflow(
 /// ワークフローユースケース実装
 ///
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
-pub struct WorkflowUseCaseImpl<D, I, S, U, C> {
-   definition_repo: D,
-   instance_repo:   I,
-   step_repo:       S,
-   user_repo:       U,
-   counter_repo:    C,
+pub struct WorkflowUseCaseImpl {
+   definition_repo: Arc<dyn WorkflowDefinitionRepository>,
+   instance_repo:   Arc<dyn WorkflowInstanceRepository>,
+   step_repo:       Arc<dyn WorkflowStepRepository>,
+   user_repo:       Arc<dyn UserRepository>,
+   counter_repo:    Arc<dyn DisplayIdCounterRepository>,
 }
 
-impl<D, I, S, U, C> WorkflowUseCaseImpl<D, I, S, U, C>
-where
-   D: WorkflowDefinitionRepository,
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-   U: UserRepository,
-   C: DisplayIdCounterRepository,
-{
+impl WorkflowUseCaseImpl {
    /// 新しいワークフローユースケースを作成
    pub fn new(
-      definition_repo: D,
-      instance_repo: I,
-      step_repo: S,
-      user_repo: U,
-      counter_repo: C,
+      definition_repo: Arc<dyn WorkflowDefinitionRepository>,
+      instance_repo: Arc<dyn WorkflowInstanceRepository>,
+      step_repo: Arc<dyn WorkflowStepRepository>,
+      user_repo: Arc<dyn UserRepository>,
+      counter_repo: Arc<dyn DisplayIdCounterRepository>,
    ) -> Self {
       Self {
          definition_repo,
@@ -127,7 +120,7 @@ where
       &self,
       user_ids: &[UserId],
    ) -> Result<HashMap<UserId, String>, CoreError> {
-      crate::usecase::resolve_user_names(&self.user_repo, user_ids).await
+      crate::usecase::resolve_user_names(self.user_repo.as_ref(), user_ids).await
    }
 
    /// ワークフローインスタンスを作成する（下書き）
@@ -1174,11 +1167,11 @@ mod tests {
       definition_repo.add_definition(published_definition.clone());
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo.clone(),
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = CreateWorkflowInput {
@@ -1218,11 +1211,11 @@ mod tests {
       let step_repo = MockWorkflowStepRepository::new();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = CreateWorkflowInput {
@@ -1284,11 +1277,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo.clone(),
-         step_repo.clone(),
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = ApproveRejectInput {
@@ -1371,11 +1364,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = ApproveRejectInput {
@@ -1435,11 +1428,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = ApproveRejectInput {
@@ -1498,11 +1491,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
@@ -1565,11 +1558,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo.clone(),
-         step_repo.clone(),
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = ApproveRejectInput {
@@ -1652,11 +1645,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = ApproveRejectInput {
@@ -1716,11 +1709,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = ApproveRejectInput {
@@ -1779,11 +1772,11 @@ mod tests {
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
@@ -1843,11 +1836,11 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo.clone(),
-         step_repo.clone(),
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = SubmitWorkflowInput {
@@ -1918,11 +1911,11 @@ mod tests {
       instance_repo.insert(&instance).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
-         definition_repo,
-         instance_repo,
-         step_repo,
-         MockUserRepository,
-         MockDisplayIdCounterRepository::new(),
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
       );
 
       let input = SubmitWorkflowInput {

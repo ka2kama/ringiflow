@@ -11,7 +11,7 @@
 
 | カテゴリ | ディレクトリ | 内容 |
 |---------|-------------|------|
-| Rust | `rust/` | Cargo ワークスペース、Newtype パターン、エラーハンドリング、sqlx-cli |
+| Rust | `rust/` | Cargo ワークスペース、Newtype パターン、エラーハンドリング、sqlx-cli、動的ディスパッチ DI |
 | Elm | `elm/` | アーキテクチャ、ポート、ルーティング、Nested TEA、TEA メインループ |
 | フロントエンド | `frontend/` | Vite、esbuild、pnpm |
 | インフラ | `infra/` | Docker Compose、PostgreSQL、Redis、UUID |

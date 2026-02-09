@@ -62,7 +62,12 @@ use axum::{
 };
 use config::AuthConfig;
 use handler::{AuthState, create_credentials, delete_credentials, health_check, verify};
-use ringiflow_infra::{Argon2PasswordChecker, db, repository::PostgresCredentialsRepository};
+use ringiflow_infra::{
+   Argon2PasswordChecker,
+   PasswordChecker,
+   db,
+   repository::{CredentialsRepository, PostgresCredentialsRepository},
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -99,11 +104,12 @@ async fn main() -> anyhow::Result<()> {
    tracing::info!("データベースに接続しました");
 
    // 依存コンポーネントを初期化
-   let credentials_repository = PostgresCredentialsRepository::new(pool);
-   let password_checker = Argon2PasswordChecker::new();
-   let auth_usecase = AuthUseCaseImpl::new(credentials_repository, password_checker);
+   let credentials_repo: Arc<dyn CredentialsRepository> =
+      Arc::new(PostgresCredentialsRepository::new(pool));
+   let password_checker: Arc<dyn PasswordChecker> = Arc::new(Argon2PasswordChecker::new());
+   let auth_usecase = AuthUseCaseImpl::new(credentials_repo, password_checker);
    let auth_state = Arc::new(AuthState {
-      usecase: auth_usecase,
+      usecase: Arc::new(auth_usecase),
    });
 
    // ルーター構築

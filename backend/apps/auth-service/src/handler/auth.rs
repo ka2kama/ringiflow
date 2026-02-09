@@ -24,11 +24,8 @@ use uuid::Uuid;
 use crate::{error::AuthError, usecase::AuthUseCase};
 
 /// 認証ハンドラの共有状態
-pub struct AuthState<U>
-where
-   U: AuthUseCase,
-{
-   pub usecase: U,
+pub struct AuthState {
+   pub usecase: Arc<dyn AuthUseCase>,
 }
 
 // --- リクエスト/レスポンス型 ---
@@ -73,13 +70,10 @@ pub struct CreateCredentialsResponse {
 ///
 /// ユーザーが存在しない場合も、実際にダミーハッシュで検証を行い、
 /// 処理時間を均一化する。これによりユーザー存在確認攻撃を防ぐ。
-pub async fn verify<U>(
-   State(state): State<Arc<AuthState<U>>>,
+pub async fn verify(
+   State(state): State<Arc<AuthState>>,
    Json(req): Json<VerifyRequest>,
-) -> Result<impl IntoResponse, AuthError>
-where
-   U: AuthUseCase,
-{
+) -> Result<impl IntoResponse, AuthError> {
    let result = state
       .usecase
       .verify_password(req.tenant_id, req.user_id, &req.password)
@@ -94,13 +88,10 @@ where
 /// POST /internal/auth/credentials
 ///
 /// 認証情報を登録する（ユーザー作成時に呼び出し）。
-pub async fn create_credentials<U>(
-   State(state): State<Arc<AuthState<U>>>,
+pub async fn create_credentials(
+   State(state): State<Arc<AuthState>>,
    Json(req): Json<CreateCredentialsRequest>,
-) -> Result<impl IntoResponse, AuthError>
-where
-   U: AuthUseCase,
-{
+) -> Result<impl IntoResponse, AuthError> {
    let credential_id = state
       .usecase
       .create_credential(
@@ -120,13 +111,10 @@ where
 /// DELETE /internal/auth/credentials/{tenant_id}/{user_id}
 ///
 /// ユーザーの全認証情報を削除する（ユーザー削除時に呼び出し）。
-pub async fn delete_credentials<U>(
-   State(state): State<Arc<AuthState<U>>>,
+pub async fn delete_credentials(
+   State(state): State<Arc<AuthState>>,
    Path((tenant_id, user_id)): Path<(Uuid, Uuid)>,
-) -> Result<impl IntoResponse, AuthError>
-where
-   U: AuthUseCase,
-{
+) -> Result<impl IntoResponse, AuthError> {
    state.usecase.delete_credentials(tenant_id, user_id).await?;
    Ok(StatusCode::NO_CONTENT)
 }
@@ -205,17 +193,16 @@ mod tests {
    }
 
    fn create_test_app(usecase: StubAuthUseCase) -> Router {
-      let state = Arc::new(AuthState { usecase });
+      let state = Arc::new(AuthState {
+         usecase: Arc::new(usecase),
+      });
 
       Router::new()
-         .route("/internal/auth/verify", post(verify::<StubAuthUseCase>))
-         .route(
-            "/internal/auth/credentials",
-            post(create_credentials::<StubAuthUseCase>),
-         )
+         .route("/internal/auth/verify", post(verify))
+         .route("/internal/auth/credentials", post(create_credentials))
          .route(
             "/internal/auth/credentials/{tenant_id}/{user_id}",
-            delete(delete_credentials::<StubAuthUseCase>),
+            delete(delete_credentials),
          )
          .with_state(state)
    }

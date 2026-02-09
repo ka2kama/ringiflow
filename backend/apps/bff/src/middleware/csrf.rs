@@ -4,6 +4,8 @@
 //!
 //! 詳細: [07_認証機能設計.md](../../../../docs/03_詳細設計書/07_認証機能設計.md)
 
+use std::sync::Arc;
+
 use axum::{
    Json,
    body::Body,
@@ -30,11 +32,8 @@ const CSRF_SKIP_PATHS: &[&str] = &["/api/v1/auth/login", "/api/v1/auth/csrf", "/
 
 /// CSRF 検証の状態
 #[derive(Clone)]
-pub struct CsrfState<S>
-where
-   S: SessionManager + Clone,
-{
-   pub session_manager: S,
+pub struct CsrfState {
+   pub session_manager: Arc<dyn SessionManager>,
 }
 
 fn csrf_error_response(detail: &str) -> Response {
@@ -64,15 +63,12 @@ fn should_skip_csrf(path: &str) -> bool {
 }
 
 /// CSRF 検証ミドルウェア
-pub async fn csrf_middleware<S>(
-   State(state): State<CsrfState<S>>,
+pub async fn csrf_middleware(
+   State(state): State<CsrfState>,
    jar: CookieJar,
    request: Request<Body>,
    next: Next,
-) -> Response
-where
-   S: SessionManager + Clone + 'static,
-{
+) -> Response {
    let method = request.method().clone();
    let path = request.uri().path().to_string();
 

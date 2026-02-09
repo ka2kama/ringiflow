@@ -15,15 +15,11 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_infra::SessionManager;
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 
 use super::workflow::WorkflowState;
-use crate::{
-   client::CoreServiceClient,
-   error::{extract_tenant_id, get_session, internal_error_response},
-};
+use crate::error::{extract_tenant_id, get_session, internal_error_response};
 
 // --- レスポンス型 ---
 
@@ -54,21 +50,17 @@ impl From<crate::client::UserItemDto> for UserItemData {
 /// GET /api/v1/users
 ///
 /// テナント内のアクティブユーザー一覧を取得する
-pub async fn list_users<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn list_users(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
       Err(e) => return e.into_response(),
    };
 
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
