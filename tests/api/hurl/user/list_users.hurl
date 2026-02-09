@@ -36,15 +36,15 @@ HTTP 200
 jsonpath "$.data" isCollection
 jsonpath "$.data" count >= 2
 
-# 各要素の required フィールド（順序不定のため構造検証）
-jsonpath "$.data[0].id" matches "^[a-f0-9-]{36}$"
+# 各要素の required フィールド（display_number 昇順: admin=1, user=2）
+jsonpath "$.data[0].id" == "{{admin_id}}"
 jsonpath "$.data[0].display_id" matches "^USER-\\d+$"
-jsonpath "$.data[0].display_number" >= 1
-jsonpath "$.data[0].name" isString
-jsonpath "$.data[0].email" isString
+jsonpath "$.data[0].display_number" == 1
+jsonpath "$.data[0].name" == "{{admin_name}}"
+jsonpath "$.data[0].email" == "{{admin_email}}"
 
-jsonpath "$.data[1].id" matches "^[a-f0-9-]{36}$"
+jsonpath "$.data[1].id" == "{{user_id}}"
 jsonpath "$.data[1].display_id" matches "^USER-\\d+$"
-jsonpath "$.data[1].display_number" >= 1
-jsonpath "$.data[1].name" isString
-jsonpath "$.data[1].email" isString
+jsonpath "$.data[1].display_number" == 2
+jsonpath "$.data[1].name" == "{{user_name}}"
+jsonpath "$.data[1].email" == "{{user_email}}"

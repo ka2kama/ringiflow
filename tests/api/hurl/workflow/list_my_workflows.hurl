@@ -63,6 +63,8 @@ jsonpath "$.data" isCollection
 jsonpath "$.data" count >= 1
 
 # 先頭要素の WorkflowInstance required フィールド検証
+# 注: 一覧にはシードデータ + テスト作成分が含まれるため、
+# data[0] がどのワークフローかは不定。構造検証 + 決定的なフィールドのみ == を使用
 jsonpath "$.data[0].id" matches "^[a-f0-9-]{36}$"
 jsonpath "$.data[0].display_id" matches "^WF-\\d+$"
 jsonpath "$.data[0].display_number" >= 1
@@ -71,7 +73,7 @@ jsonpath "$.data[0].definition_id" matches "^[a-f0-9-]{36}$"
 jsonpath "$.data[0].status" isString
 jsonpath "$.data[0].version" >= 1
 jsonpath "$.data[0].form_data" exists
-jsonpath "$.data[0].initiated_by.id" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data[0].initiated_by.name" isString
+jsonpath "$.data[0].initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data[0].initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
