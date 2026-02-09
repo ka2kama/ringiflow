@@ -417,7 +417,7 @@ worktree-issue number:
     echo ""
     echo "次のステップ:"
     echo "  1. Claude Code を終了"
-    echo "  2. cw $NUMBER で移動して Claude Code を起動"
+    echo "  2. cd ../ringiflow-$NUMBER && claude"
 
 # worktree を追加（並行開発用の独立した作業ディレクトリを作成）
 # 使い方: just worktree-add NAME BRANCH
