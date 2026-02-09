@@ -98,7 +98,7 @@ sequenceDiagram
 | secrets | アクセス**可能** |
 | `GITHUB_TOKEN` | write 権限あり |
 
-**なぜ危険か**: ベースブランチのコンテキストで動くため secrets にアクセスできる。ここで `actions/checkout` を使って Fork のコードを checkout すると、**Fork の悪意あるコードがリポジトリの secrets にアクセスできてしまう**。
+**なぜ危険か**: ベースブランチのコンテキストで動くため secrets にアクセスできる。ここで `actions/checkout` を使って Fork のコードを checkout すると、Fork の悪意あるコードがリポジトリの secrets にアクセスできてしまう。
 
 ```yaml
 # ⚠️ 危険なパターン
