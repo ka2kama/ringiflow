@@ -25,7 +25,7 @@ flowchart LR
     B --> C["Draft PR 作成"]
     C --> D["設計"]
     D --> E["実装（TDD）"]
-    E --> F["Ready for Review"]
+    E --> F["品質ゲート +<br/>Ready for Review"]
     F --> G["レビュー確認"]
     G --> H["マージ"]
     H --> I["Issue 自動クローズ"]
@@ -341,9 +341,12 @@ EOF
 - 完了した作業と残りの作業が明確になる
 - Project Board の進捗と Issue の詳細が一致する
 
-### 6. Ready for Review
+### 6. 品質ゲートと Ready for Review
 
-実装が完了したら、チェックを実行してから Draft PR を Ready for Review に変更する。
+実装が完了したら、品質ゲート（6.1-6.3）を通過してから Draft PR を Ready for Review に変更する（6.4-6.6）。
+
+- 品質ゲート: 品質チェックリスト + Self-review + 収束確認。品質を担保するプロセス
+- Ready for Review: `gh pr ready` で Draft を解除する操作
 
 #### 6.1 自動チェック
 
@@ -355,7 +358,7 @@ just check-all  # lint + test
 
 自動チェック通過後、以下を確認する。
 
-→ 位置づけ: [品質を守る二つの砦](../../../.claude/rules/zoom-rhythm.md#品質を守る二つの砦)（最後の砦）
+→ 位置づけ: [品質を守る二つの砦](../../../.claude/rules/zoom-rhythm.md#品質を守る二つの砦)（最後の砦 = 品質ゲート）
 → 各観点の背景・出典: [俯瞰・実装リズム > 収束確認のチェックリスト](../../../.claude/rules/zoom-rhythm.md#収束確認のチェックリスト)
 
 プロセス完了確認:
