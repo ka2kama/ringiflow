@@ -422,7 +422,23 @@ Issue との整合:
 
 改善の経緯: [実装フェーズにおける収束確認の自動実行欠如](../../../prompts/improvements/2026-02/2026-02-06_0010_実装フェーズにおける自己検証の自動実行欠如.md)
 
-#### 6.4 プッシュ
+#### 6.4 base branch との同期確認
+
+プッシュ前に base branch（main）との同期状態を確認する。差分がある場合は rebase してからプッシュする。
+
+```bash
+git fetch origin main
+git log HEAD..origin/main --oneline
+```
+
+| 状態 | 対応 |
+|------|------|
+| 差分なし | 6.5 へ |
+| 差分あり | `git rebase origin/main` を実行し、`just check-all` で再確認してから 6.5 へ |
+
+なぜプッシュ前に行うか: Ready for Review 後に rebase が必要になると、CI + Claude Auto Review が再実行される無駄なサイクルが発生する。
+
+#### 6.5 プッシュ
 
 チェック完了後、変更をリモートにプッシュする:
 
@@ -430,7 +446,7 @@ Issue との整合:
 git push
 ```
 
-#### 6.5 CI 通過を確認
+#### 6.6 CI 通過を確認
 
 GitHub Actions の CI が通過するのを待つ:
 
@@ -438,7 +454,7 @@ GitHub Actions の CI が通過するのを待つ:
 gh pr checks --watch  # CI の完了を待機
 ```
 
-#### 6.6 Ready for Review に変更
+#### 6.7 Ready for Review に変更
 
 **CI が通過してから** Draft を解除する:
 
@@ -735,6 +751,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-09 | 6.4 に base branch 同期確認ステップを追加（#356） |
 | 2026-02-06 | 概要に「Issue は仮説」の前提を追加、Step 1 に Issue 精査プロセスを追加 |
 | 2026-02-06 | 6.2 にコード品質・テスト・横断検証の全項目を統合し、zoom-rhythm.md との重複を解消（#269） |
 | 2026-01-29 | 完了基準に E2E 視点を追加、Phase 分割基準にデータフロー確認を追加 |
