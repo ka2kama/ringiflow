@@ -553,10 +553,10 @@ mod tests {
       });
       step_repo.insert(&pending_step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase.list_my_tasks(tenant_id, approver_id).await;
+      let result = sut.list_my_tasks(tenant_id, approver_id).await;
 
       // Assert
       assert!(result.is_ok());
@@ -605,10 +605,10 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase.list_my_tasks(tenant_id, approver_id).await;
+      let result = sut.list_my_tasks(tenant_id, approver_id).await;
 
       // Assert
       assert!(result.is_ok());
@@ -658,10 +658,10 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act: 別のユーザーで取得
-      let result = usecase.list_my_tasks(tenant_id, other_user_id).await;
+      let result = sut.list_my_tasks(tenant_id, other_user_id).await;
 
       // Assert
       assert!(result.is_ok());
@@ -677,10 +677,10 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase.list_my_tasks(tenant_id, user_id).await;
+      let result = sut.list_my_tasks(tenant_id, user_id).await;
 
       // Assert
       assert!(result.is_ok());
@@ -728,10 +728,10 @@ mod tests {
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase.get_task(step_id, tenant_id, approver_id).await;
+      let result = sut.get_task(step_id, tenant_id, approver_id).await;
 
       // Assert
       assert!(result.is_ok());
@@ -750,10 +750,10 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act: 存在しない step_id で取得
-      let result = usecase
+      let result = sut
          .get_task(WorkflowStepId::new(), tenant_id, user_id)
          .await;
 
@@ -803,10 +803,10 @@ mod tests {
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act: 別のユーザーで取得
-      let result = usecase.get_task(step_id, tenant_id, other_user_id).await;
+      let result = sut.get_task(step_id, tenant_id, other_user_id).await;
 
       // Assert
       assert!(matches!(result, Err(CoreError::Forbidden(_))));
@@ -857,10 +857,10 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase
+      let result = sut
          .get_task_by_display_numbers(workflow_dn, step_dn, tenant_id, approver_id)
          .await;
 
@@ -881,10 +881,10 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase
+      let result = sut
          .get_task_by_display_numbers(
             DisplayNumber::new(999).unwrap(),
             DisplayNumber::new(1).unwrap(),
@@ -922,10 +922,10 @@ mod tests {
       });
       instance_repo.insert(&instance).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase
+      let result = sut
          .get_task_by_display_numbers(
             workflow_dn,
             DisplayNumber::new(999).unwrap(),
@@ -982,10 +982,10 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
 
       // Act
-      let result = usecase
+      let result = sut
          .get_task_by_display_numbers(workflow_dn, step_dn, tenant_id, other_user_id)
          .await;
 

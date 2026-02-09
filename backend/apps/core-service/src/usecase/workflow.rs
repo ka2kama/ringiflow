@@ -1173,7 +1173,7 @@ mod tests {
       let published_definition = definition.published(chrono::Utc::now()).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo.clone(),
          step_repo,
@@ -1188,7 +1188,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .create_workflow(input, tenant_id.clone(), user_id.clone())
          .await;
 
@@ -1217,7 +1217,7 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1232,7 +1232,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase.create_workflow(input, tenant_id, user_id).await;
+      let result = sut.create_workflow(input, tenant_id, user_id).await;
 
       // Assert
       assert!(matches!(result, Err(CoreError::NotFound(_))));
@@ -1283,7 +1283,7 @@ mod tests {
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo.clone(),
          step_repo.clone(),
@@ -1297,7 +1297,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .approve_step(
             input,
             step.id().clone(),
@@ -1370,7 +1370,7 @@ mod tests {
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1384,7 +1384,7 @@ mod tests {
       };
 
       // Act: 別のユーザーで承認を試みる
-      let result = usecase
+      let result = sut
          .approve_step(input, step.id().clone(), tenant_id, other_user_id)
          .await;
 
@@ -1434,7 +1434,7 @@ mod tests {
       // activated() を呼ばないので Pending のまま
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1448,7 +1448,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .approve_step(input, step.id().clone(), tenant_id, approver_id)
          .await;
 
@@ -1497,7 +1497,7 @@ mod tests {
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1513,7 +1513,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .approve_step(input, step.id().clone(), tenant_id, approver_id)
          .await;
 
@@ -1564,7 +1564,7 @@ mod tests {
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo.clone(),
          step_repo.clone(),
@@ -1578,7 +1578,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .reject_step(
             input,
             step.id().clone(),
@@ -1651,7 +1651,7 @@ mod tests {
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1665,7 +1665,7 @@ mod tests {
       };
 
       // Act: 別のユーザーで却下を試みる
-      let result = usecase
+      let result = sut
          .reject_step(input, step.id().clone(), tenant_id, other_user_id)
          .await;
 
@@ -1715,7 +1715,7 @@ mod tests {
       // activated() を呼ばないので Pending のまま
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1729,7 +1729,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .reject_step(input, step.id().clone(), tenant_id, approver_id)
          .await;
 
@@ -1778,7 +1778,7 @@ mod tests {
       .activated(chrono::Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1794,7 +1794,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .reject_step(input, step.id().clone(), tenant_id, approver_id)
          .await;
 
@@ -1842,7 +1842,7 @@ mod tests {
       });
       instance_repo.insert(&instance).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo.clone(),
          step_repo.clone(),
@@ -1855,7 +1855,7 @@ mod tests {
       };
 
       // Act
-      let result = usecase
+      let result = sut
          .submit_workflow(input, instance.id().clone(), tenant_id.clone())
          .await;
 
@@ -1917,7 +1917,7 @@ mod tests {
       .with_current_step("approval".to_string(), now);
       instance_repo.insert(&instance).await.unwrap();
 
-      let usecase = WorkflowUseCaseImpl::new(
+      let sut = WorkflowUseCaseImpl::new(
          definition_repo,
          instance_repo,
          step_repo,
@@ -1930,7 +1930,7 @@ mod tests {
       };
 
       // Act: InProgress 状態のインスタンスに対して申請を試みる
-      let result = usecase
+      let result = sut
          .submit_workflow(input, instance.id().clone(), tenant_id)
          .await;
 
