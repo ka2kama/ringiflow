@@ -41,6 +41,7 @@ use crate::error::CoreError;
 /// ドメインモデル (`WorkflowInstance`, `WorkflowStep`) を変更せず、
 /// ユースケースの出力として集約する。詳細取得や承認/却下の結果を
 /// ハンドラに返す際に使用する。
+#[derive(Debug, PartialEq, Eq)]
 pub struct WorkflowWithSteps {
    pub instance: WorkflowInstance,
    pub steps:    Vec<WorkflowStep>,
@@ -1192,18 +1193,28 @@ mod tests {
          .await;
 
       // Assert
-      assert!(result.is_ok());
-      let instance = result.unwrap();
-      assert_eq!(instance.status(), WorkflowInstanceStatus::Draft);
-      assert_eq!(instance.title(), "テスト申請");
-      assert_eq!(instance.initiated_by(), &user_id);
+      let result = result.unwrap();
+
+      // result の ID を使って expected を構築（ID は内部で UUID v7 生成されるため）
+      let expected = WorkflowInstance::new(NewWorkflowInstance {
+         id: result.id().clone(),
+         tenant_id: tenant_id.clone(),
+         definition_id: published_definition.id().clone(),
+         definition_version: published_definition.version(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({"note": "test"}),
+         initiated_by: user_id.clone(),
+         now,
+      });
+      assert_eq!(result, expected);
 
       // リポジトリに保存されていることを確認
       let saved = instance_repo
-         .find_by_id(instance.id(), &tenant_id)
+         .find_by_id(result.id(), &tenant_id)
          .await
          .unwrap();
-      assert!(saved.is_some());
+      assert_eq!(saved, Some(expected));
    }
 
    #[tokio::test]
@@ -1279,9 +1290,9 @@ mod tests {
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now: chrono::Utc::now(),
+         now,
       })
-      .activated(chrono::Utc::now());
+      .activated(now);
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
@@ -1309,25 +1320,12 @@ mod tests {
          .await;
 
       // Assert
-      assert!(result.is_ok());
-      let workflow_with_steps = result.unwrap();
-
-      // 返却されたインスタンスが Approved になっていることを確認
-      assert_eq!(
-         workflow_with_steps.instance.status(),
-         WorkflowInstanceStatus::Approved
-      );
-
-      // 返却されたステップが Completed (Approved) になっていることを確認
-      assert_eq!(workflow_with_steps.steps.len(), 1);
-      assert_eq!(
-         workflow_with_steps.steps[0].status(),
-         ringiflow_domain::workflow::WorkflowStepStatus::Completed
-      );
-      assert_eq!(
-         workflow_with_steps.steps[0].decision(),
-         Some(ringiflow_domain::workflow::StepDecision::Approved)
-      );
+      let result = result.unwrap();
+      let expected = WorkflowWithSteps {
+         instance: instance.complete_with_approval(now).unwrap(),
+         steps:    vec![step.approve(Some("承認しました".to_string()), now).unwrap()],
+      };
+      assert_eq!(result, expected);
    }
 
    #[tokio::test]
@@ -1564,9 +1562,9 @@ mod tests {
          step_name: "承認".to_string(),
          step_type: "approval".to_string(),
          assigned_to: Some(approver_id.clone()),
-         now: chrono::Utc::now(),
+         now,
       })
-      .activated(chrono::Utc::now());
+      .activated(now);
       step_repo.insert(&step).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
@@ -1594,25 +1592,12 @@ mod tests {
          .await;
 
       // Assert
-      assert!(result.is_ok());
-      let workflow_with_steps = result.unwrap();
-
-      // 返却されたインスタンスが Rejected になっていることを確認
-      assert_eq!(
-         workflow_with_steps.instance.status(),
-         WorkflowInstanceStatus::Rejected
-      );
-
-      // 返却されたステップが Completed (Rejected) になっていることを確認
-      assert_eq!(workflow_with_steps.steps.len(), 1);
-      assert_eq!(
-         workflow_with_steps.steps[0].status(),
-         ringiflow_domain::workflow::WorkflowStepStatus::Completed
-      );
-      assert_eq!(
-         workflow_with_steps.steps[0].decision(),
-         Some(ringiflow_domain::workflow::StepDecision::Rejected)
-      );
+      let result = result.unwrap();
+      let expected = WorkflowWithSteps {
+         instance: instance.complete_with_rejection(now).unwrap(),
+         steps:    vec![step.reject(Some("却下理由".to_string()), now).unwrap()],
+      };
+      assert_eq!(result, expected);
    }
 
    #[tokio::test]
@@ -1871,15 +1856,16 @@ mod tests {
          .await;
 
       // Assert
-      assert!(result.is_ok());
-      let submitted = result.unwrap();
-      assert_eq!(submitted.status(), WorkflowInstanceStatus::InProgress);
-      assert_eq!(submitted.current_step_id(), Some("approval"));
-      assert!(submitted.submitted_at().is_some());
+      let result = result.unwrap();
+      let expected = instance
+         .submitted(now)
+         .unwrap()
+         .with_current_step("approval".to_string(), now);
+      assert_eq!(result, expected);
 
       // ステップが作成されていることを確認
       let steps = step_repo
-         .find_by_instance(submitted.id(), &tenant_id)
+         .find_by_instance(result.id(), &tenant_id)
          .await
          .unwrap();
       assert_eq!(steps.len(), 1);
