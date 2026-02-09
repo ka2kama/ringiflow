@@ -98,6 +98,16 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
+      - name: Install cargo-machete
+        run: |
+          if ! command -v cargo-machete &> /dev/null; then
+            cargo install cargo-machete --locked
+          fi
+
+      - name: Check unused dependencies
+        run: cargo machete
+        working-directory: backend
+
       - name: Lint
         run: just lint-rust
 
@@ -173,7 +183,10 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Install sqlx-cli
-        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+        run: |
+          if ! command -v sqlx &> /dev/null; then
+            cargo install sqlx-cli --no-default-features --features rustls,postgres
+          fi
 
       - name: Run migrations
         run: sqlx migrate run
