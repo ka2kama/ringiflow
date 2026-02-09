@@ -105,7 +105,7 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 #### 設計原則レンズ
 
-コードの整理に加えて、設計原則の観点から改善機会を探す。Refactor は単なる「きれいにする」ではなく、**設計を改善する**ステップ。
+コードの整理に加えて、設計原則の観点から改善機会を探す。
 
 → 位置づけ: [俯瞰・実装リズム > 実装中の俯瞰](../../../.claude/rules/zoom-rhythm.md#実装中の俯瞰-設計原則レンズ)
 
@@ -127,9 +127,9 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 発見があった場合のみ、セッションログの判断ログに記録する。発見がなければ記録不要。
 
-これらの観点は [品質チェックリスト](01_Issue駆動開発.md#62-品質チェックリスト) の「品質向上の最終確認（ゼロ→プラス）」と同一の設計原則に基づく。Refactor で品質を**作り込み**、品質チェックリストで**漏れを防ぐ**。
+これらの観点は [品質チェックリスト](01_Issue駆動開発.md#62-品質チェックリスト) の「品質向上の最終確認（ゼロ→プラス）」と同一の設計原則。Refactor で作り込み、品質チェックリストで最終確認する。
 
-既知手法との対応: 「毎 Refactor」の3項目は Kent Beck の Simple Design rules に、「モジュール完成時」の項目は SOLID 原則の SRP・DIP に対応する。
+既知手法との対応: 「毎 Refactor」は Kent Beck の Simple Design rules、「モジュール完成時」は SOLID 原則の SRP・DIP に対応。
 
 ---
 
