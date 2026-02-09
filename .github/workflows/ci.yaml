@@ -403,6 +403,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust == 'true'
 
+    env:
+      CARGO_BUILD_RUSTC_WRAPPER: ""  # sccache は CI では使用しない（cargo-deny の Docker コンテナ内にも存在しない）
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
