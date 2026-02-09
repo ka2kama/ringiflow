@@ -92,6 +92,7 @@ use handler::{
    submit_workflow,
    submit_workflow_by_display_number,
 };
+use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
    db,
    repository::{
@@ -166,12 +167,14 @@ async fn main() -> anyhow::Result<()> {
    });
 
    // ワークフロー UseCase
+   let clock = Arc::new(SystemClock);
    let workflow_usecase = WorkflowUseCaseImpl::new(
       definition_repo,
       instance_repo.clone(),
       step_repo.clone(),
       user_repo.clone(),
       counter_repo,
+      clock,
    );
    let workflow_state = Arc::new(WorkflowState {
       usecase: workflow_usecase,
