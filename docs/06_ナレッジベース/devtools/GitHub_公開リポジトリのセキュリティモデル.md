@@ -239,12 +239,12 @@ flowchart TD
 
 ### 各ワークフローの権限設定
 
-| ワークフロー | contents | pull-requests | issues | actions | secrets 使用 |
-|-------------|----------|---------------|--------|---------|-------------|
-| CI | default | default | default | default | なし |
-| Claude Auto Review | read | write | write | read | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Claude Rules Check | read | write | write | read | `CLAUDE_CODE_OAUTH_TOKEN` |
-| Check Rule Files | default | default | default | default | なし |
+| ワークフロー | contents | pull-requests | issues | actions | statuses | secrets 使用 |
+|-------------|----------|---------------|--------|---------|----------|-------------|
+| CI | default | default | default | default | default | なし |
+| Claude Auto Review | read | write | write | read | write | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Claude Rules Check | read | write | write | read | write | `CLAUDE_CODE_OAUTH_TOKEN` |
+| Check Rule Files | default | default | default | default | default | なし |
 
 Claude 系ワークフローは `contents: read` に制限しており、コードの変更はできない。
 
