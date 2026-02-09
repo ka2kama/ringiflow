@@ -20,16 +20,19 @@ impl Clock for SystemClock {
 }
 
 /// 固定時刻を返すテスト用実装
+#[cfg(any(test, feature = "test-support"))]
 pub struct FixedClock {
    now: DateTime<Utc>,
 }
 
+#[cfg(any(test, feature = "test-support"))]
 impl FixedClock {
    pub fn new(now: DateTime<Utc>) -> Self {
       Self { now }
    }
 }
 
+#[cfg(any(test, feature = "test-support"))]
 impl Clock for FixedClock {
    fn now(&self) -> DateTime<Utc> {
       self.now

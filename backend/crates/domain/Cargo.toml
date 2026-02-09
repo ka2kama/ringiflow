@@ -13,6 +13,9 @@ strum.workspace = true
 thiserror.workspace = true
 uuid.workspace = true
 
+[features]
+test-support = []
+
 [dev-dependencies]
 pretty_assertions.workspace = true
 rstest.workspace = true
