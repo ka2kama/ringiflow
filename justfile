@@ -389,12 +389,14 @@ clean:
     cd backend && cargo clean
     cd frontend && rm -rf node_modules elm-stuff dist
 
-# マージ済みローカルブランチを削除
+# 不要なブランチとワークツリーを整理（マージ済み・リモート削除済みを検出）
+# 使い方: just cleanup [--dry-run]
+cleanup *flags:
+    ./scripts/cleanup.sh {{flags}}
+
+# マージ済みローカルブランチを削除（cleanup に統合済み。後方互換のため残す）
 clean-branches:
-    git switch main
-    git pull
-    git fetch --prune
-    git branch --merged main | grep -v main | xargs -r git branch -d
+    just cleanup
 
 # =============================================================================
 # Worktree 管理（並行開発用）
