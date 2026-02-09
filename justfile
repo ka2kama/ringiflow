@@ -375,6 +375,50 @@ clean-branches:
 # Worktree 管理（並行開発用）
 # =============================================================================
 
+# Issue 番号から worktree を作成
+# 使い方: just worktree-issue NUMBER
+# 例: just worktree-issue 321
+# Issue タイトルからブランチ名を自動生成する
+worktree-issue number:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    NUMBER="{{number}}"
+
+    TITLE=$(gh issue view "$NUMBER" --json title -q .title)
+    if [[ -z "$TITLE" ]]; then
+        echo "error: Issue #$NUMBER が見つかりません" >&2
+        exit 1
+    fi
+
+    # タイトルからスラッグを生成（英数字とハイフンのみ）
+    SLUG=$(echo "$TITLE" | \
+        sed 's/[（(][^)）]*[)）]//g' | \
+        tr '[:upper:]' '[:lower:]' | \
+        sed 's/[^a-z0-9]/-/g' | \
+        sed 's/-\{2,\}/-/g' | \
+        sed 's/^-//' | \
+        sed 's/-$//' | \
+        cut -c1-50 | \
+        sed 's/-[^-]*$//')
+
+    # 日本語タイトル等でスラッグが空になった場合のフォールバック
+    if [[ -z "$SLUG" ]]; then
+        SLUG="issue"
+    fi
+
+    BRANCH="feature/${NUMBER}-${SLUG}"
+
+    echo "Issue #${NUMBER}: ${TITLE}"
+    echo "Branch: ${BRANCH}"
+    echo ""
+
+    ./scripts/worktree-add.sh "$NUMBER" "$BRANCH"
+
+    echo ""
+    echo "次のステップ:"
+    echo "  1. Claude Code を終了"
+    echo "  2. cw $NUMBER で移動して Claude Code を起動"
+
 # worktree を追加（並行開発用の独立した作業ディレクトリを作成）
 # 使い方: just worktree-add NAME BRANCH
 # 例: just worktree-add auth feature/auth
