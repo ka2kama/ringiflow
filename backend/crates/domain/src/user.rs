@@ -21,13 +21,14 @@
 //! use ringiflow_domain::{
 //!    tenant::TenantId,
 //!    user::{Email, User, UserId, UserStatus},
-//!    value_objects::UserName,
+//!    value_objects::{DisplayNumber, UserName},
 //! };
 //!
 //! // 新規ユーザー作成
 //! let user = User::new(
 //!    UserId::new(),
 //!    TenantId::new(),
+//!    DisplayNumber::new(1).unwrap(),
 //!    Email::new("user@example.com").unwrap(),
 //!    UserName::new("山田太郎").unwrap(),
 //!    chrono::Utc::now(),
