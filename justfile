@@ -42,6 +42,7 @@ check-tools:
     @which cargo-watch > /dev/null || (echo "ERROR: cargo-watch がインストールされていません" && exit 1)
     @which cargo-deny > /dev/null || (echo "ERROR: cargo-deny がインストールされていません" && exit 1)
     @which cargo-llvm-cov > /dev/null || (echo "ERROR: cargo-llvm-cov がインストールされていません" && exit 1)
+    @which cargo-machete > /dev/null || (echo "ERROR: cargo-machete がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
@@ -211,7 +212,7 @@ fmt-elm *files:
 # =============================================================================
 
 # 全体リント
-lint: lint-rust lint-elm lint-shell lint-ci lint-openapi
+lint: lint-rust lint-elm lint-shell lint-ci lint-openapi check-unused-deps
 
 # Rust リント（rustfmt + clippy）
 lint-rust:
@@ -303,6 +304,15 @@ test-api: api-test-deps api-test-reset-db
 # 依存関係の脆弱性・ライセンスチェック（cargo-deny）
 audit:
     cd backend && cargo deny check
+
+# =============================================================================
+# 未使用依存チェック
+# =============================================================================
+
+# Cargo.toml の未使用依存を検出（cargo-machete）
+# 選定理由: docs/05_ADR/038_未使用依存検出ツールの選定.md
+check-unused-deps:
+    cd backend && cargo machete
 
 # =============================================================================
 # カバレッジ計測

@@ -15,7 +15,6 @@ chrono.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tracing.workspace = true
 argon2.workspace = true
 
 [dev-dependencies]

@@ -98,6 +98,13 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
+      - name: Install cargo-machete
+        run: cargo install cargo-machete --locked
+
+      - name: Check unused dependencies
+        run: cargo machete
+        working-directory: backend
+
       - name: Lint
         run: just lint-rust
 
