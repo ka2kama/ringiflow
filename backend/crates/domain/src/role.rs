@@ -359,11 +359,17 @@ mod tests {
    }
 
    #[rstest]
-   fn test_ロールのcreated_atは注入された値と一致する(
-      now: DateTime<Utc>,
-      system_role: Role,
-   ) {
-      assert_eq!(system_role.created_at(), now);
-      assert_eq!(system_role.updated_at(), now);
+   fn test_ロールの初期状態が正しい(now: DateTime<Utc>, system_role: Role) {
+      let expected = Role::from_db(
+         system_role.id().clone(),
+         system_role.tenant_id().cloned(),
+         system_role.name().to_string(),
+         system_role.description().map(|s| s.to_string()),
+         system_role.permissions().to_vec(),
+         system_role.is_system(),
+         now,
+         now,
+      );
+      assert_eq!(system_role, expected);
    }
 }
