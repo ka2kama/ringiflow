@@ -191,7 +191,7 @@ impl std::str::FromStr for UserStatus {
 /// - `email` はテナント内で一意
 /// - `display_number` はテナント内で一意
 /// - `status` が `Deleted` の場合、ログイン不可
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct User {
    id: UserId,
    tenant_id: TenantId,

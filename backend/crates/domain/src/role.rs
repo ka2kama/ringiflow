@@ -114,7 +114,7 @@ impl Permission {
 /// - system_role（`is_system == true`）は `tenant_id == None`
 /// - テナントロール（`is_system == false`）は `tenant_id` が必須
 /// - system_role（`is_system == true`）は DB シードデータで管理
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Role {
    id:          RoleId,
    tenant_id:   Option<TenantId>,
@@ -247,7 +247,7 @@ impl Role {
 /// ユーザーロール関連（User と Role の多対多）
 ///
 /// ユーザーに割り当てられたロールを表現する。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserRole {
    id:         Uuid,
    user_id:    UserId,

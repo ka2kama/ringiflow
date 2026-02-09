@@ -201,7 +201,7 @@ impl TenantName {
 /// # 不変条件
 ///
 /// - `id` はシステム内で一意
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tenant {
    id:   TenantId,
    name: TenantName,

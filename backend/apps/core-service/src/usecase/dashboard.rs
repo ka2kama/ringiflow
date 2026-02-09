@@ -22,7 +22,7 @@ use serde::Serialize;
 use crate::error::CoreError;
 
 /// ダッシュボード統計情報
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct DashboardStats {
    pub pending_tasks: i64,
    pub my_workflows_in_progress: i64,

@@ -107,7 +107,7 @@ impl std::str::FromStr for WorkflowDefinitionStatus {
 ///
 /// 再利用可能なワークフローのテンプレート。
 /// JSON 形式の定義を保持し、バージョン管理に対応。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowDefinition {
    id:          WorkflowDefinitionId,
    tenant_id:   TenantId,
@@ -330,7 +330,7 @@ impl std::str::FromStr for WorkflowInstanceStatus {
 /// `version` フィールドにより、並行更新時の競合を検出する。
 /// 更新操作時はリクエストの version と DB の version を比較し、
 /// 一致しない場合は競合エラー（409 Conflict）を返す。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowInstance {
    id: WorkflowInstanceId,
    tenant_id: TenantId,
@@ -713,7 +713,7 @@ impl std::str::FromStr for StepDecision {
 ///
 /// ワークフローインスタンス内の個々の承認タスク。
 /// 担当者への割り当てと判断結果を保持する。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowStep {
    id: WorkflowStepId,
    instance_id: WorkflowInstanceId,
