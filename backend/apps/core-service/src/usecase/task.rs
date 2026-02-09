@@ -26,12 +26,14 @@ use ringiflow_infra::repository::{
 use crate::error::CoreError;
 
 /// タスク一覧の要素: ステップ + ワークフロー概要
+#[derive(Debug, PartialEq, Eq)]
 pub struct TaskItem {
    pub step:     WorkflowStep,
    pub workflow: WorkflowInstance,
 }
 
 /// タスク詳細: ステップ + ワークフロー（全ステップ含む）
+#[derive(Debug, PartialEq, Eq)]
 pub struct TaskDetail {
    pub step:     WorkflowStep,
    pub workflow: WorkflowInstance,
@@ -560,10 +562,11 @@ mod tests {
       let result = sut.list_my_tasks(tenant_id, approver_id).await;
 
       // Assert
-      assert!(result.is_ok());
-      let tasks = result.unwrap();
-      assert_eq!(tasks.len(), 1);
-      assert_eq!(tasks[0].step.step_name(), "承認");
+      let expected = vec![TaskItem {
+         step:     active_step,
+         workflow: instance,
+      }];
+      assert_eq!(result.unwrap(), expected);
    }
 
    #[tokio::test]
@@ -616,10 +619,11 @@ mod tests {
       let result = sut.list_my_tasks(tenant_id, approver_id).await;
 
       // Assert
-      assert!(result.is_ok());
-      let tasks = result.unwrap();
-      assert_eq!(tasks.len(), 1);
-      assert_eq!(tasks[0].workflow.title(), "経費精算申請");
+      let expected = vec![TaskItem {
+         step,
+         workflow: instance,
+      }];
+      assert_eq!(result.unwrap(), expected);
    }
 
    #[tokio::test]
@@ -751,11 +755,12 @@ mod tests {
       let result = sut.get_task(step_id, tenant_id, approver_id).await;
 
       // Assert
-      assert!(result.is_ok());
-      let detail = result.unwrap();
-      assert_eq!(detail.step.step_name(), "承認");
-      assert_eq!(detail.workflow.title(), "テスト申請");
-      assert_eq!(detail.steps.len(), 1);
+      let expected = TaskDetail {
+         step:     step.clone(),
+         workflow: instance,
+         steps:    vec![step],
+      };
+      assert_eq!(result.unwrap(), expected);
    }
 
    #[tokio::test]
@@ -894,11 +899,12 @@ mod tests {
          .await;
 
       // Assert
-      assert!(result.is_ok());
-      let detail = result.unwrap();
-      assert_eq!(detail.step.step_name(), "承認");
-      assert_eq!(detail.workflow.title(), "テスト申請");
-      assert_eq!(detail.workflow.display_number(), workflow_dn);
+      let expected = TaskDetail {
+         step:     step.clone(),
+         workflow: instance,
+         steps:    vec![step],
+      };
+      assert_eq!(result.unwrap(), expected);
    }
 
    #[tokio::test]
