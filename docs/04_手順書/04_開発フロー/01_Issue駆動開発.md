@@ -119,7 +119,6 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 **Draft PR の目的:**
 - 作業中であることを可視化
 - PR Description に設計メモや検討事項を記録
-- 必要に応じて `@claude` メンションで相談
 
 注意: Draft PR では自動レビューは実行されない。Ready for Review に変更した時点でレビューが走る。
 
