@@ -1,6 +1,8 @@
 module Page.Workflow.New exposing
-    ( Model
-    , Msg
+    ( ApproverSelection(..)
+    , Model
+    , Msg(..)
+    , SaveMessage(..)
     , init
     , isDirty
     , update
