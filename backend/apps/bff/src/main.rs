@@ -60,7 +60,7 @@ use axum::{
    middleware::from_fn_with_state,
    routing::{get, post},
 };
-use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClient, CoreServiceClientImpl};
+use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{
    AuthState,
@@ -150,10 +150,10 @@ async fn main() -> anyhow::Result<()> {
       }
    }
 
-   // Arc<dyn Trait> でラップ（共有インスタンス）
+   // 依存関係の初期化
+   // 具象型で保持し、各 State 注入時に必要なトレイトオブジェクトへ coerce する
    let session_manager: Arc<dyn SessionManager> = Arc::new(redis_session_manager);
-   let core_service_client: Arc<dyn CoreServiceClient> =
-      Arc::new(CoreServiceClientImpl::new(&config.core_url));
+   let core_service_client = Arc::new(CoreServiceClientImpl::new(&config.core_url));
    let auth_service_client: Arc<dyn AuthServiceClient> =
       Arc::new(AuthServiceClientImpl::new(&config.auth_url));
 
@@ -162,12 +162,14 @@ async fn main() -> anyhow::Result<()> {
       session_manager: session_manager.clone(),
    };
 
+   // AuthState は CoreServiceUserClient のみ必要（ISP: 認証に不要なメソッドを公開しない）
    let auth_state = Arc::new(AuthState {
       core_service_client: core_service_client.clone(),
       auth_service_client,
       session_manager: session_manager.clone(),
    });
 
+   // WorkflowState は全サブトレイト（CoreServiceClient）が必要
    let workflow_state = Arc::new(WorkflowState {
       core_service_client,
       session_manager,

@@ -1,0 +1,174 @@
+//! Core Service クライアントの DTO / リクエスト型
+
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+// --- レスポンス型 ---
+
+/// ユーザー情報レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserResponse {
+   pub id:        Uuid,
+   pub tenant_id: Uuid,
+   pub email:     String,
+   pub name:      String,
+   pub status:    String,
+}
+
+/// ユーザー詳細データ（権限付き）
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserWithPermissionsData {
+   pub user:        UserResponse,
+   pub tenant_name: String,
+   pub roles:       Vec<String>,
+   pub permissions: Vec<String>,
+}
+
+/// ユーザー一覧の要素 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserItemDto {
+   pub id: Uuid,
+   pub display_id: String,
+   pub display_number: i64,
+   pub name: String,
+   pub email: String,
+}
+
+// --- ユーザー参照型 ---
+
+/// ユーザー参照 DTO（Core Service からのデシリアライズ用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserRefDto {
+   pub id:   String,
+   pub name: String,
+}
+
+// --- ワークフロー関連の型 ---
+
+/// ワークフロー作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateWorkflowRequest {
+   pub definition_id: Uuid,
+   pub title:         String,
+   pub form_data:     serde_json::Value,
+   pub tenant_id:     Uuid,
+   pub user_id:       Uuid,
+}
+
+/// ワークフロー申請リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct SubmitWorkflowRequest {
+   pub assigned_to: Uuid,
+   pub tenant_id:   Uuid,
+}
+
+/// ステップ承認/却下リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct ApproveRejectRequest {
+   pub version:   i32,
+   pub comment:   Option<String>,
+   pub tenant_id: Uuid,
+   pub user_id:   Uuid,
+}
+
+/// ワークフローステップ DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowStepDto {
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub step_id: String,
+   pub step_name: String,
+   pub step_type: String,
+   pub status: String,
+   pub version: i32,
+   pub assigned_to: Option<UserRefDto>,
+   pub decision: Option<String>,
+   pub comment: Option<String>,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
+   pub completed_at: Option<String>,
+   pub created_at: String,
+   pub updated_at: String,
+}
+
+/// ワークフローインスタンス DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowInstanceDto {
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub title: String,
+   pub definition_id: String,
+   pub status: String,
+   pub version: i32,
+   pub form_data: serde_json::Value,
+   pub initiated_by: UserRefDto,
+   pub current_step_id: Option<String>,
+   #[serde(default)]
+   pub steps: Vec<WorkflowStepDto>,
+   pub submitted_at: Option<String>,
+   pub completed_at: Option<String>,
+   pub created_at: String,
+   pub updated_at: String,
+}
+
+/// ワークフロー定義 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowDefinitionDto {
+   pub id:          String,
+   pub name:        String,
+   pub description: Option<String>,
+   pub version:     i32,
+   pub definition:  serde_json::Value,
+   pub status:      String,
+   pub created_by:  String,
+   pub created_at:  String,
+   pub updated_at:  String,
+}
+
+// --- タスク関連の型 ---
+
+/// ワークフロー概要 DTO（タスク一覧用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskWorkflowSummaryDto {
+   pub id: String,
+   pub display_id: String,
+   pub display_number: i64,
+   pub title: String,
+   pub status: String,
+   pub initiated_by: UserRefDto,
+   pub submitted_at: Option<String>,
+}
+
+/// タスク一覧の要素 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskItemDto {
+   pub id: String,
+   pub display_number: i64,
+   pub step_name: String,
+   pub status: String,
+   pub version: i32,
+   pub assigned_to: Option<UserRefDto>,
+   pub due_date: Option<String>,
+   pub started_at: Option<String>,
+   pub created_at: String,
+   pub workflow: TaskWorkflowSummaryDto,
+}
+
+/// タスク詳細 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskDetailDto {
+   pub step:     WorkflowStepDto,
+   pub workflow: WorkflowInstanceDto,
+}
+
+// --- ダッシュボード関連の型 ---
+
+/// ダッシュボード統計 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct DashboardStatsDto {
+   pub pending_tasks: i64,
+   pub my_workflows_in_progress: i64,
+   pub completed_today: i64,
+}
