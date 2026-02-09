@@ -12,8 +12,6 @@ YAML ファイルを作成・編集する際のルール。
 
 YAML ファイルの拡張子は `.yaml` を使用する。`.yml` は使用しない。
 
-理由: [YAML 公式 FAQ](https://yaml.org/faq.html) で `.yaml` が推奨されている。
-
 ```yaml
 # 良い例
 config.yaml
