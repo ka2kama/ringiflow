@@ -272,10 +272,10 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::with_active_credential("dummy_hash");
       let checker = StubPasswordChecker::success();
-      let usecase = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(repo, checker);
 
       // When
-      let result = usecase
+      let result = sut
          .verify_password(Uuid::now_v7(), Uuid::now_v7(), "password123")
          .await;
 
@@ -290,10 +290,10 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::with_active_credential("dummy_hash");
       let checker = StubPasswordChecker::failure();
-      let usecase = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(repo, checker);
 
       // When
-      let result = usecase
+      let result = sut
          .verify_password(Uuid::now_v7(), Uuid::now_v7(), "wrongpassword")
          .await;
 
@@ -306,10 +306,10 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::empty();
       let checker = StubPasswordChecker::success();
-      let usecase = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(repo, checker);
 
       // When
-      let result = usecase
+      let result = sut
          .verify_password(Uuid::now_v7(), Uuid::now_v7(), "password123")
          .await;
 
@@ -322,10 +322,10 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::with_inactive_credential();
       let checker = StubPasswordChecker::success();
-      let usecase = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(repo, checker);
 
       // When
-      let result = usecase
+      let result = sut
          .verify_password(Uuid::now_v7(), Uuid::now_v7(), "password123")
          .await;
 
@@ -338,10 +338,10 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::empty();
       let checker = StubPasswordChecker::success();
-      let usecase = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(repo, checker);
 
       // When
-      let result = usecase
+      let result = sut
          .create_credential(
             Uuid::now_v7(),
             Uuid::now_v7(),
@@ -359,10 +359,10 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::empty();
       let checker = StubPasswordChecker::success();
-      let usecase = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(repo, checker);
 
       // When
-      let result = usecase
+      let result = sut
          .create_credential(Uuid::now_v7(), Uuid::now_v7(), "invalid_type", "data")
          .await;
 
