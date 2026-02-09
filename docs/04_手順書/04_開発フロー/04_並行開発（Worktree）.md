@@ -51,24 +51,6 @@ just worktree-add auth feature/auth
 - `../ringiflow-auth/` ディレクトリが作成される
 - `.env` ファイルが自動生成される（オフセット適用済み）
 
-### worktree に移動して Claude Code を起動する
-
-`cw` コマンドで worktree への移動と Claude Code 起動を一括で行える。
-
-```bash
-cw 321           # ringiflow-321 に移動して claude を起動
-cw main          # メインworktree に移動
-cw 321 --resume  # 前回セッションを再開
-cw               # worktree 一覧を表示
-```
-
-セットアップ（初回のみ）:
-```bash
-echo 'source ~/path/to/ringiflow/scripts/cw.zsh' >> ~/.zshrc
-```
-
-Tab 補完が効くため、worktree 名を覚える必要はない。
-
 ### worktree で開発を開始する
 
 ```bash
