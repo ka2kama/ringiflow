@@ -6,6 +6,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use itertools::Itertools;
 use ringiflow_domain::{
+   clock::Clock,
    tenant::TenantId,
    user::UserId,
    value_objects::{DisplayIdEntityType, DisplayNumber, Version},
@@ -95,6 +96,7 @@ pub struct WorkflowUseCaseImpl {
    step_repo:       Arc<dyn WorkflowStepRepository>,
    user_repo:       Arc<dyn UserRepository>,
    counter_repo:    Arc<dyn DisplayIdCounterRepository>,
+   clock:           Arc<dyn Clock>,
 }
 
 impl WorkflowUseCaseImpl {
@@ -105,6 +107,7 @@ impl WorkflowUseCaseImpl {
       step_repo: Arc<dyn WorkflowStepRepository>,
       user_repo: Arc<dyn UserRepository>,
       counter_repo: Arc<dyn DisplayIdCounterRepository>,
+      clock: Arc<dyn Clock>,
    ) -> Self {
       Self {
          definition_repo,
@@ -112,6 +115,7 @@ impl WorkflowUseCaseImpl {
          step_repo,
          user_repo,
          counter_repo,
+         clock,
       }
    }
 
@@ -159,7 +163,7 @@ impl WorkflowUseCaseImpl {
       }
 
       // 3. WorkflowInstance を draft として作成
-      let now = chrono::Utc::now();
+      let now = self.clock.now();
       let display_number = self
          .counter_repo
          .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowInstance)
@@ -239,7 +243,7 @@ impl WorkflowUseCaseImpl {
          .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
 
       // 4. ステップを作成 (MVP では1段階承認のみ)
-      let now = chrono::Utc::now();
+      let now = self.clock.now();
       let display_number = self
          .counter_repo
          .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
@@ -260,7 +264,6 @@ impl WorkflowUseCaseImpl {
       let active_step = step.activated(now);
 
       // 6. ワークフローインスタンスを申請済みに遷移
-      let now = chrono::Utc::now();
       let expected_version = instance.version();
       let submitted_instance = instance
          .submitted(now)
@@ -339,7 +342,7 @@ impl WorkflowUseCaseImpl {
       }
 
       // 4. ステップを承認
-      let now = chrono::Utc::now();
+      let now = self.clock.now();
       let step_expected_version = step.version();
       let approved_step = step
          .approve(input.comment, now)
@@ -436,7 +439,7 @@ impl WorkflowUseCaseImpl {
       }
 
       // 4. ステップを却下
-      let now = chrono::Utc::now();
+      let now = self.clock.now();
       let step_expected_version = step.version();
       let rejected_step = step
          .reject(input.comment, now)
@@ -792,6 +795,7 @@ mod tests {
    use std::sync::{Arc, Mutex};
 
    use ringiflow_domain::{
+      clock::FixedClock,
       user::User,
       value_objects::{DisplayNumber, Version, WorkflowName},
       workflow::{
@@ -1154,16 +1158,17 @@ mod tests {
       let step_repo = MockWorkflowStepRepository::new();
 
       // 公開済みの定義を追加
+      let now = chrono::Utc::now();
       let definition = WorkflowDefinition::new(NewWorkflowDefinition {
-         id:          WorkflowDefinitionId::new(),
-         tenant_id:   tenant_id.clone(),
-         name:        WorkflowName::new("汎用申請").unwrap(),
+         id: WorkflowDefinitionId::new(),
+         tenant_id: tenant_id.clone(),
+         name: WorkflowName::new("汎用申請").unwrap(),
          description: Some("テスト用定義".to_string()),
-         definition:  serde_json::json!({"steps": []}),
-         created_by:  user_id.clone(),
-         now:         chrono::Utc::now(),
+         definition: serde_json::json!({"steps": []}),
+         created_by: user_id.clone(),
+         now,
       });
-      let published_definition = definition.published(chrono::Utc::now()).unwrap();
+      let published_definition = definition.published(now).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
       let sut = WorkflowUseCaseImpl::new(
@@ -1172,6 +1177,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = CreateWorkflowInput {
@@ -1210,12 +1216,14 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
+      let now = chrono::Utc::now();
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
          Arc::new(instance_repo),
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = CreateWorkflowInput {
@@ -1282,6 +1290,7 @@ mod tests {
          Arc::new(step_repo.clone()),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = ApproveRejectInput {
@@ -1369,6 +1378,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = ApproveRejectInput {
@@ -1433,6 +1443,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = ApproveRejectInput {
@@ -1496,6 +1507,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
@@ -1563,6 +1575,7 @@ mod tests {
          Arc::new(step_repo.clone()),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = ApproveRejectInput {
@@ -1650,6 +1663,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = ApproveRejectInput {
@@ -1714,6 +1728,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = ApproveRejectInput {
@@ -1777,6 +1792,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
@@ -1803,6 +1819,7 @@ mod tests {
       let tenant_id = TenantId::new();
       let user_id = UserId::new();
       let approver_id = UserId::new();
+      let now = chrono::Utc::now();
 
       let definition_repo = MockWorkflowDefinitionRepository::new();
       let instance_repo = MockWorkflowInstanceRepository::new();
@@ -1810,15 +1827,15 @@ mod tests {
 
       // 公開済みの定義を追加
       let definition = WorkflowDefinition::new(NewWorkflowDefinition {
-         id:          WorkflowDefinitionId::new(),
-         tenant_id:   tenant_id.clone(),
-         name:        WorkflowName::new("汎用申請").unwrap(),
+         id: WorkflowDefinitionId::new(),
+         tenant_id: tenant_id.clone(),
+         name: WorkflowName::new("汎用申請").unwrap(),
          description: Some("テスト用定義".to_string()),
-         definition:  serde_json::json!({"steps": []}),
-         created_by:  user_id.clone(),
-         now:         chrono::Utc::now(),
+         definition: serde_json::json!({"steps": []}),
+         created_by: user_id.clone(),
+         now,
       });
-      let published_definition = definition.published(chrono::Utc::now()).unwrap();
+      let published_definition = definition.published(now).unwrap();
       definition_repo.add_definition(published_definition.clone());
 
       // 下書きのインスタンスを作成
@@ -1831,7 +1848,7 @@ mod tests {
          title: "テスト申請".to_string(),
          form_data: serde_json::json!({}),
          initiated_by: user_id.clone(),
-         now: chrono::Utc::now(),
+         now,
       });
       instance_repo.insert(&instance).await.unwrap();
 
@@ -1841,6 +1858,7 @@ mod tests {
          Arc::new(step_repo.clone()),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = SubmitWorkflowInput {
@@ -1916,6 +1934,7 @@ mod tests {
          Arc::new(step_repo),
          Arc::new(MockUserRepository),
          Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
       );
 
       let input = SubmitWorkflowInput {
