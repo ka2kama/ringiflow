@@ -372,9 +372,7 @@ permissions.insert("write");
 
 ### doctest でのエラーハンドリング
 
-doctest は「使い方のお手本」として機能するため、`unwrap()` ではなく `?` 演算子を使う。
-
-doctest で `?` を使うには `fn main()` を `Result` 返り値にする。ボイラープレートは `#` で隠す:
+doctest では `unwrap()` ではなく `?` 演算子を使う。`fn main()` を `Result` 返り値にし、ボイラープレートは `#` で隠す:
 
 ```rust
 //! ```rust
