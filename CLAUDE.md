@@ -502,8 +502,9 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 3. Draft PR 作成（`gh pr create --draft`）
 4. `/wrap-up` でドキュメント整備
 5. wrap-up 完了の検証（構造的チェックポイント）
-6. ユーザーに確認を求める（「Ready にしてよいですか？」）
-7. ユーザー承認後、`gh pr ready` で Ready にする
+6. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`）
+7. ユーザーに確認を求める（「Ready にしてよいですか？」）
+8. ユーザー承認後、`gh pr ready` で Ready にする
 
 Step 5 の検証方法:
 
@@ -514,6 +515,8 @@ git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/ru
 - ドキュメントコミットが存在すれば Step 6 へ進む
 - 存在しない場合は `/wrap-up` を先に実行する
 - `/wrap-up` の結果「作成不要」と判断された場合は、その旨をユーザーに伝えてから Step 6 へ進む
+
+Step 6 の同期確認: 差分がある場合は `git rebase origin/main` を実行し、`just check-all` で再確認する。Ready for Review 後の rebase は CI + レビューの再実行を伴うため、プッシュ前に解消する
 
 **禁止:**
 
