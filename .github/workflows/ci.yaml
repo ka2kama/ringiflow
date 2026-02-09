@@ -63,6 +63,7 @@ jobs:
 
     env:
       CARGO_TERM_COLOR: always
+      CARGO_BUILD_RUSTC_WRAPPER: ""  # sccache は CI では使用しない（actions/cache で代替）
       RUST_BACKTRACE: 1
       SQLX_OFFLINE: true  # CI では DB 接続なしでビルド
 
@@ -155,6 +156,7 @@ jobs:
 
     env:
       CARGO_TERM_COLOR: always
+      CARGO_BUILD_RUSTC_WRAPPER: ""  # sccache は CI では使用しない（actions/cache で代替）
       RUST_BACKTRACE: 1
       SQLX_OFFLINE: true
       DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow_test
@@ -304,6 +306,7 @@ jobs:
 
     env:
       CARGO_TERM_COLOR: always
+      CARGO_BUILD_RUSTC_WRAPPER: ""  # sccache は CI では使用しない（actions/cache で代替）
       SQLX_OFFLINE: true
 
     steps:

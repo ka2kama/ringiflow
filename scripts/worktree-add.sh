@@ -6,7 +6,10 @@
 # ポートオフセットは使用中の worktree を検出して自動割り当てする。
 #
 # 使い方:
-#   ./scripts/worktree-add.sh NAME BRANCH
+#   ./scripts/worktree-add.sh [--no-setup] NAME BRANCH
+#
+# オプション:
+#   --no-setup : セットアップ（Docker 起動、DB マイグレーション、依存関係インストール）をスキップ
 #
 # 引数:
 #   NAME   : worktree 名（ディレクトリ名に使用）
@@ -15,6 +18,8 @@
 # 例:
 #   ./scripts/worktree-add.sh auth feature/auth
 #   → ringiflow-auth/ ディレクトリを作成し、feature/auth ブランチをチェックアウト
+#   ./scripts/worktree-add.sh --no-setup auth feature/auth
+#   → セットアップをスキップ（.env 生成のみ）
 # =============================================================================
 
 set -euo pipefail
@@ -22,9 +27,27 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# オプション解析
+NO_SETUP=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --no-setup)
+            NO_SETUP=true
+            shift
+            ;;
+        -*)
+            echo "不明なオプション: $1" >&2
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
 # 引数チェック
 if [[ $# -lt 2 ]]; then
-    echo "使い方: $0 NAME BRANCH" >&2
+    echo "使い方: $0 [--no-setup] NAME BRANCH" >&2
     echo "例: $0 auth feature/auth" >&2
     exit 1
 fi
@@ -89,7 +112,16 @@ fi
 cd "$WORKTREE_PATH"
 ./scripts/generate-env.sh "$port_offset"
 
+# セットアップ実行（--no-setup でスキップ）
+if [[ "$NO_SETUP" == false ]]; then
+    echo ""
+    echo "セットアップを実行中..."
+    just setup-worktree
+else
+    echo ""
+    echo "（--no-setup: セットアップをスキップしました）"
+fi
+
 echo ""
 echo "✓ worktree を作成しました"
 echo "  cd $WORKTREE_PATH"
-echo "  just dev-deps  # 依存サービスを起動"

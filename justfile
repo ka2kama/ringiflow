@@ -43,6 +43,7 @@ check-tools:
     @which cargo-deny > /dev/null || (echo "ERROR: cargo-deny がインストールされていません" && exit 1)
     @which cargo-llvm-cov > /dev/null || (echo "ERROR: cargo-llvm-cov がインストールされていません" && exit 1)
     @which cargo-machete > /dev/null || (echo "ERROR: cargo-machete がインストールされていません" && exit 1)
+    @which sccache > /dev/null || (echo "ERROR: sccache がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
@@ -74,6 +75,11 @@ setup-db:
     @echo "データベースをセットアップ中..."
     @cd backend && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
     @echo "✓ データベースセットアップ完了"
+
+# worktree 用セットアップ（Docker 起動 → DB マイグレーション → 依存関係インストール）
+setup-worktree: dev-deps setup-db setup-deps
+    @echo ""
+    @echo "✓ worktree セットアップ完了"
 
 # データベースをリセット（drop → create → migrate）
 reset-db:
@@ -402,11 +408,11 @@ worktree-issue number:
     ./scripts/worktree-issue.sh {{number}}
 
 # worktree を追加（並行開発用の独立した作業ディレクトリを作成）
-# 使い方: just worktree-add NAME BRANCH
+# 使い方: just worktree-add NAME BRANCH [--no-setup]
 # 例: just worktree-add auth feature/auth
 # ポートオフセットは自動で空き番号が割り当てられる
-worktree-add name branch:
-    ./scripts/worktree-add.sh {{name}} {{branch}}
+worktree-add name branch *flags:
+    ./scripts/worktree-add.sh {{flags}} {{name}} {{branch}}
 
 # worktree を削除
 # 使い方: just worktree-remove NAME
