@@ -1,7 +1,12 @@
 module Api.Workflow exposing
     ( ApproveRejectRequest
+    , CreateWorkflowRequest
+    , SubmitWorkflowRequest
     , approveStep
     , createWorkflow
+    , encodeApproveRejectRequest
+    , encodeCreateRequest
+    , encodeSubmitRequest
     , getWorkflow
     , listMyWorkflows
     , rejectStep

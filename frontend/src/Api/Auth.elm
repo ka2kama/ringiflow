@@ -1,4 +1,4 @@
-module Api.Auth exposing (getCsrfToken, getMe)
+module Api.Auth exposing (csrfTokenDecoder, getCsrfToken, getMe, userDecoder)
 
 {-| 認証 API クライアント
 
