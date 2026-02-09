@@ -375,6 +375,13 @@ clean-branches:
 # Worktree 管理（並行開発用）
 # =============================================================================
 
+# Issue 番号から worktree を作成
+# 使い方: just worktree-issue NUMBER
+# 例: just worktree-issue 321
+# Issue タイトルからブランチ名を自動生成する
+worktree-issue number:
+    ./scripts/worktree-issue.sh {{number}}
+
 # worktree を追加（並行開発用の独立した作業ディレクトリを作成）
 # 使い方: just worktree-add NAME BRANCH
 # 例: just worktree-add auth feature/auth
