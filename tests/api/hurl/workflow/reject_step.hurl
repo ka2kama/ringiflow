@@ -98,7 +98,7 @@ jsonpath "$.status" == 403
 # =============================================================================
 # Given: 存在しない display_number
 # When: 却下を試みる
-# Then: 404 Not Found が返される
+# Then: 404 Not Found が返される（step-not-found として扱われる）
 
 POST {{bff_url}}/api/v1/workflows/99999999/steps/1/reject
 X-Tenant-ID: {{tenant_id}}
@@ -112,7 +112,7 @@ Content-Type: application/json
 
 HTTP 404
 [Asserts]
-jsonpath "$.type" == "https://ringiflow.example.com/errors/workflow-instance-not-found"
+jsonpath "$.type" == "https://ringiflow.example.com/errors/step-not-found"
 jsonpath "$.status" == 404
 
 # =============================================================================

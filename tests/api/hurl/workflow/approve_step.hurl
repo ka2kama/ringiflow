@@ -112,7 +112,7 @@ Content-Type: application/json
 
 HTTP 403
 [Asserts]
-jsonpath "$.type" == "https://ringiflow.example.com/errors/not-assigned"
+jsonpath "$.type" == "https://ringiflow.example.com/errors/forbidden"
 jsonpath "$.status" == 403
 
 # =============================================================================
