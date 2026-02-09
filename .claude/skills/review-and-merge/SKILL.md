@@ -18,10 +18,10 @@ $ARGUMENTS
 
 ## 手順
 
-### Step 1: PR 状態確認
+### Step 1: PR 状態確認 + base branch 同期
 
 ```bash
-gh pr view --json number,state,isDraft,reviewDecision,statusCheckRollup,url
+gh pr view --json number,state,isDraft,reviewDecision,statusCheckRollup,url,baseRefName
 ```
 
 以下の判定に基づいて対応する:
@@ -31,7 +31,23 @@ gh pr view --json number,state,isDraft,reviewDecision,statusCheckRollup,url
 | PR が存在しない | エラーメッセージを表示して終了 |
 | Draft 状態 | `gh pr ready` で解除するかユーザーに確認 |
 | CI 未通過 | `gh pr checks --watch` で待機するかユーザーに確認 |
-| Ready 状態 | Step 2 へ |
+| Ready 状態 | base branch 同期確認へ |
+
+#### base branch との同期確認
+
+Review 完了を待つ前に、base branch との同期状態を確認する。差分がある場合は rebase + push を先に行い、CI + Review のやり直しを防ぐ。
+
+```bash
+git fetch origin main
+git log HEAD..origin/main --oneline
+```
+
+| 状態 | 対応 |
+|------|------|
+| 差分なし | Step 2 へ |
+| 差分あり | rebase + push してから Step 2 へ（CI + Review が再実行される） |
+
+改善の経緯: [review-and-merge で rebase 確認が遅い](../../../prompts/improvements/2026-02/2026-02-09_2106_review-and-mergeでrebase確認が遅い.md)
 
 ### Step 2: Claude Auto Review 完了確認
 
