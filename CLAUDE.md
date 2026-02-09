@@ -501,17 +501,30 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 2. 収束確認完了（[zoom-rhythm.md](.claude/rules/zoom-rhythm.md)）
 3. Draft PR 作成（`gh pr create --draft`）
 4. `/wrap-up` でドキュメント整備
-5. ユーザーに確認を求める（「Ready にしてよいですか？」）
-6. ユーザー承認後、`gh pr ready` で Ready にする
+5. wrap-up 完了の検証（構造的チェックポイント）
+6. ユーザーに確認を求める（「Ready にしてよいですか？」）
+7. ユーザー承認後、`gh pr ready` で Ready にする
+
+Step 5 の検証方法:
+
+```bash
+git diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"
+```
+
+- ドキュメントコミットが存在すれば Step 6 へ進む
+- 存在しない場合は `/wrap-up` を先に実行する
+- `/wrap-up` の結果「作成不要」と判断された場合は、その旨をユーザーに伝えてから Step 6 へ進む
 
 **禁止:**
 
 - Draft なしで PR を作成すること
 - ユーザー確認なしに `gh pr ready` を実行すること
+- wrap-up 完了を検証せずに Ready を提案すること
 
 改善の経緯:
 - [PR を Draft で作成しなかった](prompts/improvements/2026-02/2026-02-05_2104_PRをDraftで作成しなかった.md)
 - [ユーザー確認なしに PR を Ready にした](prompts/improvements/2026-02/2026-02-05_2104_ユーザー確認なしにPRをReadyにした.md)
+- [wrap-up 前に Ready を提案する再発](prompts/improvements/2026-02/2026-02-09_2134_wrap-up前にReadyを提案する再発.md)
 
 ### Ready for Review
 
