@@ -507,9 +507,12 @@ mod tests {
       let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
 
-      assert_eq!(stats.pending_tasks, 0);
-      assert_eq!(stats.my_workflows_in_progress, 0);
-      assert_eq!(stats.completed_today, 0);
+      let expected = DashboardStats {
+         pending_tasks: 0,
+         my_workflows_in_progress: 0,
+         completed_today: 0,
+      };
+      assert_eq!(stats, expected);
    }
 
    #[tokio::test]
