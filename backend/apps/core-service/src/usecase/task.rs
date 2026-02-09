@@ -3,7 +3,7 @@
 //! タスク（自分にアサインされたワークフローステップ）の
 //! 一覧・詳細取得に関するビジネスロジックを実装する。
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use ringiflow_domain::{
    tenant::TenantId,
@@ -39,21 +39,18 @@ pub struct TaskDetail {
 }
 
 /// タスクユースケース実装
-///
-/// I: WorkflowInstanceRepository, S: WorkflowStepRepository, U: UserRepository
-pub struct TaskUseCaseImpl<I, S, U> {
-   instance_repo: I,
-   step_repo:     S,
-   user_repo:     U,
+pub struct TaskUseCaseImpl {
+   instance_repo: Arc<dyn WorkflowInstanceRepository>,
+   step_repo:     Arc<dyn WorkflowStepRepository>,
+   user_repo:     Arc<dyn UserRepository>,
 }
 
-impl<I, S, U> TaskUseCaseImpl<I, S, U>
-where
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-   U: UserRepository,
-{
-   pub fn new(instance_repo: I, step_repo: S, user_repo: U) -> Self {
+impl TaskUseCaseImpl {
+   pub fn new(
+      instance_repo: Arc<dyn WorkflowInstanceRepository>,
+      step_repo: Arc<dyn WorkflowStepRepository>,
+      user_repo: Arc<dyn UserRepository>,
+   ) -> Self {
       Self {
          instance_repo,
          step_repo,
@@ -66,7 +63,7 @@ where
       &self,
       user_ids: &[UserId],
    ) -> Result<HashMap<UserId, String>, CoreError> {
-      crate::usecase::resolve_user_names(&self.user_repo, user_ids).await
+      crate::usecase::resolve_user_names(self.user_repo.as_ref(), user_ids).await
    }
 
    /// 自分のタスク一覧を取得する
@@ -553,7 +550,11 @@ mod tests {
       });
       step_repo.insert(&pending_step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut.list_my_tasks(tenant_id, approver_id).await;
@@ -605,7 +606,11 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut.list_my_tasks(tenant_id, approver_id).await;
@@ -658,7 +663,11 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act: 別のユーザーで取得
       let result = sut.list_my_tasks(tenant_id, other_user_id).await;
@@ -677,7 +686,11 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut.list_my_tasks(tenant_id, user_id).await;
@@ -728,7 +741,11 @@ mod tests {
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut.get_task(step_id, tenant_id, approver_id).await;
@@ -750,7 +767,11 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act: 存在しない step_id で取得
       let result = sut
@@ -803,7 +824,11 @@ mod tests {
       let step_id = step.id().clone();
       step_repo.insert(&step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act: 別のユーザーで取得
       let result = sut.get_task(step_id, tenant_id, other_user_id).await;
@@ -857,7 +882,11 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut
@@ -881,7 +910,11 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut
@@ -922,7 +955,11 @@ mod tests {
       });
       instance_repo.insert(&instance).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut
@@ -982,7 +1019,11 @@ mod tests {
       .activated(now);
       step_repo.insert(&step).await.unwrap();
 
-      let sut = TaskUseCaseImpl::new(instance_repo, step_repo, MockUserRepository);
+      let sut = TaskUseCaseImpl::new(
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+      );
 
       // Act
       let result = sut

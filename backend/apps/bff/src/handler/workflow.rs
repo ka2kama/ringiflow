@@ -48,13 +48,9 @@ use crate::{
 };
 
 /// ワークフローハンドラの共有状態
-pub struct WorkflowState<C, S>
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
-   pub core_service_client: C,
-   pub session_manager:     S,
+pub struct WorkflowState {
+   pub core_service_client: Arc<dyn CoreServiceClient>,
+   pub session_manager:     Arc<dyn SessionManager>,
 }
 
 // --- リクエスト/レスポンス型 ---
@@ -238,16 +234,12 @@ impl From<crate::client::WorkflowDefinitionDto> for WorkflowDefinitionData {
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `POST /internal/workflows` を呼び出し
 /// 3. レスポンスを返す
-pub async fn create_workflow<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn create_workflow(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Json(req): Json<CreateWorkflowRequest>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -255,7 +247,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -296,17 +288,13 @@ where
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出し
 /// 3. レスポンスを返す
-pub async fn submit_workflow<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn submit_workflow(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Path(display_number): Path<i64>,
    Json(req): Json<SubmitWorkflowRequest>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // display_number の検証
    if display_number <= 0 {
       return validation_error_response("display_number は 1 以上である必要があります");
@@ -319,7 +307,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -363,15 +351,11 @@ where
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `GET /internal/workflow-definitions` を呼び出し
 /// 3. レスポンスを返す
-pub async fn list_workflow_definitions<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn list_workflow_definitions(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -379,7 +363,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -416,16 +400,12 @@ where
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `GET /internal/workflow-definitions/{id}` を呼び出し
 /// 3. レスポンスを返す
-pub async fn get_workflow_definition<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn get_workflow_definition(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Path(definition_id): Path<Uuid>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -433,7 +413,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -469,15 +449,11 @@ where
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `GET /internal/workflows` を呼び出し
 /// 3. レスポンスを返す
-pub async fn list_my_workflows<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn list_my_workflows(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -485,7 +461,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -525,16 +501,12 @@ where
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出し
 /// 3. レスポンスを返す
-pub async fn get_workflow<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn get_workflow(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Path(display_number): Path<i64>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // display_number の検証
    if display_number <= 0 {
       return validation_error_response("display_number は 1 以上である必要があります");
@@ -547,7 +519,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -585,17 +557,13 @@ where
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
-pub async fn approve_step<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn approve_step(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Path(params): Path<StepPathParams>,
    Json(req): Json<ApproveRejectRequest>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // display_number の検証
    if params.display_number <= 0 {
       return validation_error_response("display_number は 1 以上である必要があります");
@@ -611,7 +579,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -662,17 +630,13 @@ where
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
-pub async fn reject_step<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn reject_step(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Path(params): Path<StepPathParams>,
    Json(req): Json<ApproveRejectRequest>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // display_number の検証
    if params.display_number <= 0 {
       return validation_error_response("display_number は 1 以上である必要があります");
@@ -688,7 +652,7 @@ where
    };
 
    // セッションを取得
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -735,16 +699,12 @@ where
 /// GET /api/v1/workflows/{display_number}/tasks/{step_display_number}
 ///
 /// display_number でタスク詳細を取得する
-pub async fn get_task_by_display_numbers<C, S>(
-   State(state): State<Arc<WorkflowState<C, S>>>,
+pub async fn get_task_by_display_numbers(
+   State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Path(params): Path<StepPathParams>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // display_number の検証
    if params.display_number <= 0 {
       return validation_error_response("display_number は 1 以上である必要があります");
@@ -758,7 +718,7 @@ where
       Err(e) => return e.into_response(),
    };
 
-   let session_data = match get_session(&state.session_manager, &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };

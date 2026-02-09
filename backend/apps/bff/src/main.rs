@@ -60,7 +60,7 @@ use axum::{
    middleware::from_fn_with_state,
    routing::{get, post},
 };
-use client::{AuthServiceClientImpl, CoreServiceClientImpl};
+use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClient, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{
    AuthState,
@@ -87,7 +87,7 @@ use middleware::{CsrfState, csrf_middleware};
 #[cfg(feature = "dev-auth")]
 use ringiflow_bff::dev_auth;
 use ringiflow_bff::{client, handler, middleware};
-use ringiflow_infra::RedisSessionManager;
+use ringiflow_infra::{RedisSessionManager, SessionManager};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -124,11 +124,9 @@ async fn main() -> anyhow::Result<()> {
    tracing::info!("BFF サーバーを起動します: {}:{}", config.host, config.port);
 
    // 依存関係の初期化
-   let session_manager = RedisSessionManager::new(&config.redis_url)
+   let redis_session_manager = RedisSessionManager::new(&config.redis_url)
       .await
       .expect("Redis への接続に失敗しました");
-   let core_service_client = CoreServiceClientImpl::new(&config.core_url);
-   let auth_service_client = AuthServiceClientImpl::new(&config.auth_url);
 
    // DevAuth の初期化（dev-auth feature 有効時のみコンパイルされる）
    #[cfg(feature = "dev-auth")]
@@ -138,7 +136,7 @@ async fn main() -> anyhow::Result<()> {
       tracing::warn!("   本番環境では絶対に有効にしないでください");
       tracing::warn!("========================================");
 
-      match dev_auth::setup_dev_session(&session_manager).await {
+      match dev_auth::setup_dev_session(&redis_session_manager).await {
          Ok(csrf_token) => {
             tracing::info!("DevAuth: 開発用セッションを作成しました");
             tracing::info!("  Tenant ID: {}", dev_auth::DEV_TENANT_ID);
@@ -151,6 +149,13 @@ async fn main() -> anyhow::Result<()> {
          }
       }
    }
+
+   // Arc<dyn Trait> でラップ（共有インスタンス）
+   let session_manager: Arc<dyn SessionManager> = Arc::new(redis_session_manager);
+   let core_service_client: Arc<dyn CoreServiceClient> =
+      Arc::new(CoreServiceClientImpl::new(&config.core_url));
+   let auth_service_client: Arc<dyn AuthServiceClient> =
+      Arc::new(AuthServiceClientImpl::new(&config.auth_url));
 
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
@@ -173,78 +178,50 @@ async fn main() -> anyhow::Result<()> {
    // CSRF ミドルウェアは POST/PUT/PATCH/DELETE リクエストを検証する
    let app = Router::new()
       .route("/health", get(health_check))
-      .route(
-         "/api/v1/auth/login",
-         post(login::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
-      )
-      .route(
-         "/api/v1/auth/logout",
-         post(logout::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
-      )
-      .route(
-         "/api/v1/auth/me",
-         get(me::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
-      )
-      .route(
-         "/api/v1/auth/csrf",
-         get(csrf::<CoreServiceClientImpl, AuthServiceClientImpl, RedisSessionManager>),
-      )
+      .route("/api/v1/auth/login", post(login))
+      .route("/api/v1/auth/logout", post(logout))
+      .route("/api/v1/auth/me", get(me))
+      .route("/api/v1/auth/csrf", get(csrf))
       .with_state(auth_state)
       // ワークフロー定義 API
       .route(
          "/api/v1/workflow-definitions",
-         get(list_workflow_definitions::<CoreServiceClientImpl, RedisSessionManager>),
+         get(list_workflow_definitions),
       )
       .route(
          "/api/v1/workflow-definitions/{id}",
-         get(get_workflow_definition::<CoreServiceClientImpl, RedisSessionManager>),
+         get(get_workflow_definition),
       )
       // ワークフローインスタンス API
       .route(
          "/api/v1/workflows",
-         get(list_my_workflows::<CoreServiceClientImpl, RedisSessionManager>)
-            .post(create_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+         get(list_my_workflows).post(create_workflow),
       )
-      .route(
-         "/api/v1/workflows/{display_number}",
-         get(get_workflow::<CoreServiceClientImpl, RedisSessionManager>),
-      )
+      .route("/api/v1/workflows/{display_number}", get(get_workflow))
       .route(
          "/api/v1/workflows/{display_number}/submit",
-         post(submit_workflow::<CoreServiceClientImpl, RedisSessionManager>),
+         post(submit_workflow),
       )
       .route(
          "/api/v1/workflows/{display_number}/steps/{step_display_number}/approve",
-         post(approve_step::<CoreServiceClientImpl, RedisSessionManager>),
+         post(approve_step),
       )
       .route(
          "/api/v1/workflows/{display_number}/steps/{step_display_number}/reject",
-         post(reject_step::<CoreServiceClientImpl, RedisSessionManager>),
+         post(reject_step),
       )
       // タスク API
-      .route(
-         "/api/v1/tasks/my",
-         get(list_my_tasks::<CoreServiceClientImpl, RedisSessionManager>),
-      )
+      .route("/api/v1/tasks/my", get(list_my_tasks))
       .route(
          "/api/v1/workflows/{display_number}/tasks/{step_display_number}",
-         get(get_task_by_display_numbers::<CoreServiceClientImpl, RedisSessionManager>),
+         get(get_task_by_display_numbers),
       )
       // ユーザー API
-      .route(
-         "/api/v1/users",
-         get(list_users::<CoreServiceClientImpl, RedisSessionManager>),
-      )
+      .route("/api/v1/users", get(list_users))
       // ダッシュボード API
-      .route(
-         "/api/v1/dashboard/stats",
-         get(get_dashboard_stats::<CoreServiceClientImpl, RedisSessionManager>),
-      )
+      .route("/api/v1/dashboard/stats", get(get_dashboard_stats))
       .with_state(workflow_state)
-      .layer(from_fn_with_state(
-         csrf_state,
-         csrf_middleware::<RedisSessionManager>,
-      ))
+      .layer(from_fn_with_state(csrf_state, csrf_middleware))
       .layer(TraceLayer::new_for_http());
 
    // サーバー起動

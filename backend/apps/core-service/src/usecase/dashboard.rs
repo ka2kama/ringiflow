@@ -8,6 +8,8 @@
 //! - 申請中ワークフロー数: 自分が申請した InProgress なインスタンス数
 //! - 本日完了タスク数: 自分にアサインされた本日 completed_at のステップ数
 
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 use ringiflow_domain::{
    tenant::TenantId,
@@ -28,17 +30,16 @@ pub struct DashboardStats {
 }
 
 /// ダッシュボードユースケース実装
-pub struct DashboardUseCaseImpl<I, S> {
-   instance_repo: I,
-   step_repo:     S,
+pub struct DashboardUseCaseImpl {
+   instance_repo: Arc<dyn WorkflowInstanceRepository>,
+   step_repo:     Arc<dyn WorkflowStepRepository>,
 }
 
-impl<I, S> DashboardUseCaseImpl<I, S>
-where
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-{
-   pub fn new(instance_repo: I, step_repo: S) -> Self {
+impl DashboardUseCaseImpl {
+   pub fn new(
+      instance_repo: Arc<dyn WorkflowInstanceRepository>,
+      step_repo: Arc<dyn WorkflowStepRepository>,
+   ) -> Self {
       Self {
          instance_repo,
          step_repo,
@@ -373,7 +374,7 @@ mod tests {
       });
       step_repo.insert(&pending_step).await.unwrap();
 
-      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let stats = sut
          .get_stats(tenant_id, approver_id, Utc::now())
          .await
@@ -440,7 +441,7 @@ mod tests {
       .approved(now);
       instance_repo.insert(&approved).await.unwrap();
 
-      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
 
       assert_eq!(stats.my_workflows_in_progress, 1);
@@ -488,7 +489,7 @@ mod tests {
       .unwrap();
       step_repo.insert(&completed_step).await.unwrap();
 
-      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let now = Utc::now();
       let stats = sut.get_stats(tenant_id, approver_id, now).await.unwrap();
 
@@ -503,7 +504,7 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
 
       assert_eq!(stats.pending_tasks, 0);
@@ -554,7 +555,7 @@ mod tests {
       .activated(Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
 
       // other_user_id で統計を取得 → すべて 0
       let stats = sut

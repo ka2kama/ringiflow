@@ -49,15 +49,10 @@ const SESSION_COOKIE_NAME: &str = "session_id";
 const SESSION_MAX_AGE: i64 = 28800; // 8時間
 
 /// 認証ハンドラの共有状態
-pub struct AuthState<C, A, S>
-where
-   C: CoreServiceClient,
-   A: AuthServiceClient,
-   S: SessionManager,
-{
-   pub core_service_client: C,
-   pub auth_service_client: A,
-   pub session_manager:     S,
+pub struct AuthState {
+   pub core_service_client: Arc<dyn CoreServiceClient>,
+   pub auth_service_client: Arc<dyn AuthServiceClient>,
+   pub session_manager:     Arc<dyn SessionManager>,
 }
 
 // --- リクエスト/レスポンス型 ---
@@ -146,17 +141,12 @@ pub struct CsrfResponseData {
 ///   "password": "password123"
 /// }
 /// ```
-pub async fn login<C, A, S>(
-   State(state): State<Arc<AuthState<C, A, S>>>,
+pub async fn login(
+   State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
    jar: CookieJar,
    Json(req): Json<LoginRequest>,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   A: AuthServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -264,16 +254,11 @@ where
 /// POST /api/v1/auth/logout
 ///
 /// セッションを無効化してログアウトする。
-pub async fn logout<C, A, S>(
-   State(state): State<Arc<AuthState<C, A, S>>>,
+pub async fn logout(
+   State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
    jar: CookieJar,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   A: AuthServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -310,16 +295,11 @@ where
 /// GET /api/v1/auth/me
 ///
 /// 現在のユーザー情報と権限を取得する。
-pub async fn me<C, A, S>(
-   State(state): State<Arc<AuthState<C, A, S>>>,
+pub async fn me(
+   State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
    jar: CookieJar,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   A: AuthServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -366,16 +346,11 @@ where
 ///
 /// CSRF トークンを取得する。
 /// セッションが存在しない場合は新規作成し、存在する場合は既存のトークンを返す。
-pub async fn csrf<C, A, S>(
-   State(state): State<Arc<AuthState<C, A, S>>>,
+pub async fn csrf(
+   State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
    jar: CookieJar,
-) -> impl IntoResponse
-where
-   C: CoreServiceClient,
-   A: AuthServiceClient,
-   S: SessionManager,
-{
+) -> impl IntoResponse {
    // X-Tenant-ID ヘッダーからテナント ID を取得
    let tenant_id = match extract_tenant_id(&headers) {
       Ok(id) => id,
@@ -826,28 +801,16 @@ mod tests {
       session_manager: StubSessionManager,
    ) -> Router {
       let state = Arc::new(AuthState {
-         core_service_client: core_client,
-         auth_service_client: auth_client,
-         session_manager,
+         core_service_client: Arc::new(core_client),
+         auth_service_client: Arc::new(auth_client),
+         session_manager:     Arc::new(session_manager),
       });
 
       Router::new()
-         .route(
-            "/api/v1/auth/login",
-            post(login::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
-         )
-         .route(
-            "/api/v1/auth/logout",
-            post(logout::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
-         )
-         .route(
-            "/api/v1/auth/me",
-            get(me::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
-         )
-         .route(
-            "/api/v1/auth/csrf",
-            get(csrf::<StubCoreServiceClient, StubAuthServiceClient, StubSessionManager>),
-         )
+         .route("/api/v1/auth/login", post(login))
+         .route("/api/v1/auth/logout", post(logout))
+         .route("/api/v1/auth/me", get(me))
+         .route("/api/v1/auth/csrf", get(csrf))
          .with_state(state)
    }
 

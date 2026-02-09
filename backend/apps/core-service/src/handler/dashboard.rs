@@ -12,15 +12,14 @@ use axum::{
 };
 use chrono::Utc;
 use ringiflow_domain::{tenant::TenantId, user::UserId};
-use ringiflow_infra::repository::{WorkflowInstanceRepository, WorkflowStepRepository};
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 
 use crate::{error::CoreError, handler::workflow::UserQuery, usecase::dashboard::DashboardStats};
 
 /// ダッシュボードハンドラーの State
-pub struct DashboardState<I, S> {
-   pub usecase: crate::usecase::DashboardUseCaseImpl<I, S>,
+pub struct DashboardState {
+   pub usecase: crate::usecase::DashboardUseCaseImpl,
 }
 
 /// ダッシュボード統計 DTO
@@ -45,14 +44,10 @@ impl From<DashboardStats> for DashboardStatsDto {
 ///
 /// ## エンドポイント
 /// GET /internal/dashboard/stats?tenant_id={tenant_id}&user_id={user_id}
-pub async fn get_dashboard_stats<I, S>(
-   State(state): State<Arc<DashboardState<I, S>>>,
+pub async fn get_dashboard_stats(
+   State(state): State<Arc<DashboardState>>,
    Query(query): Query<UserQuery>,
-) -> Result<Response, CoreError>
-where
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-{
+) -> Result<Response, CoreError> {
    let tenant_id = TenantId::from_uuid(query.tenant_id);
    let user_id = UserId::from_uuid(query.user_id);
 

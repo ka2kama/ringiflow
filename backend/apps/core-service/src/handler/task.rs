@@ -17,11 +17,6 @@ use ringiflow_domain::{
    value_objects::{DisplayId, DisplayNumber, display_prefix},
    workflow::{WorkflowInstance, WorkflowStepId},
 };
-use ringiflow_infra::repository::{
-   UserRepository,
-   WorkflowInstanceRepository,
-   WorkflowStepRepository,
-};
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -42,8 +37,8 @@ pub struct TaskByDisplayNumberPathParams {
 }
 
 /// タスクハンドラーの State
-pub struct TaskState<I, S, U> {
-   pub usecase: TaskUseCaseImpl<I, S, U>,
+pub struct TaskState {
+   pub usecase: TaskUseCaseImpl,
 }
 
 /// タスク一覧の要素 DTO
@@ -116,15 +111,10 @@ pub struct TaskDetailDto {
 ///
 /// ## エンドポイント
 /// GET /internal/tasks/my?tenant_id={tenant_id}&user_id={user_id}
-pub async fn list_my_tasks<I, S, U>(
-   State(state): State<Arc<TaskState<I, S, U>>>,
+pub async fn list_my_tasks(
+   State(state): State<Arc<TaskState>>,
    Query(query): Query<UserQuery>,
-) -> Result<Response, CoreError>
-where
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-   U: UserRepository,
-{
+) -> Result<Response, CoreError> {
    let tenant_id = TenantId::from_uuid(query.tenant_id);
    let user_id = UserId::from_uuid(query.user_id);
 
@@ -155,16 +145,11 @@ where
 ///
 /// ## エンドポイント
 /// GET /internal/tasks/{id}?tenant_id={tenant_id}&user_id={user_id}
-pub async fn get_task<I, S, U>(
-   State(state): State<Arc<TaskState<I, S, U>>>,
+pub async fn get_task(
+   State(state): State<Arc<TaskState>>,
    Path(id): Path<Uuid>,
    Query(query): Query<UserQuery>,
-) -> Result<Response, CoreError>
-where
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-   U: UserRepository,
-{
+) -> Result<Response, CoreError> {
    let step_id = WorkflowStepId::from_uuid(id);
    let tenant_id = TenantId::from_uuid(query.tenant_id);
    let user_id = UserId::from_uuid(query.user_id);
@@ -194,16 +179,11 @@ where
 ///
 /// ## エンドポイント
 /// GET /internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}?tenant_id={tenant_id}&user_id={user_id}
-pub async fn get_task_by_display_numbers<I, S, U>(
-   State(state): State<Arc<TaskState<I, S, U>>>,
+pub async fn get_task_by_display_numbers(
+   State(state): State<Arc<TaskState>>,
    Path(params): Path<TaskByDisplayNumberPathParams>,
    Query(query): Query<UserQuery>,
-) -> Result<Response, CoreError>
-where
-   I: WorkflowInstanceRepository,
-   S: WorkflowStepRepository,
-   U: UserRepository,
-{
+) -> Result<Response, CoreError> {
    let workflow_dn = DisplayNumber::new(params.workflow_display_number).map_err(|_| {
       CoreError::BadRequest("workflow_display_number は正の整数である必要があります".to_string())
    })?;

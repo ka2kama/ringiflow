@@ -95,6 +95,12 @@ use handler::{
 use ringiflow_infra::{
    db,
    repository::{
+      DisplayIdCounterRepository,
+      TenantRepository,
+      UserRepository,
+      WorkflowDefinitionRepository,
+      WorkflowInstanceRepository,
+      WorkflowStepRepository,
       display_id_counter_repository::PostgresDisplayIdCounterRepository,
       tenant_repository::PostgresTenantRepository,
       user_repository::PostgresUserRepository,
@@ -140,254 +146,107 @@ async fn main() -> anyhow::Result<()> {
       .expect("データベース接続に失敗しました");
    tracing::info!("データベースに接続しました");
 
-   // 依存コンポーネントを初期化
-   let user_repository = PostgresUserRepository::new(pool.clone());
-   let tenant_repository = PostgresTenantRepository::new(pool.clone());
+   // 共有リポジトリインスタンスを初期化
+   let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
+   let tenant_repo: Arc<dyn TenantRepository> =
+      Arc::new(PostgresTenantRepository::new(pool.clone()));
+   let definition_repo: Arc<dyn WorkflowDefinitionRepository> =
+      Arc::new(PostgresWorkflowDefinitionRepository::new(pool.clone()));
+   let instance_repo: Arc<dyn WorkflowInstanceRepository> =
+      Arc::new(PostgresWorkflowInstanceRepository::new(pool.clone()));
+   let step_repo: Arc<dyn WorkflowStepRepository> =
+      Arc::new(PostgresWorkflowStepRepository::new(pool.clone()));
+   let counter_repo: Arc<dyn DisplayIdCounterRepository> =
+      Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
+
+   // ユーザー State
    let user_state = Arc::new(UserState {
-      user_repository,
-      tenant_repository,
+      user_repository:   user_repo.clone(),
+      tenant_repository: tenant_repo,
    });
 
-   // ワークフロー関連の依存コンポーネント
-   let definition_repo = PostgresWorkflowDefinitionRepository::new(pool.clone());
-   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-   let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
-   let workflow_user_repo = PostgresUserRepository::new(pool.clone());
-   let counter_repo = PostgresDisplayIdCounterRepository::new(pool.clone());
+   // ワークフロー UseCase
    let workflow_usecase = WorkflowUseCaseImpl::new(
       definition_repo,
-      instance_repo,
-      step_repo,
-      workflow_user_repo,
+      instance_repo.clone(),
+      step_repo.clone(),
+      user_repo.clone(),
       counter_repo,
    );
    let workflow_state = Arc::new(WorkflowState {
       usecase: workflow_usecase,
    });
 
-   // タスク関連の依存コンポーネント
-   let task_instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-   let task_step_repo = PostgresWorkflowStepRepository::new(pool.clone());
-   let task_user_repo = PostgresUserRepository::new(pool.clone());
-   let task_usecase = TaskUseCaseImpl::new(task_instance_repo, task_step_repo, task_user_repo);
+   // タスク UseCase
+   let task_usecase = TaskUseCaseImpl::new(instance_repo.clone(), step_repo.clone(), user_repo);
    let task_state = Arc::new(TaskState {
       usecase: task_usecase,
    });
 
-   // ダッシュボード関連の依存コンポーネント
-   let dashboard_instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-   let dashboard_step_repo = PostgresWorkflowStepRepository::new(pool.clone());
-   let dashboard_usecase = DashboardUseCaseImpl::new(dashboard_instance_repo, dashboard_step_repo);
+   // ダッシュボード UseCase
+   let dashboard_usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
    let dashboard_state = Arc::new(DashboardState {
       usecase: dashboard_usecase,
    });
 
    // ルーター構築
-   let app =
-      Router::new()
-         .route("/health", get(health_check))
-         .route(
-            "/internal/users",
-            get(list_users::<PostgresUserRepository, PostgresTenantRepository>),
-         )
-         .route(
-            "/internal/users/by-email",
-            get(get_user_by_email::<PostgresUserRepository, PostgresTenantRepository>),
-         )
-         .route(
-            "/internal/users/{user_id}",
-            get(get_user::<PostgresUserRepository, PostgresTenantRepository>),
-         )
-         .with_state(user_state)
-         // ワークフロー定義 API
-         .route(
-            "/internal/workflow-definitions",
-            get(
-               list_workflow_definitions::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflow-definitions/{id}",
-            get(
-               get_workflow_definition::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         // ワークフローインスタンス API
-         .route(
-            "/internal/workflows",
-            get(
-               list_my_workflows::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            )
-            .post(
-               create_workflow::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/{id}",
-            get(
-               get_workflow::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/{id}/submit",
-            post(
-               submit_workflow::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/{id}/steps/{step_id}/approve",
-            post(
-               approve_step::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/{id}/steps/{step_id}/reject",
-            post(
-               reject_step::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         // display_number 対応 API
-         .route(
-            "/internal/workflows/by-display-number/{display_number}",
-            get(
-               get_workflow_by_display_number::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/by-display-number/{display_number}/submit",
-            post(
-               submit_workflow_by_display_number::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/approve",
-            post(
-               approve_step_by_display_number::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject",
-            post(
-               reject_step_by_display_number::<
-                  PostgresWorkflowDefinitionRepository,
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-                  PostgresDisplayIdCounterRepository,
-               >,
-            ),
-         )
-         .with_state(workflow_state)
-         // タスク API
-         .route(
-            "/internal/tasks/my",
-            get(
-               list_my_tasks::<
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/tasks/{id}",
-            get(
-               get_task::<
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-               >,
-            ),
-         )
-         .route(
-            "/internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}",
-            get(
-               get_task_by_display_numbers::<
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-                  PostgresUserRepository,
-               >,
-            ),
-         )
-         .with_state(task_state)
-         // ダッシュボード API
-         .route(
-            "/internal/dashboard/stats",
-            get(
-               get_dashboard_stats::<
-                  PostgresWorkflowInstanceRepository,
-                  PostgresWorkflowStepRepository,
-               >,
-            ),
-         )
-         .with_state(dashboard_state)
-         .layer(TraceLayer::new_for_http());
+   let app = Router::new()
+      .route("/health", get(health_check))
+      .route("/internal/users", get(list_users))
+      .route("/internal/users/by-email", get(get_user_by_email))
+      .route("/internal/users/{user_id}", get(get_user))
+      .with_state(user_state)
+      // ワークフロー定義 API
+      .route("/internal/workflow-definitions", get(list_workflow_definitions))
+      .route(
+         "/internal/workflow-definitions/{id}",
+         get(get_workflow_definition),
+      )
+      // ワークフローインスタンス API
+      .route(
+         "/internal/workflows",
+         get(list_my_workflows).post(create_workflow),
+      )
+      .route("/internal/workflows/{id}", get(get_workflow))
+      .route("/internal/workflows/{id}/submit", post(submit_workflow))
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/approve",
+         post(approve_step),
+      )
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/reject",
+         post(reject_step),
+      )
+      // display_number 対応 API
+      .route(
+         "/internal/workflows/by-display-number/{display_number}",
+         get(get_workflow_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/submit",
+         post(submit_workflow_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/approve",
+         post(approve_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject",
+         post(reject_step_by_display_number),
+      )
+      .with_state(workflow_state)
+      // タスク API
+      .route("/internal/tasks/my", get(list_my_tasks))
+      .route("/internal/tasks/{id}", get(get_task))
+      .route(
+         "/internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}",
+         get(get_task_by_display_numbers),
+      )
+      .with_state(task_state)
+      // ダッシュボード API
+      .route("/internal/dashboard/stats", get(get_dashboard_stats))
+      .with_state(dashboard_state)
+      .layer(TraceLayer::new_for_http());
 
    // サーバー起動
    let addr: SocketAddr = format!("{}:{}", config.host, config.port)

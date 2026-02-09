@@ -23,22 +23,15 @@ use ringiflow_domain::{
    user::{Email, User, UserId},
    value_objects::{DisplayId, display_prefix},
 };
-use ringiflow_infra::repository::{
-   tenant_repository::TenantRepository,
-   user_repository::UserRepository,
-};
+use ringiflow_infra::repository::{TenantRepository, UserRepository};
 use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// ユーザー API の共有状態
-pub struct UserState<R, T>
-where
-   R: UserRepository,
-   T: TenantRepository,
-{
-   pub user_repository:   R,
-   pub tenant_repository: T,
+pub struct UserState {
+   pub user_repository:   Arc<dyn UserRepository>,
+   pub tenant_repository: Arc<dyn TenantRepository>,
 }
 
 // --- リクエスト/レスポンス型 ---
@@ -122,14 +115,10 @@ pub struct TenantQuery {
 /// ## レスポンス
 ///
 /// - `200 OK`: ユーザー一覧
-pub async fn list_users<R, T>(
-   State(state): State<Arc<UserState<R, T>>>,
+pub async fn list_users(
+   State(state): State<Arc<UserState>>,
    Query(query): Query<TenantQuery>,
-) -> impl IntoResponse
-where
-   R: UserRepository,
-   T: TenantRepository,
-{
+) -> impl IntoResponse {
    let tenant_id = TenantId::from_uuid(query.tenant_id);
 
    match state
@@ -167,14 +156,10 @@ where
 /// - `200 OK`: ユーザー情報
 /// - `400 Bad Request`: メールアドレスの形式が不正
 /// - `404 Not Found`: ユーザーが見つからない
-pub async fn get_user_by_email<R, T>(
-   State(state): State<Arc<UserState<R, T>>>,
+pub async fn get_user_by_email(
+   State(state): State<Arc<UserState>>,
    Query(query): Query<GetUserByEmailQuery>,
-) -> impl IntoResponse
-where
-   R: UserRepository,
-   T: TenantRepository,
-{
+) -> impl IntoResponse {
    // メールアドレスを検証
    let email = match Email::new(&query.email) {
       Ok(e) => e,
@@ -223,14 +208,10 @@ where
 ///
 /// テナント名も含めたレスポンスを返す。
 /// 認証フローで BFF が呼び出し、フロントエンドに必要な情報を一括取得する。
-pub async fn get_user<R, T>(
-   State(state): State<Arc<UserState<R, T>>>,
+pub async fn get_user(
+   State(state): State<Arc<UserState>>,
    Path(user_id): Path<Uuid>,
-) -> impl IntoResponse
-where
-   R: UserRepository,
-   T: TenantRepository,
-{
+) -> impl IntoResponse {
    let user_id = UserId::from_uuid(user_id);
 
    // ユーザーをロール付きで取得
@@ -433,19 +414,13 @@ mod tests {
 
    fn create_test_app(user_repo: StubUserRepository, tenant_repo: StubTenantRepository) -> Router {
       let state = Arc::new(UserState {
-         user_repository:   user_repo,
-         tenant_repository: tenant_repo,
+         user_repository:   Arc::new(user_repo) as Arc<dyn UserRepository>,
+         tenant_repository: Arc::new(tenant_repo) as Arc<dyn TenantRepository>,
       });
 
       Router::new()
-         .route(
-            "/internal/users/by-email",
-            get(get_user_by_email::<StubUserRepository, StubTenantRepository>),
-         )
-         .route(
-            "/internal/users/{user_id}",
-            get(get_user::<StubUserRepository, StubTenantRepository>),
-         )
+         .route("/internal/users/by-email", get(get_user_by_email))
+         .route("/internal/users/{user_id}", get(get_user))
          .with_state(state)
    }
 

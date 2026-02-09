@@ -9,6 +9,8 @@
 //!
 //! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
+use std::sync::Arc;
+
 use ringiflow_domain::{password::PlainPassword, tenant::TenantId, user::UserId};
 use ringiflow_infra::{
    PasswordChecker,
@@ -26,22 +28,17 @@ pub struct VerifyResult {
 }
 
 /// 認証ユースケースの実装
-pub struct AuthUseCaseImpl<R, P>
-where
-   R: CredentialsRepository,
-   P: PasswordChecker,
-{
-   credentials_repository: R,
-   password_checker:       P,
+pub struct AuthUseCaseImpl {
+   credentials_repository: Arc<dyn CredentialsRepository>,
+   password_checker:       Arc<dyn PasswordChecker>,
 }
 
-impl<R, P> AuthUseCaseImpl<R, P>
-where
-   R: CredentialsRepository,
-   P: PasswordChecker,
-{
+impl AuthUseCaseImpl {
    /// 新しいユースケースインスタンスを作成
-   pub fn new(credentials_repository: R, password_checker: P) -> Self {
+   pub fn new(
+      credentials_repository: Arc<dyn CredentialsRepository>,
+      password_checker: Arc<dyn PasswordChecker>,
+   ) -> Self {
       Self {
          credentials_repository,
          password_checker,
@@ -272,7 +269,7 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::with_active_credential("dummy_hash");
       let checker = StubPasswordChecker::success();
-      let sut = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(Arc::new(repo), Arc::new(checker));
 
       // When
       let result = sut
@@ -290,7 +287,7 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::with_active_credential("dummy_hash");
       let checker = StubPasswordChecker::failure();
-      let sut = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(Arc::new(repo), Arc::new(checker));
 
       // When
       let result = sut
@@ -306,7 +303,7 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::empty();
       let checker = StubPasswordChecker::success();
-      let sut = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(Arc::new(repo), Arc::new(checker));
 
       // When
       let result = sut
@@ -322,7 +319,7 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::with_inactive_credential();
       let checker = StubPasswordChecker::success();
-      let sut = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(Arc::new(repo), Arc::new(checker));
 
       // When
       let result = sut
@@ -338,7 +335,7 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::empty();
       let checker = StubPasswordChecker::success();
-      let sut = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(Arc::new(repo), Arc::new(checker));
 
       // When
       let result = sut
@@ -359,7 +356,7 @@ mod tests {
       // Given
       let repo = StubCredentialsRepository::empty();
       let checker = StubPasswordChecker::success();
-      let sut = AuthUseCaseImpl::new(repo, checker);
+      let sut = AuthUseCaseImpl::new(Arc::new(repo), Arc::new(checker));
 
       // When
       let result = sut

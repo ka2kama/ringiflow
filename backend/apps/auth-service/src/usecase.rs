@@ -73,11 +73,7 @@ pub trait AuthUseCase: Send + Sync {
 
 /// AuthUseCaseImpl に AuthUseCase トレイトを実装
 #[async_trait]
-impl<R, P> AuthUseCase for auth::AuthUseCaseImpl<R, P>
-where
-   R: ringiflow_infra::repository::CredentialsRepository + Send + Sync,
-   P: ringiflow_infra::PasswordChecker + Send + Sync,
-{
+impl AuthUseCase for AuthUseCaseImpl {
    async fn verify_password(
       &self,
       tenant_id: Uuid,
