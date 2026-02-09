@@ -114,7 +114,7 @@ impl Permission {
 /// - system_role（`is_system == true`）は `tenant_id == None`
 /// - テナントロール（`is_system == false`）は `tenant_id` が必須
 /// - system_role（`is_system == true`）は DB シードデータで管理
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Role {
    id:          RoleId,
    tenant_id:   Option<TenantId>,
@@ -247,7 +247,7 @@ impl Role {
 /// ユーザーロール関連（User と Role の多対多）
 ///
 /// ユーザーに割り当てられたロールを表現する。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserRole {
    id:         Uuid,
    user_id:    UserId,
@@ -359,11 +359,17 @@ mod tests {
    }
 
    #[rstest]
-   fn test_ロールのcreated_atは注入された値と一致する(
-      now: DateTime<Utc>,
-      system_role: Role,
-   ) {
-      assert_eq!(system_role.created_at(), now);
-      assert_eq!(system_role.updated_at(), now);
+   fn test_ロールの初期状態(now: DateTime<Utc>, system_role: Role) {
+      let expected = Role::from_db(
+         system_role.id().clone(),
+         system_role.tenant_id().cloned(),
+         system_role.name().to_string(),
+         system_role.description().map(|s| s.to_string()),
+         system_role.permissions().to_vec(),
+         system_role.is_system(),
+         now,
+         now,
+      );
+      assert_eq!(system_role, expected);
    }
 }

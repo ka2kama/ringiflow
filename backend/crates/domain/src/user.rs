@@ -191,7 +191,7 @@ impl std::str::FromStr for UserStatus {
 /// - `email` はテナント内で一意
 /// - `display_number` はテナント内で一意
 /// - `status` が `Deleted` の場合、ログイン不可
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct User {
    id: UserId,
    tenant_id: TenantId,
@@ -423,12 +423,23 @@ mod tests {
    }
 
    #[rstest]
-   fn test_ステータス変更で状態が更新される(active_user: User) {
+   fn test_ステータス変更後の状態(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let updated = active_user.with_status(UserStatus::Inactive, transition_time);
+      let original = active_user.clone();
+      let sut = active_user.with_status(UserStatus::Inactive, transition_time);
 
-      assert_eq!(updated.status(), UserStatus::Inactive);
-      assert_eq!(updated.updated_at(), transition_time);
+      let expected = User::from_db(
+         original.id().clone(),
+         original.tenant_id().clone(),
+         original.display_number(),
+         original.email().clone(),
+         original.name().clone(),
+         UserStatus::Inactive,
+         original.last_login_at(),
+         original.created_at(),
+         transition_time,
+      );
+      assert_eq!(sut, expected);
    }
 
    #[rstest]
@@ -440,12 +451,23 @@ mod tests {
    }
 
    #[rstest]
-   fn test_削除されたユーザーのステータスは削除済み(active_user: User) {
+   fn test_削除後の状態(active_user: User) {
       let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let deleted = active_user.deleted(transition_time);
+      let original = active_user.clone();
+      let sut = active_user.deleted(transition_time);
 
-      assert_eq!(deleted.status(), UserStatus::Deleted);
-      assert_eq!(deleted.updated_at(), transition_time);
+      let expected = User::from_db(
+         original.id().clone(),
+         original.tenant_id().clone(),
+         original.display_number(),
+         original.email().clone(),
+         original.name().clone(),
+         UserStatus::Deleted,
+         original.last_login_at(),
+         original.created_at(),
+         transition_time,
+      );
+      assert_eq!(sut, expected);
    }
 
    #[rstest]
@@ -457,12 +479,23 @@ mod tests {
    }
 
    #[rstest]
-   fn test_最終ログイン日時を更新できる(active_user: User) {
+   fn test_最終ログイン日時更新後の状態(active_user: User) {
       let login_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
-      let updated = active_user.with_last_login_updated(login_time);
+      let original = active_user.clone();
+      let sut = active_user.with_last_login_updated(login_time);
 
-      assert_eq!(updated.last_login_at(), Some(login_time));
-      assert_eq!(updated.updated_at(), login_time);
+      let expected = User::from_db(
+         original.id().clone(),
+         original.tenant_id().clone(),
+         original.display_number(),
+         original.email().clone(),
+         original.name().clone(),
+         original.status(),
+         Some(login_time),
+         original.created_at(),
+         login_time,
+      );
+      assert_eq!(sut, expected);
    }
 
    #[rstest]

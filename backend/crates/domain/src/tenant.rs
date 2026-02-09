@@ -201,7 +201,7 @@ impl TenantName {
 /// # 不変条件
 ///
 /// - `id` はシステム内で一意
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tenant {
    id:   TenantId,
    name: TenantName,
@@ -226,6 +226,8 @@ impl Tenant {
 
 #[cfg(test)]
 mod tests {
+   use pretty_assertions::assert_eq;
+
    use super::*;
 
    // TenantName のテスト
@@ -271,9 +273,9 @@ mod tests {
    fn test_from_dbでテナントを復元できる() {
       let id = TenantId::new();
       let name = TenantName::new("Test Tenant").unwrap();
-      let tenant = Tenant::from_db(id.clone(), name);
+      let sut = Tenant::from_db(id.clone(), name.clone());
 
-      assert_eq!(tenant.id(), &id);
-      assert_eq!(tenant.name().as_str(), "Test Tenant");
+      let expected = Tenant::from_db(id, name);
+      assert_eq!(sut, expected);
    }
 }
