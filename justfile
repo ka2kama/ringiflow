@@ -249,9 +249,10 @@ lint-openapi:
 # 全テスト（単体テストのみ）
 test: test-rust test-elm
 
-# Rust 単体テスト
+# Rust 単体テスト + doctest
 test-rust:
     cd backend && cargo test --all-features --lib --bins
+    cd backend && cargo test --all-features --doc --doc
 
 # Rust 統合テスト（DB 接続が必要）
 test-rust-integration:
