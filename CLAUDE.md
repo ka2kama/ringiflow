@@ -533,7 +533,7 @@ just check-all  # lint + test + API test
 gh pr ready     # Draft を解除
 ```
 
-→ 詳細チェックリスト: [手順書: Ready for Review](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-ready-for-review)
+→ 詳細チェックリスト: [手順書: 品質ゲートと Ready for Review](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-品質ゲートと-ready-for-review)
 
 ### マージ
 
