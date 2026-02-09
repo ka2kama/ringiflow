@@ -9,17 +9,17 @@
 
 ## カテゴリ一覧
 
-| カテゴリ | ディレクトリ | 内容 |
-|---------|-------------|------|
-| Rust | `rust/` | Cargo ワークスペース、Cargo Feature Flags、Newtype パターン、エラーハンドリング、sqlx-cli、動的ディスパッチ DI |
-| Elm | `elm/` | アーキテクチャ、ポート、ルーティング、Nested TEA、TEA メインループ |
-| フロントエンド | `frontend/` | Vite、esbuild、pnpm |
-| インフラ | `infra/` | Docker Compose、PostgreSQL、Redis、UUID |
-| アーキテクチャ | `architecture/` | BFF、DDD、Event Sourcing、REST API、サーキットブレーカー、マイクロサービス、モノレポ |
-| セキュリティ | `security/` | CSRF、DevAuth、エンタープライズ認証、パスワードハッシュ |
-| 開発ツール | `devtools/` | Claude Code、GitHub、Git、Make、Redocly、hurl、lefthook |
-| 英語 | `english/` | エンジニア略語、コミット動詞、程度の副詞、同意・肯定の表現 |
-| 方法論 | `methodology/` | ISO 25010、独自フレームワークと既知手法の対応、AI 思考特性の分析ガイド |
+| カテゴリ | ディレクトリ | 主なトピック |
+|---------|-------------|------------|
+| Rust | `rust/` | 言語機能、Cargo、ライブラリの使い方 |
+| Elm | `elm/` | TEA アーキテクチャ、ポート、ルーティング |
+| フロントエンド | `frontend/` | ビルドツール、パッケージマネージャ |
+| インフラ | `infra/` | Docker、PostgreSQL、Redis |
+| アーキテクチャ | `architecture/` | 設計パターン、API 設計 |
+| セキュリティ | `security/` | 認証、CSRF、暗号化 |
+| 開発ツール | `devtools/` | CI/CD、Git、Claude Code、リンター |
+| 英語 | `english/` | 開発で使う英語表現 |
+| 方法論 | `methodology/` | 品質モデル、プロセス設計 |
 
 ## ADR との違い
 
@@ -43,7 +43,7 @@ docs/06_ナレッジベース/<カテゴリ>/技術名.md
 - `elm/Elmアーキテクチャ.md`
 - `architecture/BFFパターン.md`
 
-新しいカテゴリが必要な場合はサブディレクトリを追加し、このREADME のカテゴリ一覧も更新する。
+新しいカテゴリが必要な場合はサブディレクトリを追加し、この README のカテゴリ一覧も更新する。既存カテゴリへの記事追加時は README の更新は不要（各ディレクトリを直接参照する）。
 
 ### 推奨セクション
 
@@ -76,3 +76,4 @@ docs/06_ナレッジベース/<カテゴリ>/技術名.md
 | 2026-01-14 | 初版作成（技術ノートとして） |
 | 2026-01-30 | 技術ノートと学習ノートを統合し、ナレッジベースとして再構成 |
 | 2026-02-07 | 方法論カテゴリを追加（#271） |
+| 2026-02-09 | カテゴリ一覧を簡略化（記事追加時の README 更新を不要に） |
