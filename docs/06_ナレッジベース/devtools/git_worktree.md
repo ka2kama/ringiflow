@@ -152,13 +152,14 @@ worktree ごとに以下が独立して存在する:
 - `node_modules/`（フロントエンド）
 - `target/`（Rust ビルドキャッシュ）
 
-ディスク容量を節約したい場合は、`CARGO_TARGET_DIR` を共有する:
+Rust のビルドキャッシュは sccache で worktree 間共有される（`backend/.cargo/config.toml` で設定済み）。`target/` ディレクトリは独立だが、コンパイル済みオブジェクトが sccache のローカルキャッシュからヒットするため、2回目以降のビルドは高速。
 
 ```bash
-export CARGO_TARGET_DIR=~/.cargo/shared-target/ringiflow
+# キャッシュ統計を確認
+sccache --show-stats
 ```
 
-ただし、異なるブランチ間でビルドキャッシュの不整合が起きる可能性があるため注意。
+注意: `CARGO_TARGET_DIR` を共有する方法は非推奨。並行ビルドでファイルロック競合やキャッシュスラッシングが起きるため、sccache の方が安全で並行開発に適している。
 
 ### クリーンアップ
 

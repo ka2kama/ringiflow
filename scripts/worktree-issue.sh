@@ -58,5 +58,4 @@ echo ""
 
 echo ""
 echo "次のステップ:"
-echo "  1. Claude Code を終了"
-echo "  2. cd ../ringiflow-$NUMBER && claude"
+echo "  cd ../ringiflow-$NUMBER"

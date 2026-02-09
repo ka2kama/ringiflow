@@ -53,27 +53,29 @@ just worktree-add auth feature/auth
 
 ### worktree で開発を開始する
 
+`worktree-add` 実行時に依存サービスの起動・DB マイグレーション・依存関係インストールが自動で行われるため、追加の手順は不要。
+
 ```bash
 cd ../ringiflow-auth
 
-# 初回のみ: 依存関係をインストール
-cd frontend && pnpm install && cd ..
-
-# 依存サービスを起動（独自のコンテナ・ボリューム）
-just dev-deps
-
-# DB マイグレーションを適用（初回のみ）
-just setup-db
-
 # サーバーを起動
-just dev-bff    # ポート 13100（初回は cargo build が走る）
+just dev-bff    # ポート 13100
 just dev-web    # ポート 15273
 ```
 
+セットアップをスキップしたい場合（例: ブランチ作成のみ）:
+```bash
+just worktree-add auth feature/auth --no-setup
+
+# 後からセットアップを実行
+cd ../ringiflow-auth
+just setup-worktree
+```
+
 注意: worktree は独立したディレクトリのため、以下が共有されない:
-- `node_modules/`: 初回に `pnpm install` が必要
-- `target/`: 初回に Rust のビルドが走る（数分かかる）
-- DB データ: 初回に `just setup-db` でマイグレーションが必要
+- `node_modules/`: `setup-worktree` で自動インストールされる
+- `target/`: 初回ビルドは走るが、sccache によりキャッシュヒットで高速化される
+- DB データ: `setup-worktree` で自動マイグレーションされる
 
 ### 並行作業の例
 
@@ -132,13 +134,14 @@ Docker コンテナ・ボリュームも一緒に削除される。
 
 ### cargo build のキャッシュ
 
-`target/` ディレクトリは worktree ごとに独立しているため、
-初回ビルドは時間がかかる。
+`target/` ディレクトリは worktree ごとに独立しているが、sccache によりコンパイル結果がキャッシュされるため、2回目以降のビルドは高速に完了する。
 
-キャッシュを共有したい場合は、環境変数 `CARGO_TARGET_DIR` を設定する:
 ```bash
-export CARGO_TARGET_DIR=~/.cargo/shared-target/ringiflow
+# キャッシュ統計を確認
+sccache --show-stats
 ```
+
+注意: `CARGO_TARGET_DIR` を共有する方法は非推奨。並行ビルドでロック競合やキャッシュスラッシングが起きるため、sccache の方が安全。
 
 ### DB スキーマの独立
 
