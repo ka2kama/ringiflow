@@ -18,6 +18,7 @@
 //! ## 使用例
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use ringiflow_domain::{
 //!    tenant::TenantId,
 //!    user::{Email, User, UserId, UserStatus},
@@ -28,14 +29,16 @@
 //! let user = User::new(
 //!    UserId::new(),
 //!    TenantId::new(),
-//!    DisplayNumber::new(1).unwrap(),
-//!    Email::new("user@example.com").unwrap(),
-//!    UserName::new("山田太郎").unwrap(),
+//!    DisplayNumber::new(1)?,
+//!    Email::new("user@example.com")?,
+//!    UserName::new("山田太郎")?,
 //!    chrono::Utc::now(),
 //! );
 //!
 //! // ステータス確認
 //! assert!(user.is_active());
+//! # Ok(())
+//! # }
 //! ```
 
 use chrono::{DateTime, Utc};

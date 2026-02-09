@@ -370,6 +370,26 @@ permissions.insert("write");
 3. 使用例（doctests）
 4. 詳細ドキュメントへのリンク
 
+### doctest でのエラーハンドリング
+
+doctest では `unwrap()` ではなく `?` 演算子を使う。`fn main()` を `Result` 返り値にし、ボイラープレートは `#` で隠す:
+
+```rust
+//! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let email = Email::new("user@example.com")?;
+//! # Ok(())
+//! # }
+//! ```
+```
+
+| コンテキスト | `unwrap()` | `?` 演算子 |
+|-------------|-----------|-----------|
+| doctest（`//!`, `///`） | 使わない | `fn main() -> Result` ラッパーで使用 |
+| テストコード（`#[cfg(test)]`） | 許容 | どちらでもよい |
+
+### ドキュメントコメントの構成例
+
 ```rust
 //! # ユーザー管理
 //!
@@ -378,10 +398,13 @@ permissions.insert("write");
 //! ## 使用例
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use ringiflow_domain::user::{User, Email};
 //!
 //! let email = Email::new("user@example.com")?;
 //! let user = User::new(tenant_id, email, "山田太郎".to_string(), None);
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! 詳細: [ユーザー管理設計](../../../docs/03_詳細設計書/ユーザー管理.md)

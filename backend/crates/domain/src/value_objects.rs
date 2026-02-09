@@ -152,11 +152,14 @@ impl std::fmt::Display for Version {
 /// # 使用例
 ///
 /// ```rust
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use ringiflow_domain::value_objects::DisplayNumber;
 ///
-/// let num = DisplayNumber::new(42).unwrap();
+/// let num = DisplayNumber::new(42)?;
 /// assert_eq!(num.as_i64(), 42);
 /// assert_eq!(num.to_string(), "42");
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DisplayNumber(i64);
@@ -280,10 +283,13 @@ impl DisplayIdEntityType {
 /// # 使用例
 ///
 /// ```rust
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use ringiflow_domain::value_objects::{DisplayId, DisplayNumber};
 ///
-/// let id = DisplayId::new("WF", DisplayNumber::new(42).unwrap());
+/// let id = DisplayId::new("WF", DisplayNumber::new(42)?);
 /// assert_eq!(id.to_string(), "WF-42");
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DisplayId {

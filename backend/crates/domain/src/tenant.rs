@@ -29,6 +29,7 @@
 //! ## 使用例
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use ringiflow_domain::tenant::TenantId;
 //! use uuid::Uuid;
 //!
@@ -36,11 +37,13 @@
 //! let tenant_id = TenantId::new();
 //!
 //! // データベースから取得した UUID から復元
-//! let uuid = Uuid::parse_str("01234567-89ab-cdef-0123-456789abcdef").unwrap();
+//! let uuid = Uuid::parse_str("01234567-89ab-cdef-0123-456789abcdef")?;
 //! let tenant_id = TenantId::from_uuid(uuid);
 //!
 //! // ログ出力
 //! println!("テナント: {}", tenant_id);
+//! # Ok(())
+//! # }
 //! ```
 
 use derive_more::Display;
