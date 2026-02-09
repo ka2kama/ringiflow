@@ -19,7 +19,7 @@
 | セキュリティ | `security/` | CSRF、DevAuth、エンタープライズ認証、パスワードハッシュ |
 | 開発ツール | `devtools/` | Claude Code、GitHub、Git、Make、Redocly、hurl、lefthook |
 | 英語 | `english/` | エンジニア略語、コミット動詞、程度の副詞、同意・肯定の表現 |
-| 方法論 | `methodology/` | 独自フレームワークと既知手法の対応、AI 思考特性の分析ガイド |
+| 方法論 | `methodology/` | ISO 25010、独自フレームワークと既知手法の対応、AI 思考特性の分析ガイド |
 
 ## ADR との違い
 
