@@ -120,7 +120,6 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 - 作業中であることを可視化
 - PR Description に設計メモや検討事項を記録
 
-
 注意: Draft PR では自動レビューは実行されない。Ready for Review に変更した時点でレビューが走る。
 
 採用理由: [ADR-013: Draft PR 運用の導入](../../05_ADR/013_Draft_PR運用の導入.md)
