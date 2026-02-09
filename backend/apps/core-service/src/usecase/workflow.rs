@@ -1610,6 +1610,201 @@ mod tests {
    }
 
    #[tokio::test]
+   async fn test_reject_step_未割り当てユーザーは403() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+      let other_user_id = UserId::new(); // 別のユーザー
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let now = chrono::Utc::now();
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver_id.clone()), // approver_id に割り当て
+         now: chrono::Utc::now(),
+      })
+      .activated(chrono::Utc::now());
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
+      );
+
+      let input = ApproveRejectInput {
+         version: step.version(),
+         comment: None,
+      };
+
+      // Act: 別のユーザーで却下を試みる
+      let result = usecase
+         .reject_step(input, step.id().clone(), tenant_id, other_user_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::Forbidden(_))));
+   }
+
+   #[tokio::test]
+   async fn test_reject_step_active以外は400() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let now = chrono::Utc::now();
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      // Pending 状態のステップ（Active ではない）
+      let step = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now: chrono::Utc::now(),
+      });
+      // activated() を呼ばないので Pending のまま
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
+      );
+
+      let input = ApproveRejectInput {
+         version: step.version(),
+         comment: None,
+      };
+
+      // Act
+      let result = usecase
+         .reject_step(input, step.id().clone(), tenant_id, approver_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::BadRequest(_))));
+   }
+
+   #[tokio::test]
+   async fn test_reject_step_バージョン不一致で409() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      let now = chrono::Utc::now();
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      let step = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "approval".to_string(),
+         step_name: "承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver_id.clone()),
+         now: chrono::Utc::now(),
+      })
+      .activated(chrono::Utc::now());
+      step_repo.insert(&step).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
+      );
+
+      // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
+      let wrong_version = Version::initial().next();
+      let input = ApproveRejectInput {
+         version: wrong_version,
+         comment: None,
+      };
+
+      // Act
+      let result = usecase
+         .reject_step(input, step.id().clone(), tenant_id, approver_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::Conflict(_))));
+   }
+
+   // ===== submit_workflow テスト =====
+
+   #[tokio::test]
    async fn test_submit_workflow_正常系() {
       // Arrange
       let tenant_id = TenantId::new();
@@ -1678,5 +1873,68 @@ mod tests {
          .unwrap();
       assert_eq!(steps.len(), 1);
       assert_eq!(steps[0].assigned_to(), Some(&approver_id));
+   }
+
+   #[tokio::test]
+   async fn test_submit_workflow_draft以外は400() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      // 公開済みの定義を追加
+      let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+         id:          WorkflowDefinitionId::new(),
+         tenant_id:   tenant_id.clone(),
+         name:        WorkflowName::new("汎用申請").unwrap(),
+         description: Some("テスト用定義".to_string()),
+         definition:  serde_json::json!({"steps": []}),
+         created_by:  user_id.clone(),
+         now:         chrono::Utc::now(),
+      });
+      let published_definition = definition.published(chrono::Utc::now()).unwrap();
+      definition_repo.add_definition(published_definition.clone());
+
+      // InProgress 状態のインスタンスを作成（Draft ではない）
+      let now = chrono::Utc::now();
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: published_definition.id().clone(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      let usecase = WorkflowUseCaseImpl::new(
+         definition_repo,
+         instance_repo,
+         step_repo,
+         MockUserRepository,
+         MockDisplayIdCounterRepository::new(),
+      );
+
+      let input = SubmitWorkflowInput {
+         assigned_to: approver_id.clone(),
+      };
+
+      // Act: InProgress 状態のインスタンスに対して申請を試みる
+      let result = usecase
+         .submit_workflow(input, instance.id().clone(), tenant_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::BadRequest(_))));
    }
 }
