@@ -11,6 +11,7 @@
 //! ## 使用例
 //!
 //! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use ringiflow_domain::workflow::{
 //!     NewWorkflowDefinition, WorkflowDefinition, WorkflowDefinitionId,
 //!     WorkflowDefinitionStatus,
@@ -22,13 +23,15 @@
 //! let definition = WorkflowDefinition::new(NewWorkflowDefinition {
 //!     id: WorkflowDefinitionId::new(),
 //!     tenant_id: TenantId::new(),
-//!     name: WorkflowName::new("汎用申請").unwrap(),
+//!     name: WorkflowName::new("汎用申請")?,
 //!     description: Some("シンプルな1段階承認".to_string()),
 //!     definition: json!({"steps": []}),
 //!     created_by: UserId::new(),
 //!     now: chrono::Utc::now(),
 //! });
 //! assert_eq!(definition.status(), WorkflowDefinitionStatus::Draft);
+//! # Ok(())
+//! # }
 //! ```
 
 use chrono::{DateTime, Utc};
