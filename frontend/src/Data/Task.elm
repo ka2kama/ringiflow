@@ -4,6 +4,8 @@ module Data.Task exposing
     , WorkflowSummary
     , detailDecoder
     , listDecoder
+    , taskItemDecoder
+    , workflowSummaryDecoder
     )
 
 {-| タスクデータ型
