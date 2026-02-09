@@ -54,17 +54,17 @@ gh pr checks
 注意: 各コマンドは `gh api` で始めること。変数代入を `&&` で繋ぐとパーミッションルール `Bash(gh *)` にマッチしなくなる。
 
 ```bash
-# 1. レビュー状態（APPROVED / CHANGES_REQUESTED）
+# 1. 全レビュー（APPROVED / CHANGES_REQUESTED）
 gh api "repos/{owner}/{repo}/pulls/{pr_number}/reviews" \
-  --jq '[.[] | select(.user.login == "claude[bot]")] | last'
+  --jq '[.[] | select(.user.login == "claude[bot]")]'
 
 # 2. Review コメント（コードの特定行への指摘）
 gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments" \
   --jq '[.[] | select(.user.login == "claude[bot]")]'
 
-# 3. PR レベルコメント（全体フィードバック・サマリー）
+# 3. 全 PR レベルコメント（全体フィードバック・サマリー）
 gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
-  --jq '[.[] | select(.user.login == "claude[bot]")] | last'
+  --jq '[.[] | select(.user.login == "claude[bot]")]'
 ```
 
 `{owner}/{repo}` と `{pr_number}` は実際の値に置き換える。`gh pr view --json number --jq '.number'` で PR 番号を、`gh repo view --json nameWithOwner --jq '.nameWithOwner'` でリポジトリ名を取得できる。
@@ -74,11 +74,15 @@ gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
 ```
 ## レビュー結果サマリー
 
-レビュー状態: APPROVED / CHANGES_REQUESTED
+レビュー: N 件（APPROVED: X, CHANGES_REQUESTED: Y）
 Review コメント: N 件
 
 ### 全体フィードバック
-（PR レベルコメントの内容）
+#### コメント 1（Auto Review）
+（内容要約）
+
+#### コメント 2（Rules Check）
+（内容要約）
 
 ### Review コメント一覧
 1. `ファイルパス:行番号` — 内容要約
