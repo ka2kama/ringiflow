@@ -26,6 +26,7 @@ dotenvy.workspace = true
 itertools.workspace = true
 
 [dev-dependencies]
+ringiflow-domain = { workspace = true, features = ["test-support"] }
 tokio-test.workspace = true
 pretty_assertions.workspace = true
 async-trait.workspace = true
