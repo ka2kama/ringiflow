@@ -107,7 +107,7 @@ impl std::str::FromStr for WorkflowDefinitionStatus {
 ///
 /// 再利用可能なワークフローのテンプレート。
 /// JSON 形式の定義を保持し、バージョン管理に対応。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowDefinition {
    id:          WorkflowDefinitionId,
    tenant_id:   TenantId,
@@ -330,7 +330,7 @@ impl std::str::FromStr for WorkflowInstanceStatus {
 /// `version` フィールドにより、並行更新時の競合を検出する。
 /// 更新操作時はリクエストの version と DB の version を比較し、
 /// 一致しない場合は競合エラー（409 Conflict）を返す。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowInstance {
    id: WorkflowInstanceId,
    tenant_id: TenantId,
@@ -713,7 +713,7 @@ impl std::str::FromStr for StepDecision {
 ///
 /// ワークフローインスタンス内の個々の承認タスク。
 /// 担当者への割り当てと判断結果を保持する。
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowStep {
    id: WorkflowStepId,
    instance_id: WorkflowInstanceId,
@@ -1036,98 +1036,115 @@ mod tests {
    // =========================================================================
 
    mod workflow_instance {
+      use pretty_assertions::assert_eq;
+
       use super::*;
 
       #[rstest]
-      fn test_新規作成時にversionは1(test_instance: WorkflowInstance) {
-         assert_eq!(test_instance.version().as_u32(), 1);
+      fn test_新規作成の初期状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: test_instance.id().clone(),
+            tenant_id: test_instance.tenant_id().clone(),
+            definition_id: test_instance.definition_id().clone(),
+            definition_version: test_instance.definition_version(),
+            display_number: test_instance.display_number(),
+            title: test_instance.title().to_string(),
+            form_data: test_instance.form_data().clone(),
+            status: WorkflowInstanceStatus::Draft,
+            version: Version::initial(),
+            current_step_id: None,
+            initiated_by: test_instance.initiated_by().clone(),
+            submitted_at: None,
+            completed_at: None,
+            created_at: now,
+            updated_at: now,
+         });
+         assert_eq!(test_instance, expected);
       }
 
       #[rstest]
-      fn test_新規作成時のcreated_atとupdated_atは注入された値と一致する(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
-         assert_eq!(test_instance.created_at(), now);
-         assert_eq!(test_instance.updated_at(), now);
+      fn test_申請後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
+         let before = test_instance.clone();
+         let sut = test_instance.submitted(now).unwrap();
+
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Pending,
+            version: before.version(),
+            current_step_id: None,
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: Some(now),
+            completed_at: None,
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_申請後のsubmitted_atは注入された値と一致する(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
-         let submitted = test_instance.submitted(now).unwrap();
-         assert_eq!(submitted.submitted_at(), Some(now));
-         assert_eq!(submitted.updated_at(), now);
-      }
-
-      #[rstest]
-      fn test_承認完了でステータスが承認済みになる(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
+      fn test_承認完了後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
          let instance = test_instance
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
+         let before = instance.clone();
 
-         let result = instance.complete_with_approval(now);
+         let sut = instance.complete_with_approval(now).unwrap();
 
-         assert!(result.is_ok());
-         let approved = result.unwrap();
-         assert_eq!(approved.status(), WorkflowInstanceStatus::Approved);
-         assert_eq!(approved.completed_at(), Some(now));
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Approved,
+            version: before.version().next(),
+            current_step_id: before.current_step_id().map(|s| s.to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_承認完了でversionがインクリメントされる(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
+      fn test_却下完了後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
          let instance = test_instance
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
-         let original_version = instance.version();
+         let before = instance.clone();
 
-         let approved = instance.complete_with_approval(now).unwrap();
+         let sut = instance.complete_with_rejection(now).unwrap();
 
-         assert_eq!(approved.version().as_u32(), original_version.as_u32() + 1);
-      }
-
-      #[rstest]
-      fn test_却下完了でステータスが却下済みになる(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
-         let instance = test_instance
-            .submitted(now)
-            .unwrap()
-            .with_current_step("step_1".to_string(), now);
-
-         let result = instance.complete_with_rejection(now);
-
-         assert!(result.is_ok());
-         let rejected = result.unwrap();
-         assert_eq!(rejected.status(), WorkflowInstanceStatus::Rejected);
-         assert_eq!(rejected.completed_at(), Some(now));
-      }
-
-      #[rstest]
-      fn test_却下完了でversionがインクリメントされる(
-         test_instance: WorkflowInstance,
-         now: DateTime<Utc>,
-      ) {
-         let instance = test_instance
-            .submitted(now)
-            .unwrap()
-            .with_current_step("step_1".to_string(), now);
-         let original_version = instance.version();
-
-         let rejected = instance.complete_with_rejection(now).unwrap();
-
-         assert_eq!(rejected.version().as_u32(), original_version.as_u32() + 1);
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Rejected,
+            version: before.version().next(),
+            current_step_id: before.current_step_id().map(|s| s.to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
@@ -1153,34 +1170,66 @@ mod tests {
       // --- cancelled() テスト ---
 
       #[rstest]
-      fn test_下書きからの取消でキャンセルになる(
+      fn test_下書きからの取消後の状態(
          test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
-         let result = test_instance.cancelled(now);
+         let before = test_instance.clone();
 
-         assert!(result.is_ok());
-         let cancelled = result.unwrap();
-         assert_eq!(cancelled.status(), WorkflowInstanceStatus::Cancelled);
-         assert_eq!(cancelled.completed_at(), Some(now));
+         let sut = test_instance.cancelled(now).unwrap();
+
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Cancelled,
+            version: before.version(),
+            current_step_id: None,
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: None,
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_申請済みからの取消でキャンセルになる(
+      fn test_申請済みからの取消後の状態(
          test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
          let instance = test_instance.submitted(now).unwrap();
+         let before = instance.clone();
 
-         let result = instance.cancelled(now);
+         let sut = instance.cancelled(now).unwrap();
 
-         assert!(result.is_ok());
-         let cancelled = result.unwrap();
-         assert_eq!(cancelled.status(), WorkflowInstanceStatus::Cancelled);
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Cancelled,
+            version: before.version(),
+            current_step_id: None,
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_処理中からの取消でキャンセルになる(
+      fn test_処理中からの取消後の状態(
          test_instance: WorkflowInstance,
          now: DateTime<Utc>,
       ) {
@@ -1188,12 +1237,28 @@ mod tests {
             .submitted(now)
             .unwrap()
             .with_current_step("step_1".to_string(), now);
+         let before = instance.clone();
 
-         let result = instance.cancelled(now);
+         let sut = instance.cancelled(now).unwrap();
 
-         assert!(result.is_ok());
-         let cancelled = result.unwrap();
-         assert_eq!(cancelled.status(), WorkflowInstanceStatus::Cancelled);
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Cancelled,
+            version: before.version(),
+            current_step_id: before.current_step_id().map(|s| s.to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
@@ -1277,90 +1342,141 @@ mod tests {
    // =========================================================================
 
    mod workflow_step {
+      use pretty_assertions::assert_eq;
+
       use super::*;
 
       #[rstest]
-      fn test_新規作成時にversionは1(test_step: WorkflowStep) {
-         assert_eq!(test_step.version().as_u32(), 1);
+      fn test_新規作成の初期状態(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: test_step.id().clone(),
+            instance_id: test_step.instance_id().clone(),
+            display_number: test_step.display_number(),
+            step_id: test_step.step_id().to_string(),
+            step_name: test_step.step_name().to_string(),
+            step_type: test_step.step_type().to_string(),
+            status: WorkflowStepStatus::Pending,
+            version: Version::initial(),
+            assigned_to: test_step.assigned_to().cloned(),
+            decision: None,
+            comment: None,
+            due_date: None,
+            started_at: None,
+            completed_at: None,
+            created_at: now,
+            updated_at: now,
+         });
+         assert_eq!(test_step, expected);
       }
 
       #[rstest]
-      fn test_新規作成時のcreated_atとupdated_atは注入された値と一致する(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
-         assert_eq!(test_step.created_at(), now);
-         assert_eq!(test_step.updated_at(), now);
+      fn test_アクティブ化後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let before = test_step.clone();
+         let sut = test_step.activated(now);
+
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Active,
+            version: before.version(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: None,
+            comment: None,
+            due_date: None,
+            started_at: Some(now),
+            completed_at: None,
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_アクティブ化後のstarted_atは注入された値と一致する(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_承認後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
-         assert_eq!(step.started_at(), Some(now));
-         assert_eq!(step.updated_at(), now);
+         let before = step.clone();
+
+         let sut = step.approve(None, now).unwrap();
+
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Completed,
+            version: before.version().next(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: Some(StepDecision::Approved),
+            comment: None,
+            due_date: None,
+            started_at: before.started_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_承認で完了と承認済みになる(test_step: WorkflowStep, now: DateTime<Utc>) {
+      fn test_コメント付き承認後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
+         let before = step.clone();
 
-         let result = step.approve(None, now);
+         let sut = step.approve(Some("承認します".to_string()), now).unwrap();
 
-         assert!(result.is_ok());
-         let approved = result.unwrap();
-         assert_eq!(approved.status(), WorkflowStepStatus::Completed);
-         assert_eq!(approved.decision(), Some(StepDecision::Approved));
-         assert_eq!(approved.completed_at(), Some(now));
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Completed,
+            version: before.version().next(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: Some(StepDecision::Approved),
+            comment: Some("承認します".to_string()),
+            due_date: None,
+            started_at: before.started_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
-      fn test_承認でversionがインクリメントされる(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
+      fn test_却下後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
-         let original_version = step.version();
+         let before = step.clone();
 
-         let approved = step.approve(None, now).unwrap();
+         let sut = step.reject(None, now).unwrap();
 
-         assert_eq!(approved.version().as_u32(), original_version.as_u32() + 1);
-      }
-
-      #[rstest]
-      fn test_承認でコメントが設定される(test_step: WorkflowStep, now: DateTime<Utc>) {
-         let step = test_step.activated(now);
-
-         let approved = step.approve(Some("承認します".to_string()), now).unwrap();
-
-         assert_eq!(approved.comment(), Some("承認します"));
-      }
-
-      #[rstest]
-      fn test_却下で完了と却下済みになる(test_step: WorkflowStep, now: DateTime<Utc>) {
-         let step = test_step.activated(now);
-
-         let result = step.reject(None, now);
-
-         assert!(result.is_ok());
-         let rejected = result.unwrap();
-         assert_eq!(rejected.status(), WorkflowStepStatus::Completed);
-         assert_eq!(rejected.decision(), Some(StepDecision::Rejected));
-      }
-
-      #[rstest]
-      fn test_却下でversionがインクリメントされる(
-         test_step: WorkflowStep,
-         now: DateTime<Utc>,
-      ) {
-         let step = test_step.activated(now);
-         let original_version = step.version();
-
-         let rejected = step.reject(None, now).unwrap();
-
-         assert_eq!(rejected.version().as_u32(), original_version.as_u32() + 1);
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Completed,
+            version: before.version().next(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: Some(StepDecision::Rejected),
+            comment: None,
+            due_date: None,
+            started_at: before.started_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
@@ -1432,21 +1548,37 @@ mod tests {
       }
 
       #[rstest]
-      fn test_差戻しで完了と差戻しになる(test_step: WorkflowStep, now: DateTime<Utc>) {
+      fn test_差戻し後の状態(test_step: WorkflowStep, now: DateTime<Utc>) {
          let step = test_step.activated(now);
+         let before = step.clone();
 
-         let result = step.completed(
-            StepDecision::RequestChanges,
-            Some("修正してください".to_string()),
-            now,
-         );
+         let sut = step
+            .completed(
+               StepDecision::RequestChanges,
+               Some("修正してください".to_string()),
+               now,
+            )
+            .unwrap();
 
-         assert!(result.is_ok());
-         let completed = result.unwrap();
-         assert_eq!(completed.status(), WorkflowStepStatus::Completed);
-         assert_eq!(completed.decision(), Some(StepDecision::RequestChanges));
-         assert_eq!(completed.comment(), Some("修正してください"));
-         assert_eq!(completed.completed_at(), Some(now));
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Completed,
+            version: before.version(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: Some(StepDecision::RequestChanges),
+            comment: Some("修正してください".to_string()),
+            due_date: None,
+            started_at: before.started_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
    }
 
@@ -1455,6 +1587,8 @@ mod tests {
    // =========================================================================
 
    mod workflow_definition {
+      use pretty_assertions::assert_eq;
+
       use super::*;
 
       #[fixture]
@@ -1471,16 +1605,24 @@ mod tests {
       }
 
       #[rstest]
-      fn test_公開でステータスが公開済みになる(
-         test_definition: WorkflowDefinition,
-         now: DateTime<Utc>,
-      ) {
-         let result = test_definition.published(now);
+      fn test_公開後の状態(test_definition: WorkflowDefinition, now: DateTime<Utc>) {
+         let before = test_definition.clone();
 
-         assert!(result.is_ok());
-         let published = result.unwrap();
-         assert_eq!(published.status(), WorkflowDefinitionStatus::Published);
-         assert_eq!(published.updated_at(), now);
+         let sut = test_definition.published(now).unwrap();
+
+         let expected = WorkflowDefinition::from_db(WorkflowDefinitionRecord {
+            id:          before.id().clone(),
+            tenant_id:   before.tenant_id().clone(),
+            name:        before.name().clone(),
+            description: before.description().map(|s| s.to_string()),
+            version:     before.version(),
+            definition:  before.definition().clone(),
+            status:      WorkflowDefinitionStatus::Published,
+            created_by:  before.created_by().clone(),
+            created_at:  before.created_at(),
+            updated_at:  now,
+         });
+         assert_eq!(sut, expected);
       }
 
       #[rstest]
@@ -1496,16 +1638,25 @@ mod tests {
       }
 
       #[rstest]
-      fn test_アーカイブでステータスがアーカイブ済みになる(
-         test_definition: WorkflowDefinition,
-         now: DateTime<Utc>,
-      ) {
+      fn test_アーカイブ後の状態(test_definition: WorkflowDefinition, now: DateTime<Utc>) {
          let published = test_definition.published(now).unwrap();
+         let before = published.clone();
 
-         let archived = published.archived(now);
+         let sut = published.archived(now);
 
-         assert_eq!(archived.status(), WorkflowDefinitionStatus::Archived);
-         assert_eq!(archived.updated_at(), now);
+         let expected = WorkflowDefinition::from_db(WorkflowDefinitionRecord {
+            id:          before.id().clone(),
+            tenant_id:   before.tenant_id().clone(),
+            name:        before.name().clone(),
+            description: before.description().map(|s| s.to_string()),
+            version:     before.version(),
+            definition:  before.definition().clone(),
+            status:      WorkflowDefinitionStatus::Archived,
+            created_by:  before.created_by().clone(),
+            created_at:  before.created_at(),
+            updated_at:  now,
+         });
+         assert_eq!(sut, expected);
       }
    }
 }
