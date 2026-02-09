@@ -858,7 +858,7 @@ mod tests {
    #[tokio::test]
    async fn test_login_成功時にセッションcookieが設定される() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
@@ -878,7 +878,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -894,7 +894,7 @@ mod tests {
    #[tokio::test]
    async fn test_login_成功時にユーザー情報が返る() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
@@ -914,7 +914,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -932,7 +932,7 @@ mod tests {
    #[tokio::test]
    async fn test_login_パスワード不一致で401() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::auth_failed(),
          StubSessionManager::new(),
@@ -952,7 +952,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -961,7 +961,7 @@ mod tests {
    #[tokio::test]
    async fn test_login_ユーザー不存在で401() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::user_not_found(),
          StubAuthServiceClient::auth_failed(),
          StubSessionManager::new(),
@@ -981,7 +981,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -990,7 +990,7 @@ mod tests {
    #[tokio::test]
    async fn test_logout_セッションが削除されてcookieがクリアされる() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
@@ -1005,7 +1005,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::NO_CONTENT);
@@ -1023,7 +1023,7 @@ mod tests {
       // Given
       let tenant_id = TenantId::from_uuid(Uuid::parse_str(TEST_TENANT_ID).unwrap());
       let user_id = UserId::new();
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::with_session(user_id, tenant_id),
@@ -1038,7 +1038,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -1058,7 +1058,7 @@ mod tests {
    #[tokio::test]
    async fn test_me_未認証で401() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
@@ -1073,7 +1073,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -1083,7 +1083,7 @@ mod tests {
    #[allow(non_snake_case)]
    async fn test_login_テナントIDヘッダーなしで400() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
@@ -1103,7 +1103,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::BAD_REQUEST);
@@ -1116,7 +1116,7 @@ mod tests {
       // Given
       let tenant_id = TenantId::from_uuid(Uuid::parse_str(TEST_TENANT_ID).unwrap());
       let user_id = UserId::new();
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::with_session(user_id, tenant_id),
@@ -1131,7 +1131,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::OK);
@@ -1149,7 +1149,7 @@ mod tests {
    #[tokio::test]
    async fn test_csrf_未認証で401() {
       // Given
-      let app = create_test_app(
+      let sut = create_test_app(
          StubCoreServiceClient::success(),
          StubAuthServiceClient::success(),
          StubSessionManager::new(),
@@ -1164,7 +1164,7 @@ mod tests {
          .unwrap();
 
       // When
-      let response = app.oneshot(request).await.unwrap();
+      let response = sut.oneshot(request).await.unwrap();
 
       // Then
       assert_eq!(response.status(), StatusCode::UNAUTHORIZED);

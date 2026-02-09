@@ -373,8 +373,8 @@ mod tests {
       });
       step_repo.insert(&pending_step).await.unwrap();
 
-      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
-      let stats = usecase
+      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let stats = sut
          .get_stats(tenant_id, approver_id, Utc::now())
          .await
          .unwrap();
@@ -440,11 +440,8 @@ mod tests {
       .approved(now);
       instance_repo.insert(&approved).await.unwrap();
 
-      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
-      let stats = usecase
-         .get_stats(tenant_id, user_id, Utc::now())
-         .await
-         .unwrap();
+      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
 
       assert_eq!(stats.my_workflows_in_progress, 1);
    }
@@ -491,12 +488,9 @@ mod tests {
       .unwrap();
       step_repo.insert(&completed_step).await.unwrap();
 
-      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
       let now = Utc::now();
-      let stats = usecase
-         .get_stats(tenant_id, approver_id, now)
-         .await
-         .unwrap();
+      let stats = sut.get_stats(tenant_id, approver_id, now).await.unwrap();
 
       assert_eq!(stats.completed_today, 1);
    }
@@ -509,11 +503,8 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
-      let stats = usecase
-         .get_stats(tenant_id, user_id, Utc::now())
-         .await
-         .unwrap();
+      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
 
       assert_eq!(stats.pending_tasks, 0);
       assert_eq!(stats.my_workflows_in_progress, 0);
@@ -563,10 +554,10 @@ mod tests {
       .activated(Utc::now());
       step_repo.insert(&step).await.unwrap();
 
-      let usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+      let sut = DashboardUseCaseImpl::new(instance_repo, step_repo);
 
       // other_user_id で統計を取得 → すべて 0
-      let stats = usecase
+      let stats = sut
          .get_stats(tenant_id, other_user_id, Utc::now())
          .await
          .unwrap();

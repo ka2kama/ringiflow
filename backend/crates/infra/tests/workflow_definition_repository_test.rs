@@ -21,10 +21,10 @@ use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_テナントの公開済み定義一覧を取得できる(pool: PgPool) {
-   let repo = PostgresWorkflowDefinitionRepository::new(pool);
+   let sut = PostgresWorkflowDefinitionRepository::new(pool);
    let tenant_id = seed_tenant_id();
 
-   let result = repo.find_published_by_tenant(&tenant_id).await;
+   let result = sut.find_published_by_tenant(&tenant_id).await;
 
    assert!(result.is_ok());
    let definitions = result.unwrap();
@@ -33,10 +33,10 @@ async fn test_テナントの公開済み定義一覧を取得できる(pool: Pg
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_別テナントの定義は取得できない(pool: PgPool) {
-   let repo = PostgresWorkflowDefinitionRepository::new(pool);
+   let sut = PostgresWorkflowDefinitionRepository::new(pool);
    let other_tenant_id = TenantId::new();
 
-   let result = repo.find_published_by_tenant(&other_tenant_id).await;
+   let result = sut.find_published_by_tenant(&other_tenant_id).await;
 
    assert!(result.is_ok());
    let definitions = result.unwrap();
@@ -45,11 +45,11 @@ async fn test_別テナントの定義は取得できない(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_idで定義を取得できる(pool: PgPool) {
-   let repo = PostgresWorkflowDefinitionRepository::new(pool);
+   let sut = PostgresWorkflowDefinitionRepository::new(pool);
    let definition_id = seed_definition_id();
    let tenant_id = seed_tenant_id();
 
-   let result = repo.find_by_id(&definition_id, &tenant_id).await;
+   let result = sut.find_by_id(&definition_id, &tenant_id).await;
 
    assert!(result.is_ok());
    assert!(result.unwrap().is_some());
@@ -57,11 +57,11 @@ async fn test_idで定義を取得できる(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_存在しないidの場合noneを返す(pool: PgPool) {
-   let repo = PostgresWorkflowDefinitionRepository::new(pool);
+   let sut = PostgresWorkflowDefinitionRepository::new(pool);
    let definition_id = WorkflowDefinitionId::new();
    let tenant_id = TenantId::new();
 
-   let result = repo.find_by_id(&definition_id, &tenant_id).await;
+   let result = sut.find_by_id(&definition_id, &tenant_id).await;
 
    assert!(result.is_ok());
    assert!(result.unwrap().is_none());

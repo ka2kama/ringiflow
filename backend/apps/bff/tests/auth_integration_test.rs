@@ -385,7 +385,7 @@ async fn create_test_app(
       session_manager,
    });
 
-   let app = Router::new()
+   let sut = Router::new()
       .route(
          "/api/v1/auth/login",
          post(login::<StubCoreServiceClient, StubAuthServiceClient, RedisSessionManager>),
@@ -408,7 +408,7 @@ async fn create_test_app(
          csrf_middleware::<RedisSessionManager>,
       ));
 
-   (app, state)
+   (sut, state)
 }
 
 /// ログインリクエストを作成
@@ -474,14 +474,14 @@ fn extract_session_id(set_cookie: &str) -> Option<String> {
 #[tokio::test]
 async fn test_ログインからログアウトまでの一連フロー() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // When: ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -501,7 +501,7 @@ async fn test_ログインからログアウトまでの一連フロー() {
    assert!(!session_id.is_empty());
 
    // When: /api/v1/auth/me でユーザー情報を取得
-   let me_response = app.clone().oneshot(me_request(&session_id)).await.unwrap();
+   let me_response = sut.clone().oneshot(me_request(&session_id)).await.unwrap();
 
    // Then: ユーザー情報が返る
    assert_eq!(me_response.status(), StatusCode::OK);
@@ -523,7 +523,7 @@ async fn test_ログインからログアウトまでの一連フロー() {
       .expect("CSRF トークンが存在しない");
 
    // When: ログアウト（CSRF トークン付き）
-   let logout_response = app
+   let logout_response = sut
       .clone()
       .oneshot(logout_request_with_csrf(&session_id, &csrf_token))
       .await
@@ -553,14 +553,14 @@ async fn test_ログインからログアウトまでの一連フロー() {
 #[tokio::test]
 async fn test_ログアウト後にauthmeで401() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -583,13 +583,13 @@ async fn test_ログアウト後にauthmeで401() {
       .expect("CSRF トークンが存在しない");
 
    // ログアウト（CSRF トークン付き）
-   app.clone()
+   sut.clone()
       .oneshot(logout_request_with_csrf(&session_id, &csrf_token))
       .await
       .unwrap();
 
    // When: ログアウト後に /api/v1/auth/me にアクセス
-   let me_response = app.clone().oneshot(me_request(&session_id)).await.unwrap();
+   let me_response = sut.clone().oneshot(me_request(&session_id)).await.unwrap();
 
    // Then: 401 Unauthorized
    assert_eq!(me_response.status(), StatusCode::UNAUTHORIZED);
@@ -601,14 +601,14 @@ async fn test_ログアウト後にauthmeで401() {
 #[tokio::test]
 async fn test_不正なパスワードでログインできない() {
    // Given
-   let (app, _state) = create_test_app(
+   let (sut, _state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::auth_failed(),
    )
    .await;
 
    // When
-   let response = app
+   let response = sut
       .oneshot(login_request("user@example.com", "wrongpassword"))
       .await
       .unwrap();
@@ -623,14 +623,14 @@ async fn test_不正なパスワードでログインできない() {
 #[tokio::test]
 async fn test_存在しないメールでログインできない() {
    // Given
-   let (app, _state) = create_test_app(
+   let (sut, _state) = create_test_app(
       CoreServiceStubConfig::user_not_found(),
       AuthServiceStubConfig::auth_failed(),
    )
    .await;
 
    // When
-   let response = app
+   let response = sut
       .oneshot(login_request("nonexistent@example.com", "password123"))
       .await
       .unwrap();
@@ -642,14 +642,14 @@ async fn test_存在しないメールでログインできない() {
 #[tokio::test]
 async fn test_非アクティブユーザーはログインできない() {
    // Given
-   let (app, _state) = create_test_app(
+   let (sut, _state) = create_test_app(
       CoreServiceStubConfig::user_inactive(),
       AuthServiceStubConfig::auth_failed(),
    )
    .await;
 
    // When
-   let response = app
+   let response = sut
       .oneshot(login_request("user@example.com", "password123"))
       .await
       .unwrap();
@@ -661,14 +661,14 @@ async fn test_非アクティブユーザーはログインできない() {
 #[tokio::test]
 async fn test_未認証状態でauthmeにアクセスすると401() {
    // Given
-   let (app, _state) = create_test_app(
+   let (sut, _state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // When: Cookie なしで /api/v1/auth/me にアクセス
-   let response = app.oneshot(me_request_without_cookie()).await.unwrap();
+   let response = sut.oneshot(me_request_without_cookie()).await.unwrap();
 
    // Then
    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
@@ -702,14 +702,14 @@ fn logout_request_with_csrf(session_cookie: &str, csrf_token: &str) -> Request<B
 #[tokio::test]
 async fn test_csrfトークン_ログイン成功時に生成される() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // When: ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -748,14 +748,14 @@ async fn test_csrfトークン_ログイン成功時に生成される() {
 #[tokio::test]
 async fn test_csrfトークン_get_auth_csrfで取得できる() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -769,7 +769,7 @@ async fn test_csrfトークン_get_auth_csrfで取得できる() {
    let session_id = extract_session_id(set_cookie).unwrap();
 
    // When: GET /api/v1/auth/csrf でトークンを取得
-   let csrf_response = app
+   let csrf_response = sut
       .clone()
       .oneshot(csrf_request(&session_id))
       .await
@@ -798,14 +798,14 @@ async fn test_csrfトークン_get_auth_csrfで取得できる() {
 #[tokio::test]
 async fn test_csrfトークン_正しいトークンでpostリクエストが成功する() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -819,7 +819,7 @@ async fn test_csrfトークン_正しいトークンでpostリクエストが成
    let session_id = extract_session_id(set_cookie).unwrap();
 
    // CSRF トークンを取得
-   let csrf_response = app
+   let csrf_response = sut
       .clone()
       .oneshot(csrf_request(&session_id))
       .await
@@ -831,7 +831,7 @@ async fn test_csrfトークン_正しいトークンでpostリクエストが成
    let csrf_token = json["data"]["token"].as_str().unwrap();
 
    // When: 正しい CSRF トークンでログアウト
-   let logout_response = app
+   let logout_response = sut
       .clone()
       .oneshot(logout_request_with_csrf(&session_id, csrf_token))
       .await
@@ -852,14 +852,14 @@ async fn test_csrfトークン_正しいトークンでpostリクエストが成
 #[tokio::test]
 async fn test_csrfトークン_トークンなしでpostリクエストが403になる() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -873,7 +873,7 @@ async fn test_csrfトークン_トークンなしでpostリクエストが403に
    let session_id = extract_session_id(set_cookie).unwrap();
 
    // When: CSRF トークンなしでログアウト
-   let logout_response = app
+   let logout_response = sut
       .clone()
       .oneshot(logout_request(&session_id))
       .await
@@ -901,14 +901,14 @@ async fn test_csrfトークン_トークンなしでpostリクエストが403に
 #[tokio::test]
 async fn test_csrfトークン_不正なトークンでpostリクエストが403になる() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -922,7 +922,7 @@ async fn test_csrfトークン_不正なトークンでpostリクエストが403
    let session_id = extract_session_id(set_cookie).unwrap();
 
    // When: 不正な CSRF トークンでログアウト
-   let logout_response = app
+   let logout_response = sut
       .clone()
       .oneshot(logout_request_with_csrf(&session_id, "invalid_csrf_token"))
       .await
@@ -950,14 +950,14 @@ async fn test_csrfトークン_不正なトークンでpostリクエストが403
 #[tokio::test]
 async fn test_csrfトークン_ログアウト時に削除される() {
    // Given
-   let (app, state) = create_test_app(
+   let (sut, state) = create_test_app(
       CoreServiceStubConfig::success(),
       AuthServiceStubConfig::success(),
    )
    .await;
 
    // ログイン
-   let login_response = app
+   let login_response = sut
       .clone()
       .oneshot(login_request("user@example.com", "password123"))
       .await
@@ -971,7 +971,7 @@ async fn test_csrfトークン_ログアウト時に削除される() {
    let session_id = extract_session_id(set_cookie).unwrap();
 
    // CSRF トークンを取得
-   let csrf_response = app
+   let csrf_response = sut
       .clone()
       .oneshot(csrf_request(&session_id))
       .await
@@ -992,7 +992,7 @@ async fn test_csrfトークン_ログアウト時に削除される() {
    assert!(token_before.is_some());
 
    // When: ログアウト
-   let logout_response = app
+   let logout_response = sut
       .clone()
       .oneshot(logout_request_with_csrf(&session_id, csrf_token))
       .await

@@ -38,7 +38,7 @@ async fn insert_counter(pool: &PgPool, tenant_id: &TenantId, entity_type: &str, 
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_初回採番で1を返す(pool: PgPool) {
-   let repo = PostgresDisplayIdCounterRepository::new(pool.clone());
+   let sut = PostgresDisplayIdCounterRepository::new(pool.clone());
    let tenant_id = seed_tenant_id();
 
    // workflow_step のカウンターを初期化（last_number=0）
@@ -50,7 +50,7 @@ async fn test_初回採番で1を返す(pool: PgPool) {
    )
    .await;
 
-   let result = repo
+   let result = sut
       .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
       .await;
 
@@ -59,7 +59,7 @@ async fn test_初回採番で1を返す(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_連続採番で連番を返す(pool: PgPool) {
-   let repo = PostgresDisplayIdCounterRepository::new(pool.clone());
+   let sut = PostgresDisplayIdCounterRepository::new(pool.clone());
    let tenant_id = seed_tenant_id();
 
    // workflow_step のカウンターを初期化（last_number=0）
@@ -71,15 +71,15 @@ async fn test_連続採番で連番を返す(pool: PgPool) {
    )
    .await;
 
-   let num1 = repo
+   let num1 = sut
       .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
       .await
       .unwrap();
-   let num2 = repo
+   let num2 = sut
       .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
       .await
       .unwrap();
-   let num3 = repo
+   let num3 = sut
       .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
       .await
       .unwrap();
@@ -91,7 +91,7 @@ async fn test_連続採番で連番を返す(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_異なるエンティティ型は独立して採番される(pool: PgPool) {
-   let repo = PostgresDisplayIdCounterRepository::new(pool.clone());
+   let sut = PostgresDisplayIdCounterRepository::new(pool.clone());
    let tenant_id = seed_tenant_id();
 
    // workflow_step のカウンターを初期化（last_number=0）
@@ -105,13 +105,13 @@ async fn test_異なるエンティティ型は独立して採番される(pool:
    .await;
 
    // workflow_step の採番（初回 → 1）
-   let step_num = repo
+   let step_num = sut
       .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
       .await
       .unwrap();
 
    // workflow_instance の採番（シードデータの次の番号）
-   let instance_num = repo
+   let instance_num = sut
       .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowInstance)
       .await
       .unwrap();
