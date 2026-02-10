@@ -82,8 +82,26 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 /// # パニック
 ///
 /// この関数はパニックしない。すべてのエラーは `Result` で返される。
+/// RLS 用の `after_release` フックを含む `PgPoolOptions` を返す
+///
+/// コネクションがプールに返却される際、`app.tenant_id` セッション変数を
+/// 空文字列にリセットする。これにより、別テナントのリクエストで
+/// 前のテナントの ID が残留することを防ぐ。
+///
+/// テストでは `max_connections(1)` と組み合わせて使用する。
+pub fn pool_options() -> PgPoolOptions {
+   PgPoolOptions::new().after_release(|conn, _meta| {
+      Box::pin(async move {
+         sqlx::query("SELECT set_config('app.tenant_id', '', false)")
+            .execute(&mut *conn)
+            .await?;
+         Ok(true)
+      })
+   })
+}
+
 pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
-   PgPoolOptions::new()
+   pool_options()
       .max_connections(10)
       .acquire_timeout(Duration::from_secs(5))
       .connect(database_url)

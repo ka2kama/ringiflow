@@ -18,6 +18,7 @@ tokio.workspace = true
 argon2.workspace = true
 
 [dev-dependencies]
+dotenvy.workspace = true
 pretty_assertions.workspace = true
 rstest.workspace = true
 tokio-test.workspace = true
