@@ -1,6 +1,5 @@
 module Page.Workflow.New exposing
-    ( ApproverSelection(..)
-    , Model
+    ( Model
     , Msg(..)
     , SaveMessage(..)
     , init
@@ -34,6 +33,7 @@ import Api exposing (ApiError)
 import Api.User as UserApi
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
+import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
 import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.UserItem as UserItem exposing (UserItem)
@@ -45,7 +45,6 @@ import Form.Validation as Validation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
-import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra
 import Ports
@@ -55,13 +54,6 @@ import Shared exposing (Shared)
 
 
 -- MODEL
-
-
-{-| 承認者の選択状態
--}
-type ApproverSelection
-    = NotSelected
-    | Selected UserItem
 
 
 {-| ページの状態
@@ -81,10 +73,7 @@ type alias Model =
     , validationErrors : Dict String String
 
     -- 承認者選択
-    , approverSearch : String
-    , approverSelection : ApproverSelection
-    , approverDropdownOpen : Bool
-    , approverHighlightIndex : Int
+    , approver : ApproverSelector.State
 
     -- 保存状態
     , savedWorkflow : Maybe WorkflowInstance
@@ -119,10 +108,7 @@ init shared =
       , title = ""
       , formValues = Dict.empty
       , validationErrors = Dict.empty
-      , approverSearch = ""
-      , approverSelection = NotSelected
-      , approverDropdownOpen = False
-      , approverHighlightIndex = 0
+      , approver = ApproverSelector.init
       , savedWorkflow = Nothing
       , saveMessage = Nothing
       , submitting = False
@@ -297,10 +283,17 @@ update msg model =
             )
 
         UpdateApproverSearch query ->
+            let
+                approver =
+                    model.approver
+            in
             ( { model
-                | approverSearch = query
-                , approverDropdownOpen = not (String.isEmpty (String.trim query))
-                , approverHighlightIndex = 0
+                | approver =
+                    { approver
+                        | search = query
+                        , dropdownOpen = not (String.isEmpty (String.trim query))
+                        , highlightIndex = 0
+                    }
               }
             , Cmd.none
             )
@@ -309,12 +302,18 @@ update msg model =
             let
                 ( dirtyModel, dirtyCmd ) =
                     markDirty model
+
+                approver =
+                    dirtyModel.approver
             in
             ( { dirtyModel
-                | approverSelection = Selected user
-                , approverSearch = ""
-                , approverDropdownOpen = False
-                , approverHighlightIndex = 0
+                | approver =
+                    { approver
+                        | selection = Selected user
+                        , search = ""
+                        , dropdownOpen = False
+                        , highlightIndex = 0
+                    }
                 , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
               }
             , dirtyCmd
@@ -325,12 +324,7 @@ update msg model =
                 ( dirtyModel, dirtyCmd ) =
                     markDirty model
             in
-            ( { dirtyModel
-                | approverSelection = NotSelected
-                , approverSearch = ""
-                , approverDropdownOpen = False
-                , approverHighlightIndex = 0
-              }
+            ( { dirtyModel | approver = ApproverSelector.init }
             , dirtyCmd
             )
 
@@ -338,7 +332,11 @@ update msg model =
             handleApproverKeyDown key model
 
         CloseApproverDropdown ->
-            ( { model | approverDropdownOpen = False }
+            let
+                approver =
+                    model.approver
+            in
+            ( { model | approver = { approver | dropdownOpen = False } }
             , Cmd.none
             )
 
@@ -399,7 +397,7 @@ update msg model =
                     validateFormWithApprover model
             in
             if Dict.isEmpty validationErrors then
-                case ( model.approverSelection, model.savedWorkflow ) of
+                case ( model.approver.selection, model.savedWorkflow ) of
                     ( Selected approver, Just workflow ) ->
                         -- 既に下書き保存済みならそのまま申請
                         -- データは永続化済みなので dirty をクリア
@@ -551,7 +549,7 @@ validateFormWithApprover model =
             validateForm model
 
         approverErrors =
-            case model.approverSelection of
+            case model.approver.selection of
                 NotSelected ->
                     Dict.singleton "approver" "承認者を選択してください"
 
@@ -569,66 +567,55 @@ handleApproverKeyDown key model =
         candidates =
             case model.users of
                 Success users ->
-                    UserItem.filterUsers model.approverSearch users
+                    UserItem.filterUsers model.approver.search users
 
                 _ ->
                     []
 
-        candidateCount =
-            List.length candidates
+        result =
+            ApproverSelector.handleKeyDown
+                { key = key
+                , candidates = candidates
+                , highlightIndex = model.approver.highlightIndex
+                }
+
+        approver =
+            model.approver
     in
-    case key of
-        "ArrowDown" ->
-            ( { model
-                | approverHighlightIndex =
-                    if candidateCount == 0 then
-                        0
-
-                    else
-                        modBy candidateCount (model.approverHighlightIndex + 1)
-              }
-            , Cmd.none
-            )
-
-        "ArrowUp" ->
-            ( { model
-                | approverHighlightIndex =
-                    if candidateCount == 0 then
-                        0
-
-                    else
-                        modBy candidateCount (model.approverHighlightIndex - 1 + candidateCount)
-              }
-            , Cmd.none
-            )
-
-        "Enter" ->
-            case List.Extra.getAt model.approverHighlightIndex candidates of
-                Just user ->
-                    let
-                        ( dirtyModel, dirtyCmd ) =
-                            markDirty model
-                    in
-                    ( { dirtyModel
-                        | approverSelection = Selected user
-                        , approverSearch = ""
-                        , approverDropdownOpen = False
-                        , approverHighlightIndex = 0
-                        , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
-                      }
-                    , dirtyCmd
-                    )
-
-                Nothing ->
-                    ( model, Cmd.none )
-
-        "Escape" ->
-            ( { model | approverDropdownOpen = False }
-            , Cmd.none
-            )
-
-        _ ->
+    case result of
+        ApproverSelector.NoChange ->
             ( model, Cmd.none )
+
+        ApproverSelector.Navigate newIndex ->
+            ( { model | approver = { approver | highlightIndex = newIndex } }
+            , Cmd.none
+            )
+
+        ApproverSelector.Select user ->
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    markDirty model
+
+                dirtyApprover =
+                    dirtyModel.approver
+            in
+            ( { dirtyModel
+                | approver =
+                    { dirtyApprover
+                        | selection = Selected user
+                        , search = ""
+                        , dropdownOpen = False
+                        , highlightIndex = 0
+                    }
+                , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
+              }
+            , dirtyCmd
+            )
+
+        ApproverSelector.Close ->
+            ( { model | approver = { approver | dropdownOpen = False } }
+            , Cmd.none
+            )
 
 
 {-| 選択されたワークフロー定義を取得
@@ -913,143 +900,18 @@ viewApproverSection model =
                 [ text "承認者"
                 , span [ class "text-error-600" ] [ text " *" ]
                 ]
-            , case model.approverSelection of
-                Selected user ->
-                    viewSelectedApprover user
-
-                NotSelected ->
-                    viewApproverSearchInput model
-            , viewApproverError model
+            , ApproverSelector.view
+                { state = model.approver
+                , users = model.users
+                , validationError = Dict.get "approver" model.validationErrors
+                , onSearch = UpdateApproverSearch
+                , onSelect = SelectApprover
+                , onClear = ClearApprover
+                , onKeyDown = ApproverKeyDown
+                , onCloseDropdown = CloseApproverDropdown
+                }
             ]
         ]
-
-
-{-| 選択済みの承認者を表示
--}
-viewSelectedApprover : UserItem -> Html Msg
-viewSelectedApprover user =
-    div
-        [ class "flex items-center justify-between rounded-lg border border-primary-200 bg-primary-50 p-3" ]
-        [ div []
-            [ span [ class "font-medium" ] [ text user.name ]
-            , span [ class "ml-2 text-sm text-secondary-500" ] [ text user.displayId ]
-            ]
-        , button
-            [ Html.Events.onClick ClearApprover
-            , class "border-0 bg-transparent cursor-pointer text-secondary-400 hover:text-secondary-600 text-xl"
-            , type_ "button"
-            ]
-            [ text "×" ]
-        ]
-
-
-{-| 承認者検索入力とドロップダウン
--}
-viewApproverSearchInput : Model -> Html Msg
-viewApproverSearchInput model =
-    let
-        candidates =
-            case model.users of
-                Success users ->
-                    UserItem.filterUsers model.approverSearch users
-
-                _ ->
-                    []
-    in
-    div [ class "relative" ]
-        [ input
-            [ type_ "text"
-            , id "approver-search"
-            , Html.Attributes.value model.approverSearch
-            , Html.Events.onInput UpdateApproverSearch
-            , Html.Events.onBlur CloseApproverDropdown
-            , Html.Events.preventDefaultOn "keydown"
-                (Decode.field "key" Decode.string
-                    |> Decode.map
-                        (\key ->
-                            ( ApproverKeyDown key
-                            , key == "ArrowDown" || key == "ArrowUp"
-                            )
-                        )
-                )
-            , placeholder "名前で検索..."
-            , Html.Attributes.autocomplete False
-            , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
-            ]
-            []
-        , if model.approverDropdownOpen && not (List.isEmpty candidates) then
-            viewApproverDropdown candidates model.approverHighlightIndex
-
-          else if model.approverDropdownOpen && not (String.isEmpty (String.trim model.approverSearch)) then
-            viewNoResults
-
-          else
-            text ""
-        , case model.users of
-            Loading ->
-                p [ class "mt-2 text-sm text-secondary-500" ] [ text "ユーザー情報を読み込み中..." ]
-
-            Failure _ ->
-                p [ class "mt-2 text-sm text-error-600" ] [ text "ユーザー情報の取得に失敗しました" ]
-
-            _ ->
-                text ""
-        ]
-
-
-{-| 候補ドロップダウン
--}
-viewApproverDropdown : List UserItem -> Int -> Html Msg
-viewApproverDropdown candidates highlightIndex =
-    ul
-        [ class "absolute z-10 mt-1 w-full rounded-lg border border-secondary-200 bg-white shadow-lg max-h-60 overflow-y-auto"
-        ]
-        (List.indexedMap (viewApproverCandidate highlightIndex) candidates)
-
-
-{-| 候補アイテム
--}
-viewApproverCandidate : Int -> Int -> UserItem -> Html Msg
-viewApproverCandidate highlightIndex index user =
-    li
-        [ Html.Events.onMouseDown (SelectApprover user)
-        , class
-            ("px-3 py-2 cursor-pointer"
-                ++ (if index == highlightIndex then
-                        " bg-primary-50"
-
-                    else
-                        " hover:bg-primary-50"
-                   )
-            )
-        ]
-        [ div [ class "font-medium" ] [ text user.name ]
-        , div [ class "text-sm text-secondary-500" ]
-            [ text (user.displayId ++ " · " ++ user.email) ]
-        ]
-
-
-{-| 候補なし表示
--}
-viewNoResults : Html Msg
-viewNoResults =
-    div
-        [ class "absolute z-10 mt-1 w-full rounded-lg border border-secondary-200 bg-white shadow-lg px-3 py-2 text-sm text-secondary-500" ]
-        [ text "該当するユーザーが見つかりません" ]
-
-
-{-| 承認者エラー表示
--}
-viewApproverError : Model -> Html Msg
-viewApproverError model =
-    case Dict.get "approver" model.validationErrors of
-        Just errorMsg ->
-            div
-                [ class "mt-1 text-sm text-error-600" ]
-                [ text errorMsg ]
-
-        Nothing ->
-            text ""
 
 
 {-| タイトルのエラー表示

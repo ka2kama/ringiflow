@@ -7,12 +7,13 @@ init → update の Model 変更を検証する。
 
 -}
 
+import Component.ApproverSelector exposing (ApproverSelection(..))
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowInstance exposing (Status(..))
 import Dict
 import Expect
 import Json.Encode as Encode
-import Page.Workflow.New as New exposing (ApproverSelection(..), Msg(..), SaveMessage(..))
+import Page.Workflow.New as New exposing (Msg(..), SaveMessage(..))
 import RemoteData exposing (RemoteData(..))
 import Shared
 import Test exposing (..)
@@ -184,12 +185,18 @@ submitTests =
 approverKeyboardTests : Test
 approverKeyboardTests =
     let
+        approver =
+            initialModel.approver
+
         modelWithUsers =
             { initialModel
                 | users = Success [ testUser1, testUser2 ]
-                , approverSearch = "山田"
-                , approverDropdownOpen = True
-                , approverHighlightIndex = 0
+                , approver =
+                    { approver
+                        | search = "山田"
+                        , dropdownOpen = True
+                        , highlightIndex = 0
+                    }
             }
     in
     describe "ApproverKeyDown"
@@ -199,7 +206,7 @@ approverKeyboardTests =
                     sut =
                         New.update (ApproverKeyDown "ArrowDown") modelWithUsers |> Tuple.first
                 in
-                sut.approverHighlightIndex
+                sut.approver.highlightIndex
                     |> Expect.equal 1
         , test "ArrowUp でインデックス循環（0 → 末尾）" <|
             \_ ->
@@ -208,7 +215,7 @@ approverKeyboardTests =
                         New.update (ApproverKeyDown "ArrowUp") modelWithUsers |> Tuple.first
                 in
                 -- index 0 → modBy 2 (0 - 1 + 2) = 1（末尾に循環）
-                sut.approverHighlightIndex
+                sut.approver.highlightIndex
                     |> Expect.equal 1
         , test "Enter で候補選択" <|
             \_ ->
@@ -216,7 +223,7 @@ approverKeyboardTests =
                     sut =
                         New.update (ApproverKeyDown "Enter") modelWithUsers |> Tuple.first
                 in
-                sut.approverSelection
+                sut.approver.selection
                     |> Expect.equal (Selected testUser1)
         , test "Escape でドロップダウン閉じる" <|
             \_ ->
@@ -224,7 +231,7 @@ approverKeyboardTests =
                     sut =
                         New.update (ApproverKeyDown "Escape") modelWithUsers |> Tuple.first
                 in
-                sut.approverDropdownOpen
+                sut.approver.dropdownOpen
                     |> Expect.equal False
         ]
 
