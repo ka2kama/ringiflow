@@ -1,0 +1,70 @@
+# 月次プロジェクト健全性診断 Issue の自動作成
+#
+# 毎月 1 日 9:00 JST に `/assess` 実施を促す Issue を作成する。
+# 手動トリガー（workflow_dispatch）にも対応。
+
+name: Monthly Assess
+
+on:
+  schedule:
+    # 毎月 1 日 0:00 UTC = 9:00 JST
+    - cron: "0 0 1 * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-assess-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate month range
+        id: month
+        run: |
+          # 前月の 1 日〜末日を算出
+          PREV_MONTH_START=$(date -d "$(date +%Y-%m-01) - 1 month" +%Y-%m-%d)
+          PREV_MONTH_END=$(date -d "$(date +%Y-%m-01) - 1 day" +%Y-%m-%d)
+          TODAY=$(date +%Y-%m-%d)
+          {
+            echo "start=${PREV_MONTH_START}"
+            echo "end=${PREV_MONTH_END}"
+            echo "today=${TODAY}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create assess issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh issue create \
+            --title "月次プロジェクト健全性診断 (${{ steps.month.outputs.today }})" \
+            --label "process" \
+            --body "$(cat <<'BODY'
+          ## 概要
+
+          月次プロジェクト健全性診断の実施 Issue。
+
+          対象期間: ${{ steps.month.outputs.start }} 〜 ${{ steps.month.outputs.end }}
+
+          ## チェックリスト
+
+          - [ ] `/assess` を実行（フルモードまたは特定軸）
+          - [ ] レポートを `prompts/reports/` に保存
+          - [ ] 推奨アクションから必要な Issue を作成
+
+          ## 実施方法
+
+          ```
+          /assess
+          ```
+
+          特定軸のみ診断したい場合:
+          ```
+          /assess discovery
+          /assess delivery
+          /assess sustainability
+          ```
+
+          → スキル詳細: `.claude/skills/assess/SKILL.md`
+          BODY
+          )"
