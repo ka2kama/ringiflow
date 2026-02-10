@@ -2,7 +2,6 @@
 
 **発生日時**: 2026-01-29
 **重大度**: 中
-**カテゴリ**: Git 運用 / コミットメッセージ
 
 ## 問題
 
@@ -66,3 +65,8 @@ lefthook がブランチ名から Issue 番号を自動付与する環境では�
 - Issue: [#157](https://github.com/ka2kama/ringiflow/issues/157)（楽観的ロック TOCTOU 修正）
 - PR: [#158](https://github.com/ka2kama/ringiflow/pull/158)
 - lefthook 設定: `lefthook.yaml`（prepare-commit-msg フック）
+
+## 分類
+
+- カテゴリ: 知識-実行乖離
+- 失敗タイプ: プロセスギャップ
