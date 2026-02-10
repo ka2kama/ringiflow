@@ -4,11 +4,13 @@
 # Draft PR は除外。
 #
 # 責務分離:
-# - このワークフロー: ルール準拠チェック（違反時のみ request-changes、それ以外は comment）
+# - このワークフロー: ルール準拠チェック（gh pr comment でフィードバック）
 # - claude-auto-review.yaml: コード品質レビュー + 承認判断（approve/request-changes）
 #
-# 重要: このワークフローは --approve を使用しない。
-# 承認権限は Auto Review に一元化し、誤った承認を防ぐ。
+# 重要: このワークフローは gh pr review を使用しない。
+# フィードバックは gh pr comment で投稿し、Auto Review のレビュー状態と競合しないようにする。
+# 結果の判定は PR コメント内のマーカー（<!-- rules-check-result:pass/fail -->）で行う。
+# 参照: #390
 
 name: Claude Rules Check
 
@@ -219,12 +221,13 @@ jobs:
 
             1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
                - 該当ルールを引用して指摘
-            2. 全体フィードバック: `gh pr review` でレビューを投稿
-               - ルール違反あり → `--request-changes` with 違反内容のサマリー
-               - ルール違反なし → `--comment` with "Rules Check: LGTM ✅" + チェックしたルール一覧
+            2. 全体フィードバック: `gh pr comment` で PR コメントを投稿
+               - ルール違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
+               - ルール違反なし → "Rules Check: LGTM ✅" + チェックしたルール一覧 + 結果マーカー `<!-- rules-check-result:pass -->`
 
-            **重要:** ルール違反がない場合でも `--approve` は使用しない。
-            承認判断は Auto Review ワークフローが担当する。
+            **重要:**
+            - `gh pr review` は使用しない（Auto Review の承認判断との競合を防ぐため）
+            - 結果マーカー（HTML コメント）を必ずコメント末尾に含めること
 
             ## 注意
 
@@ -240,23 +243,29 @@ jobs:
           claude_args: |
             --model claude-sonnet-4-5
             --max-turns 40
-            --allowedTools "Read,Bash(cat:*),Bash(grep:*),Bash(find:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
+            --allowedTools "Read,Bash(cat:*),Bash(grep:*),Bash(find:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
-      - name: Check review decision
-        id: review-decision
+      - name: Check rules result
+        id: rules-result
         if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
-          # claude[bot] の最新レビュー状態を取得
-          REVIEW_STATE=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews" \
-            --jq '[.[] | select(.user.login == "claude[bot]")] | last | .state // "NONE"')
-          echo "review_state=$REVIEW_STATE" >> "$GITHUB_OUTPUT"
-          echo "Claude review state: $REVIEW_STATE"
+          # Rules Check の結果マーカーを含む最新コメントを検索
+          RESULT=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login == "claude[bot]" and (.body | test("<!-- rules-check-result:(pass|fail) -->")))] | last | .body // ""' 2>/dev/null || echo "")
+
+          if echo "$RESULT" | grep -q "<!-- rules-check-result:fail -->"; then
+            echo "has_violations=true" >> "$GITHUB_OUTPUT"
+            echo "Rules check result: violations found"
+          else
+            echo "has_violations=false" >> "$GITHUB_OUTPUT"
+            echo "Rules check result: pass"
+          fi
 
       - name: Report success status
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success' && steps.review-decision.outputs.review_state != 'CHANGES_REQUESTED'
+        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success' && steps.rules-result.outputs.has_violations == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -266,8 +275,8 @@ jobs:
             -f description="Rules check completed" \
             -f target_url="$RUN_URL" || true
 
-      - name: Report failure status (changes requested)
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success' && steps.review-decision.outputs.review_state == 'CHANGES_REQUESTED'
+      - name: Report failure status (violations found)
+        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success' && steps.rules-result.outputs.has_violations == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
