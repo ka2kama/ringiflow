@@ -127,7 +127,7 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 | チェック | 手法 | 基準 |
 |---------|------|------|
 | テストファイル分布 | Glob `backend/**/tests/**/*.rs`, `backend/**/*_test.rs` | ファイル数 |
-| API テスト | Glob `backend/apps/bff/tests/**/*.hurl` | ファイル数 |
+| API テスト | Glob `tests/api/hurl/**/*.hurl` | ファイル数 |
 
 #### 3e. プロセス遵守
 
@@ -234,6 +234,14 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 | Fix | バグ修正 |
 | Maintain | 技術的負債、依存更新、リファクタリング |
 | Improve | プロセス改善、ドキュメント整備 |
+
+## レポートの保存
+
+診断レポートは [`prompts/reports/`](../../../prompts/reports/) に保存する。ユーザーからスナップショットの保存を求められた場合、または診断完了後に保存を提案する。
+
+→ 命名規則・ディレクトリ構造: [`prompts/reports/README.md`](../../../prompts/reports/README.md)
+
+過去の診断レポートが存在する場合は、前回との差分（トレンド）にも言及する。
 
 ## 補足
 
