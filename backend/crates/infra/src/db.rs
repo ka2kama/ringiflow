@@ -46,9 +46,31 @@
 //! }
 //! ```
 
-use std::time::Duration;
+use std::{
+   ops::{Deref, DerefMut},
+   time::Duration,
+};
 
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use ringiflow_domain::tenant::TenantId;
+use sqlx::{PgConnection, PgPool, Postgres, pool::PoolConnection, postgres::PgPoolOptions};
+
+/// RLS 用の `after_release` フックを含む `PgPoolOptions` を返す
+///
+/// コネクションがプールに返却される際、`app.tenant_id` セッション変数を
+/// 空文字列にリセットする。これにより、別テナントのリクエストで
+/// 前のテナントの ID が残留することを防ぐ。
+///
+/// テストでは `max_connections(1)` と組み合わせて使用する。
+pub fn pool_options() -> PgPoolOptions {
+   PgPoolOptions::new().after_release(|conn, _meta| {
+      Box::pin(async move {
+         sqlx::query("SELECT set_config('app.tenant_id', '', false)")
+            .execute(&mut *conn)
+            .await?;
+         Ok(true)
+      })
+   })
+}
 
 /// PostgreSQL 接続プールを作成する
 ///
@@ -83,9 +105,65 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 ///
 /// この関数はパニックしない。すべてのエラーは `Result` で返される。
 pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
-   PgPoolOptions::new()
+   pool_options()
       .max_connections(10)
       .acquire_timeout(Duration::from_secs(5))
       .connect(database_url)
       .await
+}
+
+// =============================================================================
+// TenantConnection
+// =============================================================================
+
+/// テナントスコープ付き DB コネクション
+///
+/// コネクション取得時に `app.tenant_id` PostgreSQL セッション変数を設定する。
+/// RLS ポリシーがこの変数を参照してテナント分離を実現する。
+///
+/// ドロップ時（プールへの返却時）に [`pool_options`] の `after_release` フックが
+/// `app.tenant_id` をリセットする。
+pub struct TenantConnection {
+   conn:      PoolConnection<Postgres>,
+   tenant_id: TenantId,
+}
+
+impl TenantConnection {
+   /// テナントスコープ付きコネクションを取得する
+   ///
+   /// プールからコネクションを取得し、`app.tenant_id` セッション変数に
+   /// テナント ID を設定してから返す。
+   pub async fn acquire(pool: &PgPool, tenant_id: &TenantId) -> Result<Self, sqlx::Error> {
+      let mut conn = pool.acquire().await?;
+      sqlx::query("SELECT set_config('app.tenant_id', $1, false)")
+         .bind(tenant_id.to_string())
+         .execute(&mut *conn)
+         .await?;
+      Ok(Self {
+         conn,
+         tenant_id: tenant_id.clone(),
+      })
+   }
+
+   /// 設定されているテナント ID を取得する
+   pub fn tenant_id(&self) -> &TenantId {
+      &self.tenant_id
+   }
+}
+
+// Deref/DerefMut で PgConnection として使用可能にする。
+// PoolConnection<Postgres> が Deref<Target = PgConnection> を実装しているため、
+// TenantConnection も同じターゲットに deref する。
+impl Deref for TenantConnection {
+   type Target = PgConnection;
+
+   fn deref(&self) -> &Self::Target {
+      &self.conn
+   }
+}
+
+impl DerefMut for TenantConnection {
+   fn deref_mut(&mut self) -> &mut Self::Target {
+      &mut self.conn
+   }
 }
