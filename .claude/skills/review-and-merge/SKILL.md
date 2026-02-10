@@ -149,7 +149,25 @@ gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies" \
 
 ### Step 5: マージ
 
-マージ前にユーザーに最終確認を求める。
+マージ前に以下を確認する。
+
+#### 全チェックの pass 確認
+
+```bash
+gh pr checks
+```
+
+| 状態 | 対応 |
+|------|------|
+| 全て pass | ユーザーに最終確認を求めてマージへ |
+| pending あり | `gh pr checks --watch` で待機 |
+| failure あり | 原因を特定し修正する。原因が特定できたら修正可能か判断する（「自分の変更とは無関係」は修正しない理由にならない） |
+
+改善の経緯:
+- [force-push後の自動レビュー待機漏れ](../../../prompts/improvements/2026-02/2026-02-04_1650_force-push後の自動レビュー待機漏れ.md)
+- [CI失敗を無視してマージを強行しようとした](../../../prompts/improvements/2026-02/2026-02-09_2122_CI失敗を無視してマージを強行しようとした.md)
+
+#### マージ実行
 
 ```bash
 gh pr merge --squash --delete-branch
