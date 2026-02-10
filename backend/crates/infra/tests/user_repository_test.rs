@@ -91,8 +91,8 @@ async fn test_idでユーザーを取得できる(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_ユーザーとロールを一緒に取得できる(pool: PgPool) {
-   let (_tenant_id, user_id) = setup_test_data(&pool).await;
-   assign_role(&pool, &user_id).await;
+   let (tenant_id, user_id) = setup_test_data(&pool).await;
+   assign_role(&pool, &user_id, &tenant_id).await;
    let sut = PostgresUserRepository::new(pool);
 
    let result = sut.find_with_roles(&user_id).await;

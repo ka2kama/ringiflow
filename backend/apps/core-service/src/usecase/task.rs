@@ -369,7 +369,7 @@ mod tests {
 
    #[async_trait]
    impl WorkflowStepRepository for MockWorkflowStepRepository {
-      async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+      async fn insert(&self, step: &WorkflowStep, _tenant_id: &TenantId) -> Result<(), InfraError> {
          self.steps.lock().unwrap().push(step.clone());
          Ok(())
       }
@@ -537,7 +537,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&active_step).await.unwrap();
+      step_repo.insert(&active_step, &tenant_id).await.unwrap();
 
       // Pending ステップ（同じ approver）
       let pending_step = WorkflowStep::new(NewWorkflowStep {
@@ -550,7 +550,7 @@ mod tests {
          assigned_to: Some(approver_id.clone()),
          now,
       });
-      step_repo.insert(&pending_step).await.unwrap();
+      step_repo.insert(&pending_step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),
@@ -607,7 +607,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),
@@ -665,7 +665,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),
@@ -743,7 +743,7 @@ mod tests {
       })
       .activated(now);
       let step_id = step.id().clone();
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),
@@ -827,7 +827,7 @@ mod tests {
       })
       .activated(now);
       let step_id = step.id().clone();
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),
@@ -885,7 +885,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),
@@ -1023,7 +1023,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = TaskUseCaseImpl::new(
          Arc::new(instance_repo),

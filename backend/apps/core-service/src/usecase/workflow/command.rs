@@ -185,7 +185,7 @@ impl WorkflowUseCaseImpl {
 
       self
          .step_repo
-         .insert(&active_step)
+         .insert(&active_step, &tenant_id)
          .await
          .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
 
@@ -748,7 +748,7 @@ mod tests {
 
    #[async_trait::async_trait]
    impl WorkflowStepRepository for MockWorkflowStepRepository {
-      async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+      async fn insert(&self, step: &WorkflowStep, _tenant_id: &TenantId) -> Result<(), InfraError> {
          let mut steps = self.steps.lock().unwrap();
          steps.push(step.clone());
          Ok(())
@@ -1051,7 +1051,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1126,7 +1126,7 @@ mod tests {
          now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1191,7 +1191,7 @@ mod tests {
          now: chrono::Utc::now(),
       });
       // activated() を呼ばないので Pending のまま
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1255,7 +1255,7 @@ mod tests {
          now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1323,7 +1323,7 @@ mod tests {
          now,
       })
       .activated(now);
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1398,7 +1398,7 @@ mod tests {
          now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1463,7 +1463,7 @@ mod tests {
          now: chrono::Utc::now(),
       });
       // activated() を呼ばないので Pending のまま
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),
@@ -1527,7 +1527,7 @@ mod tests {
          now: chrono::Utc::now(),
       })
       .activated(chrono::Utc::now());
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = WorkflowUseCaseImpl::new(
          Arc::new(definition_repo),

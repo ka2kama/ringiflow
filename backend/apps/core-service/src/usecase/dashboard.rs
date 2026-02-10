@@ -246,7 +246,7 @@ mod tests {
 
    #[async_trait]
    impl WorkflowStepRepository for MockWorkflowStepRepository {
-      async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+      async fn insert(&self, step: &WorkflowStep, _tenant_id: &TenantId) -> Result<(), InfraError> {
          self.steps.lock().unwrap().push(step.clone());
          Ok(())
       }
@@ -359,7 +359,7 @@ mod tests {
          now: Utc::now(),
       })
       .activated(Utc::now());
-      step_repo.insert(&active_step).await.unwrap();
+      step_repo.insert(&active_step, &tenant_id).await.unwrap();
 
       // Pending ステップ（カウント対象外）
       let pending_step = WorkflowStep::new(NewWorkflowStep {
@@ -372,7 +372,7 @@ mod tests {
          assigned_to: Some(approver_id.clone()),
          now: Utc::now(),
       });
-      step_repo.insert(&pending_step).await.unwrap();
+      step_repo.insert(&pending_step, &tenant_id).await.unwrap();
 
       let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let stats = sut
@@ -487,7 +487,7 @@ mod tests {
       .activated(Utc::now())
       .approve(Some("OK".to_string()), Utc::now())
       .unwrap();
-      step_repo.insert(&completed_step).await.unwrap();
+      step_repo.insert(&completed_step, &tenant_id).await.unwrap();
 
       let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
       let now = Utc::now();
@@ -556,7 +556,7 @@ mod tests {
          now: Utc::now(),
       })
       .activated(Utc::now());
-      step_repo.insert(&step).await.unwrap();
+      step_repo.insert(&step, &tenant_id).await.unwrap();
 
       let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
 

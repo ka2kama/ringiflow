@@ -26,7 +26,9 @@ use crate::error::InfraError;
 #[async_trait]
 pub trait WorkflowStepRepository: Send + Sync {
    /// 新規ステップを作成する
-   async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError>;
+   ///
+   /// `tenant_id` は RLS 二重防御用。ドメインモデルではなくインフラ層で管理する。
+   async fn insert(&self, step: &WorkflowStep, tenant_id: &TenantId) -> Result<(), InfraError>;
 
    /// 楽観的ロック付きでステップを更新する
    ///
@@ -83,21 +85,22 @@ impl PostgresWorkflowStepRepository {
 
 #[async_trait]
 impl WorkflowStepRepository for PostgresWorkflowStepRepository {
-   async fn insert(&self, step: &WorkflowStep) -> Result<(), InfraError> {
+   async fn insert(&self, step: &WorkflowStep, tenant_id: &TenantId) -> Result<(), InfraError> {
       let status: &str = step.status().into();
       let decision: Option<&str> = step.decision().map(|d| d.into());
       sqlx::query!(
          r#"
          INSERT INTO workflow_steps (
-            id, instance_id, display_number, step_id, step_name, step_type,
+            id, instance_id, tenant_id, display_number, step_id, step_name, step_type,
             status, version, assigned_to, decision, comment,
             due_date, started_at, completed_at,
             created_at, updated_at
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          "#,
          step.id().as_uuid(),
          step.instance_id().as_uuid(),
+         tenant_id.as_uuid(),
          step.display_number().as_i64(),
          step.step_id(),
          step.step_name(),
