@@ -1,0 +1,66 @@
+# 週次レトロスペクティブ Issue の自動作成
+#
+# 毎週月曜 9:00 JST に `/retro` 実施を促す Issue を作成する。
+# 手動トリガー（workflow_dispatch）にも対応。
+
+name: Weekly Retro
+
+on:
+  schedule:
+    # 毎週月曜 0:00 UTC = 9:00 JST
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  create-retro-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate week range
+        id: week
+        run: |
+          # 前週の月曜〜日曜を算出
+          LAST_MONDAY=$(date -d "last monday - 7 days" +%Y-%m-%d)
+          LAST_SUNDAY=$(date -d "last monday - 1 day" +%Y-%m-%d)
+          TODAY=$(date +%Y-%m-%d)
+          echo "start=${LAST_MONDAY}" >> "$GITHUB_OUTPUT"
+          echo "end=${LAST_SUNDAY}" >> "$GITHUB_OUTPUT"
+          echo "today=${TODAY}" >> "$GITHUB_OUTPUT"
+
+      - name: Create retro issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh issue create \
+            --title "週次レトロスペクティブ (${{ steps.week.outputs.today }})" \
+            --label "process" \
+            --body "$(cat <<'BODY'
+          ## 概要
+
+          週次レトロスペクティブの実施 Issue。
+
+          対象期間: ${{ steps.week.outputs.start }} 〜 ${{ steps.week.outputs.end }}
+
+          ## チェックリスト
+
+          - [ ] `/retro` を実行（フルモードまたは `quick`）
+          - [ ] レポートを `prompts/reports/` に保存
+          - [ ] アクションアイテムから必要な Issue を作成
+
+          ## 実施方法
+
+          ```
+          /retro
+          ```
+
+          軽量に済ませたい場合:
+          ```
+          /retro quick
+          ```
+
+          → スキル詳細: `.claude/skills/retro/SKILL.md`
+          BODY
+          )"
