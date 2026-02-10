@@ -29,13 +29,14 @@ use sqlx::PgPool;
 async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let sut = PostgresWorkflowStepRepository::new(pool);
+   let tenant_id = seed_tenant_id();
 
    let instance = create_test_instance(100);
    instance_repo.insert(&instance).await.unwrap();
 
    let step = create_test_step(instance.id(), 1);
 
-   let result = sut.insert(&step).await;
+   let result = sut.insert(&step, &tenant_id).await;
 
    assert!(result.is_ok());
 }
@@ -51,7 +52,7 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
 
    let step = create_test_step(instance.id(), 1);
    let step_id = step.id().clone();
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    let result = sut.find_by_id(&step_id, &tenant_id).await;
 
@@ -91,8 +92,8 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
 
    let step1 = create_test_step(&instance_id, 1);
    let step2 = create_test_step(&instance_id, 2);
-   sut.insert(&step1).await.unwrap();
-   sut.insert(&step2).await.unwrap();
+   sut.insert(&step1, &tenant_id).await.unwrap();
+   sut.insert(&step2, &tenant_id).await.unwrap();
 
    let result = sut.find_by_instance(&instance_id, &tenant_id).await;
 
@@ -126,7 +127,7 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
    instance_repo.insert(&instance).await.unwrap();
 
    let step = create_test_step(instance.id(), 1);
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    let result = sut.find_by_assigned_to(&tenant_id, &user_id).await;
 
@@ -148,7 +149,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
    let step = create_test_step(instance.id(), 1);
    let step_id = step.id().clone();
    let expected_version = step.version();
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    // アクティブ化（バージョンインクリメント）
    let activated_step = step.activated(now);
@@ -169,13 +170,14 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
 ) {
    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
    let sut = PostgresWorkflowStepRepository::new(pool);
+   let tenant_id = seed_tenant_id();
    let now = test_now();
 
    let instance = create_test_instance(100);
    instance_repo.insert(&instance).await.unwrap();
 
    let step = create_test_step(instance.id(), 1);
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    // アクティブ化（バージョンインクリメント）
    let activated_step = step.activated(now);
@@ -211,7 +213,7 @@ async fn test_find_by_display_number_存在するdisplay_numberで検索でき�
 
    let step = create_test_step(&instance_id, 1);
    let step_id = step.id().clone();
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    let display_number = DisplayNumber::new(1).unwrap();
    let result = sut
@@ -262,7 +264,7 @@ async fn test_find_by_display_number_別のinstance_idでは見つからない(p
 
    // インスタンス A にステップを作成
    let step = create_test_step(&instance_a_id, 1);
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    // インスタンス B の display_number: 1 を検索 → 見つからないはず
    let display_number = DisplayNumber::new(1).unwrap();
@@ -287,7 +289,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
    let step = create_test_step(instance.id(), 1);
    let step_id = step.id().clone();
    let v1 = step.version();
-   sut.insert(&step).await.unwrap();
+   sut.insert(&step, &tenant_id).await.unwrap();
 
    // ステップをアクティブ化
    let active_step = step.activated(now);

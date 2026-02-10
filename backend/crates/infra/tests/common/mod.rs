@@ -121,13 +121,14 @@ pub async fn setup_test_data(pool: &PgPool) -> (TenantId, UserId) {
 }
 
 /// ロールをユーザーに割り当て
-pub async fn assign_role(pool: &PgPool, user_id: &UserId) {
+pub async fn assign_role(pool: &PgPool, user_id: &UserId, tenant_id: &TenantId) {
    sqlx::query!(
       r#"
-        INSERT INTO user_roles (user_id, role_id)
-        SELECT $1, id FROM roles WHERE name = 'user' AND is_system = true
+        INSERT INTO user_roles (user_id, role_id, tenant_id)
+        SELECT $1, id, $2 FROM roles WHERE name = 'user' AND is_system = true
         "#,
-      user_id.as_uuid()
+      user_id.as_uuid(),
+      tenant_id.as_uuid()
    )
    .execute(pool)
    .await
