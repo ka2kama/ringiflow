@@ -519,6 +519,7 @@ Issue を分類するためのラベルを設定する。
 | `frontend` | Elm / UI 関連 | 緑 `#28a745` |
 | `infra` | Docker / Terraform / AWS | 紫 `#6f42c1` |
 | `docs` | ドキュメント | 水色 `#0075ca` |
+| `process` | 開発プロセスの改善・振り返り | 緑 `#0e8a16` |
 | **優先度** | | |
 | `priority:high` | 優先度: 高 | 赤 `#d73a4a` |
 | `priority:medium` | 優先度: 中 | 黄 `#fbca04` |
@@ -537,6 +538,7 @@ gh label create "backend" --description "Rust / API 関連" --color "0366d6"
 gh label create "frontend" --description "Elm / UI 関連" --color "28a745"
 gh label create "infra" --description "Docker / Terraform / AWS" --color "6f42c1"
 gh label create "docs" --description "ドキュメント" --color "0075ca"
+gh label create "process" --description "開発プロセスの改善・振り返り" --color "0e8a16"
 
 # 優先度
 gh label create "priority:high" --description "優先度: 高" --color "d73a4a"
