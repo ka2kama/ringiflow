@@ -120,7 +120,7 @@ setup-labels:
 dev-deps:
     #!/usr/bin/env bash
     PROJECT_NAME=$(basename "$(pwd)")
-    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml up -d --wait
+    docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml up -d --wait
     echo "PostgreSQL: localhost:${POSTGRES_PORT}"
     echo "Redis: localhost:${REDIS_PORT}"
     echo "プロジェクト名: $PROJECT_NAME"
@@ -149,7 +149,7 @@ dev-all: dev-deps
 dev-down:
     #!/usr/bin/env bash
     PROJECT_NAME=$(basename "$(pwd)")
-    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down
+    docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down
 
 # 開発サーバープロセスを一括終了（mprocs がハングしたとき用）
 dev-kill:
@@ -396,7 +396,7 @@ pre-commit: sqlx-prepare check-all
 clean:
     #!/usr/bin/env bash
     PROJECT_NAME=$(basename "$(pwd)")
-    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
+    docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
     cd backend && cargo clean
     cd frontend && rm -rf node_modules elm-stuff dist
 
@@ -439,10 +439,10 @@ worktree-remove name:
     echo "worktree を削除中: {{name}}"
 
     # Docker コンテナを停止・削除
-    containers=$(docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml ps -q 2>/dev/null || true)
+    containers=$(docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml ps -q 2>/dev/null || true)
     if [[ -n "$containers" ]]; then
         echo "  Docker コンテナを停止中..."
-        docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
+        docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
     fi
 
     # worktree を削除
