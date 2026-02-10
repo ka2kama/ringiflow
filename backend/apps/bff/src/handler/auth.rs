@@ -457,7 +457,13 @@ mod tests {
    use uuid::Uuid;
 
    use super::*;
-   use crate::client::{UserResponse, VerifyResponse};
+   use crate::client::{
+      CoreServiceTaskClient,
+      CoreServiceUserClient,
+      CoreServiceWorkflowClient,
+      UserResponse,
+      VerifyResponse,
+   };
 
    // テスト用スタブ
 
@@ -495,12 +501,11 @@ mod tests {
    }
 
    #[async_trait]
-   impl CoreServiceClient for StubCoreServiceClient {
+   impl CoreServiceUserClient for StubCoreServiceClient {
       async fn list_users(
          &self,
          _tenant_id: Uuid,
       ) -> Result<ApiResponse<Vec<crate::client::UserItemDto>>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("list_users is not used in auth tests")
       }
 
@@ -518,12 +523,14 @@ mod tests {
       ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
          self.get_user_result.clone()
       }
+   }
 
+   #[async_trait]
+   impl CoreServiceWorkflowClient for StubCoreServiceClient {
       async fn create_workflow(
          &self,
          _req: crate::client::CreateWorkflowRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("create_workflow is not used in auth tests")
       }
 
@@ -532,7 +539,6 @@ mod tests {
          _workflow_id: Uuid,
          _req: crate::client::SubmitWorkflowRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("submit_workflow is not used in auth tests")
       }
 
@@ -540,7 +546,6 @@ mod tests {
          &self,
          _tenant_id: Uuid,
       ) -> Result<ApiResponse<Vec<crate::client::WorkflowDefinitionDto>>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("list_workflow_definitions is not used in auth tests")
       }
 
@@ -549,7 +554,6 @@ mod tests {
          _definition_id: Uuid,
          _tenant_id: Uuid,
       ) -> Result<ApiResponse<crate::client::WorkflowDefinitionDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("get_workflow_definition is not used in auth tests")
       }
 
@@ -558,7 +562,6 @@ mod tests {
          _tenant_id: Uuid,
          _user_id: Uuid,
       ) -> Result<ApiResponse<Vec<crate::client::WorkflowInstanceDto>>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("list_my_workflows is not used in auth tests")
       }
 
@@ -567,7 +570,6 @@ mod tests {
          _workflow_id: Uuid,
          _tenant_id: Uuid,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("get_workflow is not used in auth tests")
       }
 
@@ -577,7 +579,6 @@ mod tests {
          _step_id: Uuid,
          _req: crate::client::ApproveRejectRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("approve_step is not used in auth tests")
       }
 
@@ -587,36 +588,7 @@ mod tests {
          _step_id: Uuid,
          _req: crate::client::ApproveRejectRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("reject_step is not used in auth tests")
-      }
-
-      async fn list_my_tasks(
-         &self,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<Vec<crate::client::TaskItemDto>>, CoreServiceError> {
-         // テストスタブでは未使用
-         unimplemented!("list_my_tasks is not used in auth tests")
-      }
-
-      async fn get_task(
-         &self,
-         _task_id: Uuid,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
-         // テストスタブでは未使用
-         unimplemented!("get_task is not used in auth tests")
-      }
-
-      async fn get_dashboard_stats(
-         &self,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::DashboardStatsDto>, CoreServiceError> {
-         // テストスタブでは未使用
-         unimplemented!("get_dashboard_stats is not used in auth tests")
       }
 
       async fn get_workflow_by_display_number(
@@ -624,7 +596,6 @@ mod tests {
          _display_number: i64,
          _tenant_id: Uuid,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("get_workflow_by_display_number is not used in auth tests")
       }
 
@@ -633,7 +604,6 @@ mod tests {
          _display_number: i64,
          _req: crate::client::SubmitWorkflowRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("submit_workflow_by_display_number is not used in auth tests")
       }
 
@@ -643,7 +613,6 @@ mod tests {
          _step_display_number: i64,
          _req: crate::client::ApproveRejectRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("approve_step_by_display_number is not used in auth tests")
       }
 
@@ -653,8 +622,35 @@ mod tests {
          _step_display_number: i64,
          _req: crate::client::ApproveRejectRequest,
       ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("reject_step_by_display_number is not used in auth tests")
+      }
+   }
+
+   #[async_trait]
+   impl CoreServiceTaskClient for StubCoreServiceClient {
+      async fn list_my_tasks(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<ApiResponse<Vec<crate::client::TaskItemDto>>, CoreServiceError> {
+         unimplemented!("list_my_tasks is not used in auth tests")
+      }
+
+      async fn get_task(
+         &self,
+         _task_id: Uuid,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
+         unimplemented!("get_task is not used in auth tests")
+      }
+
+      async fn get_dashboard_stats(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+      ) -> Result<ApiResponse<crate::client::DashboardStatsDto>, CoreServiceError> {
+         unimplemented!("get_dashboard_stats is not used in auth tests")
       }
 
       async fn get_task_by_display_numbers(
@@ -664,7 +660,6 @@ mod tests {
          _tenant_id: Uuid,
          _user_id: Uuid,
       ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
-         // テストスタブでは未使用
          unimplemented!("get_task_by_display_numbers is not used in auth tests")
       }
    }

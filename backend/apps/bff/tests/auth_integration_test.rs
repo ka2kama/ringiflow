@@ -38,8 +38,10 @@ use ringiflow_bff::{
    client::{
       AuthServiceClient,
       AuthServiceError,
-      CoreServiceClient,
       CoreServiceError,
+      CoreServiceTaskClient,
+      CoreServiceUserClient,
+      CoreServiceWorkflowClient,
       CreateWorkflowRequest,
       SubmitWorkflowRequest,
       UserResponse,
@@ -121,7 +123,7 @@ impl StubCoreServiceClient {
 }
 
 #[async_trait]
-impl CoreServiceClient for StubCoreServiceClient {
+impl CoreServiceUserClient for StubCoreServiceClient {
    async fn get_user_by_email(
       &self,
       _tenant_id: Uuid,
@@ -150,6 +152,17 @@ impl CoreServiceClient for StubCoreServiceClient {
       }))
    }
 
+   async fn list_users(
+      &self,
+      _tenant_id: Uuid,
+   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::UserItemDto>>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("list_users is not used in auth tests")
+   }
+}
+
+#[async_trait]
+impl CoreServiceWorkflowClient for StubCoreServiceClient {
    async fn create_workflow(
       &self,
       _req: CreateWorkflowRequest,
@@ -223,34 +236,6 @@ impl CoreServiceClient for StubCoreServiceClient {
       unimplemented!("reject_step is not used in auth tests")
    }
 
-   async fn list_my_tasks(
-      &self,
-      _tenant_id: Uuid,
-      _user_id: Uuid,
-   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::TaskItemDto>>, CoreServiceError> {
-      // 認証テストでは未使用
-      unimplemented!("list_my_tasks is not used in auth tests")
-   }
-
-   async fn get_task(
-      &self,
-      _task_id: Uuid,
-      _tenant_id: Uuid,
-      _user_id: Uuid,
-   ) -> Result<ApiResponse<ringiflow_bff::client::TaskDetailDto>, CoreServiceError> {
-      // 認証テストでは未使用
-      unimplemented!("get_task is not used in auth tests")
-   }
-
-   async fn get_dashboard_stats(
-      &self,
-      _tenant_id: Uuid,
-      _user_id: Uuid,
-   ) -> Result<ApiResponse<ringiflow_bff::client::DashboardStatsDto>, CoreServiceError> {
-      // 認証テストでは未使用
-      unimplemented!("get_dashboard_stats is not used in auth tests")
-   }
-
    async fn get_workflow_by_display_number(
       &self,
       _display_number: i64,
@@ -288,6 +273,37 @@ impl CoreServiceClient for StubCoreServiceClient {
       // 認証テストでは未使用
       unimplemented!("reject_step_by_display_number is not used in auth tests")
    }
+}
+
+#[async_trait]
+impl CoreServiceTaskClient for StubCoreServiceClient {
+   async fn list_my_tasks(
+      &self,
+      _tenant_id: Uuid,
+      _user_id: Uuid,
+   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::TaskItemDto>>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("list_my_tasks is not used in auth tests")
+   }
+
+   async fn get_task(
+      &self,
+      _task_id: Uuid,
+      _tenant_id: Uuid,
+      _user_id: Uuid,
+   ) -> Result<ApiResponse<ringiflow_bff::client::TaskDetailDto>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("get_task is not used in auth tests")
+   }
+
+   async fn get_dashboard_stats(
+      &self,
+      _tenant_id: Uuid,
+      _user_id: Uuid,
+   ) -> Result<ApiResponse<ringiflow_bff::client::DashboardStatsDto>, CoreServiceError> {
+      // 認証テストでは未使用
+      unimplemented!("get_dashboard_stats is not used in auth tests")
+   }
 
    async fn get_task_by_display_numbers(
       &self,
@@ -298,14 +314,6 @@ impl CoreServiceClient for StubCoreServiceClient {
    ) -> Result<ApiResponse<ringiflow_bff::client::TaskDetailDto>, CoreServiceError> {
       // 認証テストでは未使用
       unimplemented!("get_task_by_display_numbers is not used in auth tests")
-   }
-
-   async fn list_users(
-      &self,
-      _tenant_id: Uuid,
-   ) -> Result<ApiResponse<Vec<ringiflow_bff::client::UserItemDto>>, CoreServiceError> {
-      // 認証テストでは未使用
-      unimplemented!("list_users is not used in auth tests")
    }
 }
 
