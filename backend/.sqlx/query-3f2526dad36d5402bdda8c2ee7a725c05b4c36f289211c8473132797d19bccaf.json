@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n         UPDATE workflow_steps SET\n            status = $1,\n            version = $2,\n            decision = $3,\n            comment = $4,\n            started_at = $5,\n            completed_at = $6,\n            updated_at = $7\n         WHERE id = $8 AND version = $9 AND tenant_id = $10\n         ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Int4",
+        "Varchar",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Uuid",
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3f2526dad36d5402bdda8c2ee7a725c05b4c36f289211c8473132797d19bccaf"
+}

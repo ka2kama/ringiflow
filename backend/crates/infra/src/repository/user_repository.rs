@@ -185,6 +185,7 @@ impl UserRepository for PostgresUserRepository {
       };
 
       // ロールを取得（JOIN で一括）
+      // tenant_id フィルタで RLS 二重防御（user_roles テーブルに tenant_id あり）
       let role_rows = sqlx::query!(
          r#"
             SELECT
@@ -198,9 +199,10 @@ impl UserRepository for PostgresUserRepository {
                 r.updated_at
             FROM roles r
             INNER JOIN user_roles ur ON ur.role_id = r.id
-            WHERE ur.user_id = $1
+            WHERE ur.user_id = $1 AND ur.tenant_id = $2
             "#,
-         id.as_uuid()
+         id.as_uuid(),
+         user.tenant_id().as_uuid()
       )
       .fetch_all(&self.pool)
       .await?;

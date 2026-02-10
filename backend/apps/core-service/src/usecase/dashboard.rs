@@ -255,6 +255,7 @@ mod tests {
          &self,
          _step: &WorkflowStep,
          _expected_version: Version,
+         _tenant_id: &TenantId,
       ) -> Result<(), InfraError> {
          Ok(())
       }

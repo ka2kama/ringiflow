@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                r.id,\n                r.tenant_id,\n                r.name,\n                r.description,\n                r.permissions,\n                r.is_system,\n                r.created_at,\n                r.updated_at\n            FROM roles r\n            INNER JOIN user_roles ur ON ur.role_id = r.id\n            WHERE ur.user_id = $1\n            ",
+  "query": "\n            SELECT\n                r.id,\n                r.tenant_id,\n                r.name,\n                r.description,\n                r.permissions,\n                r.is_system,\n                r.created_at,\n                r.updated_at\n            FROM roles r\n            INNER JOIN user_roles ur ON ur.role_id = r.id\n            WHERE ur.user_id = $1 AND ur.tenant_id = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -46,6 +46,7 @@
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Uuid"
       ]
     },
@@ -60,5 +61,5 @@
       false
     ]
   },
-  "hash": "8dab46c1ed8abce92b1ebc0d48110cc738842708f8d1cc0a94cff52e31753e82"
+  "hash": "068e217b48a39fde56e466d6c54a16c68b45325d35bb4d4a4860eb2df0795a9c"
 }
