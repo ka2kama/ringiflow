@@ -29,8 +29,8 @@ use crate::{
    client::{
       AuthServiceClient,
       AuthServiceError,
-      CoreServiceClient,
       CoreServiceError,
+      CoreServiceUserClient,
       UserWithPermissionsData,
    },
    error::{
@@ -50,7 +50,7 @@ const SESSION_MAX_AGE: i64 = 28800; // 8時間
 
 /// 認証ハンドラの共有状態
 pub struct AuthState {
-   pub core_service_client: Arc<dyn CoreServiceClient>,
+   pub core_service_client: Arc<dyn CoreServiceUserClient>,
    pub auth_service_client: Arc<dyn AuthServiceClient>,
    pub session_manager:     Arc<dyn SessionManager>,
 }
@@ -457,13 +457,7 @@ mod tests {
    use uuid::Uuid;
 
    use super::*;
-   use crate::client::{
-      CoreServiceTaskClient,
-      CoreServiceUserClient,
-      CoreServiceWorkflowClient,
-      UserResponse,
-      VerifyResponse,
-   };
+   use crate::client::{CoreServiceUserClient, UserResponse, VerifyResponse};
 
    // テスト用スタブ
 
@@ -522,145 +516,6 @@ mod tests {
          _user_id: Uuid,
       ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
          self.get_user_result.clone()
-      }
-   }
-
-   #[async_trait]
-   impl CoreServiceWorkflowClient for StubCoreServiceClient {
-      async fn create_workflow(
-         &self,
-         _req: crate::client::CreateWorkflowRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("create_workflow is not used in auth tests")
-      }
-
-      async fn submit_workflow(
-         &self,
-         _workflow_id: Uuid,
-         _req: crate::client::SubmitWorkflowRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("submit_workflow is not used in auth tests")
-      }
-
-      async fn list_workflow_definitions(
-         &self,
-         _tenant_id: Uuid,
-      ) -> Result<ApiResponse<Vec<crate::client::WorkflowDefinitionDto>>, CoreServiceError> {
-         unimplemented!("list_workflow_definitions is not used in auth tests")
-      }
-
-      async fn get_workflow_definition(
-         &self,
-         _definition_id: Uuid,
-         _tenant_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::WorkflowDefinitionDto>, CoreServiceError> {
-         unimplemented!("get_workflow_definition is not used in auth tests")
-      }
-
-      async fn list_my_workflows(
-         &self,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<Vec<crate::client::WorkflowInstanceDto>>, CoreServiceError> {
-         unimplemented!("list_my_workflows is not used in auth tests")
-      }
-
-      async fn get_workflow(
-         &self,
-         _workflow_id: Uuid,
-         _tenant_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("get_workflow is not used in auth tests")
-      }
-
-      async fn approve_step(
-         &self,
-         _workflow_id: Uuid,
-         _step_id: Uuid,
-         _req: crate::client::ApproveRejectRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("approve_step is not used in auth tests")
-      }
-
-      async fn reject_step(
-         &self,
-         _workflow_id: Uuid,
-         _step_id: Uuid,
-         _req: crate::client::ApproveRejectRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("reject_step is not used in auth tests")
-      }
-
-      async fn get_workflow_by_display_number(
-         &self,
-         _display_number: i64,
-         _tenant_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("get_workflow_by_display_number is not used in auth tests")
-      }
-
-      async fn submit_workflow_by_display_number(
-         &self,
-         _display_number: i64,
-         _req: crate::client::SubmitWorkflowRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("submit_workflow_by_display_number is not used in auth tests")
-      }
-
-      async fn approve_step_by_display_number(
-         &self,
-         _workflow_display_number: i64,
-         _step_display_number: i64,
-         _req: crate::client::ApproveRejectRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("approve_step_by_display_number is not used in auth tests")
-      }
-
-      async fn reject_step_by_display_number(
-         &self,
-         _workflow_display_number: i64,
-         _step_display_number: i64,
-         _req: crate::client::ApproveRejectRequest,
-      ) -> Result<ApiResponse<crate::client::WorkflowInstanceDto>, CoreServiceError> {
-         unimplemented!("reject_step_by_display_number is not used in auth tests")
-      }
-   }
-
-   #[async_trait]
-   impl CoreServiceTaskClient for StubCoreServiceClient {
-      async fn list_my_tasks(
-         &self,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<Vec<crate::client::TaskItemDto>>, CoreServiceError> {
-         unimplemented!("list_my_tasks is not used in auth tests")
-      }
-
-      async fn get_task(
-         &self,
-         _task_id: Uuid,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
-         unimplemented!("get_task is not used in auth tests")
-      }
-
-      async fn get_dashboard_stats(
-         &self,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::DashboardStatsDto>, CoreServiceError> {
-         unimplemented!("get_dashboard_stats is not used in auth tests")
-      }
-
-      async fn get_task_by_display_numbers(
-         &self,
-         _workflow_display_number: i64,
-         _step_display_number: i64,
-         _tenant_id: Uuid,
-         _user_id: Uuid,
-      ) -> Result<ApiResponse<crate::client::TaskDetailDto>, CoreServiceError> {
-         unimplemented!("get_task_by_display_numbers is not used in auth tests")
       }
    }
 
