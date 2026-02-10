@@ -417,6 +417,30 @@ jobs:
           command: check
           arguments: --all-features
 
+  # 構造品質チェック: コード重複の検出
+  # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
+  # 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.elm == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Check code duplicates
+        run: just check-duplicates
+
   # ブランチ保護用ステータス統合: skipped を成功扱いにし、単一ステータスを提供
   ci-success:
     name: CI Success
