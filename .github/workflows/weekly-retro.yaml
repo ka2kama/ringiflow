@@ -25,9 +25,11 @@ jobs:
           LAST_MONDAY=$(date -d "last monday - 7 days" +%Y-%m-%d)
           LAST_SUNDAY=$(date -d "last monday - 1 day" +%Y-%m-%d)
           TODAY=$(date +%Y-%m-%d)
-          echo "start=${LAST_MONDAY}" >> "$GITHUB_OUTPUT"
-          echo "end=${LAST_SUNDAY}" >> "$GITHUB_OUTPUT"
-          echo "today=${TODAY}" >> "$GITHUB_OUTPUT"
+          {
+            echo "start=${LAST_MONDAY}"
+            echo "end=${LAST_SUNDAY}"
+            echo "today=${TODAY}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create retro issue
         env:
