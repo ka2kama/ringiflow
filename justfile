@@ -320,6 +320,17 @@ audit:
 check-file-size:
     ./scripts/check-file-size.sh
 
+# コード重複（コピー＆ペースト）を検出（jscpd）
+# 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
+# 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
+# 注: --formats-exts と複数 format の同時指定にバグがあるため、Rust と Elm を分けて実行する
+check-duplicates:
+    @echo "=== Rust コード重複チェック ==="
+    npx --yes jscpd@latest --min-lines 10 --min-tokens 50 --format "rust" --gitignore --exitCode 0 backend/
+    @echo ""
+    @echo "=== Elm コード重複チェック ==="
+    npx --yes jscpd@latest --min-lines 10 --min-tokens 50 --format "haskell" --formats-exts "haskell:elm" --gitignore --exitCode 0 frontend/src/
+
 # =============================================================================
 # 未使用依存チェック
 # =============================================================================
@@ -349,8 +360,8 @@ coverage-summary:
 # 全チェック
 # =============================================================================
 
-# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、セキュリティ、ファイルサイズ）
-check: lint test test-rust-integration build-elm sqlx-check audit check-file-size
+# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、セキュリティ、構造品質）
+check: lint test test-rust-integration build-elm sqlx-check audit check-file-size check-duplicates
 
 # プッシュ前の全チェック（軽量チェック + API テスト）
 check-all: check test-api
