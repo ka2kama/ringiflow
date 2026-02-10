@@ -54,6 +54,24 @@ use std::{
 use ringiflow_domain::tenant::TenantId;
 use sqlx::{PgConnection, PgPool, Postgres, pool::PoolConnection, postgres::PgPoolOptions};
 
+/// RLS 用の `after_release` フックを含む `PgPoolOptions` を返す
+///
+/// コネクションがプールに返却される際、`app.tenant_id` セッション変数を
+/// 空文字列にリセットする。これにより、別テナントのリクエストで
+/// 前のテナントの ID が残留することを防ぐ。
+///
+/// テストでは `max_connections(1)` と組み合わせて使用する。
+pub fn pool_options() -> PgPoolOptions {
+   PgPoolOptions::new().after_release(|conn, _meta| {
+      Box::pin(async move {
+         sqlx::query("SELECT set_config('app.tenant_id', '', false)")
+            .execute(&mut *conn)
+            .await?;
+         Ok(true)
+      })
+   })
+}
+
 /// PostgreSQL 接続プールを作成する
 ///
 /// アプリケーション起動時に一度だけ呼び出し、作成したプールを
@@ -86,24 +104,6 @@ use sqlx::{PgConnection, PgPool, Postgres, pool::PoolConnection, postgres::PgPoo
 /// # パニック
 ///
 /// この関数はパニックしない。すべてのエラーは `Result` で返される。
-/// RLS 用の `after_release` フックを含む `PgPoolOptions` を返す
-///
-/// コネクションがプールに返却される際、`app.tenant_id` セッション変数を
-/// 空文字列にリセットする。これにより、別テナントのリクエストで
-/// 前のテナントの ID が残留することを防ぐ。
-///
-/// テストでは `max_connections(1)` と組み合わせて使用する。
-pub fn pool_options() -> PgPoolOptions {
-   PgPoolOptions::new().after_release(|conn, _meta| {
-      Box::pin(async move {
-         sqlx::query("SELECT set_config('app.tenant_id', '', false)")
-            .execute(&mut *conn)
-            .await?;
-         Ok(true)
-      })
-   })
-}
-
 pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
    pool_options()
       .max_connections(10)
