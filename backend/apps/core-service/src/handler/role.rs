@@ -244,3 +244,188 @@ pub async fn delete_role(
 
    Ok(StatusCode::NO_CONTENT)
 }
+
+#[cfg(test)]
+mod tests {
+   use std::sync::Arc;
+
+   use async_trait::async_trait;
+   use axum::{Router, body::Body, http::Request, routing::get};
+   use chrono::Utc;
+   use ringiflow_domain::{
+      clock::Clock,
+      role::{Permission, Role, RoleId},
+      tenant::TenantId,
+   };
+   use ringiflow_infra::{InfraError, repository::RoleRepository};
+   use tower::ServiceExt;
+
+   use super::*;
+
+   // --- スタブ ---
+
+   struct StubRoleRepository {
+      role: Option<Role>,
+   }
+
+   impl StubRoleRepository {
+      fn with_role(role: Role) -> Self {
+         Self { role: Some(role) }
+      }
+   }
+
+   #[async_trait]
+   impl RoleRepository for StubRoleRepository {
+      async fn find_all_by_tenant_with_user_count(
+         &self,
+         _tenant_id: &TenantId,
+      ) -> Result<Vec<(Role, i64)>, InfraError> {
+         todo!()
+      }
+
+      async fn find_by_id(&self, _id: &RoleId) -> Result<Option<Role>, InfraError> {
+         Ok(self.role.clone())
+      }
+
+      async fn insert(&self, _role: &Role) -> Result<(), InfraError> {
+         todo!()
+      }
+
+      async fn update(&self, _role: &Role) -> Result<(), InfraError> {
+         todo!()
+      }
+
+      async fn delete(&self, _id: &RoleId) -> Result<(), InfraError> {
+         todo!()
+      }
+
+      async fn count_users_with_role(&self, _role_id: &RoleId) -> Result<i64, InfraError> {
+         todo!()
+      }
+   }
+
+   struct StubClock;
+
+   impl Clock for StubClock {
+      fn now(&self) -> chrono::DateTime<Utc> {
+         Utc::now()
+      }
+   }
+
+   // --- ヘルパー ---
+
+   fn create_test_app(role_repo: StubRoleRepository) -> Router {
+      let role_repo_arc = Arc::new(role_repo) as Arc<dyn RoleRepository>;
+      let usecase = crate::usecase::role::RoleUseCaseImpl::new(
+         role_repo_arc.clone(),
+         Arc::new(StubClock) as Arc<dyn Clock>,
+      );
+      let state = Arc::new(RoleState {
+         role_repository: role_repo_arc,
+         usecase,
+      });
+
+      Router::new()
+         .route("/internal/roles/{role_id}", get(get_role))
+         .with_state(state)
+   }
+
+   fn create_system_role() -> Role {
+      Role::new_system(
+         RoleId::new(),
+         "tenant_admin".to_string(),
+         Some("テナント管理者".to_string()),
+         vec![Permission::new("*")],
+         Utc::now(),
+      )
+   }
+
+   fn create_tenant_role(tenant_id: TenantId) -> Role {
+      Role::new_tenant(
+         RoleId::new(),
+         tenant_id,
+         "custom_role".to_string(),
+         Some("カスタムロール".to_string()),
+         vec![Permission::new("workflow:read")],
+         Utc::now(),
+      )
+   }
+
+   // --- テストケース ---
+
+   #[tokio::test]
+   async fn test_get_role_システムロールは任意のテナントでアクセス可能() {
+      // Given
+      let role = create_system_role();
+      let role_id = *role.id().as_uuid();
+      let sut = create_test_app(StubRoleRepository::with_role(role));
+      let any_tenant_id = TenantId::new();
+
+      let request = Request::builder()
+         .method(axum::http::Method::GET)
+         .uri(format!(
+            "/internal/roles/{}?tenant_id={}",
+            role_id,
+            any_tenant_id.as_uuid()
+         ))
+         .body(Body::empty())
+         .unwrap();
+
+      // When
+      let response = sut.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::OK);
+   }
+
+   #[tokio::test]
+   async fn test_get_role_テナントロールは所属テナントでアクセス可能() {
+      // Given
+      let tenant_id = TenantId::new();
+      let role = create_tenant_role(tenant_id.clone());
+      let role_id = *role.id().as_uuid();
+      let sut = create_test_app(StubRoleRepository::with_role(role));
+
+      let request = Request::builder()
+         .method(axum::http::Method::GET)
+         .uri(format!(
+            "/internal/roles/{}?tenant_id={}",
+            role_id,
+            tenant_id.as_uuid()
+         ))
+         .body(Body::empty())
+         .unwrap();
+
+      // When
+      let response = sut.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::OK);
+   }
+
+   #[tokio::test]
+   async fn test_get_role_テナントロールは他テナントで404() {
+      // Given
+      let owner_tenant_id = TenantId::new();
+      let other_tenant_id = TenantId::new();
+      let role = create_tenant_role(owner_tenant_id);
+      let role_id = *role.id().as_uuid();
+      let sut = create_test_app(StubRoleRepository::with_role(role));
+
+      let request = Request::builder()
+         .method(axum::http::Method::GET)
+         .uri(format!(
+            "/internal/roles/{}?tenant_id={}",
+            role_id,
+            other_tenant_id.as_uuid()
+         ))
+         .body(Body::empty())
+         .unwrap();
+
+      // When
+      let response = sut.oneshot(request).await.unwrap();
+
+      // Then
+      assert_eq!(response.status(), StatusCode::NOT_FOUND);
+   }
+}
