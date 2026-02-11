@@ -176,3 +176,26 @@ just clean-branches
 ```
 
 マージ完了後、PR の URL を表示して終了する。
+
+**禁止フラグ:** `--auto`、`--admin` は使用しない。
+
+- `--auto`: 全チェック通過時に即座にマージするため、その後にプッシュしたコミットがマージに含まれない
+- `--admin`: branch protection をバイパスするため、品質ゲートが無効になる
+
+#### `gh pr merge` 失敗時の対応
+
+`gh pr merge --squash --delete-branch` が失敗した場合、`--auto` にフォールバックせず以下の手順で対応する:
+
+1. エラーメッセージから原因を特定する
+2. 原因を解消する（下表参照）
+3. 解消後、`gh pr merge --squash --delete-branch` を再試行する
+
+| 原因 | 対応 |
+|------|------|
+| CI チェックが未完了 | `gh pr checks --watch` で待機してから再試行 |
+| レビュー未承認 | Step 2 に戻り、レビュー完了を待つ |
+| 未 resolve のスレッドあり | スレッドを resolve してから再試行 |
+| base branch と差分あり | rebase + push → CI + Review 完了を待ってから再試行 |
+| その他 | 原因をユーザーに報告し、対応を相談する |
+
+改善の経緯: [auto-merge による後続コミット漏れ](../../../prompts/improvements/2026-02/2026-02-11_2234_auto-mergeによる後続コミット漏れ.md)
