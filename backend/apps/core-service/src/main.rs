@@ -63,7 +63,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
    Router,
-   routing::{get, post},
+   routing::{get, patch, post},
 };
 use config::CoreConfig;
 use handler::{
@@ -73,11 +73,13 @@ use handler::{
    WorkflowState,
    approve_step,
    approve_step_by_display_number,
+   create_user,
    create_workflow,
    get_dashboard_stats,
    get_task,
    get_task_by_display_numbers,
    get_user,
+   get_user_by_display_number,
    get_user_by_email,
    get_workflow,
    get_workflow_by_display_number,
@@ -91,6 +93,8 @@ use handler::{
    reject_step_by_display_number,
    submit_workflow,
    submit_workflow_by_display_number,
+   update_user,
+   update_user_status,
 };
 use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
@@ -113,7 +117,7 @@ use ringiflow_infra::{
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use usecase::{DashboardUseCaseImpl, TaskUseCaseImpl, WorkflowUseCaseImpl};
+use usecase::{DashboardUseCaseImpl, TaskUseCaseImpl, UserUseCaseImpl, WorkflowUseCaseImpl};
 
 /// Core Service サーバーのエントリーポイント
 ///
@@ -160,14 +164,18 @@ async fn main() -> anyhow::Result<()> {
    let counter_repo: Arc<dyn DisplayIdCounterRepository> =
       Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
 
-   // ユーザー State
+   // Clock（複数ユースケースで共有）
+   let clock: Arc<dyn ringiflow_domain::clock::Clock> = Arc::new(SystemClock);
+
+   // ユーザー UseCase + State
+   let user_usecase = UserUseCaseImpl::new(user_repo.clone(), counter_repo.clone(), clock.clone());
    let user_state = Arc::new(UserState {
       user_repository:   user_repo.clone(),
       tenant_repository: tenant_repo,
+      usecase:           user_usecase,
    });
 
    // ワークフロー UseCase
-   let clock = Arc::new(SystemClock);
    let workflow_usecase = WorkflowUseCaseImpl::new(
       definition_repo,
       instance_repo.clone(),
@@ -195,9 +203,20 @@ async fn main() -> anyhow::Result<()> {
    // ルーター構築
    let app = Router::new()
       .route("/health", get(health_check))
-      .route("/internal/users", get(list_users))
+      .route("/internal/users", get(list_users).post(create_user))
       .route("/internal/users/by-email", get(get_user_by_email))
-      .route("/internal/users/{user_id}", get(get_user))
+      .route(
+         "/internal/users/{user_id}",
+         get(get_user).patch(update_user),
+      )
+      .route(
+         "/internal/users/{user_id}/status",
+         patch(update_user_status),
+      )
+      .route(
+         "/internal/users/by-display-number/{display_number}",
+         get(get_user_by_display_number),
+      )
       .with_state(user_state)
       // ワークフロー定義 API
       .route("/internal/workflow-definitions", get(list_workflow_definitions))

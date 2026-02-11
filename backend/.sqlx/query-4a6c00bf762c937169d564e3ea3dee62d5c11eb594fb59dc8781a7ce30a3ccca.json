@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                ur.user_id,\n                r.name\n            FROM user_roles ur\n            INNER JOIN roles r ON r.id = ur.role_id\n            WHERE ur.user_id = ANY($1) AND ur.tenant_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "4a6c00bf762c937169d564e3ea3dee62d5c11eb594fb59dc8781a7ce30a3ccca"
+}

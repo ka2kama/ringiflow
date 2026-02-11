@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                  SELECT COUNT(*) as \"count!\"\n                  FROM users u\n                  INNER JOIN user_roles ur ON ur.user_id = u.id AND ur.tenant_id = u.tenant_id\n                  INNER JOIN roles r ON r.id = ur.role_id\n                  WHERE u.tenant_id = $1\n                    AND u.status = 'active'\n                    AND r.name = $2\n                    AND u.id != $3\n                  ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e5199583dffdf44d9fd686679b18292145242b4b77453ddb0d5b6515ef8754cf"
+}

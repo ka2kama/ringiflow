@@ -332,6 +332,15 @@ impl User {
       }
    }
 
+   /// ユーザー名を変更した新しいインスタンスを返す
+   pub fn with_name(self, name: UserName, now: DateTime<Utc>) -> Self {
+      Self {
+         name,
+         updated_at: now,
+         ..self
+      }
+   }
+
    /// ユーザーステータスを変更した新しいインスタンスを返す
    pub fn with_status(self, status: UserStatus, now: DateTime<Utc>) -> Self {
       Self {
@@ -498,6 +507,27 @@ mod tests {
          Some(login_time),
          original.created_at(),
          login_time,
+      );
+      assert_eq!(sut, expected);
+   }
+
+   #[rstest]
+   fn test_名前変更後の状態(active_user: User) {
+      let transition_time = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+      let original = active_user.clone();
+      let new_name = UserName::new("新しい名前").unwrap();
+      let sut = active_user.with_name(new_name.clone(), transition_time);
+
+      let expected = User::from_db(
+         original.id().clone(),
+         original.tenant_id().clone(),
+         original.display_number(),
+         original.email().clone(),
+         new_name,
+         original.status(),
+         original.last_login_at(),
+         original.created_at(),
+         transition_time,
       );
       assert_eq!(sut, expected);
    }

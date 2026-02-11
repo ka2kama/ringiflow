@@ -18,7 +18,16 @@ pub mod health;
 pub mod task;
 pub mod workflow;
 
-pub use auth::{UserState, get_user, get_user_by_email, list_users};
+pub use auth::{
+   UserState,
+   create_user,
+   get_user,
+   get_user_by_display_number,
+   get_user_by_email,
+   list_users,
+   update_user,
+   update_user_status,
+};
 pub use dashboard::{DashboardState, get_dashboard_stats};
 pub use health::health_check;
 pub use task::{TaskState, get_task, get_task_by_display_numbers, list_my_tasks};
