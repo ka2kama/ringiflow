@@ -17,6 +17,9 @@ thiserror.workspace = true
 tokio.workspace = true
 argon2.workspace = true
 
+[features]
+test-utils = []
+
 [dev-dependencies]
 dotenvy.workspace = true
 pretty_assertions.workspace = true
