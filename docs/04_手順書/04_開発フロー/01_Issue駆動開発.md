@@ -76,7 +76,7 @@ E2E 基準がないと、各レイヤーが個別に正しくてもレイヤー�
 - [ ] POST /reject で却下できる
 ```
 
-改善の経緯: [E2E 視点の完了基準欠如](../../../../prompts/improvements/2026-01/2026-01-29_1304_E2E視点の完了基準欠如.md)
+改善の経緯: [E2E 視点の完了基準欠如](../../../prompts/improvements/2026-01/2026-01-29_1304_E2E視点の完了基準欠如.md)
 
 #### 既存 Issue の精査
 
@@ -92,7 +92,7 @@ E2E 基準がないと、各レイヤーが個別に正しくてもレイヤー�
 
 精査の結果、Issue の修正が必要な場合は修正してから次のステップに進む。
 
-改善の経緯: [Issue を正として扱う暗黙の前提](../../../../prompts/improvements/2026-02/2026-02-06_1946_Issueを正として扱う暗黙の前提.md)
+改善の経緯: [Issue を正として扱う暗黙の前提](../../../prompts/improvements/2026-02/2026-02-06_1946_Issueを正として扱う暗黙の前提.md)
 
 ### 2. ブランチを作成
 
@@ -489,7 +489,7 @@ gh pr merge --squash --delete-branch
 - コミットメッセージ: PR タイトル + PR 本文（Summary, Test plan 等）
 - `git log` で変更の背景を追跡できる
 
-→ 設定詳細: [GitHub 設定 > Pull Requests](../../02_プロジェクト構築/03_GitHub設定.md#13-pull-requests)
+→ 設定詳細: [GitHub 設定 > Pull Requests](../02_プロジェクト構築/03_GitHub設定.md#13-pull-requests)
 
 注意: `--auto` は使用しない。レビュー結果を確認してからマージすること。
 
@@ -648,6 +648,8 @@ Issue を作成すると自動的に Project に追加される（`--project "Ri
 
 アジャイルの Issue 階層を取り入れ、大きな機能を段階的に管理する。
 
+→ 意思決定: [ADR-046 Story-per-PR ブランチ戦略](../../05_ADR/046_Story-per-PRブランチ戦略.md)
+
 ### 階層構造
 
 ```
@@ -688,6 +690,19 @@ Epic の設計フェーズで Story に分解する。分解のタイミング:
 - Epic 着手時に全体像が見えている場合 → 最初に分解
 - 段階的に明確になる場合 → 進行に応じて追加
 
+#### Story 分解の品質基準
+
+各 Story は main に独立してマージ可能でなければならない。以下の基準を満たすこと:
+
+| 基準 | 問い |
+|------|------|
+| 独立動作 | この Story だけマージしても main は壊れないか？ |
+| 後方互換 | 後続 Story がなくても既存機能は動作するか？ |
+| テスト完結 | この Story 単独でテストが全て通るか？ |
+| 意味のある単位 | この Story だけで何らかの価値を提供するか？ |
+
+Story が独立してマージできないなら、Story の分解が不十分である。
+
 ```bash
 # Story の作成（Epic の Sub-issue として）
 gh issue create \
@@ -699,18 +714,43 @@ gh issue create \
 # 親 Issue（Epic）に紐付け（GitHub UI で設定、または gh api で）
 ```
 
-### 運用フロー
+### 運用フロー（Story-per-PR）
+
+各 Story を個別の PR で main にマージする。Epic 単位の PR は作成しない。
 
 ```mermaid
 flowchart TB
     A["ADR で方針決定"] --> B["Epic Issue 作成"]
     B --> C["設計フェーズで Story に分解"]
-    C --> D["Story ごとに実装（TDD）"]
-    D --> E["Story 完了 → クローズ"]
-    E --> F{"全 Story 完了?"}
-    F -->|No| D
-    F -->|Yes| G["Epic クローズ"]
+    C --> D["Story ブランチ作成"]
+    D --> E["Story 実装（TDD）"]
+    E --> F["Story PR 作成・マージ"]
+    F --> G["Story Issue 自動クローズ"]
+    G --> H{"全 Story 完了?"}
+    H -->|No| D
+    H -->|Yes| I["Epic クローズ（手動）"]
 ```
+
+#### ブランチ命名
+
+Story 単位でブランチを作成する。Epic 番号でブランチを作成しない。
+
+```bash
+# Story #427 のブランチ（Epic #403 のサブ Issue）
+git checkout -b feature/427-user-management-api
+
+# Epic 番号のブランチは作成しない
+# NG: git checkout -b feature/403-phase2-2
+```
+
+#### PR と Issue の紐付け
+
+| 対象 | 方法 | 例 |
+|------|------|-----|
+| Story | PR 本文で `Closes` → 自動クローズ | `Closes #427` |
+| Epic | 全サブ Issue 完了後に手動クローズ | GitHub UI で確認・クローズ |
+
+Epic に対して `Closes` を使用しない。Epic のクローズは全サブ Issue の完了を確認してから手動で行う。
 
 ### 進捗の可視化
 
