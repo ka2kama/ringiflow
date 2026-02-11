@@ -50,6 +50,20 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  # DynamoDB Local（API テスト用: ポート 18001）
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "18001:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
 volumes:
   postgres_api_test_data:
   redis_api_test_data:

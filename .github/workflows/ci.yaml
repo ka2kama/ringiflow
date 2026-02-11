@@ -159,6 +159,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports:
+          - 18000:8000
+        options: >-
+          --health-cmd "curl -s -o /dev/null http://localhost:8000 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       CARGO_TERM_COLOR: always
       CARGO_BUILD_RUSTC_WRAPPER: ""  # sccache は CI では使用しない（actions/cache で代替）
@@ -166,6 +176,7 @@ jobs:
       SQLX_OFFLINE: true
       DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow_test
       REDIS_URL: redis://localhost:16379
+      DYNAMODB_ENDPOINT: http://localhost:18000
 
     steps:
       - name: Checkout

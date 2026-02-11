@@ -30,6 +30,7 @@ fi
 # 基準ポート（メインworktree用）
 BASE_POSTGRES_PORT=15432
 BASE_REDIS_PORT=16379
+BASE_DYNAMODB_PORT=18000
 BASE_BFF_PORT=13000
 BASE_CORE_PORT=13001
 BASE_AUTH_PORT=13002
@@ -40,6 +41,7 @@ OFFSET=$((PORT_OFFSET * 100))
 
 POSTGRES_PORT=$((BASE_POSTGRES_PORT + OFFSET))
 REDIS_PORT=$((BASE_REDIS_PORT + OFFSET))
+DYNAMODB_PORT=$((BASE_DYNAMODB_PORT + OFFSET))
 BFF_PORT=$((BASE_BFF_PORT + OFFSET))
 CORE_PORT=$((BASE_CORE_PORT + OFFSET))
 AUTH_PORT=$((BASE_AUTH_PORT + OFFSET))
@@ -58,6 +60,7 @@ cat > "$PROJECT_ROOT/.env" << EOF
 # -----------------------------------------------------------------------------
 POSTGRES_PORT=$POSTGRES_PORT
 REDIS_PORT=$REDIS_PORT
+DYNAMODB_PORT=$DYNAMODB_PORT
 
 # -----------------------------------------------------------------------------
 # 開発サーバーポート設定
@@ -112,6 +115,11 @@ CORE_URL=http://localhost:$CORE_PORT
 AUTH_URL=http://localhost:$AUTH_PORT
 
 # -----------------------------------------------------------------------------
+# DynamoDB 接続（監査ログ）
+# -----------------------------------------------------------------------------
+DYNAMODB_ENDPOINT=http://localhost:$DYNAMODB_PORT
+
+# -----------------------------------------------------------------------------
 # ログ・環境設定
 # -----------------------------------------------------------------------------
 RUST_LOG=info,ringiflow=debug
@@ -128,6 +136,7 @@ EOF
 echo "✓ .env ファイルを生成しました（ポートオフセット: $PORT_OFFSET）"
 echo "  PostgreSQL:     $POSTGRES_PORT"
 echo "  Redis:          $REDIS_PORT"
+echo "  DynamoDB:       $DYNAMODB_PORT"
 echo "  BFF:            $BFF_PORT"
 echo "  Core Service:   $CORE_PORT"
 echo "  Auth Service:   $AUTH_PORT"

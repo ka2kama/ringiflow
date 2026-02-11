@@ -46,6 +46,14 @@ pub enum InfraError {
       id:     String,
    },
 
+   /// DynamoDB エラー
+   ///
+   /// DynamoDB への操作で発生するエラー。
+   /// AWS SDK のエラー型はジェネリクスが深く `#[from]` が困難なため、
+   /// 手動で String にマップする。
+   #[error("DynamoDB エラー: {0}")]
+   DynamoDb(String),
+
    /// 予期しないエラー
    ///
    /// 上記に分類できない予期しないエラー。

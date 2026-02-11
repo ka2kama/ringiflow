@@ -70,6 +70,25 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  # DynamoDB Local（監査ログストア）
+  # 本番環境: Amazon DynamoDB
+  # 用途:
+  #   - 監査ログ（ユーザー操作、ロール操作の記録）
+  # -inMemory: データはメモリ上のみ（コンテナ再起動でリセット）
+  # -sharedDb: 全リクエストで同一 DB を共有（リージョン・認証情報に依存しない）
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "${DYNAMODB_PORT}:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
 # 名前付きボリューム
 # name を指定しない → プロジェクト名がプレフィックスとして付与される
 # 例: ringiflow_postgres_data, ringiflow-auth_postgres_data
