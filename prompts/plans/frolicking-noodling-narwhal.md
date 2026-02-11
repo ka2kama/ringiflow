@@ -1,397 +1,476 @@
-# Story #429: ロール管理 API 実装計画
+# Story #430: DynamoDB 基盤 + 監査ログ記録・閲覧 API 実装計画
 
 ## Context
 
-Issue #403 Phase 2-2 の Story #429 として、テナント管理者向けのロール管理 API を実装する。Story #428（ユーザー CRUD API）で確立したパターンを踏襲し、ロールの一覧・作成・編集・削除 API を Core Service と BFF に追加する。
+Issue #403 Phase 2-2 の Story #430 として、DynamoDB をローカル開発環境に導入し、監査ログの記録・閲覧 API を実装する。Story #428（ユーザー CRUD）と #429（ロール管理）で実装した操作の監査ログを BFF レベルで記録し、テナント管理者が一覧・検索できる API を提供する。
 
 **スコープ**:
-- ロール一覧取得 API（システムロール + カスタムロール、ユーザー数付き）
-- カスタムロール作成 API
-- カスタムロール編集 API
-- カスタムロール削除 API（使用中チェック付き）
+- DynamoDB Local の導入（docker-compose）
+- Rust AWS SDK（DynamoDB クライアント）の導入
+- audit_logs テーブルの自動作成
+- 監査ログ記録（ユーザー管理・ロール管理操作、成功時のみ）
+- 監査ログ閲覧 API（一覧、フィルタ、カーソルベースページネーション）
+- 認可ミドルウェアの適用（`user:read` 権限）
 
 **対象外**:
-- ユーザーへのロール割り当て変更 API（Story #428 で `UpdateUserInput.role_name` として実装済み）
-- フロントエンド（Story #431 で対応）
+- 認証イベント（login/logout）の監査ログ（後続 Story で対応）
+- ワークフロー操作の監査ログ（後続 Story で対応）
+- 失敗時の記録（成功時のみ。失敗ログは後続で拡張）
+- `role.assign` の監査（user.update に含めて記録）
+- `source_ip` の取得（`ConnectInfo` 導入は axum::serve 変更を伴うため先送り、現時点では None）
+- GSI の追加（FilterExpression で十分なデータ量）
+- テナント退会時の DynamoDB データ削除（Issue 化して追跡。TTL で1年後に自動削除）
+- Terraform による本番 DynamoDB テーブル定義
 
 ## 設計判断
 
-### 1. RoleRepository の分離
+### 1. 記録場所: BFF ハンドラレベル
 
-現在 `UserRepository` にロール関連メソッド（`find_role_by_name`, `insert_user_role` 等）が混在している。新規の Role CRUD メソッドは別の `RoleRepository` トレイトに分離する。
+BFF が DynamoDB に直接書き込む。Core Service を経由しない。
 
-理由: SRP に基づく。User のユースケースと Role のユースケースは独立した変更理由を持つ。
+理由:
+- BFF はセッションデータ（actor_id, actor_name, tenant_id）を保持しており、監査ログに必要な全コンテキストがある
+- Redis の SessionManager と同じパターン（BFF → データストア直接）
+- Core Service への変更不要。Core Service のクライアントは BFF のみなので全操作がカバーされる
 
-既存のユーザーロール関連メソッド（`insert_user_role`, `replace_user_roles`, `find_roles_for_users` 等）は UserRepository に残す（移動はスコープ外）。
+代替案: Core Service に DynamoDB 依存を追加し、BFF からアクターコンテキストをヘッダーで渡す → Core Service 側の変更が大きく、クライアントが BFF のみの現状では過剰。
 
-### 2. 権限マッピング
+### 2. DynamoDB テーブル設計
 
-ロール管理は `user:*` 権限の傘下とし、新しい権限リソースは追加しない。
+| 項目 | 値 |
+|------|-----|
+| テーブル名 | `audit_logs` |
+| PK | `tenant_id` (String, UUID) |
+| SK | `{ISO8601_timestamp}#{uuid}` (例: `2026-02-11T10:30:00.123Z#550e8400-...`) |
+| TTL | `ttl` (Number, epoch seconds, created_at + 1年) |
 
-| 操作 | 必要な権限 |
-|------|---------|
-| ロール一覧・詳細 | `user:read` |
-| ロール作成 | `user:create` |
-| ロール編集・削除 | `user:update` |
+SK 設計の根拠:
+- ISO 8601 はレキシカル順でソート可能 → 時系列クエリに最適
+- UUID サフィックスで同一ミリ秒のエントリも一意性を保証
+- カーソルベースページネーションに SK 値をそのまま使用可能
 
-理由: 機能仕様書に「テナント管理者の権限チェックは `user:*` 権限が必要」と明記。新しいリソース権限を追加すると DB マイグレーション（シードデータ変更）が必要になり、スコープを超える。
+### 3. ページネーション
 
-### 3. ロール識別子
+DynamoDB ネイティブのカーソルベースページネーション。
 
-BFF の URL パスでは UUID（文字列表現）を使用する。ロールにはワークフローやユーザーのような `display_number` がない。管理者 API なので UUID で十分。
+- `LastEvaluatedKey` を base64 エンコードしてクライアントに返す（opaque cursor）
+- クライアントは `cursor` パラメータで次ページを要求
+- `ScanIndexForward=false`（新しい順）、デフォルト 50 件/ページ
+- base64 エンコード/デコードはリポジトリ層に閉じ込め、BFF は opaque 文字列を透過
 
+`PaginatedResponse<T>` を shared クレートに新設する（既存の `ApiResponse<T>` はページネーション非対応）。
+
+### 4. 権限マッピング
+
+監査ログ閲覧は `user:read` 権限を使用する。新しい権限リソースは追加しない。
+
+理由: 機能仕様書で「テナント管理者のみ閲覧可能」と規定。tenant_admin ロールは全権限を持つ。`user:read` は tenant_admin のみが持つ権限であり、要件を満たす。新権限の追加はシードデータ変更を伴い、スコープを超える。
+
+### 5. InfraError の DynamoDB バリアント
+
+```rust
+#[error("DynamoDB エラー: {0}")]
+DynamoDb(String),
 ```
-GET    /api/v1/roles
-POST   /api/v1/roles
-GET    /api/v1/roles/{role_id}
-PATCH  /api/v1/roles/{role_id}
-DELETE /api/v1/roles/{role_id}
+
+理由: AWS SDK のエラー型は `SdkError<ServiceError<E>>` でジェネリクスが深い。`#[from]` 自動変換が困難なため、手動で String にマップする。
+
+### 6. 監査ログ記録の非ブロッキング
+
+記録失敗時はレスポンスに影響させず、`tracing::error!` でログ出力のみ。
+
+```rust
+if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+    tracing::error!("監査ログ記録に失敗: {}", e);
+}
 ```
 
-### 4. system_admin ロールの非表示
+理由: 監査ログの記録失敗がビジネスオペレーションを妨げるべきではない。
 
-機能仕様書: `system_admin` ロールはテナント管理画面に表示しない。リポジトリの SQL で除外する。
+### 7. detail フィールドの内容
 
-### 5. CoreServiceRoleClient サブトレイト
+アクション別に記録する内容:
 
-BFF クライアントの ISP パターンを踏襲し、新しい `CoreServiceRoleClient` サブトレイトを作成する。`CoreServiceClient` スーパートレイトに追加する。
+| アクション | detail の内容 |
+|-----------|-------------|
+| user.create | `{"email": "...", "name": "...", "role": "..."}` |
+| user.update | `{"name": "...", "role_name": "..."}` (リクエスト内容) |
+| user.deactivate | `{"user_name": "..."}` |
+| user.activate | `{"user_name": "..."}` |
+| role.create | `{"name": "...", "permissions": [...]}` |
+| role.update | `{"name": "...", "permissions": [...]}` (リクエスト内容) |
+| role.delete | `{"role_id": "..."}` |
+
+変更前後の差分（before/after）は BFF では取得コスト高のため、リクエスト内容のみ記録する。
 
 ## Phase 分解
 
-### Phase 1: Domain Model（Role 更新メソッド）
+### Phase 1: DynamoDB インフラ基盤
 
 #### 確認事項
-- パターン: `User::with_name()`, `User::with_status()` → `backend/crates/domain/src/user.rs`
+- ライブラリ: `aws-sdk-dynamodb::Client` の生成パターン → docs.rs で確認（プロジェクト内に既存使用なし）
+- ライブラリ: `aws-config` の `defaults(BehaviorVersion::latest())` → docs.rs で確認
+- パターン: Redis クライアント初期化 → `infra/src/redis.rs`
+- パターン: Docker Compose サービス定義 → `infra/docker/docker-compose.yaml`
+- パターン: InfraError バリアント追加 → `infra/src/error.rs`
+- パターン: CI サービス定義 → `.github/workflows/ci.yaml`
+- 確認: DynamoDB Local の健全性チェック方法（curl 利用可否）
 
 #### テストリスト
-- [ ] `Role::with_name()` で名前と updated_at が更新される
-- [ ] `Role::with_description()` で説明と updated_at が更新される
-- [ ] `Role::with_permissions()` で権限と updated_at が更新される
+- [ ] DynamoDB Local コンテナが `just dev-deps` で起動する
+- [ ] `create_dynamodb_client` がエンドポイントに接続できる
+- [ ] `ensure_audit_log_table` が初回呼び出しでテーブルを作成する
+- [ ] `ensure_audit_log_table` が既存テーブルに対して冪等に動作する（エラーにならない）
 
 #### 実装内容
-`Role` に不変更新メソッドを追加:
+
+**Docker Compose** (`infra/docker/docker-compose.yaml`):
+```yaml
+dynamodb:
+  image: amazon/dynamodb-local:latest
+  ports:
+    - "${DYNAMODB_PORT}:8000"
+  command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+  restart: unless-stopped
+```
+
+API テスト用 (`infra/docker/docker-compose.api-test.yaml`): ポート 18001 で追加。
+
+**Cargo 依存** (`backend/Cargo.toml` ワークスペース):
+```toml
+aws-config = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-dynamodb = "1"
+base64 = "0.22"
+```
+
+**DynamoDB モジュール** (`backend/crates/infra/src/dynamodb.rs`):
+```rust
+pub async fn create_dynamodb_client(endpoint: &str, region: &str) -> Client { ... }
+pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result<(), InfraError> { ... }
+```
+
+`ensure_audit_log_table` は DescribeTable で存在確認 → なければ CreateTable。冪等。
+
+**環境変数追加**:
+- `.env.template`: `DYNAMODB_PORT=18000`
+- `backend/.env.template`: `DYNAMODB_ENDPOINT=http://localhost:${DYNAMODB_PORT}`
+- `backend/.env.api-test`: `DYNAMODB_ENDPOINT=http://localhost:18001`
+
+**CI** (`.github/workflows/ci.yaml`): rust-integration ジョブの services に DynamoDB Local 追加。
+
+### Phase 2: ドメインモデル + リポジトリ
+
+#### 確認事項
+- 型: `TenantId::as_uuid()`, `UserId::as_uuid()` → `domain/src/tenant.rs`, `domain/src/user.rs`
+- パターン: ドメインモデルの Newtype + enum パターン → `domain/src/role.rs`
+- パターン: リポジトリトレイト定義 → `infra/src/repository/role_repository.rs`
+- パターン: 統合テストのセットアップ → `infra/tests/role_repository_test.rs`
+- ライブラリ: `aws_sdk_dynamodb::types::AttributeValue` の変換パターン → docs.rs
+- ライブラリ: `base64::engine::general_purpose::STANDARD` → docs.rs
+- 型: `ApiResponse<T>` の構造 → `shared/src/lib.rs`
+
+#### テストリスト
+- [ ] `AuditAction` の各バリアントが `.` 区切りの文字列に変換される（例: `UserCreate` → `"user.create"`）
+- [ ] `AuditAction` が文字列からパースできる
+- [ ] `AuditLog::new` が正しい TTL を計算する（created_at + 1年）
+- [ ] `record` が監査ログを DynamoDB に書き込める
+- [ ] `find_by_tenant` がテナント ID で検索でき、新しい順に返る
+- [ ] `find_by_tenant` がカーソルベースページネーションで正しく動作する
+- [ ] `find_by_tenant` が日付範囲フィルタで絞り込める
+- [ ] `find_by_tenant` が `actor_id` フィルタで絞り込める
+- [ ] `find_by_tenant` が `actions` フィルタ（複数選択）で絞り込める
+- [ ] `find_by_tenant` が `result` フィルタで絞り込める
+- [ ] 異なるテナントの監査ログが分離されている
+- [ ] `PaginatedResponse` の `next_cursor` が null のとき最後のページを示す
+
+#### 実装内容
+
+**ドメインモデル** (`backend/crates/domain/src/audit_log.rs`):
 
 ```rust
-pub fn with_name(&self, name: String, now: DateTime<Utc>) -> Self {
-    Self { name, updated_at: now, ..self.clone() }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuditAction {
+    UserCreate,
+    UserUpdate,
+    UserDeactivate,
+    UserActivate,
+    RoleCreate,
+    RoleUpdate,
+    RoleDelete,
 }
 
-pub fn with_description(&self, description: Option<String>, now: DateTime<Utc>) -> Self {
-    Self { description, updated_at: now, ..self.clone() }
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuditResult {
+    Success,
+    Failure,
 }
 
-pub fn with_permissions(&self, permissions: Vec<Permission>, now: DateTime<Utc>) -> Self {
-    Self { permissions, updated_at: now, ..self.clone() }
+pub struct AuditLog {
+    pub id: Uuid,
+    pub tenant_id: TenantId,
+    pub actor_id: UserId,
+    pub actor_name: String,
+    pub action: AuditAction,
+    pub result: AuditResult,
+    pub resource_type: String,
+    pub resource_id: String,
+    pub detail: Option<serde_json::Value>,
+    pub source_ip: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub ttl: i64, // epoch seconds
 }
 ```
 
-### Phase 2: Repository（RoleRepository）
+AuditAction の文字列変換は `Display` + `FromStr` を手動実装（`strum` は `"user.create"` のような `.` 区切りに対応が難しいため）。
 
-#### 確認事項
-- 型: `Role`, `RoleId`, `Permission` → `domain/src/role.rs`
-- パターン: 既存リポジトリ構造 → `infra/src/repository/user_repository.rs`
-- パターン: 統合テスト → `infra/tests/user_repository_test.rs`
-- ライブラリ: sqlx JSONB → Grep `permissions` in `user_repository.rs`
-- RLS: roles テーブルポリシー → `tenant_id = current OR tenant_id IS NULL`
-
-#### テストリスト
-- [ ] `find_all_by_tenant_with_user_count` でシステムロール + テナントロールが取得できる
-- [ ] `find_all_by_tenant_with_user_count` で system_admin が除外される
-- [ ] `find_all_by_tenant_with_user_count` でユーザー数が正しく集計される
-- [ ] `find_by_id` でロールが取得できる
-- [ ] `find_by_id` で存在しない ID は None を返す
-- [ ] `insert` でカスタムロールを作成できる
-- [ ] `insert` でテナント内の同名ロールは重複エラー
-- [ ] `update` でロール名・説明・権限を更新できる
-- [ ] `delete` でカスタムロールを削除できる
-- [ ] `count_users_with_role` でロールに割り当てられたユーザー数を返す
-
-#### 実装内容
-
-新しいファイル `backend/crates/infra/src/repository/role_repository.rs`:
+**PaginatedResponse** (`backend/crates/shared/src/lib.rs` に追加):
 
 ```rust
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaginatedResponse<T> {
+    pub data: Vec<T>,
+    pub next_cursor: Option<String>,
+}
+```
+
+**リポジトリ** (`backend/crates/infra/src/repository/audit_log_repository.rs`):
+
+```rust
+pub struct AuditLogFilter {
+    pub from: Option<DateTime<Utc>>,
+    pub to: Option<DateTime<Utc>>,
+    pub actor_id: Option<UserId>,
+    pub actions: Option<Vec<AuditAction>>,
+    pub result: Option<AuditResult>,
+}
+
+pub struct AuditLogPage {
+    pub items: Vec<AuditLog>,
+    pub next_cursor: Option<String>,
+}
+
 #[async_trait]
-pub trait RoleRepository: Send + Sync {
-    async fn find_all_by_tenant_with_user_count(
+pub trait AuditLogRepository: Send + Sync {
+    async fn record(&self, log: &AuditLog) -> Result<(), InfraError>;
+    async fn find_by_tenant(
         &self,
         tenant_id: &TenantId,
-    ) -> Result<Vec<(Role, i64)>, InfraError>;
-
-    async fn find_by_id(&self, id: &RoleId) -> Result<Option<Role>, InfraError>;
-
-    async fn insert(&self, role: &Role) -> Result<(), InfraError>;
-
-    async fn update(&self, role: &Role) -> Result<(), InfraError>;
-
-    async fn delete(&self, id: &RoleId) -> Result<(), InfraError>;
-
-    async fn count_users_with_role(&self, role_id: &RoleId) -> Result<i64, InfraError>;
+        cursor: Option<&str>,
+        limit: i32,
+        filter: &AuditLogFilter,
+    ) -> Result<AuditLogPage, InfraError>;
 }
 ```
 
-`find_all_by_tenant_with_user_count` の SQL:
+**DynamoDB 実装**: `DynamoDbAuditLogRepository`
+- SK 形式: `{ISO8601_timestamp}#{uuid}`
+- `record`: PutItem
+- `find_by_tenant`: Query with `ScanIndexForward=false`, FilterExpression for actor_id/actions/result
+- 日付範囲: KeyConditionExpression `sk BETWEEN :start AND :end`
+- カーソル: `LastEvaluatedKey` を base64 エンコード/デコード
 
-```sql
-SELECT r.id, r.tenant_id, r.name, r.description, r.permissions,
-       r.is_system, r.created_at, r.updated_at,
-       COUNT(ur.id) as user_count
-FROM roles r
-LEFT JOIN user_roles ur ON r.id = ur.role_id AND ur.tenant_id = $1
-WHERE (r.tenant_id = $1 OR r.is_system = true) AND r.name != 'system_admin'
-GROUP BY r.id
-ORDER BY r.is_system DESC, r.name ASC
-```
+**統合テスト** (`backend/crates/infra/tests/audit_log_repository_test.rs`):
+- テスト毎にランダムな `TenantId` を生成して分離（`#[sqlx::test]` のような自動ロールバックは不可）
+- DynamoDB Local（`http://localhost:18000`）に接続
 
-注: RLS が有効な環境では `app.tenant_id` 設定で自動フィルタされるが、テスト（superuser 接続）では WHERE 句が必要。明示的条件で二重防御する。
-
-テストファイル: `backend/crates/infra/tests/role_repository_test.rs`
-
-`repository.rs` に `pub mod role_repository;` と re-export を追加。`just sqlx-prepare` を実行。
-
-### Phase 3: Core Service（Usecase + Handler + Router）
+### Phase 3: BFF 監査ログ記録
 
 #### 確認事項
-- 型: `CoreError` バリアント → `core-service/src/error.rs`
-- パターン: `UserUseCaseImpl` → `core-service/src/usecase/user.rs`
-- パターン: Core Service ハンドラ → `core-service/src/handler/auth.rs`
-- パターン: Core Service ルーター → `core-service/src/main.rs`
+- 型: `UserState`, `RoleState` のフィールド構成 → `bff/src/handler/user.rs`, `bff/src/handler/role.rs`
+- パターン: BFF main.rs の依存関係初期化 → `bff/src/main.rs`
+- パターン: `BffConfig::from_env()` → `bff/src/config.rs`
+- パターン: BFF 統合テストスタブ → `bff/tests/auth_integration_test.rs`
+- 型: `SessionData` のアクセサ → `infra/src/session.rs`
 
 #### テストリスト
-- [ ] `list_roles` でロール一覧が返る
-- [ ] `get_role` で存在するロールが返る
-- [ ] `get_role` で存在しないロールは 404
-- [ ] `create_role` でカスタムロールが作成される
-- [ ] `create_role` で名前重複は 409
-- [ ] `create_role` で権限が空の場合は 400
-- [ ] `update_role` でカスタムロールが更新される
-- [ ] `update_role` でシステムロールは 400
-- [ ] `update_role` で存在しないロールは 404
-- [ ] `delete_role` でカスタムロールが削除される
-- [ ] `delete_role` でシステムロールは 400
-- [ ] `delete_role` でユーザー割り当てありは 409
-- [ ] `delete_role` で存在しないロールは 404
+- [ ] `create_user` 成功時に `user.create` の監査ログが記録される
+- [ ] `update_user` 成功時に `user.update` の監査ログが記録される
+- [ ] `update_user_status`（inactive）で `user.deactivate` が記録される
+- [ ] `update_user_status`（active）で `user.activate` が記録される
+- [ ] `create_role` 成功時に `role.create` の監査ログが記録される
+- [ ] `update_role` 成功時に `role.update` の監査ログが記録される
+- [ ] `delete_role` 成功時に `role.delete` の監査ログが記録される
+- [ ] 監査ログ記録失敗時にレスポンスが正常に返される（非ブロッキング）
 
 #### 実装内容
 
-**Usecase**: `backend/apps/core-service/src/usecase/role.rs`
+**BffConfig** (`bff/src/config.rs`): `dynamodb_endpoint`, `aws_region` フィールド追加
 
+**UserState** に `audit_log_repository: Arc<dyn AuditLogRepository>` 追加:
 ```rust
-pub struct RoleUseCaseImpl {
-    role_repository: Arc<dyn RoleRepository>,
-    clock: Arc<dyn Clock>,
-}
-
-pub struct CreateRoleInput {
-    pub tenant_id: TenantId,
-    pub name: String,
-    pub description: Option<String>,
-    pub permissions: Vec<String>,
-}
-
-pub struct UpdateRoleInput {
-    pub role_id: RoleId,
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub permissions: Option<Vec<String>>,
+pub struct UserState {
+    pub core_service_client: Arc<dyn CoreServiceUserClient>,
+    pub auth_service_client: Arc<dyn AuthServiceClient>,
+    pub session_manager: Arc<dyn SessionManager>,
+    pub audit_log_repository: Arc<dyn AuditLogRepository>, // NEW
 }
 ```
 
-ビジネスルール:
-- 作成: ロール名テナント内一意チェック（`insert` の DB 制約 + アプリ層エラーハンドリング）
-- 作成: 権限が空でないことを検証
-- 編集: システムロールは編集拒否（`is_system` チェック）
-- 削除: システムロールは削除拒否（`is_system` チェック）
-- 削除: ユーザー割り当てチェック（`count_users_with_role`）
+**RoleState** に同様に追加。
 
-**Handler**: `backend/apps/core-service/src/handler/role.rs` を新規作成
-
+**各ハンドラの成功パスに記録コードを挿入**（例: create_user）:
 ```rust
-pub struct RoleState {
-    pub role_repository: Arc<dyn RoleRepository>,
-    pub usecase: RoleUseCaseImpl,
+Ok(core_response) => {
+    let user_data = core_response.data;
+
+    // 監査ログ記録
+    let audit_log = AuditLog::new(
+        *session_data.tenant_id(),
+        *session_data.user_id(),
+        session_data.name().to_string(),
+        AuditAction::UserCreate,
+        "user",
+        user_data.id.to_string(),
+        Some(serde_json::json!({
+            "email": &user_data.email,
+            "name": &user_data.name,
+            "role": &user_data.role,
+        })),
+        None, // source_ip
+    );
+    if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+        tracing::error!("監査ログ記録に失敗: {}", e);
+    }
+
+    // レスポンス返却（既存コード）
+    ...
 }
 ```
 
-ハンドラ: `list_roles`, `get_role`, `create_role`, `update_role`, `delete_role`
+**main.rs**: DynamoDB クライアント初期化 + `audit_log_repository` の生成 + 各 State への注入
 
-**Router**: `backend/apps/core-service/src/main.rs` に追加
+**テストスタブ**: `auth_integration_test.rs` の `StubCoreServiceClient` に `AuditLogRepository` スタブを追加
 
-```rust
-.route("/internal/roles", get(list_roles).post(create_role))
-.route("/internal/roles/{role_id}", get(get_role).patch(update_role).delete(delete_role))
-.with_state(role_state)
-```
-
-### Phase 4: BFF Client（CoreServiceRoleClient）
+### Phase 4: BFF 監査ログ閲覧 API + OpenAPI
 
 #### 確認事項
-- パターン: `CoreServiceUserClient` → `bff/src/client/core_service/user_client.rs`
-- パターン: `CoreServiceClient` スーパートレイト → `bff/src/client/core_service/client_impl.rs`
-- パターン: `handle_response` → `bff/src/client/core_service/response.rs`
-- パターン: DTO 型 → `bff/src/client/core_service/types.rs`
+- パターン: ルーターの認可ミドルウェア適用 → `bff/src/main.rs` の `user_read_authz` + `merge`
+- パターン: OpenAPI エンドポイント定義 → `openapi/openapi.yaml` の `/api/v1/roles`
+- パターン: ハンドラモジュールの re-export → `bff/src/handler.rs`
+- 型: `AuthzState` の構成 → `bff/src/middleware.rs`
 
 #### テストリスト
-確認事項: なし（HTTP クライアントの実装パターン踏襲、既存テストのスタブ更新のみ）
+- [ ] `GET /api/v1/audit-logs` が監査ログ一覧を正しい JSON 形式で返す
+- [ ] `limit` パラメータが結果数を制限する（デフォルト 50）
+- [ ] `cursor` パラメータで次ページを取得できる
+- [ ] `from`/`to` パラメータで日付範囲フィルタが動作する
+- [ ] `actor_id` フィルタが動作する
+- [ ] `action` フィルタが動作する（カンマ区切りで複数指定可）
+- [ ] `result` フィルタが動作する
+- [ ] 異なるテナントの監査ログが返されない
+- [ ] `user:read` 権限なしで 403 が返る
+- [ ] OpenAPI 仕様が redocly lint を通過する
 
 #### 実装内容
 
-**新規ファイル**: `backend/apps/bff/src/client/core_service/role_client.rs`
+**ハンドラ** (`backend/apps/bff/src/handler/audit_log.rs`):
 
 ```rust
-#[async_trait]
-pub trait CoreServiceRoleClient: Send + Sync {
-    async fn list_roles(&self, tenant_id: Uuid)
-        -> Result<ApiResponse<Vec<RoleItemDto>>, CoreServiceError>;
-
-    async fn get_role(&self, role_id: Uuid, tenant_id: Uuid)
-        -> Result<RoleDetailDto, CoreServiceError>;
-
-    async fn create_role(&self, req: CreateRoleCoreRequest)
-        -> Result<RoleDetailDto, CoreServiceError>;
-
-    async fn update_role(&self, role_id: Uuid, req: UpdateRoleCoreRequest)
-        -> Result<RoleDetailDto, CoreServiceError>;
-
-    async fn delete_role(&self, role_id: Uuid, tenant_id: Uuid)
-        -> Result<(), CoreServiceError>;
-}
-```
-
-**DTO 型（types.rs に追加）**:
-
-```rust
-pub struct RoleItemDto {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub permissions: Vec<String>,
-    pub is_system: bool,
-    pub user_count: i64,
-}
-
-pub struct RoleDetailDto {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub permissions: Vec<String>,
-    pub is_system: bool,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-pub struct CreateRoleCoreRequest {
-    pub tenant_id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub permissions: Vec<String>,
-}
-
-pub struct UpdateRoleCoreRequest {
-    pub name: Option<String>,
-    pub description: Option<String>,
-    pub permissions: Option<Vec<String>>,
-}
-```
-
-**CoreServiceClient スーパートレイトに追加**:
-
-```rust
-pub trait CoreServiceClient:
-    CoreServiceUserClient + CoreServiceWorkflowClient + CoreServiceTaskClient + CoreServiceRoleClient
-{ }
-```
-
-**エラー型（error.rs に追加）**: `RoleNotFound` バリアント
-
-**テストスタブ更新**: BFF ハンドラテスト、統合テストの `CoreServiceRoleClient` スタブを追加
-
-### Phase 5: BFF Handler + Router + OpenAPI
-
-#### 確認事項
-- パターン: BFF `UserState` → `bff/src/handler/user.rs`
-- パターン: BFF ルーター → `bff/src/main.rs`
-- パターン: OpenAPI 仕様 → `openapi/openapi.yaml`
-
-#### テストリスト
-確認事項: BFF ハンドラテストは既存パターンを踏襲（認証テストが中心、ビジネスロジックは Core Service 側でテスト済み）
-
-#### 実装内容
-
-**新規ファイル**: `backend/apps/bff/src/handler/role.rs`
-
-```rust
-pub struct RoleState {
-    pub core_service_client: Arc<dyn CoreServiceRoleClient>,
+pub struct AuditLogState {
+    pub audit_log_repository: Arc<dyn AuditLogRepository>,
     pub session_manager: Arc<dyn SessionManager>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct ListAuditLogsQuery {
+    pub cursor: Option<String>,
+    pub limit: Option<i32>,
+    pub from: Option<String>,   // ISO 8601
+    pub to: Option<String>,     // ISO 8601
+    pub actor_id: Option<Uuid>,
+    pub action: Option<String>, // カンマ区切り
+    pub result: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AuditLogItemData {
+    pub id: String,
+    pub actor_id: String,
+    pub actor_name: String,
+    pub action: String,
+    pub result: String,
+    pub resource_type: String,
+    pub resource_id: String,
+    pub detail: Option<serde_json::Value>,
+    pub source_ip: Option<String>,
+    pub created_at: String,
+}
 ```
 
-ハンドラ: `list_roles`, `get_role`, `create_role`, `update_role`, `delete_role`
-
-各ハンドラのフロー: セッション取得 → テナント ID 抽出 → Core Service 呼び出し → BFF レスポンス変換
-
-**Router（main.rs）**:
-
+**ルーター** (`bff/src/main.rs`):
 ```rust
-// RoleState 初期化
-let role_state = Arc::new(RoleState {
-    core_service_client: core_service_client.clone(),
+let audit_log_state = Arc::new(AuditLogState {
+    audit_log_repository: audit_log_repository.clone(),
     session_manager: session_manager.clone(),
 });
 
-// 権限別ルートグループ
+let audit_read_authz = AuthzState {
+    session_manager: session_manager.clone(),
+    required_permission: "user:read".to_string(),
+};
+
 .merge(
     Router::new()
-        .route("/api/v1/roles", get(list_roles))
-        .route("/api/v1/roles/{role_id}", get(get_role))
-        .layer(from_fn_with_state(role_read_authz, require_permission))
-        .with_state(role_state.clone()),
-)
-.merge(
-    Router::new()
-        .route("/api/v1/roles", post(create_role))
-        .layer(from_fn_with_state(role_create_authz, require_permission))
-        .with_state(role_state.clone()),
-)
-.merge(
-    Router::new()
-        .route("/api/v1/roles/{role_id}", patch(update_role).delete(delete_role))
-        .layer(from_fn_with_state(role_update_authz, require_permission))
-        .with_state(role_state),
+        .route("/api/v1/audit-logs", get(list_audit_logs))
+        .layer(from_fn_with_state(audit_read_authz, require_permission))
+        .with_state(audit_log_state),
 )
 ```
 
-注: delete と update は同じ `user:update` 権限を使用するため、1つの merge ブロックにまとめる。
+**OpenAPI** (`openapi/openapi.yaml`):
+- tags に `audit-logs` 追加
+- `GET /api/v1/audit-logs` エンドポイント（クエリパラメータ: cursor, limit, from, to, actor_id, action, result）
+- `AuditLogListResponse`（`PaginatedResponse<AuditLogItem>` に対応）スキーマ追加
+- `AuditLogItem` スキーマ追加
 
-**OpenAPI 仕様更新**: `openapi/openapi.yaml` にロール管理エンドポイント 5 個を追加
+## 暫定値・ワークアラウンドの影響パス
 
-**handler.rs re-export 更新**: `RoleState` と各ハンドラを re-export
+### DynamoDB Local の `-inMemory` モード
+
+| パス | 影響 | 判定 |
+|------|------|------|
+| ユニットテスト（Mock） | DynamoDB 不使用 | OK |
+| 統合テスト | テスト毎にランダム tenant_id で分離 | OK |
+| API テスト | `-inMemory` でコンテナ再起動時にリセット | OK |
+| 開発サーバー | コンテナ再起動でデータ消失 | 許容（監査ログは閲覧確認用） |
+
+### ポート番号
+
+| 環境 | DynamoDB ポート | 設定先 |
+|------|----------------|--------|
+| 開発 | 18000 | .env.template, docker-compose.yaml |
+| API テスト | 18001 | .env.api-test, docker-compose.api-test.yaml |
+| CI | services で直接起動（8000） | ci.yaml |
 
 ## 検証方法
 
 1. 各 Phase 完了後: `cargo test --package <対象パッケージ>`
-2. Phase 2 完了後: `just sqlx-prepare` + `just test-rust-integration`
-3. 全 Phase 完了後: `just check-all`（リント + テスト + API テスト）
-4. OpenAPI 仕様: `redocly lint` が既存の warning 以外に新しいエラーを出さないこと
+2. Phase 1 完了後: `just dev-deps` で DynamoDB Local が起動することを確認
+3. Phase 2 完了後: `just test-rust-integration` で DynamoDB 統合テスト通過
+4. Phase 4 完了後: `just check-all`（リント + テスト + API テスト）
+5. OpenAPI 仕様: `redocly lint` が既存 warning 以外にエラーを出さないこと
 
 ## ブラッシュアップループの記録
 
 | ループ | 検出したギャップ | 観点 | 対応 |
 |-------|----------------|------|------|
-| 1回目 | `system_admin` ロールの非表示条件がリポジトリ SQL に必要 | 不完全なパス | `find_all_by_tenant_with_user_count` の WHERE 句に `r.name != 'system_admin'` を追加 |
-| 1回目 | ユーザーロール割り当て API が Story #428 で実装済みか | 既存手段の見落とし | `UpdateUserInput.role_name` + `replace_user_roles` で対応済み。スコープから除外を明記 |
-| 2回目 | `CoreServiceClient` スーパートレイトへの `CoreServiceRoleClient` 追加が必要 | 未定義 | Phase 4 に明記。ブランケット impl の修正含む |
-| 2回目 | DELETE と PATCH を同じ権限グループにまとめられる | シンプルさ | Phase 5 のルーター設計で `patch(update_role).delete(delete_role)` を1つのルートに集約 |
-| 3回目 | Role CRUD テスト用のフィクスチャ（テナント + ロール）の作成方法 | テストパターン | `#[sqlx::test(migrations)]` でシードデータ投入。テスト内でカスタムロール INSERT |
+| 1回目 | `PaginatedResponse` が `ApiResponse` と別型として必要 | 未定義 | shared クレートに `PaginatedResponse<T>` を新設 |
+| 2回目 | 統合テストでの DynamoDB テスト分離戦略が未定義 | 不完全なパス | テスト毎にランダム `TenantId` を生成する方式を採用 |
+| 3回目 | API テスト用 DynamoDB ポートが開発環境と衝突する可能性 | 競合・エッジケース | API テスト用は別ポート 18001 で DynamoDB を追加 |
+| 4回目 | テナント退会時の DynamoDB データ削除が未設計 | 不完全なパス | Issue 化して追跡。TTL で自動削除されるため即時リスクは低い |
+| 5回目 | `source_ip` 取得の ConnectInfo が `axum::serve` 変更を要求 | 技術的前提 | 先送り、現時点では None を記録 |
+| 6回目 | `base64` 依存の配置先が曖昧 | 曖昧 | エンコード/デコードはリポジトリ層（infra クレート）に閉じ込め |
+| 7回目 | CI の rust-integration ジョブに DynamoDB Local サービス追加が必要 | 未定義 | ci.yaml の services に追加 |
+| 8回目 | `AuditLogFilter` に日付範囲フィルタが必要（機能仕様書の「期間」フィルタ） | 既存手段の見落とし | `from`, `to` フィールドを `AuditLogFilter` に追加。SK の KeyConditionExpression で実現 |
+| 9回目 | `detail` フィールドの型: String vs serde_json::Value | シンプルさ | ドメインモデルでは `serde_json::Value`（構造化データ）、DynamoDB には JSON 文字列で格納 |
 
 ## 収束確認（設計・計画）
 
 | # | 観点 | 理想状態（To-Be） | 判定 | 確認内容 |
 |---|------|------------------|------|---------|
-| 1 | 網羅性 | 探索で発見された全対象が計画に含まれている | OK | Issue #429 の全完了基準をカバー。ユーザーロール割り当ては #428 で実装済みを確認 |
-| 2 | 曖昧さ排除 | 不確定な記述がゼロ | OK | 各 Phase のファイルパス、型名、SQL を具体的に記載 |
-| 3 | 設計判断の完結性 | 全ての差異に判断が記載されている | OK | RoleRepository 分離、権限マッピング、ロール識別子、system_admin 非表示の4つの判断を記載 |
-| 4 | スコープ境界 | 対象と対象外が両方明記されている | OK | 対象外にユーザーロール割り当て API とフロントエンドを明記 |
-| 5 | 技術的前提 | コードに現れない前提が考慮されている | OK | RLS ポリシー（roles テーブル: tenant_id OR NULL）、UNIQUE 制約（tenant_id, name）を確認 |
-| 6 | 既存ドキュメント整合 | 既存ドキュメントと矛盾がない | OK | 機能仕様書 4.6-4.9、権限マトリクス（セクション 5）と整合 |
+| 1 | 網羅性 | 探索で発見された全対象が計画に含まれている | OK | 完了基準5項目すべてに対応する Phase が存在。Docker/SDK/ドメイン/リポジトリ/BFF記録/BFF閲覧/OpenAPI を網羅 |
+| 2 | 曖昧さ排除 | 不確定な記述がゼロ | OK | 各 Phase の変更ファイル・型定義・関数シグネチャが具体的。source_ip は「None」、失敗ログは「対象外」と明示 |
+| 3 | 設計判断の完結性 | 全ての差異に判断が記載されている | OK | 記録場所・テーブル設計・ページネーション・権限・エラー型・非ブロッキング・detail 内容の7判断を記載 |
+| 4 | スコープ境界 | 対象と対象外が両方明記されている | OK | 対象外セクションに auth/workflow/failure/source_ip/GSI/退会削除を明記 |
+| 5 | 技術的前提 | コードに現れない前提が考慮されている | OK | DynamoDB Local の `-inMemory` 動作、ConnectInfo の axum::serve 変更、AWS SDK エラー型の複雑さ、base64 カーソル層を確認 |
+| 6 | 既存ドキュメント整合 | 既存ドキュメントと矛盾がない | OK | 機能仕様書 03_監査ログ、data-store.md のテナント退会チェック、redis.rs / repository パターンとの一貫性を確認 |
