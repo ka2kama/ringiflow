@@ -375,11 +375,32 @@ coverage-summary:
 # 全チェック
 # =============================================================================
 
-# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、構造品質）
-check: lint test test-rust-integration build-elm sqlx-check check-file-size check-duplicates
+# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、OpenAPI 同期、構造品質）
+check: lint test test-rust-integration build-elm sqlx-check openapi-check check-file-size check-duplicates
 
 # プッシュ前の全チェック（軽量チェック + セキュリティ + API テスト + E2E テスト）
 check-all: check audit test-api test-e2e
+
+# OpenAPI 仕様書を utoipa から生成して openapi/openapi.yaml に出力
+openapi-generate:
+    cd backend && cargo run --bin generate-openapi -p ringiflow-bff 2>/dev/null > ../openapi/openapi.yaml
+    @echo "✓ openapi/openapi.yaml を生成しました"
+
+# OpenAPI 仕様書の同期チェック（utoipa 生成結果と openapi/openapi.yaml を比較）
+openapi-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    temp=$(mktemp)
+    trap 'rm -f "$temp"' EXIT
+    cd backend && cargo run --bin generate-openapi -p ringiflow-bff > "$temp" 2>/dev/null
+    cd ..
+    if ! diff -q openapi/openapi.yaml "$temp" > /dev/null 2>&1; then
+        echo "ERROR: openapi/openapi.yaml が utoipa の定義と同期していません"
+        echo "  'just openapi-generate' を実行して更新してください"
+        diff --unified openapi/openapi.yaml "$temp" || true
+        exit 1
+    fi
+    echo "✓ openapi/openapi.yaml は utoipa の定義と同期しています"
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック
