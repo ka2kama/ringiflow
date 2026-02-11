@@ -102,6 +102,32 @@ impl Permission {
    pub fn as_str(&self) -> &str {
       &self.0
    }
+
+   /// この権限が、要求された権限を満たすか判定する
+   ///
+   /// ## マッチングルール
+   ///
+   /// | 保持権限 | 要求権限 | 結果 |
+   /// |---------|---------|------|
+   /// | `*` | 任意 | true（全権限） |
+   /// | `user:*` | `user:read` | true（リソース内の全アクション） |
+   /// | `user:read` | `user:read` | true（完全一致） |
+   /// | `user:read` | `user:write` | false |
+   /// | `user:*` | `task:read` | false（リソース不一致） |
+   pub fn satisfies(&self, required: &Permission) -> bool {
+      let held = self.as_str();
+      let req = required.as_str();
+
+      if held == "*" {
+         return true;
+      }
+
+      if let Some(resource) = held.strip_suffix(":*") {
+         return req.starts_with(&format!("{resource}:"));
+      }
+
+      held == req
+   }
 }
 
 /// ロールエンティティ
@@ -371,5 +397,73 @@ mod tests {
          now,
       );
       assert_eq!(system_role, expected);
+   }
+
+   // Permission::satisfies のテスト
+
+   #[rstest]
+   #[case("*", "user:read")]
+   #[case("*", "workflow:create")]
+   #[case("*", "task:delete")]
+   fn test_全権限ワイルドカードは任意の権限を満たす(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:*", "user:read")]
+   #[case("user:*", "user:create")]
+   #[case("workflow:*", "workflow:approve")]
+   fn test_リソースワイルドカードは同一リソースの任意のアクションを満たす(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:read", "user:read")]
+   #[case("workflow:create", "workflow:create")]
+   fn test_完全一致は権限を満たす(#[case] held: &str, #[case] required: &str) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:*", "task:read")]
+   #[case("workflow:*", "user:create")]
+   fn test_リソースワイルドカードは異なるリソースを満たさない(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(!held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:read", "user:write")]
+   #[case("workflow:read", "workflow:create")]
+   fn test_異なるアクションは権限を満たさない(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(!held.satisfies(&required));
+   }
+
+   #[rstest]
+   fn test_具体的な権限は全権限ワイルドカードを満たさない() {
+      let held = Permission::new("user:read");
+      let required = Permission::new("*");
+      assert!(!held.satisfies(&required));
    }
 }

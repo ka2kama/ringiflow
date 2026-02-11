@@ -83,7 +83,7 @@ use handler::{
    reject_step,
    submit_workflow,
 };
-use middleware::{CsrfState, csrf_middleware};
+use middleware::{AuthzState, CsrfState, csrf_middleware, require_permission};
 #[cfg(feature = "dev-auth")]
 use ringiflow_bff::dev_auth;
 use ringiflow_bff::{client, handler, middleware};
@@ -172,8 +172,14 @@ async fn main() -> anyhow::Result<()> {
    // WorkflowState は全サブトレイト（CoreServiceClient）が必要
    let workflow_state = Arc::new(WorkflowState {
       core_service_client,
-      session_manager,
+      session_manager: session_manager.clone(),
    });
+
+   // 認可ミドルウェア用の状態（管理者 API に適用）
+   let user_admin_authz = AuthzState {
+      session_manager,
+      required_permission: "user:read".to_string(),
+   };
 
    // ルーター構築
    // TraceLayer により、すべての HTTP リクエストがトレーシングされる
@@ -218,11 +224,16 @@ async fn main() -> anyhow::Result<()> {
          "/api/v1/workflows/{display_number}/tasks/{step_display_number}",
          get(get_task_by_display_numbers),
       )
-      // ユーザー API
-      .route("/api/v1/users", get(list_users))
       // ダッシュボード API
       .route("/api/v1/dashboard/stats", get(get_dashboard_stats))
-      .with_state(workflow_state)
+      .with_state(workflow_state.clone())
+      // 管理者 API（認可ミドルウェア適用）
+      .merge(
+         Router::new()
+            .route("/api/v1/users", get(list_users))
+            .layer(from_fn_with_state(user_admin_authz, require_permission))
+            .with_state(workflow_state),
+      )
       .layer(from_fn_with_state(csrf_state, csrf_middleware))
       .layer(TraceLayer::new_for_http());
 

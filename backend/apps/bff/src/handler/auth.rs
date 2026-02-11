@@ -180,13 +180,14 @@ pub async fn login(
                   }
                };
 
-               // Step 4: セッションを作成
+               // Step 4: セッションを作成（ロールと権限をキャッシュ）
                let session_data = SessionData::new(
                   ringiflow_domain::user::UserId::from_uuid(user.id),
                   TenantId::from_uuid(user.tenant_id),
                   user.email.clone(),
                   user.name.clone(),
                   user_with_roles.data.roles.clone(),
+                  user_with_roles.data.permissions.clone(),
                );
 
                match state.session_manager.create(&session_data).await {
@@ -569,6 +570,7 @@ mod tests {
                "user@example.com".to_string(),
                "Test User".to_string(),
                vec!["user".to_string()],
+               vec!["workflow:read".to_string()],
             )),
          }
       }

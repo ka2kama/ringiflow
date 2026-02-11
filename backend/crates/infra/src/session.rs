@@ -42,6 +42,8 @@ pub struct SessionData {
    email: String,
    name: String,
    roles: Vec<String>,
+   #[serde(default)]
+   permissions: Vec<String>,
    created_at: DateTime<Utc>,
    last_accessed_at: DateTime<Utc>,
 }
@@ -56,6 +58,7 @@ impl SessionData {
       email: String,
       name: String,
       roles: Vec<String>,
+      permissions: Vec<String>,
    ) -> Self {
       let now = Utc::now();
       Self {
@@ -64,6 +67,7 @@ impl SessionData {
          email,
          name,
          roles,
+         permissions,
          created_at: now,
          last_accessed_at: now,
       }
@@ -87,6 +91,10 @@ impl SessionData {
 
    pub fn roles(&self) -> &[String] {
       &self.roles
+   }
+
+   pub fn permissions(&self) -> &[String] {
+      &self.permissions
    }
 
    pub fn created_at(&self) -> DateTime<Utc> {
@@ -422,5 +430,44 @@ impl SessionManager for RedisSessionManager {
       }
 
       Ok(())
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use super::*;
+
+   #[test]
+   fn test_セッションデータにpermissionsが保存される() {
+      let session = SessionData::new(
+         UserId::from_uuid(uuid::Uuid::nil()),
+         TenantId::from_uuid(uuid::Uuid::nil()),
+         "test@example.com".to_string(),
+         "Test User".to_string(),
+         vec!["user".to_string()],
+         vec!["workflow:read".to_string(), "task:read".to_string()],
+      );
+
+      assert_eq!(
+         session.permissions(),
+         &["workflow:read".to_string(), "task:read".to_string()]
+      );
+   }
+
+   #[test]
+   fn test_permissionsフィールドなしのjsonからデシリアライズすると空vecになる() {
+      // permissions フィールドがない旧形式の JSON
+      let json = r#"{
+         "user_id": "00000000-0000-0000-0000-000000000000",
+         "tenant_id": "00000000-0000-0000-0000-000000000000",
+         "email": "test@example.com",
+         "name": "Test User",
+         "roles": ["user"],
+         "created_at": "2024-01-01T00:00:00Z",
+         "last_accessed_at": "2024-01-01T00:00:00Z"
+      }"#;
+
+      let session: SessionData = serde_json::from_str(json).unwrap();
+      assert!(session.permissions().is_empty());
    }
 }

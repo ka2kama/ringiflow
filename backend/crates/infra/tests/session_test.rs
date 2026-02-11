@@ -34,6 +34,7 @@ fn test_session_data(tenant_id: &TenantId, user_id: &UserId) -> SessionData {
       "test@example.com".to_string(),
       "Test User".to_string(),
       vec!["user".to_string()],
+      vec!["workflow:read".to_string()],
    )
 }
 
