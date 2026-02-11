@@ -7,6 +7,7 @@ use uuid::Uuid;
 use super::{
    client_impl::CoreServiceClientImpl,
    error::CoreServiceError,
+   response::handle_response,
    types::{UserItemDto, UserResponse, UserWithPermissionsData},
 };
 
@@ -73,20 +74,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
       let url = format!("{}/internal/users?tenant_id={}", self.base_url, tenant_id);
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<Vec<UserItemDto>>>().await?;
-            Ok(body)
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, None).await
    }
 
    async fn get_user_by_email(
@@ -102,21 +90,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<UserResponse>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::UserNotFound),
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::UserNotFound)).await
    }
 
    async fn get_user(
@@ -126,22 +100,6 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
       let url = format!("{}/internal/users/{}", self.base_url, user_id);
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response
-               .json::<ApiResponse<UserWithPermissionsData>>()
-               .await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::UserNotFound),
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::UserNotFound)).await
    }
 }

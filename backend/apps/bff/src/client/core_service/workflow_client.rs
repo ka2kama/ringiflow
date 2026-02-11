@@ -7,6 +7,7 @@ use uuid::Uuid;
 use super::{
    client_impl::CoreServiceClientImpl,
    error::CoreServiceError,
+   response::handle_response,
    types::{
       ApproveRejectRequest,
       CreateWorkflowRequest,
@@ -139,25 +140,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       let url = format!("{}/internal/workflows", self.base_url);
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowDefinitionNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
    }
 
    async fn submit_workflow(
@@ -171,25 +154,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
    }
 
    async fn list_workflow_definitions(
@@ -202,22 +167,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response
-               .json::<ApiResponse<Vec<WorkflowDefinitionDto>>>()
-               .await?;
-            Ok(body)
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, None).await
    }
 
    async fn get_workflow_definition(
@@ -231,23 +181,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response
-               .json::<ApiResponse<WorkflowDefinitionDto>>()
-               .await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowDefinitionNotFound),
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
    }
 
    async fn list_my_workflows(
@@ -261,22 +195,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response
-               .json::<ApiResponse<Vec<WorkflowInstanceDto>>>()
-               .await?;
-            Ok(body)
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, None).await
    }
 
    async fn get_workflow(
@@ -290,21 +209,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
    }
 
    async fn approve_step(
@@ -319,33 +224,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         reqwest::StatusCode::FORBIDDEN => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Forbidden(body))
-         }
-         reqwest::StatusCode::CONFLICT => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Conflict(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
    }
 
    async fn reject_step(
@@ -360,33 +239,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         reqwest::StatusCode::FORBIDDEN => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Forbidden(body))
-         }
-         reqwest::StatusCode::CONFLICT => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Conflict(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
    }
 
    async fn get_workflow_by_display_number(
@@ -400,25 +253,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
    }
 
    async fn submit_workflow_by_display_number(
@@ -432,25 +267,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::WorkflowInstanceNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
    }
 
    async fn approve_step_by_display_number(
@@ -465,33 +282,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         reqwest::StatusCode::FORBIDDEN => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Forbidden(body))
-         }
-         reqwest::StatusCode::CONFLICT => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Conflict(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
    }
 
    async fn reject_step_by_display_number(
@@ -506,32 +297,6 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
       );
 
       let response = self.client.post(&url).json(&req).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<WorkflowInstanceDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
-         reqwest::StatusCode::BAD_REQUEST => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::ValidationError(body))
-         }
-         reqwest::StatusCode::FORBIDDEN => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Forbidden(body))
-         }
-         reqwest::StatusCode::CONFLICT => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Conflict(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
    }
 }
