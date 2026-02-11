@@ -457,26 +457,33 @@ Insight ブロックには、日本語の解説に加えて 1〜2 文の英語�
 → 詳細: [手順書: Issue 駆動開発](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md)
 
 1. Issue を確認または作成し、前提を精査する
-2. Issue 番号を含むブランチを作成（例: `feature/34-user-auth`）
+2. Story 番号を含むブランチを作成（例: `feature/34-user-auth`）
 3. 実装（[TDD](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md)）
-4. PR を作成し `Closes #34` で紐づけ
-5. マージで Issue 自動クローズ
+4. PR を作成し `Closes #34` で紐づけ（Story 単位）
+5. マージで Story Issue 自動クローズ
 
 補足:
 - 機能実装前に対応 Issue の存在を確認
-- ブランチ名には Issue 番号を含める
+- ブランチ名には Story 番号を含める（Epic 番号ではない）
 - Phase やタスク完了時は Issue のチェックボックスを更新
 
 ## Git 操作ルール
 
-### ブランチ戦略
+### ブランチ戦略（GitHub Flow + Story-per-PR）
+
+→ 意思決定: [ADR-046](docs/05_ADR/046_Story-per-PRブランチ戦略.md)
+
+各 Story を個別 PR で main にマージする。Integration branch（develop 等）は使用しない。
 
 ```bash
-git checkout -b feature/機能名   # 新機能
-git checkout -b fix/バグ名       # バグ修正
+git checkout -b feature/Story番号-機能名   # 新機能（Story 単位）
+git checkout -b fix/Issue番号-バグ名       # バグ修正
 ```
 
-**禁止:** main ブランチで直接作業・コミット
+**禁止:**
+
+- main ブランチで直接作業・コミット
+- Epic 番号でブランチを作成すること（ブランチは Story 単位）
 
 ### コミットメッセージ
 
@@ -511,17 +518,16 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 **PR 本文の形式:**
 
 - 本文の先頭に `## Issue` セクションを配置:
-  - Issue をクローズする場合: `Closes #123`
+  - Story PR: `Closes #<Story番号>` で自動クローズ
   - Issue を参照するだけの場合: `Related to #123`
   - Issue がない場合: `なし`
+- Epic に対して `Closes` は使用しない（Epic は全サブ Issue 完了後に手動クローズ）
 - AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
 **Test plan の記載について:**
 
-- **段階的な実装（Phase 1-N）の場合**: Test plan は最終 Phase（API 実装完了後）に記載する
-  - 各 Phase では `just check-all` が通ることのみ確認
-  - 途中の Phase では「最終 Phase 完了後に確認」と記載
 - **単一 PR で完結する場合**: 実装したテストと手動テストの手順を記載
+- **Epic の Story PR の場合**: 各 Story PR に、その Story のテスト手順を記載
 
 ### PR 完了フロー
 

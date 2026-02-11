@@ -9,12 +9,10 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
-      - develop
 
 jobs:
   # 変更検出: 変更されたファイルを検出し、必要なジョブのみを実行
