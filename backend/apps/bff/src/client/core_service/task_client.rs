@@ -7,6 +7,7 @@ use uuid::Uuid;
 use super::{
    client_impl::CoreServiceClientImpl,
    error::CoreServiceError,
+   response::handle_response,
    types::{DashboardStatsDto, TaskDetailDto, TaskItemDto},
 };
 
@@ -66,20 +67,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<Vec<TaskItemDto>>>().await?;
-            Ok(body)
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, None).await
    }
 
    async fn get_task(
@@ -94,25 +82,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<TaskDetailDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
-         reqwest::StatusCode::FORBIDDEN => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Forbidden(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
    }
 
    async fn get_dashboard_stats(
@@ -126,20 +96,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<DashboardStatsDto>>().await?;
-            Ok(body)
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, None).await
    }
 
    async fn get_task_by_display_numbers(
@@ -155,24 +112,6 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
       );
 
       let response = self.client.get(&url).send().await?;
-
-      match response.status() {
-         status if status.is_success() => {
-            let body = response.json::<ApiResponse<TaskDetailDto>>().await?;
-            Ok(body)
-         }
-         reqwest::StatusCode::NOT_FOUND => Err(CoreServiceError::StepNotFound),
-         reqwest::StatusCode::FORBIDDEN => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Forbidden(body))
-         }
-         status => {
-            let body = response.text().await.unwrap_or_default();
-            Err(CoreServiceError::Unexpected(format!(
-               "予期しないステータス {}: {}",
-               status, body
-            )))
-         }
-      }
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
    }
 }
