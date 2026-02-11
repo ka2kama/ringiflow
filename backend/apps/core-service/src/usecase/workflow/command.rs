@@ -263,7 +263,7 @@ impl WorkflowUseCaseImpl {
       // 6. 楽観的ロック付きで保存
       self
          .step_repo
-         .update_with_version_check(&approved_step, step_expected_version)
+         .update_with_version_check(&approved_step, step_expected_version, &tenant_id)
          .await
          .map_err(|e| match e {
             InfraError::Conflict { .. } => CoreError::Conflict(
@@ -360,7 +360,7 @@ impl WorkflowUseCaseImpl {
       // 6. 楽観的ロック付きで保存
       self
          .step_repo
-         .update_with_version_check(&rejected_step, step_expected_version)
+         .update_with_version_check(&rejected_step, step_expected_version, &tenant_id)
          .await
          .map_err(|e| match e {
             InfraError::Conflict { .. } => CoreError::Conflict(
@@ -758,6 +758,7 @@ mod tests {
          &self,
          step: &WorkflowStep,
          expected_version: Version,
+         _tenant_id: &TenantId,
       ) -> Result<(), InfraError> {
          let mut steps = self.steps.lock().unwrap();
          if let Some(pos) = steps.iter().position(|s| s.id() == step.id()) {

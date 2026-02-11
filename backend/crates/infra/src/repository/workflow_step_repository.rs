@@ -34,10 +34,12 @@ pub trait WorkflowStepRepository: Send + Sync {
    ///
    /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
    /// 不一致の場合は `InfraError::Conflict` を返す。
+   /// `tenant_id` は RLS 二重防御用。アプリケーション層でもテナント分離を保証する。
    async fn update_with_version_check(
       &self,
       step: &WorkflowStep,
       expected_version: Version,
+      tenant_id: &TenantId,
    ) -> Result<(), InfraError>;
 
    /// ID でステップを検索する
@@ -126,6 +128,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       &self,
       step: &WorkflowStep,
       expected_version: Version,
+      tenant_id: &TenantId,
    ) -> Result<(), InfraError> {
       let status: &str = step.status().into();
       let decision: Option<&str> = step.decision().map(|d| d.into());
@@ -139,7 +142,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
             started_at = $5,
             completed_at = $6,
             updated_at = $7
-         WHERE id = $8 AND version = $9
+         WHERE id = $8 AND version = $9 AND tenant_id = $10
          "#,
          status,
          step.version().as_i32(),
@@ -150,6 +153,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
          step.updated_at(),
          step.id().as_uuid(),
          expected_version.as_i32(),
+         tenant_id.as_uuid(),
       )
       .execute(&self.pool)
       .await?;

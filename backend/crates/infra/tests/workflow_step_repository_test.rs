@@ -155,7 +155,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
    let activated_step = step.activated(now);
 
    let result = sut
-      .update_with_version_check(&activated_step, expected_version)
+      .update_with_version_check(&activated_step, expected_version, &tenant_id)
       .await;
 
    assert!(result.is_ok());
@@ -185,7 +185,41 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
    // 不一致バージョン（version 2）で更新を試みる
    let wrong_version = Version::initial().next();
    let result = sut
-      .update_with_version_check(&activated_step, wrong_version)
+      .update_with_version_check(&activated_step, wrong_version, &tenant_id)
+      .await;
+
+   assert!(result.is_err());
+   let err = result.unwrap_err();
+   assert!(
+      matches!(err, ringiflow_infra::InfraError::Conflict { .. }),
+      "InfraError::Conflict を期待したが {:?} が返った",
+      err
+   );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_update_with_version_check_別テナントのステップは更新できない(
+   pool: PgPool,
+) {
+   let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+   let sut = PostgresWorkflowStepRepository::new(pool);
+   let tenant_id = seed_tenant_id();
+   let now = test_now();
+
+   let instance = create_test_instance(100);
+   instance_repo.insert(&instance).await.unwrap();
+
+   let step = create_test_step(instance.id(), 1);
+   let expected_version = step.version();
+   sut.insert(&step, &tenant_id).await.unwrap();
+
+   // アクティブ化
+   let activated_step = step.activated(now);
+
+   // 別テナントで更新を試みる → Conflict エラー
+   let other_tenant_id = TenantId::new();
+   let result = sut
+      .update_with_version_check(&activated_step, expected_version, &other_tenant_id)
       .await;
 
    assert!(result.is_err());
@@ -294,7 +328,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
    // ステップをアクティブ化
    let active_step = step.activated(now);
    let v2 = active_step.version();
-   sut.update_with_version_check(&active_step, v1)
+   sut.update_with_version_check(&active_step, v1, &tenant_id)
       .await
       .unwrap();
 
@@ -302,7 +336,7 @@ async fn test_ステップを完了できる(pool: PgPool) {
    let completed_step = active_step
       .completed(StepDecision::Approved, Some("承認します".to_string()), now)
       .unwrap();
-   sut.update_with_version_check(&completed_step, v2)
+   sut.update_with_version_check(&completed_step, v2, &tenant_id)
       .await
       .unwrap();
 
