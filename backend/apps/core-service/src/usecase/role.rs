@@ -69,12 +69,11 @@ impl RoleUseCaseImpl {
 
       self.role_repository.insert(&role).await.map_err(|e| {
          // UNIQUE 制約違反（tenant_id, name）の場合は Conflict
-         if let ringiflow_infra::InfraError::Database(ref db_err) = e {
-            if let Some(constraint) = db_err.as_database_error().and_then(|d| d.constraint()) {
-               if constraint == "roles_tenant_name_key" {
-                  return CoreError::Conflict("同名のロールが既に存在します".to_string());
-               }
-            }
+         if let ringiflow_infra::InfraError::Database(ref db_err) = e
+            && let Some(constraint) = db_err.as_database_error().and_then(|d| d.constraint())
+            && constraint == "roles_tenant_name_key"
+         {
+            return CoreError::Conflict("同名のロールが既に存在します".to_string());
          }
          CoreError::Database(e)
       })?;

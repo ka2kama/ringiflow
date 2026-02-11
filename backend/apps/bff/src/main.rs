@@ -64,13 +64,17 @@ use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{
    AuthState,
+   RoleState,
    UserState,
    WorkflowState,
    approve_step,
+   create_role,
    create_user,
    create_workflow,
    csrf,
+   delete_role,
    get_dashboard_stats,
+   get_role,
    get_task_by_display_numbers,
    get_user_detail,
    get_workflow,
@@ -78,6 +82,7 @@ use handler::{
    health_check,
    list_my_tasks,
    list_my_workflows,
+   list_roles,
    list_users,
    list_workflow_definitions,
    login,
@@ -85,6 +90,7 @@ use handler::{
    me,
    reject_step,
    submit_workflow,
+   update_role,
    update_user,
    update_user_status,
 };
@@ -182,12 +188,19 @@ async fn main() -> anyhow::Result<()> {
 
    // UserState はユーザー管理の CRUD に必要（Core Service + Auth Service）
    let user_state = Arc::new(UserState {
-      core_service_client,
+      core_service_client: core_service_client.clone(),
       auth_service_client,
       session_manager: session_manager.clone(),
    });
 
+   // RoleState はロール管理の CRUD に必要
+   let role_state = Arc::new(RoleState {
+      core_service_client,
+      session_manager: session_manager.clone(),
+   });
+
    // 認可ミドルウェア用の状態（権限別ルートグループ）
+   // ユーザー管理とロール管理は同じ user:* 権限を共有する
    let user_read_authz = AuthzState {
       session_manager:     session_manager.clone(),
       required_permission: "user:read".to_string(),
@@ -197,6 +210,20 @@ async fn main() -> anyhow::Result<()> {
       required_permission: "user:create".to_string(),
    };
    let user_update_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:update".to_string(),
+   };
+
+   // ロール管理 API 用の認可状態（ユーザー管理と同じ user:* 権限を使用）
+   let role_read_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:read".to_string(),
+   };
+   let role_create_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:create".to_string(),
+   };
+   let role_update_authz = AuthzState {
       session_manager,
       required_permission: "user:update".to_string(),
    };
@@ -270,6 +297,29 @@ async fn main() -> anyhow::Result<()> {
             )
             .layer(from_fn_with_state(user_update_authz, require_permission))
             .with_state(user_state),
+      )
+      // ロール管理 API（認可ミドルウェア適用、user:* 権限）
+      .merge(
+         Router::new()
+            .route("/api/v1/roles", get(list_roles))
+            .route("/api/v1/roles/{role_id}", get(get_role))
+            .layer(from_fn_with_state(role_read_authz, require_permission))
+            .with_state(role_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route("/api/v1/roles", post(create_role))
+            .layer(from_fn_with_state(role_create_authz, require_permission))
+            .with_state(role_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route(
+               "/api/v1/roles/{role_id}",
+               patch(update_role).delete(delete_role),
+            )
+            .layer(from_fn_with_state(role_update_authz, require_permission))
+            .with_state(role_state),
       )
       .layer(from_fn_with_state(csrf_state, csrf_middleware))
       .layer(TraceLayer::new_for_http());
