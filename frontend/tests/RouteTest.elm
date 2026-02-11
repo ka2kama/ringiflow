@@ -59,6 +59,40 @@ fromUrlTests =
             \_ ->
                 parseUrl "/unknown/path"
                     |> Expect.equal NotFound
+        , describe "管理ルート"
+            [ test "/users → Users" <|
+                \_ ->
+                    parseUrl "/users"
+                        |> Expect.equal Users
+            , test "/users/5 → UserDetail 5" <|
+                \_ ->
+                    parseUrl "/users/5"
+                        |> Expect.equal (UserDetail 5)
+            , test "/users/new → UserNew" <|
+                \_ ->
+                    parseUrl "/users/new"
+                        |> Expect.equal UserNew
+            , test "/users/5/edit → UserEdit 5" <|
+                \_ ->
+                    parseUrl "/users/5/edit"
+                        |> Expect.equal (UserEdit 5)
+            , test "/roles → Roles" <|
+                \_ ->
+                    parseUrl "/roles"
+                        |> Expect.equal Roles
+            , test "/roles/new → RoleNew" <|
+                \_ ->
+                    parseUrl "/roles/new"
+                        |> Expect.equal RoleNew
+            , test "/roles/{uuid}/edit → RoleEdit uuid" <|
+                \_ ->
+                    parseUrl "/roles/550e8400-e29b-41d4-a716-446655440000/edit"
+                        |> Expect.equal (RoleEdit "550e8400-e29b-41d4-a716-446655440000")
+            , test "/audit-logs → AuditLogs" <|
+                \_ ->
+                    parseUrl "/audit-logs"
+                        |> Expect.equal AuditLogs
+            ]
         , describe "クエリパラメータ"
             [ test "/workflows?status=in_progress → InProgress フィルタ" <|
                 \_ ->
@@ -123,6 +157,40 @@ toStringTests =
             \_ ->
                 Route.toString NotFound
                     |> Expect.equal "/not-found"
+        , describe "管理ルート"
+            [ test "Users → /users" <|
+                \_ ->
+                    Route.toString Users
+                        |> Expect.equal "/users"
+            , test "UserDetail 5 → /users/5" <|
+                \_ ->
+                    Route.toString (UserDetail 5)
+                        |> Expect.equal "/users/5"
+            , test "UserNew → /users/new" <|
+                \_ ->
+                    Route.toString UserNew
+                        |> Expect.equal "/users/new"
+            , test "UserEdit 5 → /users/5/edit" <|
+                \_ ->
+                    Route.toString (UserEdit 5)
+                        |> Expect.equal "/users/5/edit"
+            , test "Roles → /roles" <|
+                \_ ->
+                    Route.toString Roles
+                        |> Expect.equal "/roles"
+            , test "RoleNew → /roles/new" <|
+                \_ ->
+                    Route.toString RoleNew
+                        |> Expect.equal "/roles/new"
+            , test "RoleEdit uuid → /roles/{uuid}/edit" <|
+                \_ ->
+                    Route.toString (RoleEdit "550e8400-e29b-41d4-a716-446655440000")
+                        |> Expect.equal "/roles/550e8400-e29b-41d4-a716-446655440000/edit"
+            , test "AuditLogs → /audit-logs" <|
+                \_ ->
+                    Route.toString AuditLogs
+                        |> Expect.equal "/audit-logs"
+            ]
         , describe "クエリパラメータ"
             [ test "status=InProgress → /workflows?status=in_progress" <|
                 \_ ->
@@ -203,6 +271,26 @@ isRouteActiveTests =
         , test "Workflows ナビは WorkflowDetail でもアクティブ" <|
             \_ ->
                 Route.isRouteActive (Workflows emptyWorkflowFilter) (WorkflowDetail 1)
+                    |> Expect.equal True
+        , test "Users ナビは UserDetail でもアクティブ" <|
+            \_ ->
+                Route.isRouteActive Users (UserDetail 5)
+                    |> Expect.equal True
+        , test "Users ナビは UserNew でもアクティブ" <|
+            \_ ->
+                Route.isRouteActive Users UserNew
+                    |> Expect.equal True
+        , test "Users ナビは UserEdit でもアクティブ" <|
+            \_ ->
+                Route.isRouteActive Users (UserEdit 5)
+                    |> Expect.equal True
+        , test "Roles ナビは RoleNew でもアクティブ" <|
+            \_ ->
+                Route.isRouteActive Roles RoleNew
+                    |> Expect.equal True
+        , test "Roles ナビは RoleEdit でもアクティブ" <|
+            \_ ->
+                Route.isRouteActive Roles (RoleEdit "some-uuid")
                     |> Expect.equal True
         ]
 

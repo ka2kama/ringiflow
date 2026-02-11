@@ -17,10 +17,18 @@ import Component.ConfirmDialog as ConfirmDialog
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
+import Page.AuditLog.List as AuditLogList
 import Page.Home as Home
 import Page.NotFound
+import Page.Role.Edit as RoleEdit
+import Page.Role.List as RoleList
+import Page.Role.New as RoleNew
 import Page.Task.Detail as TaskDetail
 import Page.Task.List as TaskList
+import Page.User.Detail as UserDetail
+import Page.User.Edit as UserEdit
+import Page.User.List as UserList
+import Page.User.New as UserNew
 import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
@@ -80,6 +88,14 @@ type Page
     | WorkflowDetailPage WorkflowDetail.Model
     | TasksPage TaskList.Model
     | TaskDetailPage TaskDetail.Model
+    | UsersPage UserList.Model
+    | UserDetailPage UserDetail.Model
+    | UserNewPage UserNew.Model
+    | UserEditPage UserEdit.Model
+    | RolesPage RoleList.Model
+    | RoleNewPage RoleNew.Model
+    | RoleEditPage RoleEdit.Model
+    | AuditLogsPage AuditLogList.Model
     | NotFoundPage
 
 
@@ -213,6 +229,62 @@ initPage key route shared =
             in
             ( TaskDetailPage model, Cmd.map TaskDetailMsg cmd )
 
+        Route.Users ->
+            let
+                ( model, cmd ) =
+                    UserList.init shared
+            in
+            ( UsersPage model, Cmd.map UsersMsg cmd )
+
+        Route.UserDetail displayNumber ->
+            let
+                ( model, cmd ) =
+                    UserDetail.init shared displayNumber
+            in
+            ( UserDetailPage model, Cmd.map UserDetailMsg cmd )
+
+        Route.UserNew ->
+            let
+                ( model, cmd ) =
+                    UserNew.init shared
+            in
+            ( UserNewPage model, Cmd.map UserNewMsg cmd )
+
+        Route.UserEdit displayNumber ->
+            let
+                ( model, cmd ) =
+                    UserEdit.init shared displayNumber
+            in
+            ( UserEditPage model, Cmd.map UserEditMsg cmd )
+
+        Route.Roles ->
+            let
+                ( model, cmd ) =
+                    RoleList.init shared
+            in
+            ( RolesPage model, Cmd.map RolesMsg cmd )
+
+        Route.RoleNew ->
+            let
+                ( model, cmd ) =
+                    RoleNew.init shared
+            in
+            ( RoleNewPage model, Cmd.map RoleNewMsg cmd )
+
+        Route.RoleEdit roleId ->
+            let
+                ( model, cmd ) =
+                    RoleEdit.init shared roleId
+            in
+            ( RoleEditPage model, Cmd.map RoleEditMsg cmd )
+
+        Route.AuditLogs ->
+            let
+                ( model, cmd ) =
+                    AuditLogList.init shared
+            in
+            ( AuditLogsPage model, Cmd.map AuditLogsMsg cmd )
+
         Route.NotFound ->
             ( NotFoundPage, Cmd.none )
 
@@ -244,6 +316,30 @@ updatePageShared shared page =
         TaskDetailPage subModel ->
             TaskDetailPage (TaskDetail.updateShared shared subModel)
 
+        UsersPage subModel ->
+            UsersPage (UserList.updateShared shared subModel)
+
+        UserDetailPage subModel ->
+            UserDetailPage (UserDetail.updateShared shared subModel)
+
+        UserNewPage subModel ->
+            UserNewPage (UserNew.updateShared shared subModel)
+
+        UserEditPage subModel ->
+            UserEditPage (UserEdit.updateShared shared subModel)
+
+        RolesPage subModel ->
+            RolesPage (RoleList.updateShared shared subModel)
+
+        RoleNewPage subModel ->
+            RoleNewPage (RoleNew.updateShared shared subModel)
+
+        RoleEditPage subModel ->
+            RoleEditPage (RoleEdit.updateShared shared subModel)
+
+        AuditLogsPage subModel ->
+            AuditLogsPage (AuditLogList.updateShared shared subModel)
+
         NotFoundPage ->
             NotFoundPage
 
@@ -272,6 +368,14 @@ type Msg
     | WorkflowDetailMsg WorkflowDetail.Msg
     | TasksMsg TaskList.Msg
     | TaskDetailMsg TaskDetail.Msg
+    | UsersMsg UserList.Msg
+    | UserDetailMsg UserDetail.Msg
+    | UserNewMsg UserNew.Msg
+    | UserEditMsg UserEdit.Msg
+    | RolesMsg RoleList.Msg
+    | RoleNewMsg RoleNew.Msg
+    | RoleEditMsg RoleEdit.Msg
+    | AuditLogsMsg AuditLogList.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -477,6 +581,118 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        UsersMsg subMsg ->
+            case model.page of
+                UsersPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            UserList.update subMsg subModel
+                    in
+                    ( { model | page = UsersPage newSubModel }
+                    , Cmd.map UsersMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        UserDetailMsg subMsg ->
+            case model.page of
+                UserDetailPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            UserDetail.update subMsg subModel
+                    in
+                    ( { model | page = UserDetailPage newSubModel }
+                    , Cmd.map UserDetailMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        UserNewMsg subMsg ->
+            case model.page of
+                UserNewPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            UserNew.update subMsg subModel
+                    in
+                    ( { model | page = UserNewPage newSubModel }
+                    , Cmd.map UserNewMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        UserEditMsg subMsg ->
+            case model.page of
+                UserEditPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            UserEdit.update subMsg subModel
+                    in
+                    ( { model | page = UserEditPage newSubModel }
+                    , Cmd.map UserEditMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        RolesMsg subMsg ->
+            case model.page of
+                RolesPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            RoleList.update subMsg subModel
+                    in
+                    ( { model | page = RolesPage newSubModel }
+                    , Cmd.map RolesMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        RoleNewMsg subMsg ->
+            case model.page of
+                RoleNewPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            RoleNew.update subMsg subModel
+                    in
+                    ( { model | page = RoleNewPage newSubModel }
+                    , Cmd.map RoleNewMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        RoleEditMsg subMsg ->
+            case model.page of
+                RoleEditPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            RoleEdit.update subMsg subModel
+                    in
+                    ( { model | page = RoleEditPage newSubModel }
+                    , Cmd.map RoleEditMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        AuditLogsMsg subMsg ->
+            case model.page of
+                AuditLogsPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            AuditLogList.update subMsg subModel
+                    in
+                    ( { model | page = AuditLogsPage newSubModel }
+                    , Cmd.map AuditLogsMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 {-| 現在のページに未保存の変更があるかを判定
 -}
@@ -527,7 +743,7 @@ subscriptions model =
 -}
 view : Model -> Browser.Document Msg
 view model =
-    { title = pageTitle model.route ++ " | RingiFlow"
+    { title = Route.pageTitle model.route ++ " | RingiFlow"
     , body =
         [ a [ class "sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-4 focus:text-primary-600", href "#main-content" ]
             [ text "メインコンテンツにスキップ" ]
@@ -546,33 +762,6 @@ view model =
         , viewNavigationConfirmDialog model.pendingNavigation
         ]
     }
-
-
-{-| ルートに応じたページタイトル
--}
-pageTitle : Route -> String
-pageTitle route =
-    case route of
-        Route.Home ->
-            "ダッシュボード"
-
-        Route.Workflows _ ->
-            "申請一覧"
-
-        Route.WorkflowNew ->
-            "新規申請"
-
-        Route.WorkflowDetail _ ->
-            "申請詳細"
-
-        Route.Tasks ->
-            "タスク一覧"
-
-        Route.TaskDetail _ _ ->
-            "タスク詳細"
-
-        Route.NotFound ->
-            "ページが見つかりません"
 
 
 {-| サイドバーナビゲーション
@@ -605,10 +794,12 @@ viewSidebar currentRoute isOpen shared =
 
         -- ナビゲーションリンク
         , nav [ class "flex-1 space-y-1 px-3 py-4" ]
-            [ viewNavItem currentRoute Route.Home "ダッシュボード" iconDashboard
-            , viewNavItem currentRoute (Route.Workflows Route.emptyWorkflowFilter) "申請一覧" iconWorkflows
-            , viewNavItem currentRoute Route.Tasks "タスク一覧" iconTasks
-            ]
+            ([ viewNavItem currentRoute Route.Home "ダッシュボード" iconDashboard
+             , viewNavItem currentRoute (Route.Workflows Route.emptyWorkflowFilter) "申請一覧" iconWorkflows
+             , viewNavItem currentRoute Route.Tasks "タスク一覧" iconTasks
+             ]
+                ++ viewAdminSection currentRoute shared
+            )
 
         -- フッター（ユーザー情報 + Copyright）
         , div [ class "border-t border-secondary-700 px-4 py-4" ]
@@ -644,6 +835,26 @@ viewNavItem currentRoute targetRoute label icon =
         [ icon
         , span [] [ text label ]
         ]
+
+
+{-| 管理セクション（admin ロール限定）
+
+テナント管理者のみに表示するサイドバーセクション。
+ユーザー管理、ロール管理、監査ログへのリンクを提供する。
+
+-}
+viewAdminSection : Route -> Shared -> List (Html Msg)
+viewAdminSection currentRoute shared =
+    if Shared.isAdmin shared then
+        [ div [ class "mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-secondary-500" ]
+            [ text "管理" ]
+        , viewNavItem currentRoute Route.Users "ユーザー管理" iconUsers
+        , viewNavItem currentRoute Route.Roles "ロール管理" iconRoles
+        , viewNavItem currentRoute Route.AuditLogs "監査ログ" iconAuditLog
+        ]
+
+    else
+        []
 
 
 {-| ユーザー情報表示
@@ -732,6 +943,38 @@ viewPage model =
             TaskDetail.view subModel
                 |> Html.map TaskDetailMsg
 
+        UsersPage subModel ->
+            UserList.view subModel
+                |> Html.map UsersMsg
+
+        UserDetailPage subModel ->
+            UserDetail.view subModel
+                |> Html.map UserDetailMsg
+
+        UserNewPage subModel ->
+            UserNew.view subModel
+                |> Html.map UserNewMsg
+
+        UserEditPage subModel ->
+            UserEdit.view subModel
+                |> Html.map UserEditMsg
+
+        RolesPage subModel ->
+            RoleList.view subModel
+                |> Html.map RolesMsg
+
+        RoleNewPage subModel ->
+            RoleNew.view subModel
+                |> Html.map RoleNewMsg
+
+        RoleEditPage subModel ->
+            RoleEdit.view subModel
+                |> Html.map RoleEditMsg
+
+        AuditLogsPage subModel ->
+            AuditLogList.view subModel
+                |> Html.map AuditLogsMsg
+
         NotFoundPage ->
             Page.NotFound.view
 
@@ -812,6 +1055,58 @@ iconTasks =
         ]
         [ Svg.path [ SvgAttr.d "M9 11l3 3L22 4" ] []
         , Svg.path [ SvgAttr.d "M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" ] []
+        ]
+
+
+{-| SVG アイコン: ユーザー管理（People）
+-}
+iconUsers : Html msg
+iconUsers =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.path [ SvgAttr.d "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" ] []
+        , Svg.circle [ SvgAttr.cx "9", SvgAttr.cy "7", SvgAttr.r "4" ] []
+        , Svg.path [ SvgAttr.d "M23 21v-2a4 4 0 0 0-3-3.87" ] []
+        , Svg.path [ SvgAttr.d "M16 3.13a4 4 0 0 1 0 7.75" ] []
+        ]
+
+
+{-| SVG アイコン: ロール管理（Shield）
+-}
+iconRoles : Html msg
+iconRoles =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.path [ SvgAttr.d "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" ] []
+        ]
+
+
+{-| SVG アイコン: 監査ログ（ClipboardList）
+-}
+iconAuditLog : Html msg
+iconAuditLog =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.path [ SvgAttr.d "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" ] []
+        , Svg.rect [ SvgAttr.x "8", SvgAttr.y "2", SvgAttr.width "8", SvgAttr.height "4", SvgAttr.rx "1" ] []
+        , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "10", SvgAttr.x2 "16", SvgAttr.y2 "10" ] []
+        , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "14", SvgAttr.x2 "16", SvgAttr.y2 "14" ] []
+        , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "18", SvgAttr.x2 "12", SvgAttr.y2 "18" ] []
         ]
 
 
