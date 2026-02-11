@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n         SELECT\n            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,\n            s.status, s.version, s.assigned_to, s.decision, s.comment,\n            s.due_date, s.started_at, s.completed_at,\n            s.created_at, s.updated_at\n         FROM workflow_steps s\n         INNER JOIN workflow_instances i ON s.instance_id = i.id\n         WHERE i.tenant_id = $1 AND s.assigned_to = $2\n         ORDER BY s.created_at DESC\n         ",
+  "query": "\n         SELECT\n            id, instance_id, display_number, step_id, step_name, step_type,\n            status, version, assigned_to, decision, comment,\n            due_date, started_at, completed_at,\n            created_at, updated_at\n         FROM workflow_steps\n         WHERE display_number = $1 AND instance_id = $2 AND tenant_id = $3\n         ",
   "describe": {
     "columns": [
       {
@@ -86,6 +86,7 @@
     ],
     "parameters": {
       "Left": [
+        "Int8",
         "Uuid",
         "Uuid"
       ]
@@ -109,5 +110,5 @@
       false
     ]
   },
-  "hash": "03f2f8f756f329852e4694b10ba8ad49c9c982fa303413163c7cd54b28b570a0"
+  "hash": "9a4e1c24e3d7fc39407f735c302ed0c24aaf179315b9bcc1d043abb8060bde96"
 }

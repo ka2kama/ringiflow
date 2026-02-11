@@ -172,13 +172,12 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let row = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
-            s.status, s.version, s.assigned_to, s.decision, s.comment,
-            s.due_date, s.started_at, s.completed_at,
-            s.created_at, s.updated_at
-         FROM workflow_steps s
-         INNER JOIN workflow_instances i ON s.instance_id = i.id
-         WHERE s.id = $1 AND i.tenant_id = $2
+            id, instance_id, display_number, step_id, step_name, step_type,
+            status, version, assigned_to, decision, comment,
+            due_date, started_at, completed_at,
+            created_at, updated_at
+         FROM workflow_steps
+         WHERE id = $1 AND tenant_id = $2
          "#,
          id.as_uuid(),
          tenant_id.as_uuid()
@@ -228,14 +227,13 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let rows = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
-            s.status, s.version, s.assigned_to, s.decision, s.comment,
-            s.due_date, s.started_at, s.completed_at,
-            s.created_at, s.updated_at
-         FROM workflow_steps s
-         INNER JOIN workflow_instances i ON s.instance_id = i.id
-         WHERE s.instance_id = $1 AND i.tenant_id = $2
-         ORDER BY s.created_at ASC
+            id, instance_id, display_number, step_id, step_name, step_type,
+            status, version, assigned_to, decision, comment,
+            due_date, started_at, completed_at,
+            created_at, updated_at
+         FROM workflow_steps
+         WHERE instance_id = $1 AND tenant_id = $2
+         ORDER BY created_at ASC
          "#,
          instance_id.as_uuid(),
          tenant_id.as_uuid()
@@ -284,14 +282,13 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let rows = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
-            s.status, s.version, s.assigned_to, s.decision, s.comment,
-            s.due_date, s.started_at, s.completed_at,
-            s.created_at, s.updated_at
-         FROM workflow_steps s
-         INNER JOIN workflow_instances i ON s.instance_id = i.id
-         WHERE i.tenant_id = $1 AND s.assigned_to = $2
-         ORDER BY s.created_at DESC
+            id, instance_id, display_number, step_id, step_name, step_type,
+            status, version, assigned_to, decision, comment,
+            due_date, started_at, completed_at,
+            created_at, updated_at
+         FROM workflow_steps
+         WHERE tenant_id = $1 AND assigned_to = $2
+         ORDER BY created_at DESC
          "#,
          tenant_id.as_uuid(),
          user_id.as_uuid()
@@ -341,13 +338,12 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       let row = sqlx::query!(
          r#"
          SELECT
-            s.id, s.instance_id, s.display_number, s.step_id, s.step_name, s.step_type,
-            s.status, s.version, s.assigned_to, s.decision, s.comment,
-            s.due_date, s.started_at, s.completed_at,
-            s.created_at, s.updated_at
-         FROM workflow_steps s
-         INNER JOIN workflow_instances i ON s.instance_id = i.id
-         WHERE s.display_number = $1 AND s.instance_id = $2 AND i.tenant_id = $3
+            id, instance_id, display_number, step_id, step_name, step_type,
+            status, version, assigned_to, decision, comment,
+            due_date, started_at, completed_at,
+            created_at, updated_at
+         FROM workflow_steps
+         WHERE display_number = $1 AND instance_id = $2 AND tenant_id = $3
          "#,
          display_number.as_i64(),
          instance_id.as_uuid(),
