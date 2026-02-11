@@ -19,7 +19,8 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_infra::SessionManager;
+use ringiflow_domain::audit_log::{AuditAction, AuditLog};
+use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 
@@ -44,9 +45,10 @@ use crate::{
 
 /// ユーザー管理 API の共有状態
 pub struct UserState {
-   pub core_service_client: Arc<dyn CoreServiceUserClient>,
-   pub auth_service_client: Arc<dyn AuthServiceClient>,
-   pub session_manager:     Arc<dyn SessionManager>,
+   pub core_service_client:  Arc<dyn CoreServiceUserClient>,
+   pub auth_service_client:  Arc<dyn AuthServiceClient>,
+   pub session_manager:      Arc<dyn SessionManager>,
+   pub audit_log_repository: Arc<dyn AuditLogRepository>,
 }
 
 // --- リクエスト型 ---
@@ -272,6 +274,25 @@ pub async fn create_user(
       return internal_error_response();
    }
 
+   // 監査ログ記録
+   let audit_log = AuditLog::new_success(
+      session_data.tenant_id().clone(),
+      session_data.user_id().clone(),
+      session_data.name().to_string(),
+      AuditAction::UserCreate,
+      "user",
+      user_data.id.to_string(),
+      Some(serde_json::json!({
+         "email": &user_data.email,
+         "name": &user_data.name,
+         "role": &user_data.role,
+      })),
+      None,
+   );
+   if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+      tracing::error!("監査ログ記録に失敗: {}", e);
+   }
+
    let response = ApiResponse::new(CreateUserResponseData {
       id: user_data.id.to_string(),
       display_id: user_data.display_id,
@@ -388,6 +409,24 @@ pub async fn update_user(
    {
       Ok(core_response) => {
          let user = core_response.data;
+
+         // 監査ログ記録
+         let audit_log = AuditLog::new_success(
+            session_data.tenant_id().clone(),
+            session_data.user_id().clone(),
+            session_data.name().to_string(),
+            AuditAction::UserUpdate,
+            "user",
+            user.id.to_string(),
+            Some(serde_json::json!({
+               "name": &user.name,
+            })),
+            None,
+         );
+         if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+            tracing::error!("監査ログ記録に失敗: {}", e);
+         }
+
          let response = ApiResponse::new(UserResponseData {
             id:     user.id.to_string(),
             name:   user.name,
@@ -463,6 +502,29 @@ pub async fn update_user_status(
    {
       Ok(core_response) => {
          let user = core_response.data;
+
+         // 監査ログ記録: ステータスに応じて Deactivate / Activate を使い分ける
+         let action = if user.status == "inactive" {
+            AuditAction::UserDeactivate
+         } else {
+            AuditAction::UserActivate
+         };
+         let audit_log = AuditLog::new_success(
+            session_data.tenant_id().clone(),
+            session_data.user_id().clone(),
+            session_data.name().to_string(),
+            action,
+            "user",
+            user.id.to_string(),
+            Some(serde_json::json!({
+               "user_name": &user.name,
+            })),
+            None,
+         );
+         if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+            tracing::error!("監査ログ記録に失敗: {}", e);
+         }
+
          let response = ApiResponse::new(UserResponseData {
             id:     user.id.to_string(),
             name:   user.name,

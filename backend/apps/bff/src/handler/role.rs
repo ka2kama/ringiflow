@@ -19,7 +19,8 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_infra::SessionManager;
+use ringiflow_domain::audit_log::{AuditAction, AuditLog};
+use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -43,8 +44,9 @@ use crate::{
 
 /// ロール管理 API の共有状態
 pub struct RoleState {
-   pub core_service_client: Arc<dyn CoreServiceRoleClient>,
-   pub session_manager:     Arc<dyn SessionManager>,
+   pub core_service_client:  Arc<dyn CoreServiceRoleClient>,
+   pub session_manager:      Arc<dyn SessionManager>,
+   pub audit_log_repository: Arc<dyn AuditLogRepository>,
 }
 
 // --- リクエスト型 ---
@@ -211,6 +213,25 @@ pub async fn create_role(
    match state.core_service_client.create_role(&core_request).await {
       Ok(core_response) => {
          let dto = core_response.data;
+
+         // 監査ログ記録
+         let audit_log = AuditLog::new_success(
+            session_data.tenant_id().clone(),
+            session_data.user_id().clone(),
+            session_data.name().to_string(),
+            AuditAction::RoleCreate,
+            "role",
+            dto.id.to_string(),
+            Some(serde_json::json!({
+               "name": &dto.name,
+               "permissions": &dto.permissions,
+            })),
+            None,
+         );
+         if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+            tracing::error!("監査ログ記録に失敗: {}", e);
+         }
+
          let response = ApiResponse::new(RoleDetailData {
             id:          dto.id.to_string(),
             name:        dto.name,
@@ -246,7 +267,7 @@ pub async fn update_role(
       Err(e) => return e.into_response(),
    };
 
-   let _session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
@@ -264,6 +285,25 @@ pub async fn update_role(
    {
       Ok(core_response) => {
          let dto = core_response.data;
+
+         // 監査ログ記録
+         let audit_log = AuditLog::new_success(
+            session_data.tenant_id().clone(),
+            session_data.user_id().clone(),
+            session_data.name().to_string(),
+            AuditAction::RoleUpdate,
+            "role",
+            dto.id.to_string(),
+            Some(serde_json::json!({
+               "name": &dto.name,
+               "permissions": &dto.permissions,
+            })),
+            None,
+         );
+         if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+            tracing::error!("監査ログ記録に失敗: {}", e);
+         }
+
          let response = ApiResponse::new(RoleDetailData {
             id:          dto.id.to_string(),
             name:        dto.name,
@@ -300,13 +340,32 @@ pub async fn delete_role(
       Err(e) => return e.into_response(),
    };
 
-   let _session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
       Ok(data) => data,
       Err(response) => return response,
    };
 
    match state.core_service_client.delete_role(role_id).await {
-      Ok(()) => StatusCode::NO_CONTENT.into_response(),
+      Ok(()) => {
+         // 監査ログ記録
+         let audit_log = AuditLog::new_success(
+            session_data.tenant_id().clone(),
+            session_data.user_id().clone(),
+            session_data.name().to_string(),
+            AuditAction::RoleDelete,
+            "role",
+            role_id.to_string(),
+            Some(serde_json::json!({
+               "role_id": role_id.to_string(),
+            })),
+            None,
+         );
+         if let Err(e) = state.audit_log_repository.record(&audit_log).await {
+            tracing::error!("監査ログ記録に失敗: {}", e);
+         }
+
+         StatusCode::NO_CONTENT.into_response()
+      }
       Err(CoreServiceError::RoleNotFound) => {
          not_found_response("role-not-found", "Role Not Found", "ロールが見つかりません")
       }

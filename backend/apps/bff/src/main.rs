@@ -98,7 +98,12 @@ use middleware::{AuthzState, CsrfState, csrf_middleware, require_permission};
 #[cfg(feature = "dev-auth")]
 use ringiflow_bff::dev_auth;
 use ringiflow_bff::{client, handler, middleware};
-use ringiflow_infra::{RedisSessionManager, SessionManager};
+use ringiflow_infra::{
+   RedisSessionManager,
+   SessionManager,
+   dynamodb,
+   repository::DynamoDbAuditLogRepository,
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -168,6 +173,16 @@ async fn main() -> anyhow::Result<()> {
    let auth_service_client: Arc<dyn AuthServiceClient> =
       Arc::new(AuthServiceClientImpl::new(&config.auth_url));
 
+   // DynamoDB クライアントの初期化
+   let dynamodb_client = dynamodb::create_client(&config.dynamodb_endpoint).await;
+   dynamodb::ensure_audit_log_table(&dynamodb_client, "audit_logs")
+      .await
+      .expect("DynamoDB 監査ログテーブルのセットアップに失敗しました");
+   let audit_log_repository = Arc::new(DynamoDbAuditLogRepository::new(
+      dynamodb_client,
+      "audit_logs".to_string(),
+   ));
+
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
       session_manager: session_manager.clone(),
@@ -191,12 +206,14 @@ async fn main() -> anyhow::Result<()> {
       core_service_client: core_service_client.clone(),
       auth_service_client,
       session_manager: session_manager.clone(),
+      audit_log_repository: audit_log_repository.clone(),
    });
 
    // RoleState はロール管理の CRUD に必要
    let role_state = Arc::new(RoleState {
       core_service_client,
       session_manager: session_manager.clone(),
+      audit_log_repository: audit_log_repository.clone(),
    });
 
    // 認可ミドルウェア用の状態（権限別ルートグループ）
