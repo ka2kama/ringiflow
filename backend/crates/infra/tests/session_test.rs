@@ -14,8 +14,16 @@ use ringiflow_infra::session::{RedisSessionManager, SessionData, SessionManager}
 use uuid::Uuid;
 
 /// テスト用の Redis URL
+///
+/// 優先順位:
+/// 1. `REDIS_URL`（CI で明示的に設定）
+/// 2. `REDIS_PORT` から構築（justfile が root `.env` から渡す）
+/// 3. フォールバック: `redis://localhost:16379`
 fn redis_url() -> String {
-   std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:16379".to_string())
+   std::env::var("REDIS_URL").unwrap_or_else(|_| {
+      let port = std::env::var("REDIS_PORT").unwrap_or_else(|_| "16379".to_string());
+      format!("redis://localhost:{port}")
+   })
 }
 
 /// テスト用のセッションデータを作成
