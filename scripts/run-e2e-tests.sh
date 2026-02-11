@@ -23,6 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # バックグラウンドプロセスを終了するトラップ
+# FIXME: SC2046 - trap 内のコマンド置換はクォートすると kill に複数 PID を渡せない
 # shellcheck disable=SC2046
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 
@@ -34,6 +35,7 @@ cd "$PROJECT_ROOT/backend"
 # .env.api-test から環境変数を読み込み（空行とコメント行を除外）
 env_vars=$(grep -Ev '^\s*$|^\s*#' .env.api-test | xargs)
 
+# FIXME: SC2086 - env_vars はスペース区切りで複数の KEY=VALUE を含むため、意図的に分割展開する
 # shellcheck disable=SC2086
 env $env_vars cargo run -p ringiflow-bff &
 # shellcheck disable=SC2086
