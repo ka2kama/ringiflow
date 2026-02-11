@@ -1,1156 +1,1527 @@
 openapi: 3.1.0
 info:
   title: RingiFlow API
-  description: |
-    RingiFlow ワークフロー管理システムの API 仕様書。
-
-    ## 認証
-
-    - ブラウザからのアクセスは Cookie ベースのセッション認証を使用
-    - 状態変更リクエスト（POST/PUT/PATCH/DELETE）には CSRF トークンが必要
-
-    ## エラーレスポンス
-
-    エラーは RFC 9457 Problem Details 形式で返却される。
-  version: 0.1.0
-  contact:
-    name: RingiFlow Team
+  description: ワークフロー管理システム RingiFlow の BFF API
   license:
     name: MIT
-    url: https://opensource.org/licenses/MIT
-
-servers:
-  - url: http://localhost:13000
-    description: ローカル開発環境（BFF）
-  - url: https://dev.ringiflow.example.com
-    description: 開発環境
-  - url: https://app.ringiflow.example.com
-    description: 本番環境
-
-tags:
-  - name: auth
-    description: 認証 API
-  - name: workflows
-    description: ワークフロー API
-  - name: tasks
-    description: タスク API
-  - name: users
-    description: ユーザー API
-  - name: roles
-    description: ロール管理 API
-  - name: audit-logs
-    description: 監査ログ API
-  - name: dashboard
-    description: ダッシュボード API
-  - name: health
-    description: ヘルスチェック API
-
+    identifier: MIT
+  version: 0.1.0
 paths:
-  # ============================================================
-  # 認証 API
-  # ============================================================
+  /api/v1/auth/csrf:
+    get:
+      tags:
+      - auth
+      summary: GET /api/v1/auth/csrf
+      description: |-
+        CSRF トークンを取得する。
+        セッションが存在しない場合は新規作成し、存在する場合は既存のトークンを返す。
+      operationId: csrf
+      responses:
+        '200':
+          description: CSRF トークン
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_CsrfResponseData'
+        '401':
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
   /api/v1/auth/login:
     post:
       tags:
-        - auth
-      summary: ログイン
-      description: |
+      - auth
+      summary: POST /api/v1/auth/login
+      description: |-
         メール/パスワードでログインし、セッションを確立する。
 
-        成功時は `Set-Cookie` ヘッダーでセッション Cookie が設定される。
+        ## 認証フロー
+
+        1. Core API でユーザーを検索（`GET /internal/users/by-email`）
+        2. Auth Service でパスワードを検証（`POST /internal/auth/verify`）
+        3. セッションを作成し Cookie を設定
+
+        ## タイミング攻撃対策
+
+        ユーザーが存在しない場合も Auth Service にダミーリクエストを送信し、
+        処理時間を均一化してユーザー存在確認攻撃を防ぐ。
+
+        ## ヘッダー
+
+        - `X-Tenant-ID`: テナント ID（必須）
+
+        ## リクエストボディ
+
+        ```json
+        {
+          "email": "user@example.com",
+          "password": "password123"
+        }
+        ```
       operationId: login
-      security: []  # 認証不要
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
-            example:
-              email: user@example.com
-              password: password123
+        required: true
       responses:
         '200':
           description: ログイン成功
-          headers:
-            Set-Cookie:
-              description: セッション Cookie
-              schema:
-                type: string
-                example: session_id=xxx; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=28800
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: '#/components/schemas/ApiResponse_LoginResponseData'
         '401':
           description: 認証失敗
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/authentication-failed
-                title: Authentication Failed
-                status: 401
-                detail: メールアドレスまたはパスワードが正しくありません
-        '400':
-          description: バリデーションエラー
+        '503':
+          description: サービス利用不可
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-
+                $ref: '#/components/schemas/ProblemDetails'
   /api/v1/auth/logout:
     post:
       tags:
-        - auth
-      summary: ログアウト
-      description: |
-        セッションを無効化してログアウトする。
-
-        `Set-Cookie` ヘッダーでセッション Cookie が削除される。
+      - auth
+      summary: POST /api/v1/auth/logout
+      description: セッションを無効化してログアウトする。
       operationId: logout
-      security:
-        - sessionAuth: []
       responses:
         '204':
           description: ログアウト成功
-          headers:
-            Set-Cookie:
-              description: セッション Cookie 削除
-              schema:
-                type: string
-                example: session_id=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0
         '401':
-          $ref: '#/components/responses/Unauthorized'
-
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
   /api/v1/auth/me:
     get:
       tags:
-        - auth
-      summary: 現在のユーザー情報取得
-      description: 現在ログイン中のユーザー情報と権限を取得する。
-      operationId: getCurrentUser
-      security:
-        - sessionAuth: []
+      - auth
+      summary: GET /api/v1/auth/me
+      description: 現在のユーザー情報と権限を取得する。
+      operationId: me
       responses:
         '200':
-          description: 成功
+          description: ユーザー情報
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CurrentUserResponse'
+                $ref: '#/components/schemas/ApiResponse_MeResponseData'
         '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /api/v1/auth/csrf:
+          description: 未認証
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/dashboard/stats:
     get:
       tags:
-        - auth
-      summary: CSRF トークン取得
-      description: |
-        CSRF トークンを取得する。
-
-        状態変更リクエスト（POST/PUT/PATCH/DELETE）には
-        `X-CSRF-Token` ヘッダーにこのトークンを付与する必要がある。
-      operationId: getCsrfToken
-      security:
-        - sessionAuth: []
+      - dashboard
+      summary: GET /api/v1/dashboard/stats
+      description: ダッシュボード統計情報を取得する
+      operationId: get_dashboard_stats
       responses:
         '200':
-          description: 成功
+          description: ダッシュボード統計
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CsrfTokenResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  # ============================================================
-  # ワークフロー定義 API
-  # ============================================================
-  /api/v1/workflow-definitions:
-    get:
-      tags:
-        - workflows
-      summary: ワークフロー定義一覧取得
-      description: |
-        公開済みのワークフロー定義一覧を取得する。
-
-        フロントエンドの申請フォームで、ユーザーが選択可能なワークフロー定義を表示するために使用する。
-      operationId: listWorkflowDefinitions
+                $ref: '#/components/schemas/ApiResponse_DashboardStatsData'
       security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-      responses:
-        '200':
-          description: ワークフロー定義一覧
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowDefinitionListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /api/v1/workflow-definitions/{id}:
-    get:
-      tags:
-        - workflows
-      summary: ワークフロー定義詳細取得
-      description: |
-        指定された ID のワークフロー定義を取得する。
-
-        申請フォームで選択されたワークフロー定義の詳細（フォーム定義など）を取得するために使用する。
-      operationId: getWorkflowDefinition
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - name: id
-          in: path
-          required: true
-          description: ワークフロー定義 ID
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: ワークフロー定義
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowDefinitionResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: ワークフロー定義が見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/workflow-definition-not-found
-                title: Workflow Definition Not Found
-                status: 404
-                detail: ワークフロー定義が見つかりません
-
-  # ============================================================
-  # ワークフロー API
-  # ============================================================
-  /api/v1/workflows:
-    get:
-      tags:
-        - workflows
-      summary: 自分のワークフロー一覧取得
-      description: |
-        ログインユーザーが申請したワークフローインスタンスの一覧を取得する。
-
-        申請履歴の確認に使用する。
-      operationId: listMyWorkflows
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-      responses:
-        '200':
-          description: ワークフロー一覧
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-    post:
-      tags:
-        - workflows
-      summary: ワークフロー作成（下書き）
-      description: |
-        ワークフロー定義を元に、新しいワークフローインスタンスを下書き状態で作成する。
-
-        作成後は `draft` 状態となり、`/submit` で申請するまで承認フローは開始されない。
-      operationId: createWorkflow
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateWorkflowRequest'
-            example:
-              definition_id: "123e4567-e89b-12d3-a456-426614174000"
-              title: "経費精算申請"
-              form_data:
-                amount: 50000
-                description: "出張費用"
-      responses:
-        '201':
-          description: ワークフロー作成成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowResponse'
-        '400':
-          description: バリデーションエラー（定義が未公開など）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/validation-error
-                title: Validation Error
-                status: 400
-                detail: 公開されていないワークフロー定義です
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: ワークフロー定義が見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/workflow-definition-not-found
-                title: Workflow Definition Not Found
-                status: 404
-                detail: ワークフロー定義が見つかりません
-
-  /api/v1/workflows/{display_number}:
-    get:
-      tags:
-        - workflows
-      summary: ワークフロー詳細取得
-      description: |
-        指定された表示用番号のワークフローインスタンスを取得する。
-
-        申請詳細の表示に使用する。
-      operationId: getWorkflow
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - name: display_number
-          in: path
-          required: true
-          description: ワークフローインスタンスの表示用番号
-          schema:
-            type: integer
-            minimum: 1
-      responses:
-        '200':
-          description: ワークフロー詳細
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: ワークフローインスタンスが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/workflow-instance-not-found
-                title: Workflow Instance Not Found
-                status: 404
-                detail: ワークフローインスタンスが見つかりません
-
-  /api/v1/workflows/{display_number}/submit:
-    post:
-      tags:
-        - workflows
-      summary: ワークフロー申請
-      description: |
-        下書き状態のワークフローを申請する。
-
-        申請すると承認ステップが作成され、ワークフローは `in_progress` 状態に遷移する。
-        MVP では1段階承認のみサポート。
-      operationId: submitWorkflow
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-        - name: display_number
-          in: path
-          required: true
-          description: ワークフローインスタンスの表示用番号
-          schema:
-            type: integer
-            minimum: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SubmitWorkflowRequest'
-            example:
-              assigned_to: "987fcdeb-51a2-3d4e-b567-890123456789"
-      responses:
-        '200':
-          description: 申請成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowResponse'
-        '400':
-          description: バリデーションエラー（下書き以外の申請など）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/validation-error
-                title: Validation Error
-                status: 400
-                detail: 下書き状態のワークフローのみ申請できます
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          description: ワークフローインスタンスが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/workflow-instance-not-found
-                title: Workflow Instance Not Found
-                status: 404
-                detail: ワークフローインスタンスが見つかりません
-
-  /api/v1/workflows/{display_number}/steps/{step_display_number}/approve:
-    post:
-      tags:
-        - workflows
-      summary: ワークフローステップ承認
-      description: |
-        指定されたステップを承認する。
-
-        承認には楽観的ロック用の `version` が必要。
-        競合が発生した場合は 409 Conflict を返す。
-
-        MVP では1段階承認のため、ステップ承認 = ワークフロー承認となる。
-      operationId: approveWorkflowStep
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-        - name: display_number
-          in: path
-          required: true
-          description: ワークフローインスタンスの表示用番号
-          schema:
-            type: integer
-            minimum: 1
-        - name: step_display_number
-          in: path
-          required: true
-          description: ワークフローステップの表示用番号
-          schema:
-            type: integer
-            minimum: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApproveRejectRequest'
-            example:
-              version: 1
-              comment: "承認します"
-      responses:
-        '200':
-          description: 承認成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowResponse'
-        '400':
-          description: バリデーションエラー（ステップが承認可能な状態でない等）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/invalid-step-status
-                title: Invalid Step Status
-                status: 400
-                detail: このステップは承認できる状態ではありません
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: 承認権限がない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/not-assigned
-                title: Not Assigned
-                status: 403
-                detail: このステップの承認権限がありません
-        '404':
-          description: ワークフローまたはステップが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/step-not-found
-                title: Step Not Found
-                status: 404
-                detail: ワークフローステップが見つかりません
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  /api/v1/workflows/{display_number}/steps/{step_display_number}/reject:
-    post:
-      tags:
-        - workflows
-      summary: ワークフローステップ却下
-      description: |
-        指定されたステップを却下する。
-
-        却下には楽観的ロック用の `version` が必要。
-        競合が発生した場合は 409 Conflict を返す。
-
-        MVP では1段階承認のため、ステップ却下 = ワークフロー却下となる。
-      operationId: rejectWorkflowStep
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-        - name: display_number
-          in: path
-          required: true
-          description: ワークフローインスタンスの表示用番号
-          schema:
-            type: integer
-            minimum: 1
-        - name: step_display_number
-          in: path
-          required: true
-          description: ワークフローステップの表示用番号
-          schema:
-            type: integer
-            minimum: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ApproveRejectRequest'
-            example:
-              version: 1
-              comment: "内容に不備があります"
-      responses:
-        '200':
-          description: 却下成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WorkflowResponse'
-        '400':
-          description: バリデーションエラー（ステップが却下可能な状態でない等）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/invalid-step-status
-                title: Invalid Step Status
-                status: 400
-                detail: このステップは却下できる状態ではありません
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: 却下権限がない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/not-assigned
-                title: Not Assigned
-                status: 403
-                detail: このステップの却下権限がありません
-        '404':
-          description: ワークフローまたはステップが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/step-not-found
-                title: Step Not Found
-                status: 404
-                detail: ワークフローステップが見つかりません
-        '409':
-          $ref: '#/components/responses/Conflict'
-
-  # ============================================================
-  # ユーザー API
-  # ============================================================
-  /api/v1/users:
-    get:
-      tags:
-        - users
-      summary: テナント内ユーザー一覧取得
-      description: |
-        テナント内のアクティブなユーザー一覧を取得する。
-
-        承認者選択 UI など、テナント内のユーザーを選択する場面で使用する。
-        同姓同名のユーザーを区別するため、表示用 ID（USER-N）とメールアドレスを返す。
-      operationId: listUsers
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-      responses:
-        '200':
-          description: ユーザー一覧
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  # ============================================================
-  # ロール管理 API
-  # ============================================================
-  /api/v1/roles:
-    get:
-      tags:
-        - roles
-      summary: ロール一覧取得
-      description: |
-        テナント内で利用可能なロール一覧をユーザー数付きで取得する。
-
-        システムロール（admin, user 等）とカスタムロールの両方を返す。
-        `system_admin` ロールは除外される。
-      operationId: listRoles
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-      responses:
-        '200':
-          description: ロール一覧
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-    post:
-      tags:
-        - roles
-      summary: カスタムロール作成
-      description: |
-        テナント固有のカスタムロールを作成する。
-
-        ロール名はテナント内で一意である必要がある。
-        権限は 1 つ以上指定が必要。
-      operationId: createRole
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateRoleRequest'
-      responses:
-        '201':
-          description: ロール作成成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleDetailResponse'
-        '400':
-          description: バリデーションエラー（権限が空）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          description: 同名ロールが既に存在する
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/conflict
-                title: Conflict
-                status: 409
-                detail: 同名のロールが既に存在します
-
-  /api/v1/roles/{role_id}:
-    get:
-      tags:
-        - roles
-      summary: ロール詳細取得
-      description: ロールの詳細情報を取得する。
-      operationId: getRole
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - name: role_id
-          in: path
-          required: true
-          description: ロール ID
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: ロール詳細
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleDetailResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          description: ロールが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/role-not-found
-                title: Role Not Found
-                status: 404
-                detail: ロールが見つかりません
-
-    patch:
-      tags:
-        - roles
-      summary: カスタムロール更新
-      description: |
-        カスタムロールの名前・説明・権限を更新する。
-
-        システムロールは更新できない。
-        権限を更新する場合は 1 つ以上指定が必要。
-      operationId: updateRole
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-        - name: role_id
-          in: path
-          required: true
-          description: ロール ID
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateRoleRequest'
-      responses:
-        '200':
-          description: ロール更新成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleDetailResponse'
-        '400':
-          description: バリデーションエラー（システムロール、権限が空）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          description: ロールが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/role-not-found
-                title: Role Not Found
-                status: 404
-                detail: ロールが見つかりません
-
-    delete:
-      tags:
-        - roles
-      summary: カスタムロール削除
-      description: |
-        カスタムロールを削除する。
-
-        システムロールは削除できない。
-        ユーザーに割り当てられているロールは削除できない。
-      operationId: deleteRole
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - $ref: '#/components/parameters/XCsrfToken'
-        - name: role_id
-          in: path
-          required: true
-          description: ロール ID
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: ロール削除成功
-        '400':
-          description: バリデーションエラー（システムロール）
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          description: ロールが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/role-not-found
-                title: Role Not Found
-                status: 404
-                detail: ロールが見つかりません
-        '409':
-          description: ユーザー割り当てあり
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/conflict
-                title: Conflict
-                status: 409
-                detail: このロールは 3 人のユーザーに割り当てられているため削除できません
-
-  # ============================================================
-  # 監査ログ API
-  # ============================================================
-  /api/v1/audit-logs:
-    get:
-      tags:
-        - audit-logs
-      summary: 監査ログ一覧取得
-      description: |
-        テナント内の監査ログを新しい順で取得する。
-        カーソルベースページネーション対応。
-
-        `user:read` 権限が必要（テナント管理者のみ）。
-      operationId: listAuditLogs
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - name: cursor
-          in: query
-          required: false
-          description: 次ページ取得用カーソル（前回レスポンスの `next_cursor` 値）
-          schema:
-            type: string
-        - name: limit
-          in: query
-          required: false
-          description: 取得件数（デフォルト 50、最大 100）
-          schema:
-            type: integer
-            default: 50
-            minimum: 1
-            maximum: 100
-        - name: from
-          in: query
-          required: false
-          description: 開始日時（ISO 8601 形式）
-          schema:
-            type: string
-            format: date-time
-        - name: to
-          in: query
-          required: false
-          description: 終了日時（ISO 8601 形式）
-          schema:
-            type: string
-            format: date-time
-        - name: actor_id
-          in: query
-          required: false
-          description: 操作者 ID でフィルタ
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: false
-          description: |
-            アクションでフィルタ（カンマ区切りで複数指定可）。
-            指定可能な値: `user.create`, `user.update`, `user.deactivate`, `user.activate`,
-            `role.create`, `role.update`, `role.delete`
-          schema:
-            type: string
-            example: user.create,user.update
-        - name: result
-          in: query
-          required: false
-          description: 結果でフィルタ（`success` / `failure`）
-          schema:
-            type: string
-            enum:
-              - success
-              - failure
-      responses:
-        '200':
-          description: 監査ログ一覧
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuditLogListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-
-  # ============================================================
-  # タスク API
-  # ============================================================
+      - session_auth: []
   /api/v1/tasks/my:
     get:
       tags:
-        - tasks
-      summary: 自分のタスク一覧取得
-      description: |
-        ログインユーザーにアサインされたアクティブなタスク（承認ステップ）の一覧を取得する。
-
-        「タスク」とは WorkflowStep のユーザー向けビューであり、
-        自分にアサインされた承認待ちのステップを表す。
-      operationId: listMyTasks
-      security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
+      - tasks
+      summary: GET /api/v1/tasks/my
+      description: 自分のタスク一覧を取得する
+      operationId: list_my_tasks
       responses:
         '200':
           description: タスク一覧
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskListResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /api/v1/workflows/{workflow_display_number}/tasks/{step_display_number}:
+                $ref: '#/components/schemas/ApiResponse_Vec_TaskItemData'
+      security:
+      - session_auth: []
+  /api/v1/users:
     get:
       tags:
-        - tasks
-      summary: タスク詳細取得
-      description: |
-        ワークフローと承認ステップの表示用番号でタスク詳細を取得する。
-
-        レスポンスにはステップ情報と、関連するワークフローインスタンス（全ステップ含む）が含まれる。
-        自分にアサインされたタスクのみ取得可能。
-
-        URL の構造は `/workflows/{workflow_display_number}/tasks/{step_display_number}` で、
-        ワークフローとステップの階層関係を表現している。
-      operationId: getTaskByDisplayNumbers
-      security:
-        - sessionAuth: []
+      - users
+      summary: GET /api/v1/users
+      description: |-
+        テナント内のユーザー一覧を取得する。
+        ステータスフィルタに対応（省略時は deleted 以外すべて）。
+      operationId: list_users
       parameters:
-        - $ref: '#/components/parameters/XTenantId'
-        - name: workflow_display_number
-          in: path
-          required: true
-          description: ワークフローインスタンスの表示用連番
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-          example: 1
-        - name: step_display_number
-          in: path
-          required: true
-          description: ステップの表示用連番（ワークフロー内で一意）
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-          example: 1
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ユーザー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_Vec_UserItemData'
+      security:
+      - session_auth: []
+    post:
+      tags:
+      - users
+      summary: POST /api/v1/users
+      description: |-
+        ユーザーを作成する。
+
+        ## フロー
+
+        1. 入力バリデーション
+        2. 初期パスワード生成
+        3. Core Service でユーザー作成
+        4. Auth Service で認証情報作成
+        5. 初期パスワード付きレスポンス返却
+      operationId: create_user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+        required: true
+      responses:
+        '201':
+          description: ユーザー作成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_CreateUserResponseData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: メールアドレス重複
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/users/{display_number}:
+    get:
+      tags:
+      - users
+      summary: GET /api/v1/users/{display_number}
+      description: 表示用連番でユーザー詳細を取得する。
+      operationId: get_user_detail
+      parameters:
+      - name: display_number
+        in: path
+        description: ユーザー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: ユーザー詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_UserDetailData'
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+    patch:
+      tags:
+      - users
+      summary: PATCH /api/v1/users/{display_number}
+      description: ユーザー情報を更新する（名前、ロール）。
+      operationId: update_user
+      parameters:
+      - name: display_number
+        in: path
+        description: ユーザー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+        required: true
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_UserResponseData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/users/{display_number}/status:
+    patch:
+      tags:
+      - users
+      summary: PATCH /api/v1/users/{display_number}/status
+      description: |-
+        ユーザーステータスを変更する。
+        セッションから自身の user_id を取得し、Core Service に渡す。
+      operationId: update_user_status
+      parameters:
+      - name: display_number
+        in: path
+        description: ユーザー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserStatusRequest'
+        required: true
+      responses:
+        '200':
+          description: ステータス変更成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_UserResponseData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ユーザーが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflow-definitions:
+    get:
+      tags:
+      - workflows
+      summary: GET /api/v1/workflow-definitions
+      description: |-
+        ワークフロー定義一覧を取得する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id` を取得
+        2. Core Service の `GET /internal/workflow-definitions` を呼び出し
+        3. レスポンスを返す
+      operationId: list_workflow_definitions
+      responses:
+        '200':
+          description: ワークフロー定義一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_Vec_WorkflowDefinitionData'
+      security:
+      - session_auth: []
+  /api/v1/workflow-definitions/{id}:
+    get:
+      tags:
+      - workflows
+      summary: GET /api/v1/workflow-definitions/{id}
+      description: |-
+        ワークフロー定義の詳細を取得する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id` を取得
+        2. Core Service の `GET /internal/workflow-definitions/{id}` を呼び出し
+        3. レスポンスを返す
+      operationId: get_workflow_definition
+      parameters:
+      - name: id
+        in: path
+        description: ワークフロー定義 ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: ワークフロー定義詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowDefinitionData'
+        '404':
+          description: 定義が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows:
+    get:
+      tags:
+      - workflows
+      summary: GET /api/v1/workflows
+      description: |-
+        自分のワークフロー一覧を取得する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `GET /internal/workflows` を呼び出し
+        3. レスポンスを返す
+      operationId: list_my_workflows
+      responses:
+        '200':
+          description: 自分のワークフロー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_Vec_WorkflowData'
+      security:
+      - session_auth: []
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows
+      description: |-
+        ワークフローを作成する（下書き）
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `POST /internal/workflows` を呼び出し
+        3. レスポンスを返す
+      operationId: create_workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkflowRequest'
+        required: true
+      responses:
+        '201':
+          description: ワークフロー作成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: 定義が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}:
+    get:
+      tags:
+      - workflows
+      summary: GET /api/v1/workflows/{display_number}
+      description: |-
+        ワークフローの詳細を取得する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id` を取得
+        2. Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出し
+        3. レスポンスを返す
+      operationId: get_workflow
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフロー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: ワークフロー詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '404':
+          description: ワークフローが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}/steps/{step_display_number}/approve:
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows/{display_number}/steps/{step_display_number}/approve
+      description: |-
+        ワークフローステップを承認する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出し
+        3. 200 OK + 更新されたワークフローを返す
+      operationId: approve_step
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフローの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: step_display_number
+        in: path
+        description: ステップの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRejectRequest'
+        required: true
+      responses:
+        '200':
+          description: 承認成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: 権限なし
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ステップが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 競合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}/steps/{step_display_number}/reject:
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows/{display_number}/steps/{step_display_number}/reject
+      description: |-
+        ワークフローステップを却下する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出し
+        3. 200 OK + 更新されたワークフローを返す
+      operationId: reject_step
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフローの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: step_display_number
+        in: path
+        description: ステップの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRejectRequest'
+        required: true
+      responses:
+        '200':
+          description: 却下成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: 権限なし
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ステップが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 競合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}/submit:
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows/{display_number}/submit
+      description: |-
+        ワークフローを申請する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id` を取得
+        2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出し
+        3. レスポンスを返す
+      operationId: submit_workflow
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフロー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitWorkflowRequest'
+        required: true
+      responses:
+        '200':
+          description: 申請成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ワークフローが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}/tasks/{step_display_number}:
+    get:
+      tags:
+      - tasks
+      summary: GET /api/v1/workflows/{display_number}/tasks/{step_display_number}
+      description: display_number でタスク詳細を取得する
+      operationId: get_task_by_display_numbers
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフローの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: step_display_number
+        in: path
+        description: ステップの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
       responses:
         '200':
           description: タスク詳細
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TaskDetailResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: 自分にアサインされていないタスク
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/forbidden
-                title: Forbidden
-                status: 403
-                detail: このタスクにアクセスする権限がありません
+                $ref: '#/components/schemas/ApiResponse_TaskDetailData'
         '404':
           description: タスクが見つからない
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-              example:
-                type: https://ringiflow.example.com/errors/task-not-found
-                title: Task Not Found
-                status: 404
-                detail: タスクが見つかりません
-
-  # ============================================================
-  # ダッシュボード API
-  # ============================================================
-  /api/v1/dashboard/stats:
-    get:
-      tags:
-        - dashboard
-      summary: ダッシュボード統計情報取得
-      description: |
-        ログインユーザーのダッシュボード統計情報を取得する。
-
-        以下の KPI を返す:
-        - 承認待ちタスク数（Active なステップのうち自分にアサインされたもの）
-        - 申請中ワークフロー数（InProgress なインスタンスのうち自分が申請したもの）
-        - 本日完了タスク数（今日 completed_at が設定されたステップのうち自分にアサインされたもの）
-      operationId: getDashboardStats
       security:
-        - sessionAuth: []
-      parameters:
-        - $ref: '#/components/parameters/XTenantId'
-      responses:
-        '200':
-          description: ダッシュボード統計情報
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DashboardStatsResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  # ============================================================
-  # ヘルスチェック API
-  # ============================================================
+      - session_auth: []
   /health:
     get:
       tags:
-        - health
-      summary: ヘルスチェック
-      description: サーバーの稼働状態を確認する。
-      operationId: healthCheck
-      security: []  # 認証不要
+      - health
+      summary: ヘルスチェックエンドポイント
+      description: サーバーが正常に稼働していることを確認するためのエンドポイント。
+      operationId: health_check
       responses:
         '200':
-          description: 正常
+          description: サーバー稼働中
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
-
-  /health/ready:
-    get:
-      tags:
-        - health
-      summary: レディネスチェック
-      description: 依存サービス（DB、Redis、Core API）を含めた稼働状態を確認する。
-      operationId: readinessCheck
-      security: []  # 認証不要
-      responses:
-        '200':
-          description: 準備完了
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReadinessResponse'
-        '503':
-          description: 一部サービスが利用不可
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ReadinessResponse'
-
 components:
-  securitySchemes:
-    sessionAuth:
-      type: apiKey
-      in: cookie
-      name: session_id
-      description: HTTPOnly セッション Cookie
-
-  parameters:
-    XTenantId:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      description: テナント ID
-      schema:
-        type: string
-        format: uuid
-      example: "123e4567-e89b-12d3-a456-426614174000"
-
-    XCsrfToken:
-      name: X-CSRF-Token
-      in: header
-      required: true
-      description: CSRF トークン（/api/v1/auth/csrf で取得）
-      schema:
-        type: string
-      example: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-
   schemas:
-    # ============================================================
-    # ワークフロー関連
-    # ============================================================
+    ApiResponse_CreateUserResponseData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ユーザー作成レスポンス（初期パスワード付き）
+          required:
+          - id
+          - display_id
+          - display_number
+          - name
+          - email
+          - role
+          - initial_password
+          properties:
+            id:
+              type: string
+            display_id:
+              type: string
+            display_number:
+              type: integer
+              format: int64
+            name:
+              type: string
+            email:
+              type: string
+            role:
+              type: string
+            initial_password:
+              type: string
+    ApiResponse_CsrfResponseData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: CSRF トークンデータ
+          required:
+          - token
+          properties:
+            token:
+              type: string
+    ApiResponse_DashboardStatsData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ダッシュボード統計データ
+          required:
+          - pending_tasks
+          - my_workflows_in_progress
+          - completed_today
+          properties:
+            pending_tasks:
+              type: integer
+              format: int64
+            my_workflows_in_progress:
+              type: integer
+              format: int64
+            completed_today:
+              type: integer
+              format: int64
+    ApiResponse_LoginResponseData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ログインレスポンスデータ
+          required:
+          - user
+          properties:
+            user:
+              $ref: '#/components/schemas/LoginUserResponse'
+    ApiResponse_MeResponseData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: 現在のユーザー情報データ
+          required:
+          - id
+          - email
+          - name
+          - tenant_id
+          - tenant_name
+          - roles
+          - permissions
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+            name:
+              type: string
+            tenant_id:
+              type: string
+              format: uuid
+            tenant_name:
+              type: string
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
+    ApiResponse_TaskDetailData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: タスク詳細データ
+          required:
+          - step
+          - workflow
+          properties:
+            step:
+              $ref: '#/components/schemas/WorkflowStepData'
+            workflow:
+              $ref: '#/components/schemas/WorkflowData'
+    ApiResponse_UserDetailData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ユーザー詳細レスポンス
+          required:
+          - id
+          - display_id
+          - display_number
+          - name
+          - email
+          - status
+          - roles
+          - permissions
+          - tenant_name
+          properties:
+            id:
+              type: string
+            display_id:
+              type: string
+            display_number:
+              type: integer
+              format: int64
+            name:
+              type: string
+            email:
+              type: string
+            status:
+              type: string
+            roles:
+              type: array
+              items:
+                type: string
+            permissions:
+              type: array
+              items:
+                type: string
+            tenant_name:
+              type: string
+    ApiResponse_UserResponseData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ユーザー簡易レスポンス（更新・ステータス変更用）
+          required:
+          - id
+          - name
+          - email
+          - status
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+            status:
+              type: string
+    ApiResponse_Vec_TaskItemData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: タスク一覧の要素データ
+            required:
+            - id
+            - display_number
+            - step_name
+            - status
+            - version
+            - created_at
+            - workflow
+            properties:
+              id:
+                type: string
+              display_number:
+                type: integer
+                format: int64
+              step_name:
+                type: string
+              status:
+                type: string
+              version:
+                type: integer
+                format: int32
+              assigned_to:
+                oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/UserRefData'
+              due_date:
+                type:
+                - string
+                - 'null'
+              started_at:
+                type:
+                - string
+                - 'null'
+              created_at:
+                type: string
+              workflow:
+                $ref: '#/components/schemas/TaskWorkflowSummaryData'
+    ApiResponse_Vec_UserItemData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: ユーザー一覧の要素データ
+            required:
+            - id
+            - display_id
+            - display_number
+            - name
+            - email
+            - status
+            - roles
+            properties:
+              id:
+                type: string
+              display_id:
+                type: string
+              display_number:
+                type: integer
+                format: int64
+              name:
+                type: string
+              email:
+                type: string
+              status:
+                type: string
+              roles:
+                type: array
+                items:
+                  type: string
+    ApiResponse_Vec_WorkflowData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: ワークフローデータ
+            required:
+            - id
+            - display_id
+            - display_number
+            - title
+            - definition_id
+            - status
+            - version
+            - form_data
+            - initiated_by
+            - steps
+            - created_at
+            - updated_at
+            properties:
+              id:
+                type: string
+              display_id:
+                type: string
+              display_number:
+                type: integer
+                format: int64
+              title:
+                type: string
+              definition_id:
+                type: string
+              status:
+                type: string
+              version:
+                type: integer
+                format: int32
+              form_data: {}
+              initiated_by:
+                $ref: '#/components/schemas/UserRefData'
+              current_step_id:
+                type:
+                - string
+                - 'null'
+              steps:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowStepData'
+              submitted_at:
+                type:
+                - string
+                - 'null'
+              completed_at:
+                type:
+                - string
+                - 'null'
+              created_at:
+                type: string
+              updated_at:
+                type: string
+    ApiResponse_Vec_WorkflowDefinitionData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: ワークフロー定義データ
+            required:
+            - id
+            - name
+            - version
+            - definition
+            - status
+            - created_by
+            - created_at
+            - updated_at
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type:
+                - string
+                - 'null'
+              version:
+                type: integer
+                format: int32
+              definition: {}
+              status:
+                type: string
+              created_by:
+                type: string
+              created_at:
+                type: string
+              updated_at:
+                type: string
+    ApiResponse_WorkflowData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ワークフローデータ
+          required:
+          - id
+          - display_id
+          - display_number
+          - title
+          - definition_id
+          - status
+          - version
+          - form_data
+          - initiated_by
+          - steps
+          - created_at
+          - updated_at
+          properties:
+            id:
+              type: string
+            display_id:
+              type: string
+            display_number:
+              type: integer
+              format: int64
+            title:
+              type: string
+            definition_id:
+              type: string
+            status:
+              type: string
+            version:
+              type: integer
+              format: int32
+            form_data: {}
+            initiated_by:
+              $ref: '#/components/schemas/UserRefData'
+            current_step_id:
+              type:
+              - string
+              - 'null'
+            steps:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkflowStepData'
+            submitted_at:
+              type:
+              - string
+              - 'null'
+            completed_at:
+              type:
+              - string
+              - 'null'
+            created_at:
+              type: string
+            updated_at:
+              type: string
+    ApiResponse_WorkflowDefinitionData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ワークフロー定義データ
+          required:
+          - id
+          - name
+          - version
+          - definition
+          - status
+          - created_by
+          - created_at
+          - updated_at
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            description:
+              type:
+              - string
+              - 'null'
+            version:
+              type: integer
+              format: int32
+            definition: {}
+            status:
+              type: string
+            created_by:
+              type: string
+            created_at:
+              type: string
+            updated_at:
+              type: string
+    ApproveRejectRequest:
+      type: object
+      description: ステップ承認/却下リクエスト（BFF 公開 API）
+      required:
+      - version
+      properties:
+        version:
+          type: integer
+          format: int32
+          description: 楽観的ロック用バージョン
+        comment:
+          type:
+          - string
+          - 'null'
+          description: コメント（任意）
+    CreateUserRequest:
+      type: object
+      description: ユーザー作成リクエスト
+      required:
+      - email
+      - name
+      - role_name
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        role_name:
+          type: string
+    CreateUserResponseData:
+      type: object
+      description: ユーザー作成レスポンス（初期パスワード付き）
+      required:
+      - id
+      - display_id
+      - display_number
+      - name
+      - email
+      - role
+      - initial_password
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        initial_password:
+          type: string
     CreateWorkflowRequest:
       type: object
+      description: ワークフロー作成リクエスト（BFF 公開 API）
       required:
-        - definition_id
-        - title
-        - form_data
+      - definition_id
+      - title
+      - form_data
       properties:
         definition_id:
           type: string
@@ -1159,1102 +1530,512 @@ components:
         title:
           type: string
           description: ワークフロータイトル
-          minLength: 1
-          maxLength: 255
-          example: "経費精算申請"
         form_data:
-          type: object
-          description: フォームデータ（定義に応じた任意の JSON）
-          additionalProperties: true
-          example:
-            amount: 50000
-            description: "出張費用"
+          description: フォームデータ
+    CsrfResponseData:
+      type: object
+      description: CSRF トークンデータ
+      required:
+      - token
+      properties:
+        token:
+          type: string
+    DashboardStatsData:
+      type: object
+      description: ダッシュボード統計データ
+      required:
+      - pending_tasks
+      - my_workflows_in_progress
+      - completed_today
+      properties:
+        pending_tasks:
+          type: integer
+          format: int64
+        my_workflows_in_progress:
+          type: integer
+          format: int64
+        completed_today:
+          type: integer
+          format: int64
+    HealthResponse:
+      type: object
+      description: ヘルスチェックレスポンス
+      required:
+      - status
+      - version
+      properties:
+        status:
+          type: string
+          description: 稼働状態（`"healthy"` または `"unhealthy"`）
+        version:
+          type: string
+          description: アプリケーションバージョン（Cargo.toml から取得）
+    LoginRequest:
+      type: object
+      description: ログインリクエスト
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    LoginResponseData:
+      type: object
+      description: ログインレスポンスデータ
+      required:
+      - user
+      properties:
+        user:
+          $ref: '#/components/schemas/LoginUserResponse'
+    LoginUserResponse:
+      type: object
+      description: ログインユーザー情報
+      required:
+      - id
+      - email
+      - name
+      - tenant_id
+      - roles
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        tenant_id:
+          type: string
+          format: uuid
+        roles:
+          type: array
+          items:
+            type: string
+    MeResponseData:
+      type: object
+      description: 現在のユーザー情報データ
+      required:
+      - id
+      - email
+      - name
+      - tenant_id
+      - tenant_name
+      - roles
+      - permissions
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        tenant_id:
+          type: string
+          format: uuid
+        tenant_name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    ProblemDetails:
+      type: object
+      description: |-
+        エラーレスポンス（RFC 9457 Problem Details）
 
+        すべてのサービスで統一されたエラーレスポンス形式。
+        `type` フィールドは URI で問題の種類を識別する。
+      required:
+      - type
+      - title
+      - status
+      - detail
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+          minimum: 0
+        detail:
+          type: string
     SubmitWorkflowRequest:
       type: object
+      description: ワークフロー申請リクエスト（BFF 公開 API）
       required:
-        - assigned_to
+      - assigned_to
       properties:
         assigned_to:
           type: string
           format: uuid
           description: 承認者のユーザー ID
-
-    ApproveRejectRequest:
+    TaskDetailData:
       type: object
+      description: タスク詳細データ
       required:
-        - version
+      - step
+      - workflow
       properties:
-        version:
-          type: integer
-          minimum: 1
-          description: 楽観的ロック用バージョン番号（競合検出に使用）
-        comment:
-          type: string
-          maxLength: 1000
-          description: コメント（任意）
-
-    WorkflowResponse:
+        step:
+          $ref: '#/components/schemas/WorkflowStepData'
+        workflow:
+          $ref: '#/components/schemas/WorkflowData'
+    TaskItemData:
       type: object
+      description: タスク一覧の要素データ
       required:
-        - data
-      properties:
-        data:
-          $ref: '#/components/schemas/WorkflowInstance'
-
-    WorkflowListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkflowInstance'
-
-    WorkflowDefinitionResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: '#/components/schemas/WorkflowDefinition'
-
-    WorkflowDefinitionListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkflowDefinition'
-
-    WorkflowDefinition:
-      type: object
-      required:
-        - id
-        - name
-        - version
-        - definition
-        - status
-        - created_by
-        - created_at
-        - updated_at
+      - id
+      - display_number
+      - step_name
+      - status
+      - version
+      - created_at
+      - workflow
       properties:
         id:
           type: string
-          format: uuid
-          description: ワークフロー定義 ID
-        name:
-          type: string
-          description: ワークフロー定義名
-        description:
-          type:
-            - string
-            - 'null'
-          description: 説明
-        version:
-          type: integer
-          description: バージョン番号
-        definition:
-          type: object
-          description: |
-            ワークフロー定義の詳細（フォーム定義、ステップ定義など）。
-
-            フロントエンドはこの `definition` オブジェクトの `form.fields` を
-            使用して動的フォームを生成する。
-          additionalProperties: true
-        status:
-          type: string
-          enum: [Draft, Published, Archived]
-          description: |
-            ワークフロー定義の状態:
-            - Draft: 下書き
-            - Published: 公開済み
-            - Archived: アーカイブ済み
-        created_by:
-          type: string
-          format: uuid
-          description: 作成者のユーザー ID
-        created_at:
-          type: string
-          format: date-time
-          description: 作成日時
-        updated_at:
-          type: string
-          format: date-time
-          description: 更新日時
-
-    WorkflowInstance:
-      type: object
-      required:
-        - id
-        - display_id
-        - display_number
-        - title
-        - definition_id
-        - status
-        - version
-        - form_data
-        - initiated_by
-        - created_at
-        - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ワークフローインスタンス ID
-        display_id:
-          type: string
-          description: "表示用 ID（例: WF-42）"
-          example: "WF-42"
         display_number:
           type: integer
-          minimum: 1
-          description: 表示用番号（URL パスパラメータに使用）
-          example: 42
-        title:
+          format: int64
+        step_name:
           type: string
-          description: ワークフロータイトル
-        definition_id:
-          type: string
-          format: uuid
-          description: ワークフロー定義 ID
         status:
           type: string
-          enum: [Draft, Pending, InProgress, Approved, Rejected, Cancelled]
-          description: |
-            ワークフローの状態:
-            - Draft: 下書き
-            - Pending: 申請待ち
-            - InProgress: 承認中
-            - Approved: 承認済み
-            - Rejected: 却下
-            - Cancelled: キャンセル
         version:
           type: integer
-          minimum: 1
-          description: 楽観的ロック用バージョン番号（更新操作時に競合検出に使用）
-        form_data:
-          type: object
-          description: フォームデータ
-          additionalProperties: true
+          format: int32
+        assigned_to:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/UserRefData'
+        due_date:
+          type:
+          - string
+          - 'null'
+        started_at:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+        workflow:
+          $ref: '#/components/schemas/TaskWorkflowSummaryData'
+    TaskWorkflowSummaryData:
+      type: object
+      description: ワークフロー概要データ（タスク一覧用）
+      required:
+      - id
+      - display_id
+      - display_number
+      - title
+      - status
+      - initiated_by
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        title:
+          type: string
+        status:
+          type: string
         initiated_by:
-          $ref: '#/components/schemas/UserRef'
+          $ref: '#/components/schemas/UserRefData'
+        submitted_at:
+          type:
+          - string
+          - 'null'
+    UpdateUserRequest:
+      type: object
+      description: ユーザー更新リクエスト
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+        role_name:
+          type:
+          - string
+          - 'null'
+    UpdateUserStatusRequest:
+      type: object
+      description: ユーザーステータス変更リクエスト
+      required:
+      - status
+      properties:
+        status:
+          type: string
+    UserDetailData:
+      type: object
+      description: ユーザー詳細レスポンス
+      required:
+      - id
+      - display_id
+      - display_number
+      - name
+      - email
+      - status
+      - roles
+      - permissions
+      - tenant_name
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        tenant_name:
+          type: string
+    UserItemData:
+      type: object
+      description: ユーザー一覧の要素データ
+      required:
+      - id
+      - display_id
+      - display_number
+      - name
+      - email
+      - status
+      - roles
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    UserRefData:
+      type: object
+      description: ユーザー参照データ（フロントエンドへの Serialize 用）
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    UserResponseData:
+      type: object
+      description: ユーザー簡易レスポンス（更新・ステータス変更用）
+      required:
+      - id
+      - name
+      - email
+      - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+    WorkflowData:
+      type: object
+      description: ワークフローデータ
+      required:
+      - id
+      - display_id
+      - display_number
+      - title
+      - definition_id
+      - status
+      - version
+      - form_data
+      - initiated_by
+      - steps
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        title:
+          type: string
+        definition_id:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+          format: int32
+        form_data: {}
+        initiated_by:
+          $ref: '#/components/schemas/UserRefData'
         current_step_id:
           type:
-            - string
-            - 'null'
-          description: 現在の承認ステップ ID
+          - string
+          - 'null'
         steps:
           type: array
           items:
-            $ref: '#/components/schemas/WorkflowStep'
-          description: 承認ステップ一覧
+            $ref: '#/components/schemas/WorkflowStepData'
         submitted_at:
           type:
-            - string
-            - 'null'
-          format: date-time
-          description: 申請日時
+          - string
+          - 'null'
         completed_at:
           type:
-            - string
-            - 'null'
-          format: date-time
-          description: 完了日時（承認/却下/キャンセル時）
+          - string
+          - 'null'
         created_at:
           type: string
-          format: date-time
-          description: 作成日時
         updated_at:
           type: string
-          format: date-time
-          description: 更新日時
-
-    WorkflowStep:
+    WorkflowDefinitionData:
       type: object
+      description: ワークフロー定義データ
       required:
-        - id
-        - display_id
-        - display_number
-        - step_id
-        - step_name
-        - step_type
-        - status
-        - version
-        - created_at
-        - updated_at
+      - id
+      - name
+      - version
+      - definition
+      - status
+      - created_by
+      - created_at
+      - updated_at
       properties:
         id:
           type: string
-          format: uuid
-          description: ステップインスタンス ID
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+          format: int32
+        definition: {}
+        status:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    WorkflowStepData:
+      type: object
+      description: ワークフローステップデータ
+      required:
+      - id
+      - display_id
+      - display_number
+      - step_id
+      - step_name
+      - step_type
+      - status
+      - version
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
         display_id:
           type: string
-          pattern: '^STEP-\d+$'
-          description: "表示用 ID（例: STEP-42）"
-          example: "STEP-42"
         display_number:
           type: integer
-          minimum: 1
-          description: 表示用番号（URL パスパラメータに使用）
-          example: 1
+          format: int64
         step_id:
           type: string
-          description: ステップ定義 ID（定義内での識別子）
         step_name:
           type: string
-          description: ステップ名
         step_type:
           type: string
-          enum: [Approval, Notification, Task]
-          description: ステップ種別
         status:
           type: string
-          enum: [Pending, Active, Completed, Skipped]
-          description: |
-            ステップの状態:
-            - Pending: 待機中
-            - Active: 処理中（承認待ち）
-            - Completed: 完了
-            - Skipped: スキップ
         version:
           type: integer
-          minimum: 1
-          description: 楽観的ロック用バージョン番号
+          format: int32
         assigned_to:
           oneOf:
-            - $ref: '#/components/schemas/UserRef'
-            - type: 'null'
-          description: 担当者のユーザー参照
+          - type: 'null'
+          - $ref: '#/components/schemas/UserRefData'
         decision:
           type:
-            - string
-            - 'null'
-          enum: [Approved, Rejected, RequestChanges, null]
-          description: |
-            決定結果:
-            - Approved: 承認
-            - Rejected: 却下
-            - RequestChanges: 差し戻し
+          - string
+          - 'null'
         comment:
           type:
-            - string
-            - 'null'
-          description: コメント
+          - string
+          - 'null'
         due_date:
           type:
-            - string
-            - 'null'
-          format: date-time
-          description: 期限
+          - string
+          - 'null'
         started_at:
           type:
-            - string
-            - 'null'
-          format: date-time
-          description: 処理開始日時
+          - string
+          - 'null'
         completed_at:
           type:
-            - string
-            - 'null'
-          format: date-time
-          description: 完了日時
+          - string
+          - 'null'
         created_at:
           type: string
-          format: date-time
-          description: 作成日時
         updated_at:
           type: string
-          format: date-time
-          description: 更新日時
-
-    # ============================================================
-    # タスク関連
-    # ============================================================
-    TaskListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/TaskItem'
-
-    TaskDetailResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: '#/components/schemas/TaskDetail'
-
-    TaskItem:
-      type: object
-      description: タスク一覧の要素。承認ステップとワークフロー概要を含む。
-      required:
-        - id
-        - display_number
-        - step_name
-        - status
-        - version
-        - created_at
-        - workflow
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ステップインスタンス ID
-        display_number:
-          type: integer
-          format: int64
-          minimum: 1
-          description: ステップの表示用連番（ワークフロー内で一意）
-          example: 1
-        step_name:
-          type: string
-          description: ステップ名
-        status:
-          type: string
-          enum: [Pending, Active, Completed, Skipped]
-          description: ステップの状態
-        version:
-          type: integer
-          minimum: 1
-          description: 楽観的ロック用バージョン番号
-        assigned_to:
-          oneOf:
-            - $ref: '#/components/schemas/UserRef'
-            - type: 'null'
-          description: 担当者のユーザー参照
-        due_date:
-          type:
-            - string
-            - 'null'
-          format: date-time
-          description: 期限
-        started_at:
-          type:
-            - string
-            - 'null'
-          format: date-time
-          description: 処理開始日時
-        created_at:
-          type: string
-          format: date-time
-          description: 作成日時
-        workflow:
-          $ref: '#/components/schemas/TaskWorkflowSummary'
-
-    TaskWorkflowSummary:
-      type: object
-      description: タスク一覧で表示するワークフロー概要情報
-      required:
-        - id
-        - display_id
-        - display_number
-        - title
-        - status
-        - initiated_by
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ワークフローインスタンス ID
-        display_id:
-          type: string
-          description: "ワークフローの表示用 ID（例: WF-42）"
-          example: "WF-42"
-        display_number:
-          type: integer
-          format: int64
-          minimum: 1
-          description: ワークフローの表示用連番
-          example: 42
-        title:
-          type: string
-          description: ワークフロータイトル
-        status:
-          type: string
-          enum: [Draft, Pending, InProgress, Approved, Rejected, Cancelled]
-          description: ワークフローの状態
-        initiated_by:
-          $ref: '#/components/schemas/UserRef'
-        submitted_at:
-          type:
-            - string
-            - 'null'
-          format: date-time
-          description: 申請日時
-
-    TaskDetail:
-      type: object
-      description: タスク詳細。承認ステップと関連するワークフロー全体を含む。
-      required:
-        - step
-        - workflow
-      properties:
-        step:
-          $ref: '#/components/schemas/WorkflowStep'
-          description: タスクに対応するワークフローステップ
-        workflow:
-          $ref: '#/components/schemas/WorkflowInstance'
-          description: 関連するワークフローインスタンス（全ステップ含む）
-
-    # ============================================================
-    # ユーザー関連
-    # ============================================================
-    UserListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserItem'
-
-    UserItem:
-      type: object
-      description: |
-        ユーザー一覧の要素。
-
-        承認者選択 UI などで同姓同名ユーザーを区別するため、
-        表示用 ID（USER-N 形式）とメールアドレスを含む。
-      required:
-        - id
-        - display_id
-        - display_number
-        - name
-        - email
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ユーザー ID
-        display_id:
-          type: string
-          pattern: '^USER-\d+$'
-          description: "表示用 ID（例: USER-5）"
-          example: "USER-5"
-        display_number:
-          type: integer
-          format: int64
-          minimum: 1
-          description: 表示用連番（テナント内で一意）
-          example: 5
-        name:
-          type: string
-          description: ユーザー名
-          example: "山田太郎"
-        email:
-          type: string
-          format: email
-          description: メールアドレス
-          example: "yamada.taro@example.com"
-
-    # ============================================================
-    # ロール関連
-    # ============================================================
-    RoleListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/RoleItem'
-
-    RoleItem:
-      type: object
-      description: ロール一覧の要素（ユーザー数付き）
-      required:
-        - id
-        - name
-        - permissions
-        - is_system
-        - user_count
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ロール ID
-        name:
-          type: string
-          description: ロール名
-          example: "editor"
-        description:
-          type:
-            - string
-            - "null"
-          description: ロールの説明
-          example: "ドキュメント編集権限を持つロール"
-        permissions:
-          type: array
-          items:
-            type: string
-          description: 権限リスト
-          example: ["workflow:read", "workflow:create"]
-        is_system:
-          type: boolean
-          description: システムロールかどうか
-          example: false
-        user_count:
-          type: integer
-          format: int64
-          minimum: 0
-          description: このロールに割り当てられたユーザー数
-          example: 5
-
-    RoleDetailResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: '#/components/schemas/RoleDetail'
-
-    RoleDetail:
-      type: object
-      description: ロール詳細情報
-      required:
-        - id
-        - name
-        - permissions
-        - is_system
-        - created_at
-        - updated_at
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ロール ID
-        name:
-          type: string
-          description: ロール名
-          example: "editor"
-        description:
-          type:
-            - string
-            - "null"
-          description: ロールの説明
-          example: "ドキュメント編集権限を持つロール"
-        permissions:
-          type: array
-          items:
-            type: string
-          description: 権限リスト
-          example: ["workflow:read", "workflow:create"]
-        is_system:
-          type: boolean
-          description: システムロールかどうか
-          example: false
-        created_at:
-          type: string
-          format: date-time
-          description: 作成日時
-        updated_at:
-          type: string
-          format: date-time
-          description: 更新日時
-
-    CreateRoleRequest:
-      type: object
-      required:
-        - name
-        - permissions
-      properties:
-        name:
-          type: string
-          description: ロール名
-          maxLength: 100
-          example: "editor"
-        description:
-          type:
-            - string
-            - "null"
-          description: ロールの説明
-          maxLength: 500
-          example: "ドキュメント編集権限を持つロール"
-        permissions:
-          type: array
-          items:
-            type: string
-          minItems: 1
-          description: 権限リスト（1 つ以上必須）
-          example: ["workflow:read", "workflow:create"]
-
-    UpdateRoleRequest:
-      type: object
-      description: 更新するフィールドのみ指定する
-      properties:
-        name:
-          type: string
-          description: ロール名
-          maxLength: 100
-          example: "editor-v2"
-        description:
-          type:
-            - string
-            - "null"
-          description: ロールの説明
-          maxLength: 500
-        permissions:
-          type: array
-          items:
-            type: string
-          minItems: 1
-          description: 権限リスト（指定する場合は 1 つ以上必須）
-
-    # ============================================================
-    # ダッシュボード関連
-    # ============================================================
-    DashboardStatsResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: '#/components/schemas/DashboardStats'
-
-    DashboardStats:
-      type: object
-      description: ダッシュボードの統計情報
-      required:
-        - pending_tasks
-        - my_workflows_in_progress
-        - completed_today
-      properties:
-        pending_tasks:
-          type: integer
-          minimum: 0
-          description: 承認待ちタスク数（Active なステップのうち自分にアサインされたもの）
-        my_workflows_in_progress:
-          type: integer
-          minimum: 0
-          description: 申請中ワークフロー数（InProgress なインスタンスのうち自分が申請したもの）
-        completed_today:
-          type: integer
-          minimum: 0
-          description: 本日完了タスク数（今日 completed_at が設定されたステップのうち自分にアサインされたもの）
-
-    # ============================================================
-    # 認証関連
-    # ============================================================
-    LoginRequest:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-          description: メールアドレス
-          maxLength: 255
-          example: user@example.com
-        password:
-          type: string
-          format: password
-          description: パスワード
-          minLength: 8
-          maxLength: 128
-          example: password123
-
-    LoginResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: object
-          required:
-            - user
-          properties:
-            user:
-              $ref: '#/components/schemas/UserSummary'
-
-    CurrentUserResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: '#/components/schemas/CurrentUser'
-
-    CurrentUser:
-      type: object
-      required:
-        - id
-        - email
-        - name
-        - tenant_id
-        - tenant_name
-        - roles
-        - permissions
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ユーザー ID
-        email:
-          type: string
-          format: email
-          description: メールアドレス
-        name:
-          type: string
-          description: 表示名
-        tenant_id:
-          type: string
-          format: uuid
-          description: テナント ID
-        tenant_name:
-          type: string
-          description: テナント名
-        roles:
-          type: array
-          items:
-            type: string
-          description: ロール一覧
-          example: ["user"]
-        permissions:
-          type: array
-          items:
-            type: string
-          description: 権限一覧
-          example: ["workflow:read", "workflow:create", "task:read", "task:update"]
-
-    UserSummary:
-      type: object
-      required:
-        - id
-        - email
-        - name
-        - tenant_id
-        - roles
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ユーザー ID
-        email:
-          type: string
-          format: email
-          description: メールアドレス
-        name:
-          type: string
-          description: 表示名
-        tenant_id:
-          type: string
-          format: uuid
-          description: テナント ID
-        roles:
-          type: array
-          items:
-            type: string
-          description: ロール一覧
-          example: ["user"]
-
-    UserRef:
-      type: object
-      description: ユーザー参照（ID とユーザー名のペア）
-      required:
-        - id
-        - name
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ユーザー ID
-        name:
-          type: string
-          maxLength: 100
-          description: ユーザー名
-
-    CsrfTokenResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: object
-          required:
-            - token
-          properties:
-            token:
-              type: string
-              description: CSRF トークン
-              example: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-    # ============================================================
-    # ヘルスチェック関連
-    # ============================================================
-    HealthResponse:
-      type: object
-      required:
-        - status
-        - version
-      properties:
-        status:
-          type: string
-          enum: [healthy]
-          description: ステータス
-        version:
-          type: string
-          description: アプリケーションバージョン
-          example: "0.1.0"
-        timestamp:
-          type: string
-          format: date-time
-          description: タイムスタンプ
-
-    ReadinessResponse:
-      type: object
-      required:
-        - status
-        - checks
-      properties:
-        status:
-          type: string
-          enum: [ready, degraded]
-          description: 全体ステータス
-        checks:
-          type: object
-          properties:
-            database:
-              type: string
-              enum: [ok, error]
-            redis:
-              type: string
-              enum: [ok, error]
-            core_api:
-              type: string
-              enum: [ok, error]
-
-    # ============================================================
-    # エラー関連
-    # ============================================================
-    ProblemDetails:
-      type: object
-      description: RFC 9457 Problem Details
-      required:
-        - type
-        - title
-        - status
-      properties:
-        type:
-          type: string
-          format: uri
-          description: エラー種別を識別する URI
-          example: https://ringiflow.example.com/errors/authentication-failed
-        title:
-          type: string
-          description: エラーの簡潔なタイトル
-          example: Authentication Failed
-        status:
-          type: integer
-          description: HTTP ステータスコード
-          example: 401
-        detail:
-          type: string
-          description: エラーの詳細説明
-          example: メールアドレスまたはパスワードが正しくありません
-        instance:
-          type: string
-          format: uri
-          description: エラーが発生したリクエストパス
-        correlation_id:
-          type: string
-          format: uuid
-          description: リクエスト追跡用 ID
-
-    ValidationError:
-      allOf:
-        - $ref: '#/components/schemas/ProblemDetails'
-        - type: object
-          properties:
-            errors:
-              type: array
-              items:
-                type: object
-                required:
-                  - field
-                  - message
-                properties:
-                  field:
-                    type: string
-                    description: エラーが発生したフィールド名
-                  code:
-                    type: string
-                    description: エラーコード
-                  message:
-                    type: string
-                    description: エラーメッセージ
-
-    # ============================================================
-    # 監査ログ
-    # ============================================================
-    AuditLogListResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/AuditLogItem'
-        next_cursor:
-          type:
-            - string
-            - 'null'
-          description: |
-            次ページ取得用のカーソル。
-            `null` の場合は最後のページを意味する。
-
-    AuditLogItem:
-      type: object
-      required:
-        - id
-        - actor_id
-        - actor_name
-        - action
-        - result
-        - resource_type
-        - resource_id
-        - created_at
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: 監査ログ ID
-        actor_id:
-          type: string
-          format: uuid
-          description: 操作者のユーザー ID
-        actor_name:
-          type: string
-          description: 操作者の表示名
-        action:
-          type: string
-          description: |
-            操作種別。`リソース.操作` 形式。
-          enum:
-            - user.create
-            - user.update
-            - user.deactivate
-            - user.activate
-            - role.create
-            - role.update
-            - role.delete
-        result:
-          type: string
-          description: 操作結果
-          enum:
-            - success
-            - failure
-        resource_type:
-          type: string
-          description: 対象リソース種別
-        resource_id:
-          type: string
-          description: 対象リソース ID
-        detail:
-          description: 操作の詳細情報（JSON オブジェクト）
-        source_ip:
-          type:
-            - string
-            - 'null'
-          description: 操作元 IP アドレス
-        created_at:
-          type: string
-          format: date-time
-          description: 操作日時（ISO 8601）
-
-    # ============================================================
-    # 共通
-    # ============================================================
-    Pagination:
-      type: object
-      required:
-        - page
-        - per_page
-        - total_pages
-        - total_count
-      properties:
-        page:
-          type: integer
-          minimum: 1
-          description: 現在のページ番号
-        per_page:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: 1ページあたりの件数
-        total_pages:
-          type: integer
-          minimum: 0
-          description: 総ページ数
-        total_count:
-          type: integer
-          minimum: 0
-          description: 総件数
-
-  responses:
-    Unauthorized:
-      description: 認証が必要
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          example:
-            type: https://ringiflow.example.com/errors/unauthorized
-            title: Unauthorized
-            status: 401
-            detail: 認証が必要です
-
-    Forbidden:
-      description: 権限不足
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          example:
-            type: https://ringiflow.example.com/errors/forbidden
-            title: Forbidden
-            status: 403
-            detail: この操作を行う権限がありません
-
-    NotFound:
-      description: リソースが見つからない
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ProblemDetails'
-          example:
-            type: https://ringiflow.example.com/errors/not-found
-            title: Not Found
-            status: 404
-            detail: リソースが見つかりません
-
-    Conflict:
-      description: 競合が発生（楽観的ロック失敗）
-      content:
-        application/json:
-          schema:
-            allOf:
-              - $ref: '#/components/schemas/ProblemDetails'
-              - type: object
-                properties:
-                  current_version:
-                    type: integer
-                    description: 現在のバージョン番号
-          example:
-            type: https://ringiflow.example.com/errors/conflict
-            title: Conflict
-            status: 409
-            detail: このリソースは既に更新されています。最新の状態を取得してください。
-            current_version: 2
+  securitySchemes:
+    session_auth:
+      type: apiKey
+      in: cookie
+      name: session_id
+tags:
+- name: health
+  description: ヘルスチェック
+- name: auth
+  description: 認証
+- name: workflows
+  description: ワークフロー管理
+- name: tasks
+  description: タスク管理
+- name: users
+  description: ユーザー管理
+- name: dashboard
+  description: ダッシュボード

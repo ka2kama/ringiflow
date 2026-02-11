@@ -9,7 +9,7 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use uuid::Uuid;
 
 use super::{StepPathParams, WorkflowData, WorkflowDefinitionData, WorkflowState};
@@ -34,6 +34,15 @@ use crate::{
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `GET /internal/workflow-definitions` を呼び出し
 /// 3. レスポンスを返す
+#[utoipa::path(
+   get,
+   path = "/api/v1/workflow-definitions",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "ワークフロー定義一覧", body = ApiResponse<Vec<WorkflowDefinitionData>>)
+   )
+)]
 pub async fn list_workflow_definitions(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -83,6 +92,17 @@ pub async fn list_workflow_definitions(
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `GET /internal/workflow-definitions/{id}` を呼び出し
 /// 3. レスポンスを返す
+#[utoipa::path(
+   get,
+   path = "/api/v1/workflow-definitions/{id}",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   params(("id" = Uuid, Path, description = "ワークフロー定義 ID")),
+   responses(
+      (status = 200, description = "ワークフロー定義詳細", body = ApiResponse<WorkflowDefinitionData>),
+      (status = 404, description = "定義が見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn get_workflow_definition(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -132,6 +152,15 @@ pub async fn get_workflow_definition(
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `GET /internal/workflows` を呼び出し
 /// 3. レスポンスを返す
+#[utoipa::path(
+   get,
+   path = "/api/v1/workflows",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "自分のワークフロー一覧", body = ApiResponse<Vec<WorkflowData>>)
+   )
+)]
 pub async fn list_my_workflows(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -184,6 +213,17 @@ pub async fn list_my_workflows(
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出し
 /// 3. レスポンスを返す
+#[utoipa::path(
+   get,
+   path = "/api/v1/workflows/{display_number}",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
+   responses(
+      (status = 200, description = "ワークフロー詳細", body = ApiResponse<WorkflowData>),
+      (status = 404, description = "ワークフローが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn get_workflow(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -234,6 +274,17 @@ pub async fn get_workflow(
 /// GET /api/v1/workflows/{display_number}/tasks/{step_display_number}
 ///
 /// display_number でタスク詳細を取得する
+#[utoipa::path(
+   get,
+   path = "/api/v1/workflows/{display_number}/tasks/{step_display_number}",
+   tag = "tasks",
+   security(("session_auth" = [])),
+   params(StepPathParams),
+   responses(
+      (status = 200, description = "タスク詳細", body = ApiResponse<crate::handler::task::TaskDetailData>),
+      (status = 404, description = "タスクが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn get_task_by_display_numbers(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,

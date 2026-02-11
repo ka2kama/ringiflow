@@ -79,6 +79,9 @@ argon2 = "0.5"
 # 暗号
 subtle = "2.6"
 
+# OpenAPI
+utoipa = { version = "5", features = ["chrono", "uuid", "yaml", "preserve_order"] }
+
 # テスト
 tokio-test = "0.4"
 pretty_assertions = "1.4"

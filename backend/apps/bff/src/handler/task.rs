@@ -18,6 +18,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use super::workflow::{UserRefData, WorkflowData, WorkflowState, WorkflowStepData};
 use crate::error::{extract_tenant_id, get_session, internal_error_response};
@@ -25,7 +26,7 @@ use crate::error::{extract_tenant_id, get_session, internal_error_response};
 // --- レスポンス型 ---
 
 /// ワークフロー概要データ（タスク一覧用）
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskWorkflowSummaryData {
    pub id: String,
    pub display_id: String,
@@ -51,7 +52,7 @@ impl From<crate::client::TaskWorkflowSummaryDto> for TaskWorkflowSummaryData {
 }
 
 /// タスク一覧の要素データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskItemData {
    pub id: String,
    pub display_number: i64,
@@ -83,7 +84,7 @@ impl From<crate::client::TaskItemDto> for TaskItemData {
 }
 
 /// タスク詳細データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct TaskDetailData {
    pub step:     WorkflowStepData,
    pub workflow: WorkflowData,
@@ -103,6 +104,15 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
 /// GET /api/v1/tasks/my
 ///
 /// 自分のタスク一覧を取得する
+#[utoipa::path(
+   get,
+   path = "/api/v1/tasks/my",
+   tag = "tasks",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "タスク一覧", body = ApiResponse<Vec<TaskItemData>>)
+   )
+)]
 pub async fn list_my_tasks(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,

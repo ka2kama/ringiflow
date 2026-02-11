@@ -25,9 +25,10 @@
 
 use axum::Json;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 /// ヘルスチェックレスポンス
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct HealthResponse {
    /// 稼働状態（`"healthy"` または `"unhealthy"`）
    pub status:  String,
@@ -38,6 +39,14 @@ pub struct HealthResponse {
 /// ヘルスチェックエンドポイント
 ///
 /// サーバーが正常に稼働していることを確認するためのエンドポイント。
+#[utoipa::path(
+   get,
+   path = "/health",
+   tag = "health",
+   responses(
+      (status = 200, description = "サーバー稼働中", body = HealthResponse)
+   )
+)]
 pub async fn health_check() -> Json<HealthResponse> {
    Json(HealthResponse {
       status:  "healthy".to_string(),

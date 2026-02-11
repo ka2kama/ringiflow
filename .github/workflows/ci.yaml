@@ -122,6 +122,18 @@ jobs:
         run: cargo test --release --all-features --lib --bins
         working-directory: backend
 
+      - name: Check OpenAPI spec sync
+        # utoipa から生成した OpenAPI 仕様と openapi/openapi.yaml が同期しているか検証
+        run: |
+          generated=$(cargo run --release --bin generate-openapi -p ringiflow-bff 2>/dev/null)
+          if ! diff -q <(echo "$generated") ../openapi/openapi.yaml > /dev/null 2>&1; then
+            echo "::error::openapi/openapi.yaml is out of sync with utoipa definitions. Run 'just openapi-generate' to update."
+            diff --unified <(echo "$generated") ../openapi/openapi.yaml || true
+            exit 1
+          fi
+          echo "✓ OpenAPI spec is in sync"
+        working-directory: backend
+
       - name: Verify production build (no dev features)
         # 本番ビルド（dev-auth feature 除外）がコンパイルできることを検証
         run: cargo build --release --no-default-features --bin ringiflow-bff

@@ -17,6 +17,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use super::workflow::WorkflowState;
 use crate::{
@@ -27,7 +28,7 @@ use crate::{
 // --- レスポンス型 ---
 
 /// ダッシュボード統計データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DashboardStatsData {
    pub pending_tasks: i64,
    pub my_workflows_in_progress: i64,
@@ -49,6 +50,15 @@ impl From<DashboardStatsDto> for DashboardStatsData {
 /// GET /api/v1/dashboard/stats
 ///
 /// ダッシュボード統計情報を取得する
+#[utoipa::path(
+   get,
+   path = "/api/v1/dashboard/stats",
+   tag = "dashboard",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "ダッシュボード統計", body = ApiResponse<DashboardStatsData>)
+   )
+)]
 pub async fn get_dashboard_stats(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,

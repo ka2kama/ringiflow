@@ -21,6 +21,7 @@ pub use command::*;
 pub use query::*;
 use ringiflow_infra::SessionManager;
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::client::CoreServiceClient;
@@ -34,7 +35,7 @@ pub struct WorkflowState {
 // --- リクエスト/レスポンス型 ---
 
 /// ワークフロー作成リクエスト（BFF 公開 API）
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateWorkflowRequest {
    /// ワークフロー定義 ID
    pub definition_id: Uuid,
@@ -45,14 +46,14 @@ pub struct CreateWorkflowRequest {
 }
 
 /// ワークフロー申請リクエスト（BFF 公開 API）
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct SubmitWorkflowRequest {
    /// 承認者のユーザー ID
    pub assigned_to: Uuid,
 }
 
 /// ステップ承認/却下リクエスト（BFF 公開 API）
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ApproveRejectRequest {
    /// 楽観的ロック用バージョン
    pub version: i32,
@@ -61,7 +62,8 @@ pub struct ApproveRejectRequest {
 }
 
 /// ステップパスパラメータ（display_number 用）
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct StepPathParams {
    /// ワークフローの表示用連番
    pub display_number:      i64,
@@ -70,7 +72,7 @@ pub struct StepPathParams {
 }
 
 /// ユーザー参照データ（フロントエンドへの Serialize 用）
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserRefData {
    pub id:   String,
    pub name: String,
@@ -86,7 +88,7 @@ impl From<crate::client::UserRefDto> for UserRefData {
 }
 
 /// ワークフローステップデータ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct WorkflowStepData {
    pub id: String,
    pub display_id: String,
@@ -130,7 +132,7 @@ impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
 }
 
 /// ワークフローデータ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct WorkflowData {
    pub id: String,
    pub display_id: String,
@@ -172,7 +174,7 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
 }
 
 /// ワークフロー定義データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct WorkflowDefinitionData {
    pub id:          String,
    pub name:        String,

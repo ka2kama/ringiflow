@@ -19,6 +19,8 @@ const ERROR_TYPE_BASE: &str = "https://ringiflow.example.com/errors";
 /// すべてのサービスで統一されたエラーレスポンス形式。
 /// `type` フィールドは URI で問題の種類を識別する。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "openapi", schema(as = ProblemDetails))]
 pub struct ErrorResponse {
    #[serde(rename = "type")]
    pub error_type: String,
@@ -183,5 +185,18 @@ mod tests {
       assert_eq!(error.title, "Not Found");
       assert_eq!(error.status, 404);
       assert_eq!(error.detail, "見つかりません");
+   }
+}
+
+#[cfg(all(test, feature = "openapi"))]
+mod openapi_tests {
+   use utoipa::ToSchema;
+
+   use super::*;
+
+   #[test]
+   fn test_スキーマ名がproblem_detailsになる() {
+      // schema(as = ProblemDetails) により、OpenAPI 上の名前が ProblemDetails になる
+      assert_eq!(ErrorResponse::name(), "ProblemDetails");
    }
 }
