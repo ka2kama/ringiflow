@@ -36,27 +36,31 @@ impl TenantDeleter for PostgresWorkflowDeleter {
    }
 
    async fn delete(&self, tenant_id: &TenantId) -> Result<DeletionResult, InfraError> {
-      // FK 制約に従い子テーブルから順に削除
+      let mut tx = self.pool.begin().await?;
+
+      // FK 制約に従い子テーブルから順に削除（トランザクションで一貫性を保証）
       let steps = sqlx::query!(
          "DELETE FROM workflow_steps WHERE tenant_id = $1",
          tenant_id.as_uuid()
       )
-      .execute(&self.pool)
+      .execute(&mut *tx)
       .await?;
 
       let instances = sqlx::query!(
          "DELETE FROM workflow_instances WHERE tenant_id = $1",
          tenant_id.as_uuid()
       )
-      .execute(&self.pool)
+      .execute(&mut *tx)
       .await?;
 
       let definitions = sqlx::query!(
          "DELETE FROM workflow_definitions WHERE tenant_id = $1",
          tenant_id.as_uuid()
       )
-      .execute(&self.pool)
+      .execute(&mut *tx)
       .await?;
+
+      tx.commit().await?;
 
       Ok(DeletionResult {
          deleted_count: steps.rows_affected()
