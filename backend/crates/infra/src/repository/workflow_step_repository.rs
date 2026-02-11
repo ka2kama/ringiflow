@@ -2,9 +2,8 @@
 //!
 //! ワークフローインスタンスの個々の承認ステップを管理する。
 
-use std::str::FromStr;
-
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -19,6 +18,7 @@ use ringiflow_domain::{
    },
 };
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::error::InfraError;
 
@@ -72,6 +72,64 @@ pub trait WorkflowStepRepository: Send + Sync {
       instance_id: &WorkflowInstanceId,
       tenant_id: &TenantId,
    ) -> Result<Option<WorkflowStep>, InfraError>;
+}
+
+/// DB の workflow_steps テーブルの行を表す中間構造体
+///
+/// `query_as!` マクロが SQL 結果を直接マッピングする対象。
+/// `TryFrom` で `WorkflowStep` への変換ロジックを一箇所に集約する。
+struct WorkflowStepRow {
+   id: Uuid,
+   instance_id: Uuid,
+   display_number: i64,
+   step_id: String,
+   step_name: String,
+   step_type: String,
+   status: String,
+   version: i32,
+   assigned_to: Option<Uuid>,
+   decision: Option<String>,
+   comment: Option<String>,
+   due_date: Option<DateTime<Utc>>,
+   started_at: Option<DateTime<Utc>>,
+   completed_at: Option<DateTime<Utc>>,
+   created_at: DateTime<Utc>,
+   updated_at: DateTime<Utc>,
+}
+
+impl TryFrom<WorkflowStepRow> for WorkflowStep {
+   type Error = InfraError;
+
+   fn try_from(row: WorkflowStepRow) -> Result<Self, Self::Error> {
+      Ok(WorkflowStep::from_db(WorkflowStepRecord {
+         id: WorkflowStepId::from_uuid(row.id),
+         instance_id: WorkflowInstanceId::from_uuid(row.instance_id),
+         display_number: DisplayNumber::new(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         step_id: row.step_id,
+         step_name: row.step_name,
+         step_type: row.step_type,
+         status: row
+            .status
+            .parse::<WorkflowStepStatus>()
+            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+         version: Version::new(row.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         assigned_to: row.assigned_to.map(UserId::from_uuid),
+         decision: row
+            .decision
+            .as_deref()
+            .map(|s| s.parse::<StepDecision>())
+            .transpose()
+            .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
+         comment: row.comment,
+         due_date: row.due_date,
+         started_at: row.started_at,
+         completed_at: row.completed_at,
+         created_at: row.created_at,
+         updated_at: row.updated_at,
+      }))
+   }
 }
 
 /// PostgreSQL 実装
@@ -173,7 +231,8 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       id: &WorkflowStepId,
       tenant_id: &TenantId,
    ) -> Result<Option<WorkflowStep>, InfraError> {
-      let row = sqlx::query!(
+      let row = sqlx::query_as!(
+         WorkflowStepRow,
          r#"
          SELECT
             id, instance_id, display_number, step_id, step_name, step_type,
@@ -189,38 +248,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_optional(&self.pool)
       .await?;
 
-      let Some(r) = row else {
-         return Ok(None);
-      };
-
-      let step = WorkflowStep::from_db(WorkflowStepRecord {
-         id: WorkflowStepId::from_uuid(r.id),
-         instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
-         display_number: DisplayNumber::new(r.display_number)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         step_id: r.step_id,
-         step_name: r.step_name,
-         step_type: r.step_type,
-         status: WorkflowStepStatus::from_str(&r.status)
-            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-         version: Version::new(r.version as u32)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         assigned_to: r.assigned_to.map(UserId::from_uuid),
-         decision: r
-            .decision
-            .as_deref()
-            .map(StepDecision::from_str)
-            .transpose()
-            .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-         comment: r.comment,
-         due_date: r.due_date,
-         started_at: r.started_at,
-         completed_at: r.completed_at,
-         created_at: r.created_at,
-         updated_at: r.updated_at,
-      });
-
-      Ok(Some(step))
+      row.map(WorkflowStep::try_from).transpose()
    }
 
    async fn find_by_instance(
@@ -228,7 +256,8 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       instance_id: &WorkflowInstanceId,
       tenant_id: &TenantId,
    ) -> Result<Vec<WorkflowStep>, InfraError> {
-      let rows = sqlx::query!(
+      let rows = sqlx::query_as!(
+         WorkflowStepRow,
          r#"
          SELECT
             id, instance_id, display_number, step_id, step_name, step_type,
@@ -245,37 +274,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      rows
-         .into_iter()
-         .map(|r| -> Result<WorkflowStep, InfraError> {
-            Ok(WorkflowStep::from_db(WorkflowStepRecord {
-               id: WorkflowStepId::from_uuid(r.id),
-               instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
-               display_number: DisplayNumber::new(r.display_number)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               step_id: r.step_id,
-               step_name: r.step_name,
-               step_type: r.step_type,
-               status: WorkflowStepStatus::from_str(&r.status)
-                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-               version: Version::new(r.version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               assigned_to: r.assigned_to.map(UserId::from_uuid),
-               decision: r
-                  .decision
-                  .as_deref()
-                  .map(StepDecision::from_str)
-                  .transpose()
-                  .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-               comment: r.comment,
-               due_date: r.due_date,
-               started_at: r.started_at,
-               completed_at: r.completed_at,
-               created_at: r.created_at,
-               updated_at: r.updated_at,
-            }))
-         })
-         .collect()
+      rows.into_iter().map(WorkflowStep::try_from).collect()
    }
 
    async fn find_by_assigned_to(
@@ -283,7 +282,8 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       tenant_id: &TenantId,
       user_id: &UserId,
    ) -> Result<Vec<WorkflowStep>, InfraError> {
-      let rows = sqlx::query!(
+      let rows = sqlx::query_as!(
+         WorkflowStepRow,
          r#"
          SELECT
             id, instance_id, display_number, step_id, step_name, step_type,
@@ -300,37 +300,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      rows
-         .into_iter()
-         .map(|r| -> Result<WorkflowStep, InfraError> {
-            Ok(WorkflowStep::from_db(WorkflowStepRecord {
-               id: WorkflowStepId::from_uuid(r.id),
-               instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
-               display_number: DisplayNumber::new(r.display_number)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               step_id: r.step_id,
-               step_name: r.step_name,
-               step_type: r.step_type,
-               status: WorkflowStepStatus::from_str(&r.status)
-                  .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-               version: Version::new(r.version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               assigned_to: r.assigned_to.map(UserId::from_uuid),
-               decision: r
-                  .decision
-                  .as_deref()
-                  .map(StepDecision::from_str)
-                  .transpose()
-                  .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-               comment: r.comment,
-               due_date: r.due_date,
-               started_at: r.started_at,
-               completed_at: r.completed_at,
-               created_at: r.created_at,
-               updated_at: r.updated_at,
-            }))
-         })
-         .collect()
+      rows.into_iter().map(WorkflowStep::try_from).collect()
    }
 
    async fn find_by_display_number(
@@ -339,7 +309,8 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       instance_id: &WorkflowInstanceId,
       tenant_id: &TenantId,
    ) -> Result<Option<WorkflowStep>, InfraError> {
-      let row = sqlx::query!(
+      let row = sqlx::query_as!(
+         WorkflowStepRow,
          r#"
          SELECT
             id, instance_id, display_number, step_id, step_name, step_type,
@@ -356,38 +327,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
       .fetch_optional(&self.pool)
       .await?;
 
-      let Some(r) = row else {
-         return Ok(None);
-      };
-
-      let step = WorkflowStep::from_db(WorkflowStepRecord {
-         id: WorkflowStepId::from_uuid(r.id),
-         instance_id: WorkflowInstanceId::from_uuid(r.instance_id),
-         display_number: DisplayNumber::new(r.display_number)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         step_id: r.step_id,
-         step_name: r.step_name,
-         step_type: r.step_type,
-         status: WorkflowStepStatus::from_str(&r.status)
-            .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
-         version: Version::new(r.version as u32)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         assigned_to: r.assigned_to.map(UserId::from_uuid),
-         decision: r
-            .decision
-            .as_deref()
-            .map(StepDecision::from_str)
-            .transpose()
-            .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
-         comment: r.comment,
-         due_date: r.due_date,
-         started_at: r.started_at,
-         completed_at: r.completed_at,
-         created_at: r.created_at,
-         updated_at: r.updated_at,
-      });
-
-      Ok(Some(step))
+      row.map(WorkflowStep::try_from).transpose()
    }
 }
 
