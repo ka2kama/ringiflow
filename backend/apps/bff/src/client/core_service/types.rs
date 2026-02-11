@@ -200,6 +200,48 @@ pub struct TaskDetailDto {
    pub workflow: WorkflowInstanceDto,
 }
 
+// --- ロール関連の型 ---
+
+/// ロール一覧の要素 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct RoleItemDto {
+   pub id:          Uuid,
+   pub name:        String,
+   pub description: Option<String>,
+   pub permissions: Vec<String>,
+   pub is_system:   bool,
+   pub user_count:  i64,
+}
+
+/// ロール詳細 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct RoleDetailDto {
+   pub id:          Uuid,
+   pub name:        String,
+   pub description: Option<String>,
+   pub permissions: Vec<String>,
+   pub is_system:   bool,
+   pub created_at:  String,
+   pub updated_at:  String,
+}
+
+/// ロール作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateRoleCoreRequest {
+   pub tenant_id:   Uuid,
+   pub name:        String,
+   pub description: Option<String>,
+   pub permissions: Vec<String>,
+}
+
+/// ロール更新リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateRoleCoreRequest {
+   pub name:        Option<String>,
+   pub description: Option<String>,
+   pub permissions: Option<Vec<String>>,
+}
+
 // --- ダッシュボード関連の型 ---
 
 /// ダッシュボード統計 DTO

@@ -1,6 +1,7 @@
 //! CoreServiceClient スーパートレイトとクライアント実装の構造体
 
 use super::{
+   role_client::CoreServiceRoleClient,
    task_client::CoreServiceTaskClient,
    user_client::CoreServiceUserClient,
    workflow_client::CoreServiceWorkflowClient,
@@ -14,14 +15,17 @@ use super::{
 /// `dyn CoreServiceClient` はオブジェクトセーフであり、従来通り
 /// `Arc<dyn CoreServiceClient>` として使用可能。
 pub trait CoreServiceClient:
-   CoreServiceUserClient + CoreServiceWorkflowClient + CoreServiceTaskClient
+   CoreServiceUserClient + CoreServiceWorkflowClient + CoreServiceTaskClient + CoreServiceRoleClient
 {
 }
 
-/// ブランケット impl: 3 つのサブトレイトをすべて実装する型は
+/// ブランケット impl: 4 つのサブトレイトをすべて実装する型は
 /// 自動的に `CoreServiceClient` を実装する。
 impl<T> CoreServiceClient for T where
-   T: CoreServiceUserClient + CoreServiceWorkflowClient + CoreServiceTaskClient
+   T: CoreServiceUserClient
+      + CoreServiceWorkflowClient
+      + CoreServiceTaskClient
+      + CoreServiceRoleClient
 {
 }
 

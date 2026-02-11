@@ -21,6 +21,10 @@ pub enum CoreServiceError {
    #[error("ステップが見つかりません")]
    StepNotFound,
 
+   /// ロールが見つからない（404）
+   #[error("ロールが見つかりません")]
+   RoleNotFound,
+
    /// バリデーションエラー（400）
    #[error("バリデーションエラー: {0}")]
    ValidationError(String),
