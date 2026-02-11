@@ -104,6 +104,15 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
 /// GET /api/v1/tasks/my
 ///
 /// 自分のタスク一覧を取得する
+#[utoipa::path(
+   get,
+   path = "/api/v1/tasks/my",
+   tag = "tasks",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "タスク一覧", body = ApiResponse<Vec<TaskItemData>>)
+   )
+)]
 pub async fn list_my_tasks(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,

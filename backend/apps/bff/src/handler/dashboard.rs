@@ -50,6 +50,15 @@ impl From<DashboardStatsDto> for DashboardStatsData {
 /// GET /api/v1/dashboard/stats
 ///
 /// ダッシュボード統計情報を取得する
+#[utoipa::path(
+   get,
+   path = "/api/v1/dashboard/stats",
+   tag = "dashboard",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "ダッシュボード統計", body = ApiResponse<DashboardStatsData>)
+   )
+)]
 pub async fn get_dashboard_stats(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,

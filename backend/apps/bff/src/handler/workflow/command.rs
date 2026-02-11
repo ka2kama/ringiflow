@@ -9,7 +9,7 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 
 use super::{
    ApproveRejectRequest,
@@ -41,6 +41,18 @@ use crate::{
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `POST /internal/workflows` を呼び出し
 /// 3. レスポンスを返す
+#[utoipa::path(
+   post,
+   path = "/api/v1/workflows",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   request_body = CreateWorkflowRequest,
+   responses(
+      (status = 201, description = "ワークフロー作成", body = ApiResponse<WorkflowData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 404, description = "定義が見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn create_workflow(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -95,6 +107,19 @@ pub async fn create_workflow(
 /// 1. セッションから `tenant_id` を取得
 /// 2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出し
 /// 3. レスポンスを返す
+#[utoipa::path(
+   post,
+   path = "/api/v1/workflows/{display_number}/submit",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
+   request_body = SubmitWorkflowRequest,
+   responses(
+      (status = 200, description = "申請成功", body = ApiResponse<WorkflowData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 404, description = "ワークフローが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn submit_workflow(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -158,6 +183,21 @@ pub async fn submit_workflow(
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
+#[utoipa::path(
+   post,
+   path = "/api/v1/workflows/{display_number}/steps/{step_display_number}/approve",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   params(StepPathParams),
+   request_body = ApproveRejectRequest,
+   responses(
+      (status = 200, description = "承認成功", body = ApiResponse<WorkflowData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 403, description = "権限なし", body = ErrorResponse),
+      (status = 404, description = "ステップが見つからない", body = ErrorResponse),
+      (status = 409, description = "競合", body = ErrorResponse)
+   )
+)]
 pub async fn approve_step(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,
@@ -231,6 +271,21 @@ pub async fn approve_step(
 /// 1. セッションから `tenant_id`, `user_id` を取得
 /// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
+#[utoipa::path(
+   post,
+   path = "/api/v1/workflows/{display_number}/steps/{step_display_number}/reject",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   params(StepPathParams),
+   request_body = ApproveRejectRequest,
+   responses(
+      (status = 200, description = "却下成功", body = ApiResponse<WorkflowData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 403, description = "権限なし", body = ErrorResponse),
+      (status = 404, description = "ステップが見つからない", body = ErrorResponse),
+      (status = 409, description = "競合", body = ErrorResponse)
+   )
+)]
 pub async fn reject_step(
    State(state): State<Arc<WorkflowState>>,
    headers: HeaderMap,

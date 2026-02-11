@@ -21,7 +21,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::audit_log::{AuditAction, AuditLog};
 use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -166,6 +166,16 @@ fn generate_initial_password() -> String {
 ///
 /// テナント内のユーザー一覧を取得する。
 /// ステータスフィルタに対応（省略時は deleted 以外すべて）。
+#[utoipa::path(
+   get,
+   path = "/api/v1/users",
+   tag = "users",
+   security(("session_auth" = [])),
+   params(ListUsersQuery),
+   responses(
+      (status = 200, description = "ユーザー一覧", body = ApiResponse<Vec<UserItemData>>)
+   )
+)]
 pub async fn list_users(
    State(state): State<Arc<UserState>>,
    headers: HeaderMap,
@@ -215,6 +225,18 @@ pub async fn list_users(
 /// 3. Core Service でユーザー作成
 /// 4. Auth Service で認証情報作成
 /// 5. 初期パスワード付きレスポンス返却
+#[utoipa::path(
+   post,
+   path = "/api/v1/users",
+   tag = "users",
+   security(("session_auth" = [])),
+   request_body = CreateUserRequest,
+   responses(
+      (status = 201, description = "ユーザー作成", body = ApiResponse<CreateUserResponseData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 409, description = "メールアドレス重複", body = ErrorResponse)
+   )
+)]
 pub async fn create_user(
    State(state): State<Arc<UserState>>,
    headers: HeaderMap,
@@ -311,6 +333,17 @@ pub async fn create_user(
 /// GET /api/v1/users/{display_number}
 ///
 /// 表示用連番でユーザー詳細を取得する。
+#[utoipa::path(
+   get,
+   path = "/api/v1/users/{display_number}",
+   tag = "users",
+   security(("session_auth" = [])),
+   params(("display_number" = i64, Path, description = "ユーザー表示番号")),
+   responses(
+      (status = 200, description = "ユーザー詳細", body = ApiResponse<UserDetailData>),
+      (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn get_user_detail(
    State(state): State<Arc<UserState>>,
    headers: HeaderMap,
@@ -362,6 +395,19 @@ pub async fn get_user_detail(
 /// PATCH /api/v1/users/{display_number}
 ///
 /// ユーザー情報を更新する（名前、ロール）。
+#[utoipa::path(
+   patch,
+   path = "/api/v1/users/{display_number}",
+   tag = "users",
+   security(("session_auth" = [])),
+   params(("display_number" = i64, Path, description = "ユーザー表示番号")),
+   request_body = UpdateUserRequest,
+   responses(
+      (status = 200, description = "更新成功", body = ApiResponse<UserResponseData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn update_user(
    State(state): State<Arc<UserState>>,
    headers: HeaderMap,
@@ -454,6 +500,19 @@ pub async fn update_user(
 ///
 /// ユーザーステータスを変更する。
 /// セッションから自身の user_id を取得し、Core Service に渡す。
+#[utoipa::path(
+   patch,
+   path = "/api/v1/users/{display_number}/status",
+   tag = "users",
+   security(("session_auth" = [])),
+   params(("display_number" = i64, Path, description = "ユーザー表示番号")),
+   request_body = UpdateUserStatusRequest,
+   responses(
+      (status = 200, description = "ステータス変更成功", body = ApiResponse<UserResponseData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn update_user_status(
    State(state): State<Arc<UserState>>,
    headers: HeaderMap,

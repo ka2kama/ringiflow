@@ -21,7 +21,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::{SessionData, SessionManager};
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -142,6 +142,17 @@ pub struct CsrfResponseData {
 ///   "password": "password123"
 /// }
 /// ```
+#[utoipa::path(
+   post,
+   path = "/api/v1/auth/login",
+   tag = "auth",
+   request_body = LoginRequest,
+   responses(
+      (status = 200, description = "ログイン成功", body = ApiResponse<LoginResponseData>),
+      (status = 401, description = "認証失敗", body = ErrorResponse),
+      (status = 503, description = "サービス利用不可", body = ErrorResponse)
+   )
+)]
 pub async fn login(
    State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
@@ -256,6 +267,16 @@ pub async fn login(
 /// POST /api/v1/auth/logout
 ///
 /// セッションを無効化してログアウトする。
+#[utoipa::path(
+   post,
+   path = "/api/v1/auth/logout",
+   tag = "auth",
+   security(("session_auth" = [])),
+   responses(
+      (status = 204, description = "ログアウト成功"),
+      (status = 401, description = "未認証", body = ErrorResponse)
+   )
+)]
 pub async fn logout(
    State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
@@ -297,6 +318,16 @@ pub async fn logout(
 /// GET /api/v1/auth/me
 ///
 /// 現在のユーザー情報と権限を取得する。
+#[utoipa::path(
+   get,
+   path = "/api/v1/auth/me",
+   tag = "auth",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "ユーザー情報", body = ApiResponse<MeResponseData>),
+      (status = 401, description = "未認証", body = ErrorResponse)
+   )
+)]
 pub async fn me(
    State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
@@ -348,6 +379,16 @@ pub async fn me(
 ///
 /// CSRF トークンを取得する。
 /// セッションが存在しない場合は新規作成し、存在する場合は既存のトークンを返す。
+#[utoipa::path(
+   get,
+   path = "/api/v1/auth/csrf",
+   tag = "auth",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "CSRF トークン", body = ApiResponse<CsrfResponseData>),
+      (status = 401, description = "未認証", body = ErrorResponse)
+   )
+)]
 pub async fn csrf(
    State(state): State<Arc<AuthState>>,
    headers: HeaderMap,
