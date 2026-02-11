@@ -13,7 +13,7 @@ Chromium、Firefox、WebKit に対応し、ブラウザ操作を TypeScript/Java
 | **elm-program-test** | メンテナンス状況に懸念があり見送り（#127）。Playwright は Microsoft が活発に開発しており、業界標準 |
 | **Cypress** | Playwright の方が高速（並列実行）、マルチブラウザ対応が強い |
 
-選定の経緯: [ADR-127](../../05_ADR/README.md)、[セッションログ](../../../prompts/runs/2026-01/2026-01-27_テスト追加とE2Eテスト方針決定.md)
+選定の経緯: [#127](https://github.com/ka2kama/ringiflow/issues/127)、[セッションログ](../../../prompts/runs/2026-01/2026-01-27_テスト追加とE2Eテスト方針決定.md)
 
 ## インストール
 
