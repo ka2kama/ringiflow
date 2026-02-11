@@ -21,10 +21,18 @@ if [[ "${1:-}" == "--dry-run" ]]; then
     DRY_RUN=true
 fi
 
-# main ワークツリーから実行されていることを確認
+# メインワークツリーに移動（ワークツリーからの実行に対応）
+main_worktree=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+original_dir=$(pwd)
+
+if [[ "$(pwd)" != "$main_worktree" ]]; then
+    echo "ワークツリーからの実行を検出。メインワークツリーに移動: $main_worktree"
+    cd "$main_worktree"
+fi
+
 current_branch=$(git rev-parse --abbrev-ref HEAD)
 if [[ "$current_branch" != "main" ]]; then
-    echo "エラー: main ブランチから実行してください（現在: $current_branch）" >&2
+    echo "エラー: メインワークツリーが main ブランチではありません（現在: $current_branch）" >&2
     exit 1
 fi
 
@@ -203,4 +211,11 @@ if [[ "$DRY_RUN" == true ]]; then
     echo "削除するには: just cleanup"
 else
     echo "✓ 整理完了"
+fi
+
+# ワークツリーから実行された場合、元のディレクトリが削除されていれば案内
+if [[ "$original_dir" != "$main_worktree" && ! -d "$original_dir" ]]; then
+    echo ""
+    echo "⚠ 実行元のワークツリーが削除されました"
+    echo "  → cd $main_worktree"
 fi
