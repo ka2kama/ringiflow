@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO workflow_steps (id, instance_id, tenant_id, display_number, step_id, step_name, step_type, status, assigned_to) VALUES ($1, $2, $3, 1, 'step1', 'Approval', 'approval', 'pending', $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0d6e778a3d41e02c9b56d7d5720ba0999d678b60177ef3ba81abfe92142e1461"
+}
