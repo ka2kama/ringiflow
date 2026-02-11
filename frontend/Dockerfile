@@ -46,6 +46,11 @@ COPY --from=deps /app/node_modules ./node_modules
 # ソースコードをコピー
 COPY . .
 
+# デモ環境では --build-arg VITE_DEV_AUTH=true で DevAuth Cookie を有効化
+# Vite がビルド時に import.meta.env.VITE_DEV_AUTH をリテラルに置換する
+ARG VITE_DEV_AUTH=false
+ENV VITE_DEV_AUTH=${VITE_DEV_AUTH}
+
 # 本番用ビルド
 RUN pnpm run build
 

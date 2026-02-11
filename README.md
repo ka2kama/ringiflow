@@ -145,6 +145,12 @@ flowchart LR
 | データストア | PostgreSQL, Redis | ワークフロー・ユーザー管理、セッション管理 |
 | インフラ | AWS Lightsail, Cloudflare | デモ環境（個人開発向け低コスト構成） |
 
+## デモ環境
+
+https://demo.ka2kama.com
+
+> ログインページは未実装のため、DevAuth（開発用認証バイパス）で認証済み状態を実現している。
+
 ## アーキテクチャ
 
 ```mermaid

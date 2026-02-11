@@ -95,10 +95,18 @@ if [ "$SKIP_BUILD" = false ]; then
     step "Step 1: Docker イメージをビルド"
 
     info "Backend イメージをビルド中..."
-    docker build -t ringiflow-backend:latest -f backend/Dockerfile backend/
+    # CARGO_FEATURES="" で default features（dev-auth 含む）を有効化
+    docker build \
+        --build-arg CARGO_FEATURES="" \
+        -t ringiflow-backend:latest \
+        -f backend/Dockerfile backend/
 
     info "Frontend イメージをビルド中..."
-    docker build -t ringiflow-frontend:latest -f frontend/Dockerfile frontend/
+    # VITE_DEV_AUTH=true で DevAuth Cookie 設定を有効化
+    docker build \
+        --build-arg VITE_DEV_AUTH=true \
+        -t ringiflow-frontend:latest \
+        -f frontend/Dockerfile frontend/
 
     # フロントエンドの静的ファイルを取り出す
     info "Frontend 静的ファイルを取り出し中..."

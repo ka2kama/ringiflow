@@ -59,19 +59,18 @@ INFO    Session ID: dev-session
 INFO    CSRF Token: <64文字のトークン>
 ```
 
-### 3. フロントエンドで Cookie を設定
+### 3. フロントエンドの Cookie 設定
 
-ブラウザの開発者ツールで Cookie を設定:
+`frontend/src/main.js` で自動的に設定される:
 
 ```javascript
-document.cookie = "session_id=dev-session; path=/";
+if (import.meta.env.DEV || import.meta.env.VITE_DEV_AUTH === "true") {
+  document.cookie = "session_id=dev-session; path=/";
+}
 ```
 
-または、フロントエンドの開発用コードで設定:
-
-```elm
--- TODO: フロントエンドの DevAuth 対応を実装
-```
+- 開発モード（`import.meta.env.DEV`）: Vite dev server 起動時に自動有効
+- デモビルド（`VITE_DEV_AUTH=true`）: ビルド時に環境変数で有効化
 
 ### 4. API リクエスト時にヘッダーを設定
 
@@ -103,14 +102,38 @@ X-Tenant-ID: 00000000-0000-0000-0000-000000000001
 | ビルドモード | コマンド | DevAuth |
 |-------------|---------|---------|
 | 開発（デフォルト） | `cargo run` / `cargo build` | 含まれる（default feature） |
+| デモ（Lightsail） | `docker build --build-arg CARGO_FEATURES=""` | 含まれる（default feature） |
 | 本番 | `cargo build --release --no-default-features` | 除外される |
 | テスト | `cargo test --all-features` | 含まれる（全 feature テスト） |
 
+## デモ環境（Lightsail）での使用
+
+デモ環境ではログインページが未実装のため、DevAuth を使用して認証済み状態を実現する。
+
+### 仕組み
+
+1. Backend Dockerfile のビルド引数 `CARGO_FEATURES=""` で `dev-auth` feature を含めてビルド
+2. Frontend Dockerfile のビルド引数 `VITE_DEV_AUTH=true` で Cookie 設定コードを有効化
+3. docker-compose の `DEV_AUTH_ENABLED: "true"` で BFF 起動時に開発用セッションを作成
+4. ブラウザアクセス時に `main.js` が `session_id=dev-session` Cookie を設定
+5. Elm アプリが CSRF トークンとユーザー情報を自動取得
+
+### デプロイ方法
+
+`infra/lightsail/deploy.sh` が自動的にデモ用ビルド引数を付与する:
+
+```bash
+./deploy.sh  # フルデプロイ（DevAuth 有効ビルド）
+```
+
 ## 本番環境での注意
 
-Dockerfile では `--no-default-features` で `dev-auth` feature を除外しており、本番バイナリに DevAuth コードは含まれない。
+Dockerfile はデフォルトで `--no-default-features`（`ARG CARGO_FEATURES="--no-default-features"`）を使用するため、ビルド引数なしでビルドすると DevAuth コードは含まれない。
 
-開発環境では `DEV_AUTH_ENABLED` を本番環境で有効にしないこと。環境変数を設定しないか、明示的に `DEV_AUTH_ENABLED=false` を設定する。
+本番環境では:
+- Backend: ビルド引数を指定しない（デフォルトで DevAuth 除外）
+- Frontend: `VITE_DEV_AUTH` を設定しない（デフォルトで Cookie 設定無効）
+- `DEV_AUTH_ENABLED` 環境変数を設定しないこと
 
 ## 関連
 
@@ -118,4 +141,5 @@ Dockerfile では `--no-default-features` で `dev-auth` feature を除外して
 - Feature flag 設計: [ADR-034: DevAuth の Feature Flag 導入](../../05_ADR/034_DevAuthのFeatureFlag導入.md)
 - Issue: [#79 開発用認証バイパス（DevAuth）を実装](https://github.com/ka2kama/ringiflow/issues/79)
 - Issue: [#288 本番ビルドで DevAuth が有効化されることを防止する](https://github.com/ka2kama/ringiflow/issues/288)
+- Issue: [#274 デモ環境の認証セットアップ](https://github.com/ka2kama/ringiflow/issues/274)
 - 認証機能設計: [07_認証機能設計.md](../03_詳細設計書/07_認証機能設計.md)

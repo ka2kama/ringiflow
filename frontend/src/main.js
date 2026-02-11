@@ -45,10 +45,10 @@ import { Elm } from "./Main.elm";
  *
  * ## 動作条件
  *
- * - 開発環境（import.meta.env.DEV が true）のみ有効
+ * - 開発環境（import.meta.env.DEV が true）またはデモ環境（VITE_DEV_AUTH=true）で有効
  * - BFF 側で DEV_AUTH_ENABLED=true が設定されている必要あり
  */
-if (import.meta.env.DEV) {
+if (import.meta.env.DEV || import.meta.env.VITE_DEV_AUTH === "true") {
   // 開発用セッション Cookie を設定
   // BFF の dev_auth.rs で定義されている DEV_SESSION_ID と一致させる
   document.cookie = "session_id=dev-session; path=/";
