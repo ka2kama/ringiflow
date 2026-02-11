@@ -13,12 +13,16 @@
       "WebSearch",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:package.elm-lang.org)",
+      "WebFetch(domain:crates.io)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:iso25000.com)",
       "Bash(git *)",
       "Bash(git commit:*)",
       "Bash(cargo *)",
       "Bash(npm *)",
       "Bash(gh *)",
       "Bash(gh issue create:*)",
+      "Bash(gh issue edit:*)",
       "Bash(gh pr create --draft:*)",
       "Bash(terraform *)",
       "Bash(elm make:*)",
@@ -68,8 +72,7 @@
       "Bash(just redis-keys:*)",
       "Bash(just redis-get:*)",
       "Bash(just check-file-size:*)",
-      "mcp__postgres__pg-schema",
-      "WebFetch(domain:iso25000.com)"
+      "mcp__postgres__pg-schema"
     ],
     "ask": [
       "Bash(terraform apply:*)",
