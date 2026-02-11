@@ -48,6 +48,7 @@ check-tools:
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
     @which redis-cli > /dev/null || (echo "ERROR: redis-cli がインストールされていません" && exit 1)
+    @cd tests/e2e && npx playwright --version > /dev/null 2>&1 || echo "  ⚠ Playwright: 未インストール（E2E テスト用: cd tests/e2e && pnpm install && npx playwright install chromium）"
     @echo "✓ 全ツール確認済み"
 
 # .env ファイルを作成（既存の場合はスキップ）
@@ -62,6 +63,8 @@ setup-deps:
     @cd backend && cargo build
     @echo "  Elm/Vite..."
     @cd frontend && pnpm install
+    @echo "  E2E テスト..."
+    @cd tests/e2e && pnpm install
     @echo "✓ 依存関係インストール完了"
 
 # Git フックをセットアップ
@@ -304,6 +307,11 @@ api-test-clean:
 test-api: api-test-deps api-test-reset-db
     ./scripts/run-api-tests.sh
 
+# E2E テスト実行（Playwright）
+# バックエンド + Vite を起動してブラウザテストを実行し、終了後にサービスを停止する
+test-e2e: api-test-deps api-test-reset-db
+    ./scripts/run-e2e-tests.sh
+
 # =============================================================================
 # セキュリティチェック
 # =============================================================================
@@ -363,8 +371,8 @@ coverage-summary:
 # 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、セキュリティ、構造品質）
 check: lint test test-rust-integration build-elm sqlx-check audit check-file-size check-duplicates
 
-# プッシュ前の全チェック（軽量チェック + API テスト）
-check-all: check test-api
+# プッシュ前の全チェック（軽量チェック + API テスト + E2E テスト）
+check-all: check test-api test-e2e
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック

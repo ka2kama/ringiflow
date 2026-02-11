@@ -46,7 +46,7 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 just setup              # 初回セットアップ
 just dev-deps           # PostgreSQL, Redis を起動
 just check              # リント + テスト（実装中の軽量チェック）
-just check-all          # リント + テスト + API テスト（プッシュ前に必須）
+just check-all          # リント + テスト + API テスト + E2E テスト（プッシュ前に必須）
 just fmt                # 全体フォーマット
 ```
 

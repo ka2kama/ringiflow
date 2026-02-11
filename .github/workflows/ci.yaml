@@ -28,6 +28,7 @@ jobs:
       ci: ${{ steps.filter.outputs.ci }}
       openapi: ${{ steps.filter.outputs.openapi }}
       api-test: ${{ steps.filter.outputs.api-test }}
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -53,6 +54,10 @@ jobs:
             api-test:
               - 'backend/**'
               - 'tests/api/**'
+            e2e:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'tests/e2e/**'
 
   # Rust チェック: リント、テスト
   rust:
@@ -396,6 +401,148 @@ jobs:
         if: always()
         run: just api-test-clean
 
+  # E2E テスト: ブラウザで統合テスト
+  e2e-test:
+    name: E2E Test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_BUILD_RUSTC_WRAPPER: ""
+      SQLX_OFFLINE: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.0
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Elm
+        run: npm install -g elm
+
+      - name: Install sqlx-cli
+        run: |
+          if ! command -v sqlx &> /dev/null; then
+            cargo install sqlx-cli --no-default-features --features rustls,postgres
+          fi
+
+      - name: Install just
+        uses: extractions/setup-just@v3
+
+      - name: Start dependencies
+        run: just api-test-deps
+
+      - name: Reset database
+        run: just api-test-reset-db
+
+      - name: Build backend services
+        run: cargo build --release
+        working-directory: backend
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Install Playwright
+        run: |
+          pnpm install --frozen-lockfile
+          npx playwright install --with-deps chromium
+        working-directory: tests/e2e
+
+      - name: Run E2E tests
+        run: |
+          # ログディレクトリ作成
+          mkdir -p /tmp/e2e-test-logs
+
+          # バックエンドサービスをバックグラウンドで起動
+          cd backend
+          set -a && source .env.api-test && set +a
+          ./target/release/ringiflow-bff > /tmp/e2e-test-logs/bff.log 2>&1 &
+          ./target/release/ringiflow-core-service > /tmp/e2e-test-logs/core.log 2>&1 &
+          ./target/release/ringiflow-auth-service > /tmp/e2e-test-logs/auth.log 2>&1 &
+          cd ..
+
+          # バックエンドヘルスチェック待機
+          for i in {1..30}; do
+            if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:14002/health > /dev/null 2>&1; then
+              echo "All backend services are healthy"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Backend service startup timeout. Showing logs:"
+              echo "=== BFF ===" && cat /tmp/e2e-test-logs/bff.log
+              echo "=== Core Service ===" && cat /tmp/e2e-test-logs/core.log
+              echo "=== Auth Service ===" && cat /tmp/e2e-test-logs/auth.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # Vite 開発サーバーを起動
+          cd frontend
+          VITE_PORT=15173 BFF_PORT=14000 pnpm run dev > /tmp/e2e-test-logs/vite.log 2>&1 &
+          cd ..
+
+          # Vite ヘルスチェック待機
+          for i in {1..30}; do
+            if curl -sf http://localhost:15173 > /dev/null 2>&1; then
+              echo "Vite dev server is ready"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Vite dev server startup timeout. Showing logs:"
+              cat /tmp/e2e-test-logs/vite.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          # E2E テスト実行
+          cd tests/e2e
+          E2E_BASE_URL=http://localhost:15173 npx playwright test
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report/
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: just api-test-clean
+
   # セキュリティチェック: 依存関係の脆弱性・ライセンスチェック
   security:
     name: Security
@@ -445,7 +592,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust, rust-integration, elm, shell, openapi, api-test, security]
+    needs: [changes, rust, rust-integration, elm, shell, openapi, api-test, e2e-test, security]
     if: always()
     steps:
       - name: Check results
@@ -482,6 +629,11 @@ jobs:
 
           if [[ "${{ needs.api-test.result }}" == "failure" ]]; then
             echo "API tests failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.e2e-test.result }}" == "failure" ]]; then
+            echo "E2E tests failed"
             exit 1
           fi
 
