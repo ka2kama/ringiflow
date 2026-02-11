@@ -253,7 +253,7 @@ initPage key route shared =
         Route.UserEdit displayNumber ->
             let
                 ( model, cmd ) =
-                    UserEdit.init shared displayNumber
+                    UserEdit.init shared key displayNumber
             in
             ( UserEditPage model, Cmd.map UserEditMsg cmd )
 
@@ -701,6 +701,12 @@ isCurrentPageDirty model =
     case model.page of
         WorkflowNewPage subModel ->
             WorkflowNew.isDirty subModel
+
+        UserNewPage subModel ->
+            UserNew.isDirty subModel
+
+        UserEditPage subModel ->
+            UserEdit.isDirty subModel
 
         _ ->
             False
