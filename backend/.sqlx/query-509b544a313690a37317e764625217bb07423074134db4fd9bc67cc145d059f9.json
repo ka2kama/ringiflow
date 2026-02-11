@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO roles (id, tenant_id, name, description, permissions, is_system)\n        VALUES ($1, $2, 'other-admin', 'Other tenant admin', '[\"admin\"]'::jsonb, false)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "509b544a313690a37317e764625217bb07423074134db4fd9bc67cc145d059f9"
+}
