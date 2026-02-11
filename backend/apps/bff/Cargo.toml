@@ -34,7 +34,12 @@ utoipa.workspace = true
 default = ["dev-auth"]
 dev-auth = []
 
+[[bin]]
+name = "generate-openapi"
+path = "src/bin/generate_openapi.rs"
+
 [dev-dependencies]
 tokio-test.workspace = true
 pretty_assertions.workspace = true
 http.workspace = true
+insta.workspace = true
