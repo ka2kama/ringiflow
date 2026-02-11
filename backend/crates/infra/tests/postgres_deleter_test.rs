@@ -12,6 +12,7 @@ use common::setup_test_data;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::deletion::{
    AuthCredentialsDeleter,
+   DeletionRegistry,
    PostgresDisplayIdCounterDeleter,
    PostgresRoleDeleter,
    PostgresUserDeleter,
@@ -289,4 +290,105 @@ async fn test_auth_credentials_deleter_他テナントのcredentialsは削除さ
 
    let count_b = sut.count(&tenant_b).await.unwrap();
    assert_eq!(count_b, 1);
+}
+
+// =============================================================================
+// DeletionRegistry::delete_all 統合テスト
+// =============================================================================
+
+/// 全 PostgreSQL Deleter + Auth の delete_all が FK 制約に違反せず完了することを検証する。
+/// DynamoDB / Redis は DB 統合テスト環境では接続できないため、PostgreSQL 系のみ登録。
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_delete_allがfk制約に違反せず全テーブルを削除できる(pool: PgPool) {
+   let (tenant_id, user_id) = setup_test_data(&pool).await;
+
+   // ロールを作成
+   sqlx::query!(
+      "INSERT INTO roles (id, tenant_id, name, description, permissions, is_system) VALUES ($1, $2, 'test_role', 'Test', '[]', false)",
+      Uuid::now_v7(),
+      tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+   // ワークフロー定義を作成（created_by → users FK）
+   let def_id = Uuid::now_v7();
+   sqlx::query!(
+      "INSERT INTO workflow_definitions (id, tenant_id, name, description, definition, version, status, created_by) VALUES ($1, $2, 'WF', 'desc', '{}', 1, 'published', $3)",
+      def_id,
+      tenant_id.as_uuid(),
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+   // ワークフローインスタンスを作成（initiated_by → users FK）
+   let inst_id = Uuid::now_v7();
+   sqlx::query!(
+      "INSERT INTO workflow_instances (id, tenant_id, definition_id, definition_version, display_number, title, form_data, status, initiated_by) VALUES ($1, $2, $3, 1, 200, 'Instance', '{}', 'pending', $4)",
+      inst_id,
+      tenant_id.as_uuid(),
+      def_id,
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+   // ワークフローステップを作成（assigned_to → users FK）
+   sqlx::query!(
+      "INSERT INTO workflow_steps (id, instance_id, tenant_id, display_number, step_id, step_name, step_type, status, assigned_to) VALUES ($1, $2, $3, 1, 'step1', 'Approval', 'approval', 'pending', $4)",
+      Uuid::now_v7(),
+      inst_id,
+      tenant_id.as_uuid(),
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+   // カウンターを作成
+   sqlx::query!(
+      "INSERT INTO display_id_counters (tenant_id, entity_type, last_number) VALUES ($1, 'user', 10)",
+      tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+   // 認証情報を作成
+   sqlx::query!(
+      "INSERT INTO auth.credentials (id, user_id, tenant_id, credential_type, credential_data) VALUES ($1, $2, $3, 'password', 'hash')",
+      Uuid::now_v7(),
+      user_id.as_uuid(),
+      tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+   // DeletionRegistry に PostgreSQL 系 Deleter のみ登録（FK 安全な順序で）
+   let mut registry = DeletionRegistry::new();
+   registry.register(Box::new(PostgresWorkflowDeleter::new(pool.clone())));
+   registry.register(Box::new(AuthCredentialsDeleter::new(pool.clone())));
+   registry.register(Box::new(PostgresDisplayIdCounterDeleter::new(pool.clone())));
+   registry.register(Box::new(PostgresRoleDeleter::new(pool.clone())));
+   registry.register(Box::new(PostgresUserDeleter::new(pool.clone())));
+
+   // delete_all が FK 制約に違反せず完了すること
+   let results = registry.delete_all(&tenant_id).await.unwrap();
+
+   assert_eq!(results["postgres:workflows"].deleted_count, 3); // step + instance + definition
+   assert_eq!(results["auth:credentials"].deleted_count, 1);
+   assert_eq!(results["postgres:display_id_counters"].deleted_count, 1);
+   assert_eq!(results["postgres:roles"].deleted_count, 1);
+   assert_eq!(results["postgres:users"].deleted_count, 1);
+
+   // 全テーブルが 0 件
+   let counts = registry.count_all(&tenant_id).await.unwrap();
+   for (name, count) in &counts {
+      assert_eq!(*count, 0, "{} に残存データあり", name);
+   }
 }

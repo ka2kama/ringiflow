@@ -116,7 +116,7 @@ mod tests {
    use super::*;
 
    #[test]
-   fn test_nameがredis_sessionsを返す() {
+   fn test_send_syncを満たす() {
       fn assert_send_sync<T: Send + Sync>() {}
       assert_send_sync::<RedisSessionDeleter>();
    }

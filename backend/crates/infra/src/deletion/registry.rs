@@ -56,13 +56,17 @@ impl DeletionRegistry {
       redis_conn: ConnectionManager,
    ) -> Self {
       let mut registry = Self::new();
-      registry.register(Box::new(PostgresUserDeleter::new(pg_pool.clone())));
-      registry.register(Box::new(PostgresRoleDeleter::new(pg_pool.clone())));
+      // FK 安全な順序: 参照元（子）→ 参照先（親）
+      // workflow_definitions.created_by → users(id) (NO CASCADE)
+      // workflow_instances.initiated_by → users(id) (NO CASCADE)
+      // → workflows を users より先に削除する必要がある
       registry.register(Box::new(PostgresWorkflowDeleter::new(pg_pool.clone())));
+      registry.register(Box::new(AuthCredentialsDeleter::new(pg_pool.clone())));
       registry.register(Box::new(PostgresDisplayIdCounterDeleter::new(
          pg_pool.clone(),
       )));
-      registry.register(Box::new(AuthCredentialsDeleter::new(pg_pool)));
+      registry.register(Box::new(PostgresRoleDeleter::new(pg_pool.clone())));
+      registry.register(Box::new(PostgresUserDeleter::new(pg_pool)));
       registry.register(Box::new(DynamoDbAuditLogDeleter::new(
          dynamodb_client,
          dynamodb_table_name,
@@ -74,11 +78,11 @@ impl DeletionRegistry {
    /// 期待される Deleter 名の一覧を返す（登録漏れ検出テスト用）
    pub fn expected_deleter_names() -> Vec<&'static str> {
       vec![
-         "postgres:users",
-         "postgres:roles",
          "postgres:workflows",
-         "postgres:display_id_counters",
          "auth:credentials",
+         "postgres:display_id_counters",
+         "postgres:roles",
+         "postgres:users",
          "dynamodb:audit_logs",
          "redis:sessions",
       ]
