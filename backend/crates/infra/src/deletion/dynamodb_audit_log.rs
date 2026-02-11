@@ -86,7 +86,7 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
 
             deleted_count += delete_requests.len() as u64;
 
-            // TODO: unprocessed_items のリトライ処理を実装する（信頼性向上）
+            // TODO(#471): unprocessed_items のリトライ処理を実装する（信頼性向上）
             // DynamoDB はスループット超過時に一部アイテムを未処理で返す可能性がある
             self
                .client
