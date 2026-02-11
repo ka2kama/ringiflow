@@ -20,3 +20,10 @@ PR #349 のマージ時に `gh pr merge` が「base branch と同期が取れて
 
 - カテゴリ: 視点不足
 - 失敗タイプ: プロセスギャップ
+
+## 検証（対策実行後に追記）
+
+- 実施日: 2026-02-11
+- 対策の実行状況: 実行済み
+- 効果: `/review-and-merge` スキルの Step 1 に base branch との同期確認が追加された（#349）。CLAUDE.md の PR 完了フローにも Step 6「base branch 同期確認」として組み込まれている。rebase の遅延による Review やり直しは再発していない
+- 備考: なし
