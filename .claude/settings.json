@@ -66,7 +66,10 @@
       "Bash(just db-schema:*)",
       "Bash(just db-query:*)",
       "Bash(just redis-keys:*)",
-      "Bash(just redis-get:*)"
+      "Bash(just redis-get:*)",
+      "Bash(just check-file-size:*)",
+      "mcp__postgres__pg-schema",
+      "WebFetch(domain:iso25000.com)"
     ],
     "ask": [
       "Bash(terraform apply:*)",
@@ -130,6 +133,10 @@
       }
     ]
   },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "postgres"
+  ],
   "sandbox": {
     "enabled": false
   },

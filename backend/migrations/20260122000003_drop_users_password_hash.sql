@@ -3,7 +3,7 @@
 --
 -- Auth Service 分離（#80）の最終フェーズ。
 -- パスワードハッシュは auth.credentials テーブルに移行済み。
--- 詳細: docs/07_実装解説/04_AuthService/01_機能解説.md
+-- 詳細: docs/07_実装解説/04_AuthService/01_AuthService_機能解説.md
 
 ALTER TABLE users DROP COLUMN password_hash;
 

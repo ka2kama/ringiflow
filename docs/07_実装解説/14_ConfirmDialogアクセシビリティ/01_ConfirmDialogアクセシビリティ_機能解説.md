@@ -203,7 +203,7 @@ sequenceDiagram
 
 ## 設計判断
 
-機能・仕組みレベルの判断を記載する。コード実装レベルの判断は[コード解説](./02_コード解説.md#設計解説)を参照。
+機能・仕組みレベルの判断を記載する。コード実装レベルの判断は[コード解説](./02_ConfirmDialogアクセシビリティ_コード解説.md#設計解説)を参照。
 
 ### 1. ダイアログ実装方式: `<dialog>` + `showModal()` vs `div` + 自前実装
 
@@ -241,7 +241,7 @@ sequenceDiagram
 
 ## 関連ドキュメント
 
-- [コード解説](./02_コード解説.md)
+- [コード解説](./02_ConfirmDialogアクセシビリティ_コード解説.md)
 - ADR-031: [ConfirmDialog の dialog 要素への移行](../../05_ADR/031_ConfirmDialogのdialog要素への移行.md)
 - [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
 - [ナレッジベース: Elm ポート](../../06_ナレッジベース/elm/Elmポート.md)

@@ -338,7 +338,7 @@ cd frontend && pnpm run test -- --watch tests/Component/ConfirmDialogTest.elm
 
 ## 設計解説
 
-コード実装レベルの判断を記載する。機能・仕組みレベルの判断は[機能解説](./01_機能解説.md#設計判断)を参照。
+コード実装レベルの判断を記載する。機能・仕組みレベルの判断は[機能解説](./01_ConfirmDialogアクセシビリティ_機能解説.md#設計判断)を参照。
 
 ### 1. `preventDefaultOn "cancel"` による状態整合性の保証
 
@@ -431,7 +431,7 @@ ESC 処理が `<dialog>` の `cancel` イベントに統合されたため、`su
 
 ## 関連ドキュメント
 
-- [機能解説](./01_機能解説.md)
+- [機能解説](./01_ConfirmDialogアクセシビリティ_機能解説.md)
 - ADR-031: [ConfirmDialog の dialog 要素への移行](../../05_ADR/031_ConfirmDialogのdialog要素への移行.md)
 - [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/)
 - [ナレッジベース: Elm ポート](../../06_ナレッジベース/elm/Elmポート.md)
