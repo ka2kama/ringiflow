@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                r.id,\n                r.tenant_id,\n                r.name as \"name!\",\n                r.description,\n                r.permissions as \"permissions!\",\n                r.is_system as \"is_system!\",\n                r.created_at as \"created_at!\",\n                r.updated_at as \"updated_at!\",\n                COUNT(ur.id)::bigint as \"user_count!\"\n            FROM roles r\n            LEFT JOIN user_roles ur ON r.id = ur.role_id AND ur.tenant_id = $1\n            WHERE (r.tenant_id = $1 OR r.is_system = true)\n              AND r.name != 'system_admin'\n            GROUP BY r.id\n            ORDER BY r.is_system DESC, r.name ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "permissions!",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_system!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "user_count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "b5ec5ec5985f6a0c4faca7024101a52e000620d14586743c00bef4562bf9776e"
+}

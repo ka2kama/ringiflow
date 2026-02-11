@@ -268,6 +268,35 @@ impl Role {
    pub fn updated_at(&self) -> DateTime<Utc> {
       self.updated_at
    }
+
+   // 不変更新メソッド
+
+   /// ロール名を更新する
+   pub fn with_name(self, name: String, now: DateTime<Utc>) -> Self {
+      Self {
+         name,
+         updated_at: now,
+         ..self
+      }
+   }
+
+   /// ロールの説明を更新する
+   pub fn with_description(self, description: Option<String>, now: DateTime<Utc>) -> Self {
+      Self {
+         description,
+         updated_at: now,
+         ..self
+      }
+   }
+
+   /// ロールの権限を更新する
+   pub fn with_permissions(self, permissions: Vec<Permission>, now: DateTime<Utc>) -> Self {
+      Self {
+         permissions,
+         updated_at: now,
+         ..self
+      }
+   }
 }
 
 /// ユーザーロール関連（User と Role の多対多）
@@ -465,5 +494,67 @@ mod tests {
       let held = Permission::new("user:read");
       let required = Permission::new("*");
       assert!(!held.satisfies(&required));
+   }
+
+   // Role::with_* メソッドのテスト
+
+   /// 更新日時として now() とは異なるタイムスタンプを使用する
+   #[fixture]
+   fn later() -> DateTime<Utc> {
+      DateTime::from_timestamp(1_700_100_000, 0).unwrap()
+   }
+
+   #[rstest]
+   fn test_with_nameで名前とupdated_atが更新される(
+      tenant_role: Role,
+      later: DateTime<Utc>,
+   ) {
+      let original_name = tenant_role.name().to_string();
+      let updated = tenant_role
+         .clone()
+         .with_name("new_role_name".to_string(), later);
+
+      assert_ne!(original_name, updated.name());
+      assert_eq!("new_role_name", updated.name());
+      assert_eq!(later, updated.updated_at());
+      // 他のフィールドは変更されない
+      assert_eq!(tenant_role.id(), updated.id());
+      assert_eq!(tenant_role.permissions(), updated.permissions());
+      assert_eq!(tenant_role.description(), updated.description());
+   }
+
+   #[rstest]
+   fn test_with_descriptionで説明とupdated_atが更新される(
+      tenant_role: Role,
+      later: DateTime<Utc>,
+   ) {
+      let updated = tenant_role
+         .clone()
+         .with_description(Some("新しい説明".to_string()), later);
+
+      assert_eq!(Some("新しい説明"), updated.description());
+      assert_eq!(later, updated.updated_at());
+      // 他のフィールドは変更されない
+      assert_eq!(tenant_role.id(), updated.id());
+      assert_eq!(tenant_role.name(), updated.name());
+      assert_eq!(tenant_role.permissions(), updated.permissions());
+   }
+
+   #[rstest]
+   fn test_with_permissionsで権限とupdated_atが更新される(
+      tenant_role: Role,
+      later: DateTime<Utc>,
+   ) {
+      let new_permissions = vec![Permission::new("user:read"), Permission::new("user:create")];
+      let updated = tenant_role
+         .clone()
+         .with_permissions(new_permissions.clone(), later);
+
+      assert_eq!(new_permissions, updated.permissions());
+      assert_eq!(later, updated.updated_at());
+      // 他のフィールドは変更されない
+      assert_eq!(tenant_role.id(), updated.id());
+      assert_eq!(tenant_role.name(), updated.name());
+      assert_eq!(tenant_role.description(), updated.description());
    }
 }

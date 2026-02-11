@@ -15,6 +15,7 @@
 pub mod auth;
 pub mod dashboard;
 pub mod health;
+pub mod role;
 pub mod task;
 pub mod workflow;
 
@@ -30,6 +31,7 @@ pub use auth::{
 };
 pub use dashboard::{DashboardState, get_dashboard_stats};
 pub use health::health_check;
+pub use role::{RoleState, create_role, delete_role, get_role, list_roles, update_role};
 pub use task::{TaskState, get_task, get_task_by_display_numbers, list_my_tasks};
 pub use workflow::{
    WorkflowState,
