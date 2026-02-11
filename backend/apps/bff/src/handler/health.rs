@@ -25,9 +25,10 @@
 
 use axum::Json;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 /// ヘルスチェックレスポンス
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct HealthResponse {
    /// 稼働状態（`"healthy"` または `"unhealthy"`）
    pub status:  String,

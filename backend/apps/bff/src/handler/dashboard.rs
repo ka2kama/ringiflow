@@ -17,6 +17,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_shared::ApiResponse;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use super::workflow::WorkflowState;
 use crate::{
@@ -27,7 +28,7 @@ use crate::{
 // --- レスポンス型 ---
 
 /// ダッシュボード統計データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct DashboardStatsData {
    pub pending_tasks: i64,
    pub my_workflows_in_progress: i64,

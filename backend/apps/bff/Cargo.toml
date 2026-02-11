@@ -7,7 +7,7 @@ license.workspace = true
 [dependencies]
 ringiflow-domain.workspace = true
 ringiflow-infra.workspace = true
-ringiflow-shared.workspace = true
+ringiflow-shared = { workspace = true, features = ["openapi"] }
 axum.workspace = true
 axum-extra.workspace = true
 reqwest.workspace = true
@@ -28,6 +28,7 @@ dotenvy.workspace = true
 subtle.workspace = true
 urlencoding.workspace = true
 rand.workspace = true
+utoipa.workspace = true
 
 [features]
 default = ["dev-auth"]

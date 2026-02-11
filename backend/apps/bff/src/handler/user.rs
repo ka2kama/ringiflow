@@ -23,6 +23,7 @@ use ringiflow_domain::audit_log::{AuditAction, AuditLog};
 use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{
    client::{
@@ -54,13 +55,14 @@ pub struct UserState {
 // --- リクエスト型 ---
 
 /// ユーザー一覧クエリパラメータ
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ListUsersQuery {
    pub status: Option<String>,
 }
 
 /// ユーザー作成リクエスト
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateUserRequest {
    pub email:     String,
    pub name:      String,
@@ -68,14 +70,14 @@ pub struct CreateUserRequest {
 }
 
 /// ユーザー更新リクエスト
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateUserRequest {
    pub name:      Option<String>,
    pub role_name: Option<String>,
 }
 
 /// ユーザーステータス変更リクエスト
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateUserStatusRequest {
    pub status: String,
 }
@@ -83,7 +85,7 @@ pub struct UpdateUserStatusRequest {
 // --- レスポンス型 ---
 
 /// ユーザー一覧の要素データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserItemData {
    pub id: String,
    pub display_id: String,
@@ -109,7 +111,7 @@ impl From<crate::client::UserItemDto> for UserItemData {
 }
 
 /// ユーザー作成レスポンス（初期パスワード付き）
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CreateUserResponseData {
    pub id: String,
    pub display_id: String,
@@ -121,7 +123,7 @@ pub struct CreateUserResponseData {
 }
 
 /// ユーザー詳細レスポンス
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserDetailData {
    pub id: String,
    pub display_id: String,
@@ -135,7 +137,7 @@ pub struct UserDetailData {
 }
 
 /// ユーザー簡易レスポンス（更新・ステータス変更用）
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserResponseData {
    pub id:     String,
    pub name:   String,

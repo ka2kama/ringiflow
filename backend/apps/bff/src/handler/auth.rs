@@ -23,6 +23,7 @@ use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::{SessionData, SessionManager};
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
@@ -58,20 +59,20 @@ pub struct AuthState {
 // --- リクエスト/レスポンス型 ---
 
 /// ログインリクエスト
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LoginRequest {
    pub email:    String,
    pub password: String,
 }
 
 /// ログインレスポンスデータ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LoginResponseData {
    pub user: LoginUserResponse,
 }
 
 /// ログインユーザー情報
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LoginUserResponse {
    pub id:        Uuid,
    pub email:     String,
@@ -81,7 +82,7 @@ pub struct LoginUserResponse {
 }
 
 /// 現在のユーザー情報データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct MeResponseData {
    pub id:          Uuid,
    pub email:       String,
@@ -107,7 +108,7 @@ impl From<UserWithPermissionsData> for MeResponseData {
 }
 
 /// CSRF トークンデータ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct CsrfResponseData {
    pub token: String,
 }
