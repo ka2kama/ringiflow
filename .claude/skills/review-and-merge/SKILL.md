@@ -150,7 +150,7 @@ APPROVED（コメントあり）の場合:
 - 対応した場合は同様にコミット・プッシュ → Step 2 に戻る
 - 対応しない場合は Step 5 へ
 
-対応完了後、レビューコメントに返信する（resolve のため）:
+対応完了後、レビューコメントに返信し、スレッドを resolve する:
 
 ```bash
 # 対応した場合
@@ -166,7 +166,35 @@ gh api "repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies" \
   -f body="Issue #<番号> で対応予定です。"
 ```
 
-改善の経緯: [レビュー返信の検討事項に Issue 追跡が欠如](../../../prompts/improvements/2026-02/2026-02-11_2234_レビュー返信の検討事項にIssue追跡が欠如.md)
+返信後、未 resolve のスレッドを resolve する:
+
+```bash
+# 未 resolve スレッドの ID を取得
+gh api graphql -f query='
+query {
+  repository(owner: "{owner}", name: "{repo}") {
+    pullRequest(number: {pr_number}) {
+      reviewThreads(first: 100) {
+        nodes { id isResolved }
+      }
+    }
+  }
+}'
+
+# 各未 resolve スレッドを resolve
+gh api graphql -f query='
+mutation {
+  resolveReviewThread(input: {threadId: "{thread_id}"}) {
+    thread { isResolved }
+  }
+}'
+```
+
+注意: `required_review_thread_resolution` ブランチ保護ルールにより、未 resolve スレッドがあるとマージがブロックされる。返信だけでは自動 resolve されないため、明示的に resolve が必要。
+
+改善の経緯:
+- [レビュー返信の検討事項に Issue 追跡が欠如](../../../prompts/improvements/2026-02/2026-02-11_2234_レビュー返信の検討事項にIssue追跡が欠如.md)
+- Issue [#451](https://github.com/ka2kama/ringiflow/issues/451): review-and-merge でレビュースレッドの resolve 漏れ
 
 ### Step 5: マージ
 
