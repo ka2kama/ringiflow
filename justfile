@@ -122,7 +122,7 @@ setup-labels:
 # 開発サーバー
 # =============================================================================
 
-# Docker で依存サービス（PostgreSQL, Redis）を起動
+# Docker で依存サービス（PostgreSQL, Redis, DynamoDB）を起動
 # --wait: healthcheck が通るまで待機（setup 時の競合を防止）
 # プロジェクト名はディレクトリ名から自動取得（worktree対応）
 dev-deps:
@@ -131,6 +131,7 @@ dev-deps:
     docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml up -d --wait
     echo "PostgreSQL: localhost:${POSTGRES_PORT}"
     echo "Redis: localhost:${REDIS_PORT}"
+    echo "DynamoDB: localhost:${DYNAMODB_PORT}"
     echo "プロジェクト名: $PROJECT_NAME"
 
 # BFF 開発サーバーを起動（ポート: $BFF_PORT、ファイル変更で自動リビルド）
@@ -286,12 +287,13 @@ build-elm:
 # API テスト
 # =============================================================================
 
-# API テスト用の DB/Redis を起動（開発環境とは独立）
+# API テスト用の DB/Redis/DynamoDB を起動（開発環境とは独立）
 api-test-deps:
     docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml up -d --wait
     @echo "API テスト環境:"
     @echo "  PostgreSQL: localhost:15433"
     @echo "  Redis: localhost:16380"
+    @echo "  DynamoDB: localhost:18001"
 
 # API テスト用の DB をリセット
 api-test-reset-db:

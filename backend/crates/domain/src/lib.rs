@@ -40,6 +40,7 @@
 //! };
 //! ```
 
+pub mod audit_log;
 pub mod clock;
 pub mod error;
 pub mod password;

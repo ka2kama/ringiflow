@@ -36,6 +36,10 @@ tags:
     description: タスク API
   - name: users
     description: ユーザー API
+  - name: roles
+    description: ロール管理 API
+  - name: audit-logs
+    description: 監査ログ API
   - name: dashboard
     description: ダッシュボード API
   - name: health
@@ -620,6 +624,327 @@ paths:
                 $ref: '#/components/schemas/UserListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  # ============================================================
+  # ロール管理 API
+  # ============================================================
+  /api/v1/roles:
+    get:
+      tags:
+        - roles
+      summary: ロール一覧取得
+      description: |
+        テナント内で利用可能なロール一覧をユーザー数付きで取得する。
+
+        システムロール（admin, user 等）とカスタムロールの両方を返す。
+        `system_admin` ロールは除外される。
+      operationId: listRoles
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+      responses:
+        '200':
+          description: ロール一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - roles
+      summary: カスタムロール作成
+      description: |
+        テナント固有のカスタムロールを作成する。
+
+        ロール名はテナント内で一意である必要がある。
+        権限は 1 つ以上指定が必要。
+      operationId: createRole
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: ロール作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDetailResponse'
+        '400':
+          description: バリデーションエラー（権限が空）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: 同名ロールが既に存在する
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/conflict
+                title: Conflict
+                status: 409
+                detail: 同名のロールが既に存在します
+
+  /api/v1/roles/{role_id}:
+    get:
+      tags:
+        - roles
+      summary: ロール詳細取得
+      description: ロールの詳細情報を取得する。
+      operationId: getRole
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - name: role_id
+          in: path
+          required: true
+          description: ロール ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: ロール詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: ロールが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/role-not-found
+                title: Role Not Found
+                status: 404
+                detail: ロールが見つかりません
+
+    patch:
+      tags:
+        - roles
+      summary: カスタムロール更新
+      description: |
+        カスタムロールの名前・説明・権限を更新する。
+
+        システムロールは更新できない。
+        権限を更新する場合は 1 つ以上指定が必要。
+      operationId: updateRole
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+        - name: role_id
+          in: path
+          required: true
+          description: ロール ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: ロール更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDetailResponse'
+        '400':
+          description: バリデーションエラー（システムロール、権限が空）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: ロールが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/role-not-found
+                title: Role Not Found
+                status: 404
+                detail: ロールが見つかりません
+
+    delete:
+      tags:
+        - roles
+      summary: カスタムロール削除
+      description: |
+        カスタムロールを削除する。
+
+        システムロールは削除できない。
+        ユーザーに割り当てられているロールは削除できない。
+      operationId: deleteRole
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - $ref: '#/components/parameters/XCsrfToken'
+        - name: role_id
+          in: path
+          required: true
+          description: ロール ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: ロール削除成功
+        '400':
+          description: バリデーションエラー（システムロール）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: ロールが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/role-not-found
+                title: Role Not Found
+                status: 404
+                detail: ロールが見つかりません
+        '409':
+          description: ユーザー割り当てあり
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: https://ringiflow.example.com/errors/conflict
+                title: Conflict
+                status: 409
+                detail: このロールは 3 人のユーザーに割り当てられているため削除できません
+
+  # ============================================================
+  # 監査ログ API
+  # ============================================================
+  /api/v1/audit-logs:
+    get:
+      tags:
+        - audit-logs
+      summary: 監査ログ一覧取得
+      description: |
+        テナント内の監査ログを新しい順で取得する。
+        カーソルベースページネーション対応。
+
+        `user:read` 権限が必要（テナント管理者のみ）。
+      operationId: listAuditLogs
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - name: cursor
+          in: query
+          required: false
+          description: 次ページ取得用カーソル（前回レスポンスの `next_cursor` 値）
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: 取得件数（デフォルト 50、最大 100）
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: from
+          in: query
+          required: false
+          description: 開始日時（ISO 8601 形式）
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: 終了日時（ISO 8601 形式）
+          schema:
+            type: string
+            format: date-time
+        - name: actor_id
+          in: query
+          required: false
+          description: 操作者 ID でフィルタ
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          required: false
+          description: |
+            アクションでフィルタ（カンマ区切りで複数指定可）。
+            指定可能な値: `user.create`, `user.update`, `user.deactivate`, `user.activate`,
+            `role.create`, `role.update`, `role.delete`
+          schema:
+            type: string
+            example: user.create,user.update
+        - name: result
+          in: query
+          required: false
+          description: 結果でフィルタ（`success` / `failure`）
+          schema:
+            type: string
+            enum:
+              - success
+              - failure
+      responses:
+        '200':
+          description: 監査ログ一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   # ============================================================
   # タスク API
@@ -1332,6 +1657,160 @@ components:
           example: "yamada.taro@example.com"
 
     # ============================================================
+    # ロール関連
+    # ============================================================
+    RoleListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleItem'
+
+    RoleItem:
+      type: object
+      description: ロール一覧の要素（ユーザー数付き）
+      required:
+        - id
+        - name
+        - permissions
+        - is_system
+        - user_count
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ロール ID
+        name:
+          type: string
+          description: ロール名
+          example: "editor"
+        description:
+          type:
+            - string
+            - "null"
+          description: ロールの説明
+          example: "ドキュメント編集権限を持つロール"
+        permissions:
+          type: array
+          items:
+            type: string
+          description: 権限リスト
+          example: ["workflow:read", "workflow:create"]
+        is_system:
+          type: boolean
+          description: システムロールかどうか
+          example: false
+        user_count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: このロールに割り当てられたユーザー数
+          example: 5
+
+    RoleDetailResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/RoleDetail'
+
+    RoleDetail:
+      type: object
+      description: ロール詳細情報
+      required:
+        - id
+        - name
+        - permissions
+        - is_system
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ロール ID
+        name:
+          type: string
+          description: ロール名
+          example: "editor"
+        description:
+          type:
+            - string
+            - "null"
+          description: ロールの説明
+          example: "ドキュメント編集権限を持つロール"
+        permissions:
+          type: array
+          items:
+            type: string
+          description: 権限リスト
+          example: ["workflow:read", "workflow:create"]
+        is_system:
+          type: boolean
+          description: システムロールかどうか
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: 作成日時
+        updated_at:
+          type: string
+          format: date-time
+          description: 更新日時
+
+    CreateRoleRequest:
+      type: object
+      required:
+        - name
+        - permissions
+      properties:
+        name:
+          type: string
+          description: ロール名
+          maxLength: 100
+          example: "editor"
+        description:
+          type:
+            - string
+            - "null"
+          description: ロールの説明
+          maxLength: 500
+          example: "ドキュメント編集権限を持つロール"
+        permissions:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: 権限リスト（1 つ以上必須）
+          example: ["workflow:read", "workflow:create"]
+
+    UpdateRoleRequest:
+      type: object
+      description: 更新するフィールドのみ指定する
+      properties:
+        name:
+          type: string
+          description: ロール名
+          maxLength: 100
+          example: "editor-v2"
+        description:
+          type:
+            - string
+            - "null"
+          description: ロールの説明
+          maxLength: 500
+        permissions:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: 権限リスト（指定する場合は 1 つ以上必須）
+
+    # ============================================================
     # ダッシュボード関連
     # ============================================================
     DashboardStatsResponse:
@@ -1615,6 +2094,85 @@ components:
                   message:
                     type: string
                     description: エラーメッセージ
+
+    # ============================================================
+    # 監査ログ
+    # ============================================================
+    AuditLogListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogItem'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+          description: |
+            次ページ取得用のカーソル。
+            `null` の場合は最後のページを意味する。
+
+    AuditLogItem:
+      type: object
+      required:
+        - id
+        - actor_id
+        - actor_name
+        - action
+        - result
+        - resource_type
+        - resource_id
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 監査ログ ID
+        actor_id:
+          type: string
+          format: uuid
+          description: 操作者のユーザー ID
+        actor_name:
+          type: string
+          description: 操作者の表示名
+        action:
+          type: string
+          description: |
+            操作種別。`リソース.操作` 形式。
+          enum:
+            - user.create
+            - user.update
+            - user.deactivate
+            - user.activate
+            - role.create
+            - role.update
+            - role.delete
+        result:
+          type: string
+          description: 操作結果
+          enum:
+            - success
+            - failure
+        resource_type:
+          type: string
+          description: 対象リソース種別
+        resource_id:
+          type: string
+          description: 対象リソース ID
+        detail:
+          description: 操作の詳細情報（JSON オブジェクト）
+        source_ip:
+          type:
+            - string
+            - 'null'
+          description: 操作元 IP アドレス
+        created_at:
+          type: string
+          format: date-time
+          description: 操作日時（ISO 8601）
 
     # ============================================================
     # 共通

@@ -47,6 +47,10 @@ config =
             , "src/Data/FormField.elm"
             , "src/Data/WorkflowInstance.elm"
             ]
+        -- Data.AuditLog.resultToCssClass は Badge パターン移行により未使用（Badge コンポーネント使用に統一）
+        |> Rule.ignoreErrorsForFiles
+            [ "src/Data/AuditLog.elm"
+            ]
     , -- 未使用のモジュール
       NoUnused.Modules.rule
         -- TODO: Ports.elm は BFF 連携実装時に使用予定

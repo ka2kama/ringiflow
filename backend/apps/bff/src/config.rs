@@ -17,6 +17,8 @@ pub struct BffConfig {
    pub core_url: String,
    /// Auth Service の URL
    pub auth_url: String,
+   /// DynamoDB エンドポイント URL
+   pub dynamodb_endpoint: String,
    /// 開発用認証バイパス（DevAuth）の有効化
    ///
    /// `DEV_AUTH_ENABLED=true` のときに有効になる。
@@ -45,6 +47,8 @@ impl BffConfig {
             .expect("CORE_URL が設定されていません（just setup-env を実行してください）"),
          auth_url: env::var("AUTH_URL")
             .expect("AUTH_URL が設定されていません（just setup-env を実行してください）"),
+         dynamodb_endpoint: env::var("DYNAMODB_ENDPOINT")
+            .expect("DYNAMODB_ENDPOINT が設定されていません（just setup-env を実行してください）"),
          #[cfg(feature = "dev-auth")]
          dev_auth_enabled,
       })

@@ -3,6 +3,7 @@ module Shared exposing
     , User
     , getUserId
     , init
+    , isAdmin
     , toRequestConfig
     , withCsrfToken
     , withUser
@@ -129,6 +130,22 @@ toRequestConfig shared =
     , tenantId = Just shared.tenantId
     , csrfToken = shared.csrfToken
     }
+
+
+{-| 現在のユーザーが管理者かどうかを判定
+
+roles に "admin" が含まれているかで判定する。
+未ログイン時は False を返す。
+
+-}
+isAdmin : Shared -> Bool
+isAdmin shared =
+    case shared.user of
+        Just user ->
+            List.member "admin" user.roles
+
+        Nothing ->
+            False
 
 
 {-| ログイン中のユーザー ID を取得

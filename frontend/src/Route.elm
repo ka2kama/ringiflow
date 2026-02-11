@@ -1,4 +1,4 @@
-module Route exposing (Route(..), WorkflowFilter, emptyWorkflowFilter, fromUrl, isRouteActive, toString)
+module Route exposing (Route(..), WorkflowFilter, emptyWorkflowFilter, fromUrl, isRouteActive, pageTitle, toString)
 
 {-| URL ルーティングモジュール
 
@@ -50,7 +50,7 @@ import Data.WorkflowInstance exposing (Status(..))
 import Dict
 import Url exposing (Url)
 import Url.Builder as Builder
-import Url.Parser as Parser exposing ((</>), (<?>), Parser, int, oneOf, s, top)
+import Url.Parser as Parser exposing ((</>), (<?>), Parser, int, oneOf, s, string, top)
 import Url.Parser.Query as Query
 
 
@@ -85,6 +85,14 @@ type Route
     | WorkflowDetail Int
     | Tasks
     | TaskDetail Int Int
+    | Users
+    | UserDetail Int
+    | UserNew
+    | UserEdit Int
+    | Roles
+    | RoleNew
+    | RoleEdit String
+    | AuditLogs
     | NotFound
 
 
@@ -153,6 +161,14 @@ parser =
         , Parser.map WorkflowDetail (s "workflows" </> int)
         , Parser.map Workflows (s "workflows" <?> workflowQueryParser)
         , Parser.map Tasks (s "tasks")
+        , Parser.map UserNew (s "users" </> s "new")
+        , Parser.map UserEdit (s "users" </> int </> s "edit")
+        , Parser.map UserDetail (s "users" </> int)
+        , Parser.map Users (s "users")
+        , Parser.map RoleNew (s "roles" </> s "new")
+        , Parser.map RoleEdit (s "roles" </> string </> s "edit")
+        , Parser.map Roles (s "roles")
+        , Parser.map AuditLogs (s "audit-logs")
         ]
 
 
@@ -274,6 +290,30 @@ toString route =
         TaskDetail workflowDisplayNumber stepDisplayNumber ->
             "/workflows/" ++ String.fromInt workflowDisplayNumber ++ "/tasks/" ++ String.fromInt stepDisplayNumber
 
+        Users ->
+            "/users"
+
+        UserDetail displayNumber ->
+            "/users/" ++ String.fromInt displayNumber
+
+        UserNew ->
+            "/users/new"
+
+        UserEdit displayNumber ->
+            "/users/" ++ String.fromInt displayNumber ++ "/edit"
+
+        Roles ->
+            "/roles"
+
+        RoleNew ->
+            "/roles/new"
+
+        RoleEdit roleId ->
+            "/roles/" ++ roleId ++ "/edit"
+
+        AuditLogs ->
+            "/audit-logs"
+
         NotFound ->
             "/not-found"
 
@@ -331,5 +371,80 @@ isRouteActive navRoute currentRoute =
         ( Tasks, TaskDetail _ _ ) ->
             True
 
+        ( Users, Users ) ->
+            True
+
+        ( Users, UserDetail _ ) ->
+            True
+
+        ( Users, UserNew ) ->
+            True
+
+        ( Users, UserEdit _ ) ->
+            True
+
+        ( Roles, Roles ) ->
+            True
+
+        ( Roles, RoleNew ) ->
+            True
+
+        ( Roles, RoleEdit _ ) ->
+            True
+
+        ( AuditLogs, AuditLogs ) ->
+            True
+
         _ ->
             False
+
+
+{-| ルートに対応するページタイトル
+-}
+pageTitle : Route -> String
+pageTitle route =
+    case route of
+        Home ->
+            "ダッシュボード"
+
+        Workflows _ ->
+            "申請一覧"
+
+        WorkflowNew ->
+            "新規申請"
+
+        WorkflowDetail _ ->
+            "申請詳細"
+
+        Tasks ->
+            "タスク一覧"
+
+        TaskDetail _ _ ->
+            "タスク詳細"
+
+        Users ->
+            "ユーザー管理"
+
+        UserDetail _ ->
+            "ユーザー詳細"
+
+        UserNew ->
+            "ユーザー作成"
+
+        UserEdit _ ->
+            "ユーザー編集"
+
+        Roles ->
+            "ロール管理"
+
+        RoleNew ->
+            "ロール作成"
+
+        RoleEdit _ ->
+            "ロール編集"
+
+        AuditLogs ->
+            "監査ログ"
+
+        NotFound ->
+            "ページが見つかりません"

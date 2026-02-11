@@ -20,6 +20,10 @@ pub enum AuthServiceError {
    #[error("認証に失敗しました")]
    AuthenticationFailed,
 
+   /// リクエストエラー（400）
+   #[error("リクエストエラー: {0}")]
+   BadRequest(String),
+
    /// ネットワークエラー
    #[error("ネットワークエラー: {0}")]
    Network(String),
@@ -60,6 +64,12 @@ pub struct VerifyResponse {
    pub credential_id: Option<Uuid>,
 }
 
+/// 認証情報作成レスポンス
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateCredentialsResponse {
+   pub credential_id: Uuid,
+}
+
 /// Auth Service クライアントトレイト
 ///
 /// テスト時にスタブを使用できるようトレイトで定義。
@@ -68,22 +78,23 @@ pub trait AuthServiceClient: Send + Sync {
    /// パスワード認証を実行する
    ///
    /// Auth Service の `POST /internal/auth/verify` を呼び出す。
-   ///
-   /// # 引数
-   ///
-   /// - `tenant_id`: テナント ID
-   /// - `user_id`: ユーザー ID
-   /// - `password`: パスワード（平文）
-   ///
-   /// # 戻り値
-   ///
-   /// 認証成功時は `VerifyResponse`、失敗時は `AuthServiceError`
    async fn verify_password(
       &self,
       tenant_id: Uuid,
       user_id: Uuid,
       password: &str,
    ) -> Result<VerifyResponse, AuthServiceError>;
+
+   /// 認証情報を作成する
+   ///
+   /// Auth Service の `POST /internal/auth/credentials` を呼び出す。
+   async fn create_credentials(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+      credential_type: &str,
+      credential_data: &str,
+   ) -> Result<CreateCredentialsResponse, AuthServiceError>;
 }
 
 /// Auth Service クライアント実装
@@ -133,6 +144,52 @@ impl AuthServiceClient for AuthServiceClientImpl {
             }
          }
          reqwest::StatusCode::UNAUTHORIZED => Err(AuthServiceError::AuthenticationFailed),
+         reqwest::StatusCode::SERVICE_UNAVAILABLE => Err(AuthServiceError::ServiceUnavailable),
+         status => {
+            let body = response.text().await.unwrap_or_default();
+            Err(AuthServiceError::Unexpected(format!(
+               "予期しないステータス {}: {}",
+               status, body
+            )))
+         }
+      }
+   }
+
+   async fn create_credentials(
+      &self,
+      tenant_id: Uuid,
+      user_id: Uuid,
+      credential_type: &str,
+      credential_data: &str,
+   ) -> Result<CreateCredentialsResponse, AuthServiceError> {
+      let url = format!("{}/internal/auth/credentials", self.base_url);
+
+      #[derive(Serialize)]
+      struct CreateCredentialsRequest {
+         user_id:         Uuid,
+         tenant_id:       Uuid,
+         credential_type: String,
+         credential_data: String,
+      }
+
+      let request = CreateCredentialsRequest {
+         user_id,
+         tenant_id,
+         credential_type: credential_type.to_string(),
+         credential_data: credential_data.to_string(),
+      };
+
+      let response = self.client.post(&url).json(&request).send().await?;
+
+      match response.status() {
+         status if status.is_success() => {
+            let body = response.json::<CreateCredentialsResponse>().await?;
+            Ok(body)
+         }
+         reqwest::StatusCode::BAD_REQUEST => {
+            let body = response.text().await.unwrap_or_default();
+            Err(AuthServiceError::BadRequest(body))
+         }
          reqwest::StatusCode::SERVICE_UNAVAILABLE => Err(AuthServiceError::ServiceUnavailable),
          status => {
             let body = response.text().await.unwrap_or_default();

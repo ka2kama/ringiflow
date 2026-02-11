@@ -21,6 +21,10 @@ pub enum CoreServiceError {
    #[error("ステップが見つかりません")]
    StepNotFound,
 
+   /// ロールが見つからない（404）
+   #[error("ロールが見つかりません")]
+   RoleNotFound,
+
    /// バリデーションエラー（400）
    #[error("バリデーションエラー: {0}")]
    ValidationError(String),
@@ -28,6 +32,10 @@ pub enum CoreServiceError {
    /// 権限不足（403）
    #[error("権限がありません: {0}")]
    Forbidden(String),
+
+   /// メールアドレスが既に使用されている（409）
+   #[error("メールアドレスは既に使用されています")]
+   EmailAlreadyExists,
 
    /// 競合（409）
    #[error("競合が発生しました: {0}")]

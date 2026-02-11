@@ -3,7 +3,9 @@ module Api exposing
     , ProblemDetails
     , RequestConfig
     , delete
+    , deleteNoContent
     , get
+    , patch
     , post
     , problemDetailsDecoder
     , put
@@ -181,6 +183,31 @@ put { config, url, body, decoder, toMsg } =
         }
 
 
+{-| PATCH リクエスト
+
+CSRF トークンと X-Tenant-ID ヘッダーを付与する。
+
+-}
+patch :
+    { config : RequestConfig
+    , url : String
+    , body : Http.Body
+    , decoder : Decoder a
+    , toMsg : Result ApiError a -> msg
+    }
+    -> Cmd msg
+patch { config, url, body, decoder, toMsg } =
+    Http.request
+        { method = "PATCH"
+        , headers = buildHeaders config True
+        , url = config.baseUrl ++ url
+        , body = body
+        , expect = expectJson toMsg decoder
+        , timeout = Just 30000
+        , tracker = Nothing
+        }
+
+
 {-| DELETE リクエスト
 
 CSRF トークンと X-Tenant-ID ヘッダーを付与する。
@@ -200,6 +227,30 @@ delete { config, url, decoder, toMsg } =
         , url = config.baseUrl ++ url
         , body = Http.emptyBody
         , expect = expectJson toMsg decoder
+        , timeout = Just 30000
+        , tracker = Nothing
+        }
+
+
+{-| DELETE リクエスト（204 No Content 用）
+
+レスポンスボディなしの DELETE に対応。
+ロール削除など 204 を返すエンドポイント用。
+
+-}
+deleteNoContent :
+    { config : RequestConfig
+    , url : String
+    , toMsg : Result ApiError () -> msg
+    }
+    -> Cmd msg
+deleteNoContent { config, url, toMsg } =
+    Http.request
+        { method = "DELETE"
+        , headers = buildHeaders config True
+        , url = config.baseUrl ++ url
+        , body = Http.emptyBody
+        , expect = expectNoContent toMsg
         , timeout = Just 30000
         , tracker = Nothing
         }
@@ -248,6 +299,37 @@ HTTP エラーを ApiError に変換し、RFC 9457 レスポンスをデコー�
 expectJson : (Result ApiError a -> msg) -> Decoder a -> Http.Expect msg
 expectJson toMsg decoder =
     Http.expectStringResponse toMsg (handleResponse decoder)
+
+
+{-| 204 No Content を期待するヘルパー
+
+レスポンスボディを無視し、2xx を Ok () に変換する。
+
+-}
+expectNoContent : (Result ApiError () -> msg) -> Http.Expect msg
+expectNoContent toMsg =
+    Http.expectStringResponse toMsg handleNoContentResponse
+
+
+{-| No Content レスポンスを処理
+-}
+handleNoContentResponse : Http.Response String -> Result ApiError ()
+handleNoContentResponse response =
+    case response of
+        Http.BadUrl_ _ ->
+            Err NetworkError
+
+        Http.Timeout_ ->
+            Err Timeout
+
+        Http.NetworkError_ ->
+            Err NetworkError
+
+        Http.BadStatus_ metadata body ->
+            Err (handleErrorStatus metadata.statusCode body)
+
+        Http.GoodStatus_ _ _ ->
+            Ok ()
 
 
 {-| HTTP レスポンスを処理

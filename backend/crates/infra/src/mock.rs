@@ -8,12 +8,16 @@
 //! ringiflow-infra = { workspace = true, features = ["test-utils"] }
 //! ```
 
-use std::sync::{Arc, Mutex};
+use std::{
+   collections::HashMap,
+   sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use ringiflow_domain::{
+   role::{Role, RoleId},
    tenant::TenantId,
-   user::{Email, User, UserId},
+   user::{Email, User, UserId, UserStatus},
    value_objects::{DisplayIdEntityType, DisplayNumber, Version},
    workflow::{
       WorkflowDefinition,
@@ -348,6 +352,73 @@ impl UserRepository for MockUserRepository {
 
    async fn update_last_login(&self, _id: &UserId) -> Result<(), InfraError> {
       Ok(())
+   }
+
+   async fn insert(&self, _user: &User) -> Result<(), InfraError> {
+      Ok(())
+   }
+
+   async fn update(&self, _user: &User) -> Result<(), InfraError> {
+      Ok(())
+   }
+
+   async fn update_status(&self, _user: &User) -> Result<(), InfraError> {
+      Ok(())
+   }
+
+   async fn find_by_display_number(
+      &self,
+      _tenant_id: &TenantId,
+      _display_number: DisplayNumber,
+   ) -> Result<Option<User>, InfraError> {
+      Ok(None)
+   }
+
+   async fn find_all_by_tenant(
+      &self,
+      _tenant_id: &TenantId,
+      _status_filter: Option<UserStatus>,
+   ) -> Result<Vec<User>, InfraError> {
+      Ok(Vec::new())
+   }
+
+   async fn insert_user_role(
+      &self,
+      _user_id: &UserId,
+      _role_id: &RoleId,
+      _tenant_id: &TenantId,
+   ) -> Result<(), InfraError> {
+      Ok(())
+   }
+
+   async fn replace_user_roles(
+      &self,
+      _user_id: &UserId,
+      _role_id: &RoleId,
+      _tenant_id: &TenantId,
+   ) -> Result<(), InfraError> {
+      Ok(())
+   }
+
+   async fn find_role_by_name(&self, _name: &str) -> Result<Option<Role>, InfraError> {
+      Ok(None)
+   }
+
+   async fn count_active_users_with_role(
+      &self,
+      _tenant_id: &TenantId,
+      _role_name: &str,
+      _excluding_user_id: Option<&UserId>,
+   ) -> Result<i64, InfraError> {
+      Ok(0)
+   }
+
+   async fn find_roles_for_users(
+      &self,
+      _user_ids: &[UserId],
+      _tenant_id: &TenantId,
+   ) -> Result<HashMap<UserId, Vec<String>>, InfraError> {
+      Ok(HashMap::new())
    }
 }
 

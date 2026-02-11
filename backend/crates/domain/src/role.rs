@@ -102,6 +102,32 @@ impl Permission {
    pub fn as_str(&self) -> &str {
       &self.0
    }
+
+   /// この権限が、要求された権限を満たすか判定する
+   ///
+   /// ## マッチングルール
+   ///
+   /// | 保持権限 | 要求権限 | 結果 |
+   /// |---------|---------|------|
+   /// | `*` | 任意 | true（全権限） |
+   /// | `user:*` | `user:read` | true（リソース内の全アクション） |
+   /// | `user:read` | `user:read` | true（完全一致） |
+   /// | `user:read` | `user:write` | false |
+   /// | `user:*` | `task:read` | false（リソース不一致） |
+   pub fn satisfies(&self, required: &Permission) -> bool {
+      let held = self.as_str();
+      let req = required.as_str();
+
+      if held == "*" {
+         return true;
+      }
+
+      if let Some(resource) = held.strip_suffix(":*") {
+         return req.starts_with(&format!("{resource}:"));
+      }
+
+      held == req
+   }
 }
 
 /// ロールエンティティ
@@ -242,6 +268,35 @@ impl Role {
    pub fn updated_at(&self) -> DateTime<Utc> {
       self.updated_at
    }
+
+   // 不変更新メソッド
+
+   /// ロール名を更新する
+   pub fn with_name(self, name: String, now: DateTime<Utc>) -> Self {
+      Self {
+         name,
+         updated_at: now,
+         ..self
+      }
+   }
+
+   /// ロールの説明を更新する
+   pub fn with_description(self, description: Option<String>, now: DateTime<Utc>) -> Self {
+      Self {
+         description,
+         updated_at: now,
+         ..self
+      }
+   }
+
+   /// ロールの権限を更新する
+   pub fn with_permissions(self, permissions: Vec<Permission>, now: DateTime<Utc>) -> Self {
+      Self {
+         permissions,
+         updated_at: now,
+         ..self
+      }
+   }
 }
 
 /// ユーザーロール関連（User と Role の多対多）
@@ -371,5 +426,135 @@ mod tests {
          now,
       );
       assert_eq!(system_role, expected);
+   }
+
+   // Permission::satisfies のテスト
+
+   #[rstest]
+   #[case("*", "user:read")]
+   #[case("*", "workflow:create")]
+   #[case("*", "task:delete")]
+   fn test_全権限ワイルドカードは任意の権限を満たす(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:*", "user:read")]
+   #[case("user:*", "user:create")]
+   #[case("workflow:*", "workflow:approve")]
+   fn test_リソースワイルドカードは同一リソースの任意のアクションを満たす(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:read", "user:read")]
+   #[case("workflow:create", "workflow:create")]
+   fn test_完全一致は権限を満たす(#[case] held: &str, #[case] required: &str) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:*", "task:read")]
+   #[case("workflow:*", "user:create")]
+   fn test_リソースワイルドカードは異なるリソースを満たさない(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(!held.satisfies(&required));
+   }
+
+   #[rstest]
+   #[case("user:read", "user:write")]
+   #[case("workflow:read", "workflow:create")]
+   fn test_異なるアクションは権限を満たさない(
+      #[case] held: &str,
+      #[case] required: &str,
+   ) {
+      let held = Permission::new(held);
+      let required = Permission::new(required);
+      assert!(!held.satisfies(&required));
+   }
+
+   #[rstest]
+   fn test_具体的な権限は全権限ワイルドカードを満たさない() {
+      let held = Permission::new("user:read");
+      let required = Permission::new("*");
+      assert!(!held.satisfies(&required));
+   }
+
+   // Role::with_* メソッドのテスト
+
+   /// 更新日時として now() とは異なるタイムスタンプを使用する
+   #[fixture]
+   fn later() -> DateTime<Utc> {
+      DateTime::from_timestamp(1_700_100_000, 0).unwrap()
+   }
+
+   #[rstest]
+   fn test_with_nameで名前とupdated_atが更新される(
+      tenant_role: Role,
+      later: DateTime<Utc>,
+   ) {
+      let original_name = tenant_role.name().to_string();
+      let updated = tenant_role
+         .clone()
+         .with_name("new_role_name".to_string(), later);
+
+      assert_ne!(original_name, updated.name());
+      assert_eq!("new_role_name", updated.name());
+      assert_eq!(later, updated.updated_at());
+      // 他のフィールドは変更されない
+      assert_eq!(tenant_role.id(), updated.id());
+      assert_eq!(tenant_role.permissions(), updated.permissions());
+      assert_eq!(tenant_role.description(), updated.description());
+   }
+
+   #[rstest]
+   fn test_with_descriptionで説明とupdated_atが更新される(
+      tenant_role: Role,
+      later: DateTime<Utc>,
+   ) {
+      let updated = tenant_role
+         .clone()
+         .with_description(Some("新しい説明".to_string()), later);
+
+      assert_eq!(Some("新しい説明"), updated.description());
+      assert_eq!(later, updated.updated_at());
+      // 他のフィールドは変更されない
+      assert_eq!(tenant_role.id(), updated.id());
+      assert_eq!(tenant_role.name(), updated.name());
+      assert_eq!(tenant_role.permissions(), updated.permissions());
+   }
+
+   #[rstest]
+   fn test_with_permissionsで権限とupdated_atが更新される(
+      tenant_role: Role,
+      later: DateTime<Utc>,
+   ) {
+      let new_permissions = vec![Permission::new("user:read"), Permission::new("user:create")];
+      let updated = tenant_role
+         .clone()
+         .with_permissions(new_permissions.clone(), later);
+
+      assert_eq!(new_permissions, updated.permissions());
+      assert_eq!(later, updated.updated_at());
+      // 他のフィールドは変更されない
+      assert_eq!(tenant_role.id(), updated.id());
+      assert_eq!(tenant_role.name(), updated.name());
+      assert_eq!(tenant_role.description(), updated.description());
    }
 }

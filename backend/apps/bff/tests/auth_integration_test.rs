@@ -39,6 +39,7 @@ use ringiflow_bff::{
       AuthServiceClient,
       AuthServiceError,
       CoreServiceError,
+      CoreServiceRoleClient,
       CoreServiceUserClient,
       UserResponse,
       UserWithPermissionsData,
@@ -159,9 +160,83 @@ impl CoreServiceUserClient for StubCoreServiceClient {
    async fn list_users(
       &self,
       _tenant_id: Uuid,
+      _status: Option<&str>,
    ) -> Result<ApiResponse<Vec<ringiflow_bff::client::UserItemDto>>, CoreServiceError> {
-      // 認証テストでは未使用
       unimplemented!("list_users is not used in auth tests")
+   }
+
+   async fn create_user(
+      &self,
+      _req: &ringiflow_bff::client::CreateUserCoreRequest,
+   ) -> Result<ApiResponse<ringiflow_bff::client::CreateUserCoreResponse>, CoreServiceError> {
+      unimplemented!("create_user is not used in auth tests")
+   }
+
+   async fn update_user(
+      &self,
+      _user_id: Uuid,
+      _req: &ringiflow_bff::client::UpdateUserCoreRequest,
+   ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+      unimplemented!("update_user is not used in auth tests")
+   }
+
+   async fn update_user_status(
+      &self,
+      _user_id: Uuid,
+      _req: &ringiflow_bff::client::UpdateUserStatusCoreRequest,
+   ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+      unimplemented!("update_user_status is not used in auth tests")
+   }
+
+   async fn get_user_by_display_number(
+      &self,
+      _tenant_id: Uuid,
+      _display_number: i64,
+   ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+      unimplemented!("get_user_by_display_number is not used in auth tests")
+   }
+}
+
+#[async_trait]
+impl CoreServiceRoleClient for StubCoreServiceClient {
+   async fn list_roles(
+      &self,
+      _tenant_id: Uuid,
+   ) -> Result<
+      ringiflow_shared::ApiResponse<Vec<ringiflow_bff::client::RoleItemDto>>,
+      CoreServiceError,
+   > {
+      unimplemented!("list_roles is not used in auth tests")
+   }
+
+   async fn get_role(
+      &self,
+      _role_id: Uuid,
+      _tenant_id: Uuid,
+   ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
+   {
+      unimplemented!("get_role is not used in auth tests")
+   }
+
+   async fn create_role(
+      &self,
+      _req: &ringiflow_bff::client::CreateRoleCoreRequest,
+   ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
+   {
+      unimplemented!("create_role is not used in auth tests")
+   }
+
+   async fn update_role(
+      &self,
+      _role_id: Uuid,
+      _req: &ringiflow_bff::client::UpdateRoleCoreRequest,
+   ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
+   {
+      unimplemented!("update_role is not used in auth tests")
+   }
+
+   async fn delete_role(&self, _role_id: Uuid) -> Result<(), CoreServiceError> {
+      unimplemented!("delete_role is not used in auth tests")
    }
 }
 
@@ -213,6 +288,16 @@ impl AuthServiceClient for StubAuthServiceClient {
          verified:      true,
          credential_id: Some(Uuid::now_v7()),
       })
+   }
+
+   async fn create_credentials(
+      &self,
+      _tenant_id: Uuid,
+      _user_id: Uuid,
+      _credential_type: &str,
+      _credential_data: &str,
+   ) -> Result<ringiflow_bff::client::CreateCredentialsResponse, AuthServiceError> {
+      unimplemented!("create_credentials is not used in auth tests")
    }
 }
 

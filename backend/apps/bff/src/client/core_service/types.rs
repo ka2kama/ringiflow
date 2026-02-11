@@ -32,6 +32,43 @@ pub struct UserItemDto {
    pub display_number: i64,
    pub name: String,
    pub email: String,
+   pub status: String,
+   pub roles: Vec<String>,
+}
+
+/// ユーザー作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateUserCoreRequest {
+   pub tenant_id: Uuid,
+   pub email:     String,
+   pub name:      String,
+   pub role_name: String,
+}
+
+/// ユーザー作成レスポンス（Core Service 内部 API 用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateUserCoreResponse {
+   pub id: Uuid,
+   pub display_id: String,
+   pub display_number: i64,
+   pub name: String,
+   pub email: String,
+   pub role: String,
+}
+
+/// ユーザー更新リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateUserCoreRequest {
+   pub name:      Option<String>,
+   pub role_name: Option<String>,
+}
+
+/// ユーザーステータス変更リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateUserStatusCoreRequest {
+   pub status:       String,
+   pub tenant_id:    Uuid,
+   pub requester_id: Uuid,
 }
 
 // --- ユーザー参照型 ---
@@ -161,6 +198,48 @@ pub struct TaskItemDto {
 pub struct TaskDetailDto {
    pub step:     WorkflowStepDto,
    pub workflow: WorkflowInstanceDto,
+}
+
+// --- ロール関連の型 ---
+
+/// ロール一覧の要素 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct RoleItemDto {
+   pub id:          Uuid,
+   pub name:        String,
+   pub description: Option<String>,
+   pub permissions: Vec<String>,
+   pub is_system:   bool,
+   pub user_count:  i64,
+}
+
+/// ロール詳細 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct RoleDetailDto {
+   pub id:          Uuid,
+   pub name:        String,
+   pub description: Option<String>,
+   pub permissions: Vec<String>,
+   pub is_system:   bool,
+   pub created_at:  String,
+   pub updated_at:  String,
+}
+
+/// ロール作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateRoleCoreRequest {
+   pub tenant_id:   Uuid,
+   pub name:        String,
+   pub description: Option<String>,
+   pub permissions: Vec<String>,
+}
+
+/// ロール更新リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateRoleCoreRequest {
+   pub name:        Option<String>,
+   pub description: Option<String>,
+   pub permissions: Option<Vec<String>>,
 }
 
 // --- ダッシュボード関連の型 ---

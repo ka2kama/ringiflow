@@ -12,7 +12,9 @@
 //! - `workflow`: ワークフロー関連のユースケース
 
 pub mod dashboard;
+pub mod role;
 pub mod task;
+pub mod user;
 pub mod workflow;
 
 use std::collections::HashMap;
@@ -20,7 +22,9 @@ use std::collections::HashMap;
 pub use dashboard::DashboardUseCaseImpl;
 use ringiflow_domain::user::UserId;
 use ringiflow_infra::repository::UserRepository;
+pub use role::RoleUseCaseImpl;
 pub use task::TaskUseCaseImpl;
+pub use user::UserUseCaseImpl;
 pub use workflow::{
    ApproveRejectInput,
    CreateWorkflowInput,

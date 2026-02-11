@@ -58,23 +58,33 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::{
    Router,
    middleware::from_fn_with_state,
-   routing::{get, post},
+   routing::{get, patch, post},
 };
 use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{
+   AuditLogState,
    AuthState,
+   RoleState,
+   UserState,
    WorkflowState,
    approve_step,
+   create_role,
+   create_user,
    create_workflow,
    csrf,
+   delete_role,
    get_dashboard_stats,
+   get_role,
    get_task_by_display_numbers,
+   get_user_detail,
    get_workflow,
    get_workflow_definition,
    health_check,
+   list_audit_logs,
    list_my_tasks,
    list_my_workflows,
+   list_roles,
    list_users,
    list_workflow_definitions,
    login,
@@ -82,12 +92,20 @@ use handler::{
    me,
    reject_step,
    submit_workflow,
+   update_role,
+   update_user,
+   update_user_status,
 };
-use middleware::{CsrfState, csrf_middleware};
+use middleware::{AuthzState, CsrfState, csrf_middleware, require_permission};
 #[cfg(feature = "dev-auth")]
 use ringiflow_bff::dev_auth;
 use ringiflow_bff::{client, handler, middleware};
-use ringiflow_infra::{RedisSessionManager, SessionManager};
+use ringiflow_infra::{
+   RedisSessionManager,
+   SessionManager,
+   dynamodb,
+   repository::DynamoDbAuditLogRepository,
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -157,6 +175,16 @@ async fn main() -> anyhow::Result<()> {
    let auth_service_client: Arc<dyn AuthServiceClient> =
       Arc::new(AuthServiceClientImpl::new(&config.auth_url));
 
+   // DynamoDB クライアントの初期化
+   let dynamodb_client = dynamodb::create_client(&config.dynamodb_endpoint).await;
+   dynamodb::ensure_audit_log_table(&dynamodb_client, "audit_logs")
+      .await
+      .expect("DynamoDB 監査ログテーブルのセットアップに失敗しました");
+   let audit_log_repository = Arc::new(DynamoDbAuditLogRepository::new(
+      dynamodb_client,
+      "audit_logs".to_string(),
+   ));
+
    // CSRF ミドルウェア用の状態
    let csrf_state = CsrfState {
       session_manager: session_manager.clone(),
@@ -165,15 +193,69 @@ async fn main() -> anyhow::Result<()> {
    // AuthState は CoreServiceUserClient のみ必要（ISP: 認証に不要なメソッドを公開しない）
    let auth_state = Arc::new(AuthState {
       core_service_client: core_service_client.clone(),
-      auth_service_client,
-      session_manager: session_manager.clone(),
+      auth_service_client: auth_service_client.clone(),
+      session_manager:     session_manager.clone(),
    });
 
    // WorkflowState は全サブトレイト（CoreServiceClient）が必要
    let workflow_state = Arc::new(WorkflowState {
-      core_service_client,
-      session_manager,
+      core_service_client: core_service_client.clone(),
+      session_manager:     session_manager.clone(),
    });
+
+   // UserState はユーザー管理の CRUD に必要（Core Service + Auth Service）
+   let user_state = Arc::new(UserState {
+      core_service_client: core_service_client.clone(),
+      auth_service_client,
+      session_manager: session_manager.clone(),
+      audit_log_repository: audit_log_repository.clone(),
+   });
+
+   // RoleState はロール管理の CRUD に必要
+   let role_state = Arc::new(RoleState {
+      core_service_client,
+      session_manager: session_manager.clone(),
+      audit_log_repository: audit_log_repository.clone(),
+   });
+
+   // 認可ミドルウェア用の状態（権限別ルートグループ）
+   // ユーザー管理とロール管理は同じ user:* 権限を共有する
+   let user_read_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:read".to_string(),
+   };
+   let user_create_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:create".to_string(),
+   };
+   let user_update_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:update".to_string(),
+   };
+
+   // ロール管理 API 用の認可状態（ユーザー管理と同じ user:* 権限を使用）
+   let role_read_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:read".to_string(),
+   };
+   let role_create_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:create".to_string(),
+   };
+   let role_update_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:update".to_string(),
+   };
+
+   // 監査ログ閲覧 API 用の状態と認可
+   let audit_log_state = Arc::new(AuditLogState {
+      audit_log_repository,
+      session_manager: session_manager.clone(),
+   });
+   let audit_log_read_authz = AuthzState {
+      session_manager,
+      required_permission: "user:read".to_string(),
+   };
 
    // ルーター構築
    // TraceLayer により、すべての HTTP リクエストがトレーシングされる
@@ -218,11 +300,63 @@ async fn main() -> anyhow::Result<()> {
          "/api/v1/workflows/{display_number}/tasks/{step_display_number}",
          get(get_task_by_display_numbers),
       )
-      // ユーザー API
-      .route("/api/v1/users", get(list_users))
       // ダッシュボード API
       .route("/api/v1/dashboard/stats", get(get_dashboard_stats))
-      .with_state(workflow_state)
+      .with_state(workflow_state.clone())
+      // 管理者 API（認可ミドルウェア適用、権限別ルートグループ）
+      .merge(
+         Router::new()
+            .route("/api/v1/users", get(list_users))
+            .route("/api/v1/users/{display_number}", get(get_user_detail))
+            .layer(from_fn_with_state(user_read_authz, require_permission))
+            .with_state(user_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route("/api/v1/users", post(create_user))
+            .layer(from_fn_with_state(user_create_authz, require_permission))
+            .with_state(user_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route("/api/v1/users/{display_number}", patch(update_user))
+            .route(
+               "/api/v1/users/{display_number}/status",
+               patch(update_user_status),
+            )
+            .layer(from_fn_with_state(user_update_authz, require_permission))
+            .with_state(user_state),
+      )
+      // ロール管理 API（認可ミドルウェア適用、user:* 権限）
+      .merge(
+         Router::new()
+            .route("/api/v1/roles", get(list_roles))
+            .route("/api/v1/roles/{role_id}", get(get_role))
+            .layer(from_fn_with_state(role_read_authz, require_permission))
+            .with_state(role_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route("/api/v1/roles", post(create_role))
+            .layer(from_fn_with_state(role_create_authz, require_permission))
+            .with_state(role_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route(
+               "/api/v1/roles/{role_id}",
+               patch(update_role).delete(delete_role),
+            )
+            .layer(from_fn_with_state(role_update_authz, require_permission))
+            .with_state(role_state),
+      )
+      // 監査ログ閲覧 API（認可ミドルウェア適用、user:read 権限）
+      .merge(
+         Router::new()
+            .route("/api/v1/audit-logs", get(list_audit_logs))
+            .layer(from_fn_with_state(audit_log_read_authz, require_permission))
+            .with_state(audit_log_state),
+      )
       .layer(from_fn_with_state(csrf_state, csrf_middleware))
       .layer(TraceLayer::new_for_http());
 

@@ -47,6 +47,9 @@ pub const DEV_USER_NAME: &str = "管理者";
 /// 開発用ユーザーのロール
 pub const DEV_USER_ROLES: &[&str] = &["tenant_admin"];
 
+/// 開発用ユーザーの権限（tenant_admin 相当）
+pub const DEV_USER_PERMISSIONS: &[&str] = &["tenant:*", "user:*", "workflow:*", "task:*"];
+
 /// 開発用セッションをセットアップする
 ///
 /// BFF 起動時に呼び出し、Redis に開発用セッションと CSRF トークンを作成する。
@@ -69,6 +72,7 @@ pub async fn setup_dev_session<S: SessionManager>(session_manager: &S) -> anyhow
       DEV_USER_EMAIL.to_string(),
       DEV_USER_NAME.to_string(),
       DEV_USER_ROLES.iter().map(|s| s.to_string()).collect(),
+      DEV_USER_PERMISSIONS.iter().map(|s| s.to_string()).collect(),
    );
 
    // 既存のセッションを削除（冪等性のため）
