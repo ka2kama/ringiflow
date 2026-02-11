@@ -331,7 +331,7 @@ flowchart LR
 | 設計の思考過程 | [`prompts/plans/`](prompts/plans/) |
 | セッションログ | [`prompts/runs/`](prompts/runs/) |
 | 操作パターン | [`prompts/recipes/`](prompts/recipes/) |
-| AI 運用改善記録 | [`prompts/improvements/`](prompts/improvements/) |
+| 運用改善記録 | [`prompts/improvements/`](prompts/improvements/) |
 | 診断レポート | [`prompts/reports/`](prompts/reports/) |
 
 作業開始時は [`docs/01_要件定義書/00_はじめに.md`](docs/01_要件定義書/00_はじめに.md) から読み、全体像を把握すること。
