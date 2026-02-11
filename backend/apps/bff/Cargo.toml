@@ -34,3 +34,4 @@ dev-auth = []
 [dev-dependencies]
 tokio-test.workspace = true
 pretty_assertions.workspace = true
+http.workspace = true

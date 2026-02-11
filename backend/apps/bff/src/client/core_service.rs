@@ -17,6 +17,7 @@
 
 mod client_impl;
 mod error;
+mod response;
 mod task_client;
 mod types;
 mod user_client;
