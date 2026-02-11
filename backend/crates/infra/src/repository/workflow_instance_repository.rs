@@ -11,6 +11,7 @@
 //! 詳細: [データベース設計](../../../../docs/03_詳細設計書/02_データベース設計.md)
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
@@ -24,6 +25,7 @@ use ringiflow_domain::{
    },
 };
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::error::InfraError;
 
@@ -153,6 +155,58 @@ pub trait WorkflowInstanceRepository: Send + Sync {
    ) -> Result<Option<WorkflowInstance>, InfraError>;
 }
 
+/// DB の workflow_instances テーブルの行を表す中間構造体
+///
+/// `query_as!` マクロが SQL 結果を直接マッピングする対象。
+/// `TryFrom` で `WorkflowInstance` への変換ロジックを一箇所に集約する。
+struct WorkflowInstanceRow {
+   id: Uuid,
+   tenant_id: Uuid,
+   definition_id: Uuid,
+   definition_version: i32,
+   display_number: i64,
+   title: String,
+   form_data: serde_json::Value,
+   status: String,
+   version: i32,
+   current_step_id: Option<String>,
+   initiated_by: Uuid,
+   submitted_at: Option<DateTime<Utc>>,
+   completed_at: Option<DateTime<Utc>>,
+   created_at: DateTime<Utc>,
+   updated_at: DateTime<Utc>,
+}
+
+impl TryFrom<WorkflowInstanceRow> for WorkflowInstance {
+   type Error = InfraError;
+
+   fn try_from(row: WorkflowInstanceRow) -> Result<Self, Self::Error> {
+      Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
+         id: WorkflowInstanceId::from_uuid(row.id),
+         tenant_id: TenantId::from_uuid(row.tenant_id),
+         definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
+         definition_version: Version::new(row.definition_version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         display_number: DisplayNumber::new(row.display_number)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         title: row.title,
+         form_data: row.form_data,
+         status: row
+            .status
+            .parse::<WorkflowInstanceStatus>()
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         version: Version::new(row.version as u32)
+            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+         current_step_id: row.current_step_id,
+         initiated_by: UserId::from_uuid(row.initiated_by),
+         submitted_at: row.submitted_at,
+         completed_at: row.completed_at,
+         created_at: row.created_at,
+         updated_at: row.updated_at,
+      }))
+   }
+}
+
 /// PostgreSQL 実装の WorkflowInstanceRepository
 #[derive(Debug, Clone)]
 pub struct PostgresWorkflowInstanceRepository {
@@ -250,7 +304,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       id: &WorkflowInstanceId,
       tenant_id: &TenantId,
    ) -> Result<Option<WorkflowInstance>, InfraError> {
-      let row = sqlx::query!(
+      let row = sqlx::query_as!(
+         WorkflowInstanceRow,
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
@@ -266,42 +321,15 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       .fetch_optional(&self.pool)
       .await?;
 
-      let Some(row) = row else {
-         return Ok(None);
-      };
-
-      let instance = WorkflowInstance::from_db(WorkflowInstanceRecord {
-         id: WorkflowInstanceId::from_uuid(row.id),
-         tenant_id: TenantId::from_uuid(row.tenant_id),
-         definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
-         definition_version: Version::new(row.definition_version as u32)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         display_number: DisplayNumber::try_from(row.display_number)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         title: row.title,
-         form_data: row.form_data,
-         status: row
-            .status
-            .parse::<WorkflowInstanceStatus>()
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         version: Version::new(row.version as u32)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         current_step_id: row.current_step_id,
-         initiated_by: UserId::from_uuid(row.initiated_by),
-         submitted_at: row.submitted_at,
-         completed_at: row.completed_at,
-         created_at: row.created_at,
-         updated_at: row.updated_at,
-      });
-
-      Ok(Some(instance))
+      row.map(WorkflowInstance::try_from).transpose()
    }
 
    async fn find_by_tenant(
       &self,
       tenant_id: &TenantId,
    ) -> Result<Vec<WorkflowInstance>, InfraError> {
-      let rows = sqlx::query!(
+      let rows = sqlx::query_as!(
+         WorkflowInstanceRow,
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
@@ -317,36 +345,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      let instances = rows
-         .into_iter()
-         .map(|row| -> Result<WorkflowInstance, InfraError> {
-            Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
-               id: WorkflowInstanceId::from_uuid(row.id),
-               tenant_id: TenantId::from_uuid(row.tenant_id),
-               definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
-               definition_version: Version::new(row.definition_version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               display_number: DisplayNumber::try_from(row.display_number)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               title: row.title,
-               form_data: row.form_data,
-               status: row
-                  .status
-                  .parse::<WorkflowInstanceStatus>()
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               version: Version::new(row.version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               current_step_id: row.current_step_id,
-               initiated_by: UserId::from_uuid(row.initiated_by),
-               submitted_at: row.submitted_at,
-               completed_at: row.completed_at,
-               created_at: row.created_at,
-               updated_at: row.updated_at,
-            }))
-         })
-         .collect::<Result<Vec<_>, InfraError>>()?;
-
-      Ok(instances)
+      rows.into_iter().map(WorkflowInstance::try_from).collect()
    }
 
    async fn find_by_initiated_by(
@@ -354,7 +353,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       tenant_id: &TenantId,
       user_id: &UserId,
    ) -> Result<Vec<WorkflowInstance>, InfraError> {
-      let rows = sqlx::query!(
+      let rows = sqlx::query_as!(
+         WorkflowInstanceRow,
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
@@ -371,36 +371,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      let instances = rows
-         .into_iter()
-         .map(|row| -> Result<WorkflowInstance, InfraError> {
-            Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
-               id: WorkflowInstanceId::from_uuid(row.id),
-               tenant_id: TenantId::from_uuid(row.tenant_id),
-               definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
-               definition_version: Version::new(row.definition_version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               display_number: DisplayNumber::try_from(row.display_number)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               title: row.title,
-               form_data: row.form_data,
-               status: row
-                  .status
-                  .parse::<WorkflowInstanceStatus>()
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               version: Version::new(row.version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               current_step_id: row.current_step_id,
-               initiated_by: UserId::from_uuid(row.initiated_by),
-               submitted_at: row.submitted_at,
-               completed_at: row.completed_at,
-               created_at: row.created_at,
-               updated_at: row.updated_at,
-            }))
-         })
-         .collect::<Result<Vec<_>, InfraError>>()?;
-
-      Ok(instances)
+      rows.into_iter().map(WorkflowInstance::try_from).collect()
    }
 
    async fn find_by_ids(
@@ -412,9 +383,10 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
          return Ok(Vec::new());
       }
 
-      let uuid_ids: Vec<uuid::Uuid> = ids.iter().map(|id| *id.as_uuid()).collect();
+      let uuid_ids: Vec<Uuid> = ids.iter().map(|id| *id.as_uuid()).collect();
 
-      let rows = sqlx::query!(
+      let rows = sqlx::query_as!(
+         WorkflowInstanceRow,
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
@@ -431,36 +403,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       .fetch_all(&self.pool)
       .await?;
 
-      let instances = rows
-         .into_iter()
-         .map(|row| -> Result<WorkflowInstance, InfraError> {
-            Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
-               id: WorkflowInstanceId::from_uuid(row.id),
-               tenant_id: TenantId::from_uuid(row.tenant_id),
-               definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
-               definition_version: Version::new(row.definition_version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               display_number: DisplayNumber::try_from(row.display_number)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               title: row.title,
-               form_data: row.form_data,
-               status: row
-                  .status
-                  .parse::<WorkflowInstanceStatus>()
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               version: Version::new(row.version as u32)
-                  .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-               current_step_id: row.current_step_id,
-               initiated_by: UserId::from_uuid(row.initiated_by),
-               submitted_at: row.submitted_at,
-               completed_at: row.completed_at,
-               created_at: row.created_at,
-               updated_at: row.updated_at,
-            }))
-         })
-         .collect::<Result<Vec<_>, InfraError>>()?;
-
-      Ok(instances)
+      rows.into_iter().map(WorkflowInstance::try_from).collect()
    }
 
    async fn find_by_display_number(
@@ -468,7 +411,8 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       display_number: DisplayNumber,
       tenant_id: &TenantId,
    ) -> Result<Option<WorkflowInstance>, InfraError> {
-      let row = sqlx::query!(
+      let row = sqlx::query_as!(
+         WorkflowInstanceRow,
          r#"
             SELECT
                 id, tenant_id, definition_id, definition_version,
@@ -484,35 +428,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
       .fetch_optional(&self.pool)
       .await?;
 
-      let Some(row) = row else {
-         return Ok(None);
-      };
-
-      let instance = WorkflowInstance::from_db(WorkflowInstanceRecord {
-         id: WorkflowInstanceId::from_uuid(row.id),
-         tenant_id: TenantId::from_uuid(row.tenant_id),
-         definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
-         definition_version: Version::new(row.definition_version as u32)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         display_number: DisplayNumber::try_from(row.display_number)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         title: row.title,
-         form_data: row.form_data,
-         status: row
-            .status
-            .parse::<WorkflowInstanceStatus>()
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         version: Version::new(row.version as u32)
-            .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-         current_step_id: row.current_step_id,
-         initiated_by: UserId::from_uuid(row.initiated_by),
-         submitted_at: row.submitted_at,
-         completed_at: row.completed_at,
-         created_at: row.created_at,
-         updated_at: row.updated_at,
-      });
-
-      Ok(Some(instance))
+      row.map(WorkflowInstance::try_from).transpose()
    }
 }
 
