@@ -81,20 +81,22 @@ BFF の Router は 4 つの異なる State 型（`AuthState`, `WorkflowState`, `
 
 ### Phase 1: utoipa 依存追加 + shared クレートの ToSchema 導入
 
-#### 確認事項
+#### 確認事項（事後検証）
 
-- [ ] ライブラリ: utoipa の ToSchema + Generic 型 → docs.rs/utoipa
-- [ ] ライブラリ: utoipa features（uuid, time, yaml, preserve_order） → docs.rs/utoipa
-- [ ] 型: `ApiResponse<T>` → `backend/crates/shared/src/api_response.rs`
-- [ ] 型: `ErrorResponse` → `backend/crates/shared/src/error_response.rs`
-- [ ] 型: `PaginatedResponse<T>` → `backend/crates/shared/src/paginated_response.rs`
+注: 実装時に未実施。PR レビュー後にコードと照合して事後検証した。
+
+- [x] ライブラリ: utoipa の ToSchema + Generic 型 → `backend/Cargo.toml:83` に utoipa v5 追加。`ApiResponse<T>` でジェネリクス対応を確認
+- [x] ライブラリ: utoipa features → `backend/Cargo.toml:83` で `["chrono", "uuid", "yaml", "preserve_order"]` を確認（計画の `time` は `chrono` に変更）
+- [x] 型: `ApiResponse<T>` → `backend/crates/shared/src/api_response.rs:24` に `#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]` を確認
+- [x] 型: `ErrorResponse` → `backend/crates/shared/src/error_response.rs:22-23` に ToSchema + `schema(as = ProblemDetails)` を確認
+- [ ] 型: `PaginatedResponse<T>` → `backend/crates/shared/src/paginated_response.rs:22` — **ToSchema 未実装**。現時点で BFF のレスポンスに使用されていないため影響なし
 
 #### テストリスト
 
-- [ ] `ApiResponse<String>` に ToSchema が実装されていること
-- [ ] `PaginatedResponse<String>` に ToSchema が実装されていること
-- [ ] `ErrorResponse` のスキーマ名が `ProblemDetails` になること
-- [ ] `openapi` feature 無効時に ToSchema が derive されないこと
+- [x] `ApiResponse<String>` に ToSchema が実装されていること
+- [ ] `PaginatedResponse<String>` に ToSchema が実装されていること — **未実装**
+- [x] `ErrorResponse` のスキーマ名が `ProblemDetails` になること
+- [x] `openapi` feature 無効時に ToSchema が derive されないこと
 
 #### 変更ファイル
 
@@ -110,17 +112,19 @@ BFF の Router は 4 つの異なる State 型（`AuthState`, `WorkflowState`, `
 
 ### Phase 2: BFF ハンドラ型に ToSchema / IntoParams 追加
 
-#### 確認事項
+#### 確認事項（事後検証）
 
-- [ ] 型: 全ハンドラのリクエスト/レスポンス型 → `backend/apps/bff/src/handler/*.rs`
-- [ ] ライブラリ: `serde_json::Value` の utoipa での扱い → Grep 使用箇所
-- [ ] ライブラリ: `IntoParams` の使い方（Path / Query パラメータ） → docs.rs/utoipa
+注: 実装時に未実施。PR レビュー後にコードと照合して事後検証した。
+
+- [ ] 型: 全ハンドラのリクエスト/レスポンス型 → **role.rs と audit_log.rs の型に ToSchema / IntoParams が未実装**。6 ファイル 30 箇所に ToSchema 実装済みだが role.rs, audit_log.rs は 0 件
+- [x] ライブラリ: `serde_json::Value` の utoipa での扱い → `handler/workflow.rs` の `form_data: serde_json::Value` で `object` 型にマッピングされることを確認
+- [x] ライブラリ: `IntoParams` の使い方 → `handler/user.rs:58-59` の `ListUsersQuery` で `#[into_params(parameter_in = Query)]` を確認
 
 #### テストリスト
 
-- [ ] 全 ToSchema 型がコンパイルできること
-- [ ] `serde_json::Value` フィールドが `object` 型にマッピングされること
-- [ ] IntoParams 型がコンパイルできること
+- [ ] 全 ToSchema 型がコンパイルできること — **role.rs, audit_log.rs の型が未対応**
+- [x] `serde_json::Value` フィールドが `object` 型にマッピングされること
+- [x] IntoParams 型がコンパイルできること
 
 #### 変更ファイル
 
@@ -141,14 +145,16 @@ BFF の Router は 4 つの異なる State 型（`AuthState`, `WorkflowState`, `
 
 ### Phase 3: `#[utoipa::path]` アノテーション追加
 
-#### 確認事項
+#### 確認事項（事後検証）
 
-- [ ] ライブラリ: `#[utoipa::path]` の security / tag / responses 属性 → docs.rs/utoipa
-- [ ] パターン: `impl IntoResponse` 戻り値での responses 定義方法
+注: 実装時に未実施。PR レビュー後にコードと照合して事後検証した。
+
+- [x] ライブラリ: `#[utoipa::path]` の security / tag / responses 属性 → `handler/auth.rs` 等で `get/post`, `path`, `tag`, `security`, `responses` の使用を確認
+- [x] パターン: `impl IntoResponse` 戻り値での responses 定義方法 → `responses()` マクロで明示指定するパターンを確認
 
 #### テストリスト
 
-- [ ] 全 27 ハンドラに `#[utoipa::path]` を付与してコンパイルできること
+- [ ] 全 27 ハンドラに `#[utoipa::path]` を付与してコンパイルできること — **20 ハンドラのみ実装済み**（7 ファイル 21 箇所）。role.rs（5）と audit_log.rs（1）が未対応、health の内部エンドポイント（1）はスコープ外として除外
 
 #### 変更ファイル
 
@@ -158,20 +164,22 @@ BFF の Router は 4 つの異なる State 型（`AuthState`, `WorkflowState`, `
 
 ### Phase 4: OpenApi ルート定義 + YAML 生成バイナリ + テスト
 
-#### 確認事項
+#### 確認事項（事後検証）
 
-- [ ] ライブラリ: `#[derive(OpenApi)]` の paths / components / modifiers / tags → docs.rs/utoipa
-- [ ] ライブラリ: `Modify` トレイトで securitySchemes 追加 → docs.rs/utoipa
-- [ ] ライブラリ: `OpenApi::to_yaml()` の出力形式 → utoipa yaml feature
+注: 実装時に未実施。PR レビュー後にコードと照合して事後検証した。
+
+- [x] ライブラリ: `#[derive(OpenApi)]` の paths / components / modifiers / tags → `openapi.rs:14-108` で paths(20), components(schemas 32), tags(6), modifiers(SecurityAddon) を確認
+- [x] ライブラリ: `Modify` トレイトで securitySchemes 追加 → `openapi.rs:115-123` で `SecurityAddon` が `session_auth`（Cookie）を追加
+- [x] ライブラリ: `OpenApi::to_yaml()` の出力形式 → `bin/generate_openapi.rs:15-17` で YAML 出力を確認
 
 #### テストリスト
 
-- [ ] `ApiDoc::openapi()` がパニックせず生成されること
-- [ ] 27 パスが含まれること
-- [ ] `sessionAuth` セキュリティスキームが含まれること
-- [ ] 全 8 タグ（auth, workflows, tasks, users, roles, dashboard, health, audit-logs）が含まれること
-- [ ] `ProblemDetails` スキーマが登録されていること
-- [ ] スナップショットテスト（insta）: OpenApi JSON 全体
+- [x] `ApiDoc::openapi()` がパニックせず生成されること
+- [ ] 27 パスが含まれること — **18 パス（20 ハンドラ）のみ**。role（5）と audit_log（1）が未登録
+- [x] `session_auth` セキュリティスキームが含まれること
+- [ ] 全 8 タグが含まれること — **6 タグのみ**（health, auth, workflows, tasks, users, dashboard）。roles と audit-logs が未登録
+- [x] `ProblemDetails` スキーマが登録されていること
+- [x] スナップショットテスト（insta）: OpenApi JSON 全体
 
 #### 変更ファイル
 
@@ -187,16 +195,18 @@ BFF の Router は 4 つの異なる State 型（`AuthState`, `WorkflowState`, `
 
 ### Phase 5: justfile コマンド + CI 統合 + openapi.yaml 置換
 
-#### 確認事項
+#### 確認事項（事後検証）
 
-- [ ] パターン: `just check` の構成 → `justfile` L372
-- [ ] パターン: CI `rust` ジョブの構成 → `.github/workflows/ci.yaml` L62-128
+注: 実装時に未実施。PR レビュー後にコードと照合して事後検証した。
+
+- [x] パターン: `just check` の構成 → `justfile:379` で `openapi-check` が `check` レシピに含まれていることを確認
+- [x] パターン: CI `rust` ジョブの構成 → `.github/workflows/ci.yaml:125-135` で OpenAPI sync check ステップを確認
 
 #### テストリスト
 
-- [ ] `just openapi-generate` が openapi/openapi.yaml を生成すること
-- [ ] `just openapi-check` が同期状態で正常終了すること
-- [ ] `just check` に `openapi-check` が含まれていること
+- [x] `just openapi-generate` が openapi/openapi.yaml を生成すること
+- [x] `just openapi-check` が同期状態で正常終了すること
+- [x] `just check` に `openapi-check` が含まれていること
 
 #### 変更ファイル
 
