@@ -46,10 +46,13 @@ RUN cargo chef prepare --recipe-path recipe.json
 # ============================================================
 FROM chef AS builder
 
+# ビルド引数: デフォルトは本番（dev-auth 除外）
+# デモ環境では --build-arg CARGO_FEATURES="" で default features を有効化
+ARG CARGO_FEATURES="--no-default-features"
+
 # レシピファイルをコピーして依存関係をビルド（キャッシュ対象）
 COPY --from=planner /app/recipe.json recipe.json
-# --no-default-features で dev-auth を除外（本番ビルド）
-RUN cargo chef cook --release --no-default-features --recipe-path recipe.json
+RUN cargo chef cook --release ${CARGO_FEATURES} --recipe-path recipe.json
 
 # ソースコードをコピー
 COPY Cargo.toml Cargo.lock ./
@@ -60,8 +63,8 @@ COPY crates/ crates/
 COPY .sqlx/ .sqlx/
 ENV SQLX_OFFLINE=true
 
-# アプリケーションをビルド（--no-default-features で dev-auth を除外）
-RUN cargo build --release --no-default-features --bin ringiflow-bff --bin ringiflow-core-service --bin ringiflow-auth-service
+# アプリケーションをビルド
+RUN cargo build --release ${CARGO_FEATURES} --bin ringiflow-bff --bin ringiflow-core-service --bin ringiflow-auth-service
 
 # ============================================================
 # Stage 4: Runtime（最小限の実行環境）
