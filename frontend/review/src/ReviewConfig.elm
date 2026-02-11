@@ -23,12 +23,9 @@ config =
       NoUnused.CustomTypeConstructors.rule []
         -- RemoteData の NotAsked は標準パターン。一部ページでは使用しないが保持
         |> Rule.ignoreErrorsForFiles [ "src/Page/Workflow/New.elm" ]
-        -- TODO: Phase 4-5 で各ページを実装時に除外解除
+        -- TODO: Phase 5 で監査ログページ実装時に除外解除
         |> Rule.ignoreErrorsForFiles
-            [ "src/Page/Role/List.elm"
-            , "src/Page/Role/New.elm"
-            , "src/Page/Role/Edit.elm"
-            , "src/Page/AuditLog/List.elm"
+            [ "src/Page/AuditLog/List.elm"
             ]
     , -- 未使用のコンストラクタ引数
       NoUnused.CustomTypeConstructorArgs.rule
@@ -54,10 +51,9 @@ config =
             , "src/Data/FormField.elm"
             , "src/Data/WorkflowInstance.elm"
             ]
-        -- TODO: Phase 4-5 で各ページ実装時に除外解除
+        -- TODO: Phase 5 で監査ログページ実装時に除外解除
         |> Rule.ignoreErrorsForFiles
-            [ "src/Api/Role.elm"
-            , "src/Api/AuditLog.elm"
+            [ "src/Api/AuditLog.elm"
             , "src/Data/AuditLog.elm"
             ]
     , -- 未使用のモジュール
@@ -70,11 +66,9 @@ config =
             ]
     , -- 未使用のパラメータ
       NoUnused.Parameters.rule
-        -- TODO: Phase 4-5 で各ページ実装時に除外解除
+        -- TODO: Phase 5 で監査ログページ実装時に除外解除
         |> Rule.ignoreErrorsForFiles
-            [ "src/Page/Role/List.elm"
-            , "src/Page/Role/New.elm"
-            , "src/Page/AuditLog/List.elm"
+            [ "src/Page/AuditLog/List.elm"
             ]
     , -- 未使用のパターン
       NoUnused.Patterns.rule

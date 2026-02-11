@@ -267,14 +267,14 @@ initPage key route shared =
         Route.RoleNew ->
             let
                 ( model, cmd ) =
-                    RoleNew.init shared
+                    RoleNew.init shared key
             in
             ( RoleNewPage model, Cmd.map RoleNewMsg cmd )
 
         Route.RoleEdit roleId ->
             let
                 ( model, cmd ) =
-                    RoleEdit.init shared roleId
+                    RoleEdit.init shared key roleId
             in
             ( RoleEditPage model, Cmd.map RoleEditMsg cmd )
 
@@ -707,6 +707,12 @@ isCurrentPageDirty model =
 
         UserEditPage subModel ->
             UserEdit.isDirty subModel
+
+        RoleNewPage subModel ->
+            RoleNew.isDirty subModel
+
+        RoleEditPage subModel ->
+            RoleEdit.isDirty subModel
 
         _ ->
             False
