@@ -73,7 +73,7 @@ setup-hooks:
 # データベースをセットアップ（マイグレーション適用）
 setup-db:
     @echo "データベースをセットアップ中..."
-    @cd backend && sqlx migrate run 2>/dev/null || echo "  マイグレーションファイルなし（Phase 1 で作成予定）"
+    @cd backend && sqlx migrate run
     @echo "✓ データベースセットアップ完了"
 
 # worktree 用セットアップ（Docker 起動 → DB マイグレーション → 依存関係インストール）
