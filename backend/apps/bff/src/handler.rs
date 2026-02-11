@@ -14,6 +14,7 @@
 //! - `auth`: 認証関連（ログイン、ログアウト）
 //! - `workflow`: ワークフロー関連（作成、申請）
 
+pub mod audit_log;
 pub mod auth;
 pub mod dashboard;
 pub mod health;
@@ -22,6 +23,7 @@ pub mod task;
 pub mod user;
 pub mod workflow;
 
+pub use audit_log::{AuditLogState, list_audit_logs};
 pub use auth::{AuthState, csrf, login, logout, me};
 pub use dashboard::get_dashboard_stats;
 pub use health::health_check;

@@ -38,6 +38,8 @@ tags:
     description: ユーザー API
   - name: roles
     description: ロール管理 API
+  - name: audit-logs
+    description: 監査ログ API
   - name: dashboard
     description: ダッシュボード API
   - name: health
@@ -858,6 +860,91 @@ paths:
                 title: Conflict
                 status: 409
                 detail: このロールは 3 人のユーザーに割り当てられているため削除できません
+
+  # ============================================================
+  # 監査ログ API
+  # ============================================================
+  /api/v1/audit-logs:
+    get:
+      tags:
+        - audit-logs
+      summary: 監査ログ一覧取得
+      description: |
+        テナント内の監査ログを新しい順で取得する。
+        カーソルベースページネーション対応。
+
+        `user:read` 権限が必要（テナント管理者のみ）。
+      operationId: listAuditLogs
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XTenantId'
+        - name: cursor
+          in: query
+          required: false
+          description: 次ページ取得用カーソル（前回レスポンスの `next_cursor` 値）
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: 取得件数（デフォルト 50、最大 100）
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: from
+          in: query
+          required: false
+          description: 開始日時（ISO 8601 形式）
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: 終了日時（ISO 8601 形式）
+          schema:
+            type: string
+            format: date-time
+        - name: actor_id
+          in: query
+          required: false
+          description: 操作者 ID でフィルタ
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          required: false
+          description: |
+            アクションでフィルタ（カンマ区切りで複数指定可）。
+            指定可能な値: `user.create`, `user.update`, `user.deactivate`, `user.activate`,
+            `role.create`, `role.update`, `role.delete`
+          schema:
+            type: string
+            example: user.create,user.update
+        - name: result
+          in: query
+          required: false
+          description: 結果でフィルタ（`success` / `failure`）
+          schema:
+            type: string
+            enum:
+              - success
+              - failure
+      responses:
+        '200':
+          description: 監査ログ一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   # ============================================================
   # タスク API
@@ -2007,6 +2094,85 @@ components:
                   message:
                     type: string
                     description: エラーメッセージ
+
+    # ============================================================
+    # 監査ログ
+    # ============================================================
+    AuditLogListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogItem'
+        next_cursor:
+          type:
+            - string
+            - 'null'
+          description: |
+            次ページ取得用のカーソル。
+            `null` の場合は最後のページを意味する。
+
+    AuditLogItem:
+      type: object
+      required:
+        - id
+        - actor_id
+        - actor_name
+        - action
+        - result
+        - resource_type
+        - resource_id
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 監査ログ ID
+        actor_id:
+          type: string
+          format: uuid
+          description: 操作者のユーザー ID
+        actor_name:
+          type: string
+          description: 操作者の表示名
+        action:
+          type: string
+          description: |
+            操作種別。`リソース.操作` 形式。
+          enum:
+            - user.create
+            - user.update
+            - user.deactivate
+            - user.activate
+            - role.create
+            - role.update
+            - role.delete
+        result:
+          type: string
+          description: 操作結果
+          enum:
+            - success
+            - failure
+        resource_type:
+          type: string
+          description: 対象リソース種別
+        resource_id:
+          type: string
+          description: 対象リソース ID
+        detail:
+          description: 操作の詳細情報（JSON オブジェクト）
+        source_ip:
+          type:
+            - string
+            - 'null'
+          description: 操作元 IP アドレス
+        created_at:
+          type: string
+          format: date-time
+          description: 操作日時（ISO 8601）
 
     # ============================================================
     # 共通

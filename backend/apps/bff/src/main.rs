@@ -63,6 +63,7 @@ use axum::{
 use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{
+   AuditLogState,
    AuthState,
    RoleState,
    UserState,
@@ -80,6 +81,7 @@ use handler::{
    get_workflow,
    get_workflow_definition,
    health_check,
+   list_audit_logs,
    list_my_tasks,
    list_my_workflows,
    list_roles,
@@ -241,8 +243,18 @@ async fn main() -> anyhow::Result<()> {
       required_permission: "user:create".to_string(),
    };
    let role_update_authz = AuthzState {
-      session_manager,
+      session_manager:     session_manager.clone(),
       required_permission: "user:update".to_string(),
+   };
+
+   // 監査ログ閲覧 API 用の状態と認可
+   let audit_log_state = Arc::new(AuditLogState {
+      audit_log_repository,
+      session_manager: session_manager.clone(),
+   });
+   let audit_log_read_authz = AuthzState {
+      session_manager,
+      required_permission: "user:read".to_string(),
    };
 
    // ルーター構築
@@ -337,6 +349,13 @@ async fn main() -> anyhow::Result<()> {
             )
             .layer(from_fn_with_state(role_update_authz, require_permission))
             .with_state(role_state),
+      )
+      // 監査ログ閲覧 API（認可ミドルウェア適用、user:read 権限）
+      .merge(
+         Router::new()
+            .route("/api/v1/audit-logs", get(list_audit_logs))
+            .layer(from_fn_with_state(audit_log_read_authz, require_permission))
+            .with_state(audit_log_state),
       )
       .layer(from_fn_with_state(csrf_state, csrf_middleware))
       .layer(TraceLayer::new_for_http());
