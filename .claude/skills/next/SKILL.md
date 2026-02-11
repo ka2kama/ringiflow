@@ -29,7 +29,7 @@ gh pr list --author @me --state open --json number,title,isDraft,headRefName,url
 
 | 状態 | 対応 |
 |------|------|
-| main 以外のブランチにいる | 継続推奨として提示、`/resume` を案内 |
+| main 以外のブランチにいる | 継続推奨として提示、`/restore` を案内 |
 | Draft PR が存在する | その PR の完了を推奨 |
 | 両方なし | Step 2 へ |
 
@@ -44,7 +44,7 @@ gh pr list --author @me --state open --json number,title,isDraft,headRefName,url
 - **状態**: Draft PR / 作業中
 
 ---
-続きを再開する場合: `/resume` を実行してください
+続きを再開する場合: `/restore` を実行してください
 ```
 
 進行中の作業がなければ Step 2 へ進む。
@@ -126,5 +126,5 @@ git checkout -b feature/<Issue番号>-<機能名>
 ## 補足
 
 - このスキルは「何をすべきか」を特定するまでが役割
-- 実際の作業開始は `/resume` または手動でブランチを作成して行う
+- 実際の作業開始は `/restore` または手動でブランチを作成して行う
 - 優先度ラベルがない場合は、Issue の作成日時（古い順）を参考にする

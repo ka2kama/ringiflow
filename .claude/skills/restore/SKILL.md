@@ -1,5 +1,5 @@
 ---
-name: resume
+name: restore
 description: セッション再開時のコンテキスト復元を自動化する。ブランチから Issue を特定し、残タスクと作業状況を把握して再開する。
 argument-hint: <省略可。Issue 番号>
 user-invocable: true
