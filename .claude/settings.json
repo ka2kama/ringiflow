@@ -24,6 +24,7 @@
       "Bash(gh issue create:*)",
       "Bash(gh issue edit:*)",
       "Bash(gh pr create --draft:*)",
+      "Bash(gh pr edit:*)",
       "Bash(terraform *)",
       "Bash(elm make:*)",
       "Bash(elm-format:*)",
@@ -72,6 +73,14 @@
       "Bash(just redis-keys:*)",
       "Bash(just redis-get:*)",
       "Bash(just check-file-size:*)",
+      "Bash(just check-duplicates)",
+      "Bash(just check-unused-deps)",
+      "Bash(just openapi-generate)",
+      "Bash(just openapi-check)",
+      "Bash(just coverage)",
+      "Bash(just coverage-summary)",
+      "Bash(just test-e2e)",
+      "Bash(just setup-deps)",
       "mcp__postgres__pg-schema"
     ],
     "ask": [
