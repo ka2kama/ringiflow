@@ -25,10 +25,10 @@ pub(super) async fn handle_response<T: DeserializeOwned>(
       return Ok(body);
    }
 
-   if status == reqwest::StatusCode::NOT_FOUND {
-      if let Some(err) = not_found_error {
-         return Err(err);
-      }
+   if status == reqwest::StatusCode::NOT_FOUND
+      && let Some(err) = not_found_error
+   {
+      return Err(err);
    }
 
    let body = response.text().await.unwrap_or_default();
