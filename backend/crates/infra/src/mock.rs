@@ -39,7 +39,7 @@ use crate::{
 
 // ===== MockWorkflowDefinitionRepository =====
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MockWorkflowDefinitionRepository {
    definitions: Arc<Mutex<Vec<WorkflowDefinition>>>,
 }
@@ -91,7 +91,7 @@ impl WorkflowDefinitionRepository for MockWorkflowDefinitionRepository {
 
 // ===== MockWorkflowInstanceRepository =====
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MockWorkflowInstanceRepository {
    instances: Arc<Mutex<Vec<WorkflowInstance>>>,
 }
@@ -205,7 +205,7 @@ impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
 
 // ===== MockWorkflowStepRepository =====
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MockWorkflowStepRepository {
    steps: Arc<Mutex<Vec<WorkflowStep>>>,
 }
@@ -356,7 +356,7 @@ impl UserRepository for MockUserRepository {
 /// テスト用のモック DisplayIdCounterRepository
 ///
 /// 呼び出しごとにカウンターをインクリメントして返す。
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MockDisplayIdCounterRepository {
    counter: Arc<Mutex<i64>>,
 }
