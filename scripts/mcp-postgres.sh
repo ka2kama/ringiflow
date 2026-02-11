@@ -8,6 +8,16 @@
 # 詳細: docs/05_ADR/028_MCPサーバー導入（PostgreSQL）.md
 set -euo pipefail
 
+# プロジェクトルートの .env からポート設定を読み込む（worktree 対応）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    # shellcheck source=/dev/null
+    source "$PROJECT_ROOT/.env"
+fi
+
+export DATABASE_URL="${DATABASE_URL:-postgresql://ringiflow:ringiflow@localhost:${POSTGRES_PORT:-15432}/ringiflow_dev}"
+
 PACKAGE="@zeddotdev/postgres-context-server"
 INSTALL_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ringiflow-mcp-postgres"
 
