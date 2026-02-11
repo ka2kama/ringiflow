@@ -58,18 +58,21 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::{
    Router,
    middleware::from_fn_with_state,
-   routing::{get, post},
+   routing::{get, patch, post},
 };
 use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
 use handler::{
    AuthState,
+   UserState,
    WorkflowState,
    approve_step,
+   create_user,
    create_workflow,
    csrf,
    get_dashboard_stats,
    get_task_by_display_numbers,
+   get_user_detail,
    get_workflow,
    get_workflow_definition,
    health_check,
@@ -82,6 +85,8 @@ use handler::{
    me,
    reject_step,
    submit_workflow,
+   update_user,
+   update_user_status,
 };
 use middleware::{AuthzState, CsrfState, csrf_middleware, require_permission};
 #[cfg(feature = "dev-auth")]
@@ -165,20 +170,35 @@ async fn main() -> anyhow::Result<()> {
    // AuthState は CoreServiceUserClient のみ必要（ISP: 認証に不要なメソッドを公開しない）
    let auth_state = Arc::new(AuthState {
       core_service_client: core_service_client.clone(),
-      auth_service_client,
-      session_manager: session_manager.clone(),
+      auth_service_client: auth_service_client.clone(),
+      session_manager:     session_manager.clone(),
    });
 
    // WorkflowState は全サブトレイト（CoreServiceClient）が必要
    let workflow_state = Arc::new(WorkflowState {
+      core_service_client: core_service_client.clone(),
+      session_manager:     session_manager.clone(),
+   });
+
+   // UserState はユーザー管理の CRUD に必要（Core Service + Auth Service）
+   let user_state = Arc::new(UserState {
       core_service_client,
+      auth_service_client,
       session_manager: session_manager.clone(),
    });
 
-   // 認可ミドルウェア用の状態（管理者 API に適用）
-   let user_admin_authz = AuthzState {
-      session_manager,
+   // 認可ミドルウェア用の状態（権限別ルートグループ）
+   let user_read_authz = AuthzState {
+      session_manager:     session_manager.clone(),
       required_permission: "user:read".to_string(),
+   };
+   let user_create_authz = AuthzState {
+      session_manager:     session_manager.clone(),
+      required_permission: "user:create".to_string(),
+   };
+   let user_update_authz = AuthzState {
+      session_manager,
+      required_permission: "user:update".to_string(),
    };
 
    // ルーター構築
@@ -227,12 +247,29 @@ async fn main() -> anyhow::Result<()> {
       // ダッシュボード API
       .route("/api/v1/dashboard/stats", get(get_dashboard_stats))
       .with_state(workflow_state.clone())
-      // 管理者 API（認可ミドルウェア適用）
+      // 管理者 API（認可ミドルウェア適用、権限別ルートグループ）
       .merge(
          Router::new()
             .route("/api/v1/users", get(list_users))
-            .layer(from_fn_with_state(user_admin_authz, require_permission))
-            .with_state(workflow_state),
+            .route("/api/v1/users/{display_number}", get(get_user_detail))
+            .layer(from_fn_with_state(user_read_authz, require_permission))
+            .with_state(user_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route("/api/v1/users", post(create_user))
+            .layer(from_fn_with_state(user_create_authz, require_permission))
+            .with_state(user_state.clone()),
+      )
+      .merge(
+         Router::new()
+            .route("/api/v1/users/{display_number}", patch(update_user))
+            .route(
+               "/api/v1/users/{display_number}/status",
+               patch(update_user_status),
+            )
+            .layer(from_fn_with_state(user_update_authz, require_permission))
+            .with_state(user_state),
       )
       .layer(from_fn_with_state(csrf_state, csrf_middleware))
       .layer(TraceLayer::new_for_http());

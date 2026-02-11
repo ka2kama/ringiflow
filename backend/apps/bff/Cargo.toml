@@ -26,6 +26,7 @@ time.workspace = true
 dotenvy.workspace = true
 subtle.workspace = true
 urlencoding.workspace = true
+rand.workspace = true
 
 [features]
 default = ["dev-auth"]

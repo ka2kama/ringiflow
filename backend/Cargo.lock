@@ -1719,6 +1719,7 @@ dependencies = [
  "dotenvy",
  "http",
  "pretty_assertions",
+ "rand 0.9.2",
  "reqwest",
  "ringiflow-domain",
  "ringiflow-infra",

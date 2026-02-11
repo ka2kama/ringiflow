@@ -25,7 +25,14 @@ pub use auth::{AuthState, csrf, login, logout, me};
 pub use dashboard::get_dashboard_stats;
 pub use health::health_check;
 pub use task::list_my_tasks;
-pub use user::list_users;
+pub use user::{
+   UserState,
+   create_user,
+   get_user_detail,
+   list_users,
+   update_user,
+   update_user_status,
+};
 pub use workflow::{
    WorkflowState,
    approve_step,
