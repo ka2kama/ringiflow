@@ -29,6 +29,10 @@ pub enum CoreServiceError {
    #[error("権限がありません: {0}")]
    Forbidden(String),
 
+   /// メールアドレスが既に使用されている（409）
+   #[error("メールアドレスは既に使用されています")]
+   EmailAlreadyExists,
+
    /// 競合（409）
    #[error("競合が発生しました: {0}")]
    Conflict(String),

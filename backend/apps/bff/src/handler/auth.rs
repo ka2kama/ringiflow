@@ -500,6 +500,7 @@ mod tests {
       async fn list_users(
          &self,
          _tenant_id: Uuid,
+         _status: Option<&str>,
       ) -> Result<ApiResponse<Vec<crate::client::UserItemDto>>, CoreServiceError> {
          unimplemented!("list_users is not used in auth tests")
       }
@@ -517,6 +518,37 @@ mod tests {
          _user_id: Uuid,
       ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
          self.get_user_result.clone()
+      }
+
+      async fn create_user(
+         &self,
+         _req: &crate::client::CreateUserCoreRequest,
+      ) -> Result<ApiResponse<crate::client::CreateUserCoreResponse>, CoreServiceError> {
+         unimplemented!("create_user is not used in auth tests")
+      }
+
+      async fn update_user(
+         &self,
+         _user_id: Uuid,
+         _req: &crate::client::UpdateUserCoreRequest,
+      ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+         unimplemented!("update_user is not used in auth tests")
+      }
+
+      async fn update_user_status(
+         &self,
+         _user_id: Uuid,
+         _req: &crate::client::UpdateUserStatusCoreRequest,
+      ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+         unimplemented!("update_user_status is not used in auth tests")
+      }
+
+      async fn get_user_by_display_number(
+         &self,
+         _tenant_id: Uuid,
+         _display_number: i64,
+      ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+         unimplemented!("get_user_by_display_number is not used in auth tests")
       }
    }
 
@@ -550,6 +582,16 @@ mod tests {
          _password: &str,
       ) -> Result<VerifyResponse, AuthServiceError> {
          self.verify_result.clone()
+      }
+
+      async fn create_credentials(
+         &self,
+         _tenant_id: Uuid,
+         _user_id: Uuid,
+         _credential_type: &str,
+         _credential_data: &str,
+      ) -> Result<crate::client::auth_service::CreateCredentialsResponse, AuthServiceError> {
+         unimplemented!("create_credentials is not used in auth tests")
       }
    }
 

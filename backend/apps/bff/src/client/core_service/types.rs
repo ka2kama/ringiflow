@@ -32,6 +32,43 @@ pub struct UserItemDto {
    pub display_number: i64,
    pub name: String,
    pub email: String,
+   pub status: String,
+   pub roles: Vec<String>,
+}
+
+/// ユーザー作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateUserCoreRequest {
+   pub tenant_id: Uuid,
+   pub email:     String,
+   pub name:      String,
+   pub role_name: String,
+}
+
+/// ユーザー作成レスポンス（Core Service 内部 API 用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateUserCoreResponse {
+   pub id: Uuid,
+   pub display_id: String,
+   pub display_number: i64,
+   pub name: String,
+   pub email: String,
+   pub role: String,
+}
+
+/// ユーザー更新リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateUserCoreRequest {
+   pub name:      Option<String>,
+   pub role_name: Option<String>,
+}
+
+/// ユーザーステータス変更リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateUserStatusCoreRequest {
+   pub status:       String,
+   pub tenant_id:    Uuid,
+   pub requester_id: Uuid,
 }
 
 // --- ユーザー参照型 ---

@@ -67,7 +67,7 @@ pub async fn list_users(
 
    match state
       .core_service_client
-      .list_users(*session_data.tenant_id().as_uuid())
+      .list_users(*session_data.tenant_id().as_uuid(), None)
       .await
    {
       Ok(core_response) => {
