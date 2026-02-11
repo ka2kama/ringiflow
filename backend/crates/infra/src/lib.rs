@@ -50,6 +50,7 @@
 //! ```
 
 pub mod db;
+pub mod deletion;
 pub mod dynamodb;
 pub mod error;
 #[cfg(any(test, feature = "test-utils"))]

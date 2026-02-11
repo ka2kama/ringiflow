@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO display_id_counters (tenant_id, entity_type, last_number) VALUES ($1, 'user', 10)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "18292341b1b58d521386d638deba084cd4645943e60a23543dfdb44727fd888b"
+}

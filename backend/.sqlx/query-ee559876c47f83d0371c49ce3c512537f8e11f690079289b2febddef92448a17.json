@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO workflow_definitions (id, tenant_id, name, description, definition, version, status, created_by) VALUES ($1, $2, 'WF', 'desc', '{}', 1, 'published', $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ee559876c47f83d0371c49ce3c512537f8e11f690079289b2febddef92448a17"
+}
