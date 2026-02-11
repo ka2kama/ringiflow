@@ -20,6 +20,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// `next_cursor` が `null` の場合は最後のページを意味する。
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PaginatedResponse<T> {
    pub data:        Vec<T>,
    pub next_cursor: Option<String>,

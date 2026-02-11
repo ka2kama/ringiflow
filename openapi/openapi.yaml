@@ -7,6 +7,69 @@ info:
     identifier: MIT
   version: 0.1.0
 paths:
+  /api/v1/audit-logs:
+    get:
+      tags:
+      - audit-logs
+      summary: GET /api/v1/audit-logs
+      description: |-
+        テナント内の監査ログ一覧を取得する（新しい順）。
+        カーソルベースページネーション対応。
+      operationId: list_audit_logs
+      parameters:
+      - name: cursor
+        in: query
+        description: カーソル（次ページ取得用、opaque 文字列）
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: 取得件数（デフォルト 50、最大 100）
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - name: from
+        in: query
+        description: 開始日時（ISO 8601）
+        required: false
+        schema:
+          type: string
+      - name: to
+        in: query
+        description: 終了日時（ISO 8601）
+        required: false
+        schema:
+          type: string
+      - name: actor_id
+        in: query
+        description: 操作者 ID でフィルタ
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: action
+        in: query
+        description: アクションでフィルタ（カンマ区切りで複数指定可）
+        required: false
+        schema:
+          type: string
+      - name: result
+        in: query
+        description: 結果でフィルタ（success / failure）
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: 監査ログ一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse_AuditLogItemData'
+      security:
+      - session_auth: []
   /api/v1/auth/csrf:
     get:
       tags:
@@ -142,6 +205,153 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_DashboardStatsData'
+      security:
+      - session_auth: []
+  /api/v1/roles:
+    get:
+      tags:
+      - roles
+      summary: GET /api/v1/roles
+      description: |-
+        テナント内のロール一覧をユーザー数付きで取得する。
+        system_admin は除外される。
+      operationId: list_roles
+      responses:
+        '200':
+          description: ロール一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_Vec_RoleItemData'
+      security:
+      - session_auth: []
+    post:
+      tags:
+      - roles
+      summary: POST /api/v1/roles
+      description: カスタムロールを作成する。
+      operationId: create_role
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+        required: true
+      responses:
+        '201':
+          description: ロール作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RoleDetailData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: ロール名重複
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/roles/{role_id}:
+    get:
+      tags:
+      - roles
+      summary: GET /api/v1/roles/{role_id}
+      description: ロール詳細を取得する。
+      operationId: get_role
+      parameters:
+      - name: role_id
+        in: path
+        description: ロールID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: ロール詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RoleDetailData'
+        '404':
+          description: ロールが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+    delete:
+      tags:
+      - roles
+      summary: DELETE /api/v1/roles/{role_id}
+      description: カスタムロールを削除する。
+      operationId: delete_role
+      parameters:
+      - name: role_id
+        in: path
+        description: ロールID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: ロールが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+    patch:
+      tags:
+      - roles
+      summary: PATCH /api/v1/roles/{role_id}
+      description: カスタムロールを更新する。
+      operationId: update_role
+      parameters:
+      - name: role_id
+        in: path
+        description: ロールID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+        required: true
+      responses:
+        '200':
+          description: ロール更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_RoleDetailData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ロールが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
   /api/v1/tasks/my:
@@ -941,6 +1151,57 @@ components:
               type: array
               items:
                 type: string
+    ApiResponse_RoleDetailData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: ロール詳細データ
+          required:
+          - id
+          - name
+          - permissions
+          - is_system
+          - created_at
+          - updated_at
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            description:
+              type:
+              - string
+              - 'null'
+            permissions:
+              type: array
+              items:
+                type: string
+            is_system:
+              type: boolean
+            created_at:
+              type: string
+            updated_at:
+              type: string
     ApiResponse_TaskDetailData:
       type: object
       description: |-
@@ -1072,6 +1333,57 @@ components:
               type: string
             status:
               type: string
+    ApiResponse_Vec_RoleItemData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: ロール一覧の要素データ
+            required:
+            - id
+            - name
+            - permissions
+            - is_system
+            - user_count
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type:
+                - string
+                - 'null'
+              permissions:
+                type: array
+                items:
+                  type: string
+              is_system:
+                type: boolean
+              user_count:
+                type: integer
+                format: int64
     ApiResponse_Vec_TaskItemData:
       type: object
       description: |-
@@ -1474,6 +1786,57 @@ components:
           - string
           - 'null'
           description: コメント（任意）
+    AuditLogItemData:
+      type: object
+      description: 監査ログ一覧の要素データ
+      required:
+      - id
+      - actor_id
+      - actor_name
+      - action
+      - result
+      - resource_type
+      - resource_id
+      - created_at
+      properties:
+        id:
+          type: string
+        actor_id:
+          type: string
+        actor_name:
+          type: string
+        action:
+          type: string
+        result:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: string
+        detail: {}
+        source_ip:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+    CreateRoleRequest:
+      type: object
+      description: ロール作成リクエスト
+      required:
+      - name
+      - permissions
+      properties:
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        permissions:
+          type: array
+          items:
+            type: string
     CreateUserRequest:
       type: object
       description: ユーザー作成リクエスト
@@ -1645,6 +2008,67 @@ components:
           type: array
           items:
             type: string
+    PaginatedResponse_AuditLogItemData:
+      type: object
+      description: |-
+        ページネーション付きレスポンス
+
+        `ApiResponse<T>` が単一データ用であるのに対し、
+        `PaginatedResponse<T>` はリスト + カーソルのページネーション形式。
+
+        ## JSON 形式
+
+        ```json
+        {
+          "data": [...],
+          "next_cursor": "opaque-cursor-string"
+        }
+        ```
+
+        `next_cursor` が `null` の場合は最後のページを意味する。
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: 監査ログ一覧の要素データ
+            required:
+            - id
+            - actor_id
+            - actor_name
+            - action
+            - result
+            - resource_type
+            - resource_id
+            - created_at
+            properties:
+              id:
+                type: string
+              actor_id:
+                type: string
+              actor_name:
+                type: string
+              action:
+                type: string
+              result:
+                type: string
+              resource_type:
+                type: string
+              resource_id:
+                type: string
+              detail: {}
+              source_ip:
+                type:
+                - string
+                - 'null'
+              created_at:
+                type: string
+        next_cursor:
+          type:
+          - string
+          - 'null'
     ProblemDetails:
       type: object
       description: |-
@@ -1668,6 +2092,62 @@ components:
           minimum: 0
         detail:
           type: string
+    RoleDetailData:
+      type: object
+      description: ロール詳細データ
+      required:
+      - id
+      - name
+      - permissions
+      - is_system
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    RoleItemData:
+      type: object
+      description: ロール一覧の要素データ
+      required:
+      - id
+      - name
+      - permissions
+      - is_system
+      - user_count
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+        user_count:
+          type: integer
+          format: int64
     SubmitWorkflowRequest:
       type: object
       description: ワークフロー申請リクエスト（BFF 公開 API）
@@ -1757,6 +2237,24 @@ components:
           type:
           - string
           - 'null'
+    UpdateRoleRequest:
+      type: object
+      description: ロール更新リクエスト
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+        description:
+          type:
+          - string
+          - 'null'
+        permissions:
+          type:
+          - array
+          - 'null'
+          items:
+            type: string
     UpdateUserRequest:
       type: object
       description: ユーザー更新リクエスト
@@ -2037,5 +2535,9 @@ tags:
   description: タスク管理
 - name: users
   description: ユーザー管理
+- name: roles
+  description: ロール管理
+- name: audit-logs
+  description: 監査ログ
 - name: dashboard
   description: ダッシュボード

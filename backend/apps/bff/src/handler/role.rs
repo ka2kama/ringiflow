@@ -21,8 +21,9 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::audit_log::{AuditAction, AuditLog};
 use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{
@@ -52,7 +53,7 @@ pub struct RoleState {
 // --- リクエスト型 ---
 
 /// ロール作成リクエスト
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateRoleRequest {
    pub name:        String,
    pub description: Option<String>,
@@ -60,7 +61,7 @@ pub struct CreateRoleRequest {
 }
 
 /// ロール更新リクエスト
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateRoleRequest {
    pub name:        Option<String>,
    pub description: Option<String>,
@@ -70,7 +71,7 @@ pub struct UpdateRoleRequest {
 // --- レスポンス型 ---
 
 /// ロール一覧の要素データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct RoleItemData {
    pub id:          String,
    pub name:        String,
@@ -81,7 +82,7 @@ pub struct RoleItemData {
 }
 
 /// ロール詳細データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct RoleDetailData {
    pub id:          String,
    pub name:        String,
@@ -98,6 +99,15 @@ pub struct RoleDetailData {
 ///
 /// テナント内のロール一覧をユーザー数付きで取得する。
 /// system_admin は除外される。
+#[utoipa::path(
+   get,
+   path = "/api/v1/roles",
+   tag = "roles",
+   security(("session_auth" = [])),
+   responses(
+      (status = 200, description = "ロール一覧", body = ApiResponse<Vec<RoleItemData>>)
+   )
+)]
 pub async fn list_roles(
    State(state): State<Arc<RoleState>>,
    headers: HeaderMap,
@@ -144,6 +154,17 @@ pub async fn list_roles(
 /// GET /api/v1/roles/{role_id}
 ///
 /// ロール詳細を取得する。
+#[utoipa::path(
+   get,
+   path = "/api/v1/roles/{role_id}",
+   tag = "roles",
+   security(("session_auth" = [])),
+   params(("role_id" = Uuid, Path, description = "ロールID")),
+   responses(
+      (status = 200, description = "ロール詳細", body = ApiResponse<RoleDetailData>),
+      (status = 404, description = "ロールが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn get_role(
    State(state): State<Arc<RoleState>>,
    headers: HeaderMap,
@@ -187,6 +208,18 @@ pub async fn get_role(
 /// POST /api/v1/roles
 ///
 /// カスタムロールを作成する。
+#[utoipa::path(
+   post,
+   path = "/api/v1/roles",
+   tag = "roles",
+   security(("session_auth" = [])),
+   request_body = CreateRoleRequest,
+   responses(
+      (status = 201, description = "ロール作成成功", body = ApiResponse<RoleDetailData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 409, description = "ロール名重複", body = ErrorResponse)
+   )
+)]
 pub async fn create_role(
    State(state): State<Arc<RoleState>>,
    headers: HeaderMap,
@@ -255,6 +288,19 @@ pub async fn create_role(
 /// PATCH /api/v1/roles/{role_id}
 ///
 /// カスタムロールを更新する。
+#[utoipa::path(
+   patch,
+   path = "/api/v1/roles/{role_id}",
+   tag = "roles",
+   security(("session_auth" = [])),
+   params(("role_id" = Uuid, Path, description = "ロールID")),
+   request_body = UpdateRoleRequest,
+   responses(
+      (status = 200, description = "ロール更新成功", body = ApiResponse<RoleDetailData>),
+      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
+      (status = 404, description = "ロールが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn update_role(
    State(state): State<Arc<RoleState>>,
    headers: HeaderMap,
@@ -329,6 +375,17 @@ pub async fn update_role(
 /// DELETE /api/v1/roles/{role_id}
 ///
 /// カスタムロールを削除する。
+#[utoipa::path(
+   delete,
+   path = "/api/v1/roles/{role_id}",
+   tag = "roles",
+   security(("session_auth" = [])),
+   params(("role_id" = Uuid, Path, description = "ロールID")),
+   responses(
+      (status = 204, description = "削除成功"),
+      (status = 404, description = "ロールが見つからない", body = ErrorResponse)
+   )
+)]
 pub async fn delete_role(
    State(state): State<Arc<RoleState>>,
    headers: HeaderMap,

@@ -1,6 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 90
+assertion_line: 97
 expression: json
 ---
 {
@@ -15,6 +15,100 @@ expression: json
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/audit-logs": {
+      "get": {
+        "tags": [
+          "audit-logs"
+        ],
+        "summary": "GET /api/v1/audit-logs",
+        "description": "テナント内の監査ログ一覧を取得する（新しい順）。\nカーソルベースページネーション対応。",
+        "operationId": "list_audit_logs",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "カーソル（次ページ取得用、opaque 文字列）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "取得件数（デフォルト 50、最大 100）",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "開始日時（ISO 8601）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "終了日時（ISO 8601）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "description": "操作者 ID でフィルタ",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "アクションでフィルタ（カンマ区切りで複数指定可）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "result",
+            "in": "query",
+            "description": "結果でフィルタ（success / failure）",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "監査ログ一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AuditLogItemData"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/csrf": {
       "get": {
         "tags": [
@@ -186,6 +280,244 @@ expression: json
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_DashboardStatsData"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/roles": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "GET /api/v1/roles",
+        "description": "テナント内のロール一覧をユーザー数付きで取得する。\nsystem_admin は除外される。",
+        "operationId": "list_roles",
+        "responses": {
+          "200": {
+            "description": "ロール一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Vec_RoleItemData"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "POST /api/v1/roles",
+        "description": "カスタムロールを作成する。",
+        "operationId": "create_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "ロール作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoleDetailData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ロール名重複",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/roles/{role_id}": {
+      "get": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "GET /api/v1/roles/{role_id}",
+        "description": "ロール詳細を取得する。",
+        "operationId": "get_role",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "description": "ロールID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ロール詳細",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoleDetailData"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ロールが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "DELETE /api/v1/roles/{role_id}",
+        "description": "カスタムロールを削除する。",
+        "operationId": "delete_role",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "description": "ロールID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          },
+          "404": {
+            "description": "ロールが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "roles"
+        ],
+        "summary": "PATCH /api/v1/roles/{role_id}",
+        "description": "カスタムロールを更新する。",
+        "operationId": "update_role",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "description": "ロールID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "ロール更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoleDetailData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ロールが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -1233,6 +1565,56 @@ expression: json
           }
         }
       },
+      "ApiResponse_RoleDetailData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "ロール詳細データ",
+            "required": [
+              "id",
+              "name",
+              "permissions",
+              "is_system",
+              "created_at",
+              "updated_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "is_system": {
+                "type": "boolean"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "updated_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
       "ApiResponse_TaskDetailData": {
         "type": "object",
         "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
@@ -1346,6 +1728,56 @@ expression: json
               },
               "status": {
                 "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ApiResponse_Vec_RoleItemData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "ロール一覧の要素データ",
+              "required": [
+                "id",
+                "name",
+                "permissions",
+                "is_system",
+                "user_count"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "is_system": {
+                  "type": "boolean"
+                },
+                "user_count": {
+                  "type": "integer",
+                  "format": "int64"
+                }
               }
             }
           }
@@ -1782,6 +2214,78 @@ expression: json
           }
         }
       },
+      "AuditLogItemData": {
+        "type": "object",
+        "description": "監査ログ一覧の要素データ",
+        "required": [
+          "id",
+          "actor_id",
+          "actor_name",
+          "action",
+          "result",
+          "resource_type",
+          "resource_id",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "actor_name": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "resource_type": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "detail": {},
+          "source_ip": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "description": "ロール作成リクエスト",
+        "required": [
+          "name",
+          "permissions"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "CreateUserRequest": {
         "type": "object",
         "description": "ユーザー作成リクエスト",
@@ -2020,6 +2524,71 @@ expression: json
           }
         }
       },
+      "PaginatedResponse_AuditLogItemData": {
+        "type": "object",
+        "description": "ページネーション付きレスポンス\n\n`ApiResponse<T>` が単一データ用であるのに対し、\n`PaginatedResponse<T>` はリスト + カーソルのページネーション形式。\n\n## JSON 形式\n\n```json\n{\n  \"data\": [...],\n  \"next_cursor\": \"opaque-cursor-string\"\n}\n```\n\n`next_cursor` が `null` の場合は最後のページを意味する。",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "監査ログ一覧の要素データ",
+              "required": [
+                "id",
+                "actor_id",
+                "actor_name",
+                "action",
+                "result",
+                "resource_type",
+                "resource_id",
+                "created_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "actor_id": {
+                  "type": "string"
+                },
+                "actor_name": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "result": {
+                  "type": "string"
+                },
+                "resource_type": {
+                  "type": "string"
+                },
+                "resource_id": {
+                  "type": "string"
+                },
+                "detail": {},
+                "source_ip": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "description": "エラーレスポンス（RFC 9457 Problem Details）\n\nすべてのサービスで統一されたエラーレスポンス形式。\n`type` フィールドは URI で問題の種類を識別する。",
@@ -2043,6 +2612,85 @@ expression: json
           },
           "detail": {
             "type": "string"
+          }
+        }
+      },
+      "RoleDetailData": {
+        "type": "object",
+        "description": "ロール詳細データ",
+        "required": [
+          "id",
+          "name",
+          "permissions",
+          "is_system",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_system": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "RoleItemData": {
+        "type": "object",
+        "description": "ロール一覧の要素データ",
+        "required": [
+          "id",
+          "name",
+          "permissions",
+          "is_system",
+          "user_count"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "is_system": {
+            "type": "boolean"
+          },
+          "user_count": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -2172,6 +2820,33 @@ expression: json
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "description": "ロール更新リクエスト",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -2577,6 +3252,14 @@ expression: json
     {
       "name": "users",
       "description": "ユーザー管理"
+    },
+    {
+      "name": "roles",
+      "description": "ロール管理"
+    },
+    {
+      "name": "audit-logs",
+      "description": "監査ログ"
     },
     {
       "name": "dashboard",

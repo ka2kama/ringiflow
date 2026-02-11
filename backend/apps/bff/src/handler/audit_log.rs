@@ -26,6 +26,7 @@ use ringiflow_infra::{
 };
 use ringiflow_shared::PaginatedResponse;
 use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::error::{extract_tenant_id, get_session, internal_error_response};
@@ -37,7 +38,8 @@ pub struct AuditLogState {
 }
 
 /// 監査ログ一覧クエリパラメータ
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ListAuditLogsQuery {
    /// カーソル（次ページ取得用、opaque 文字列）
    pub cursor:   Option<String>,
@@ -56,7 +58,7 @@ pub struct ListAuditLogsQuery {
 }
 
 /// 監査ログ一覧の要素データ
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AuditLogItemData {
    pub id: String,
    pub actor_id: String,
@@ -74,6 +76,16 @@ pub struct AuditLogItemData {
 ///
 /// テナント内の監査ログ一覧を取得する（新しい順）。
 /// カーソルベースページネーション対応。
+#[utoipa::path(
+   get,
+   path = "/api/v1/audit-logs",
+   tag = "audit-logs",
+   security(("session_auth" = [])),
+   params(ListAuditLogsQuery),
+   responses(
+      (status = 200, description = "監査ログ一覧", body = PaginatedResponse<AuditLogItemData>)
+   )
+)]
 pub async fn list_audit_logs(
    State(state): State<Arc<AuditLogState>>,
    headers: HeaderMap,

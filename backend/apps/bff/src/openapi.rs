@@ -9,7 +9,7 @@ use utoipa::{
    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
 };
 
-use crate::handler::{auth, dashboard, health, task, user, workflow};
+use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workflow};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -44,6 +44,14 @@ use crate::handler::{auth, dashboard, health, task, user, workflow};
       user::get_user_detail,
       user::update_user,
       user::update_user_status,
+      // audit-logs
+      audit_log::list_audit_logs,
+      // roles
+      role::list_roles,
+      role::get_role,
+      role::create_role,
+      role::update_role,
+      role::delete_role,
       // dashboard
       dashboard::get_dashboard_stats,
    ),
@@ -92,6 +100,16 @@ use crate::handler::{auth, dashboard, health, task, user, workflow};
       user::CreateUserResponseData,
       user::UserDetailData,
       user::UserResponseData,
+      // audit_log
+      audit_log::AuditLogItemData,
+      ringiflow_shared::PaginatedResponse<audit_log::AuditLogItemData>,
+      // role
+      role::CreateRoleRequest,
+      role::UpdateRoleRequest,
+      role::RoleItemData,
+      role::RoleDetailData,
+      ringiflow_shared::ApiResponse<Vec<role::RoleItemData>>,
+      ringiflow_shared::ApiResponse<role::RoleDetailData>,
       // dashboard
       dashboard::DashboardStatsData,
    )),
@@ -101,6 +119,8 @@ use crate::handler::{auth, dashboard, health, task, user, workflow};
       (name = "workflows", description = "ワークフロー管理"),
       (name = "tasks", description = "タスク管理"),
       (name = "users", description = "ユーザー管理"),
+      (name = "roles", description = "ロール管理"),
+      (name = "audit-logs", description = "監査ログ"),
       (name = "dashboard", description = "ダッシュボード"),
    ),
    modifiers(&SecurityAddon)
