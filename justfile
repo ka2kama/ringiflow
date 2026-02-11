@@ -3,6 +3,11 @@
 # .env ファイルを自動読み込み
 set dotenv-load := true
 
+# quiet モード（true で警告・エラーのみ表示、false で全出力）
+# 使い方: just quiet=false check
+quiet := "true"
+_cargo_q := if quiet == "true" { "--quiet" } else { "" }
+
 # デフォルト: レシピ一覧を表示
 default:
     @just --list
@@ -226,7 +231,7 @@ lint: lint-rust lint-elm lint-shell lint-ci lint-openapi check-unused-deps
 # Rust リント（rustfmt + clippy）
 lint-rust:
     cd backend && cargo +nightly fmt --all -- --check
-    cd backend && cargo clippy --all-targets --all-features -- -D warnings
+    cd backend && cargo clippy {{ _cargo_q }} --all-targets --all-features -- -D warnings
 
 # Elm リント（elm-format + elm-review）
 lint-elm:
@@ -260,12 +265,12 @@ test: test-rust test-elm
 
 # Rust 単体テスト + doctest
 test-rust:
-    cd backend && cargo test --all-features --lib --bins
-    cd backend && cargo test --all-features --doc
+    cd backend && cargo test {{ _cargo_q }} --all-features --lib --bins
+    cd backend && cargo test {{ _cargo_q }} --all-features --doc
 
 # Rust 統合テスト（DB 接続が必要）
 test-rust-integration:
-    cd backend && cargo test --all-features --test '*'
+    cd backend && cargo test {{ _cargo_q }} --all-features --test '*'
 
 # Elm テスト
 test-elm:
@@ -368,11 +373,11 @@ coverage-summary:
 # 全チェック
 # =============================================================================
 
-# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、セキュリティ、構造品質）
-check: lint test test-rust-integration build-elm sqlx-check audit check-file-size check-duplicates
+# 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、構造品質）
+check: lint test test-rust-integration build-elm sqlx-check check-file-size check-duplicates
 
-# プッシュ前の全チェック（軽量チェック + API テスト + E2E テスト）
-check-all: check test-api test-e2e
+# プッシュ前の全チェック（軽量チェック + セキュリティ + API テスト + E2E テスト）
+check-all: check audit test-api test-e2e
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック
