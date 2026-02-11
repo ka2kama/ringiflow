@@ -119,7 +119,7 @@ update msg model =
                             Encode.object
                                 [ ( "status", Encode.string newStatus ) ]
                     in
-                    ( { model | confirmAction = Nothing, isSubmitting = True }
+                    ( { model | isSubmitting = True }
                     , AdminUserApi.updateUserStatus
                         { config = Shared.toRequestConfig model.shared
                         , displayNumber = model.displayNumber
@@ -151,6 +151,7 @@ update msg model =
                     in
                     ( { model
                         | isSubmitting = False
+                        , confirmAction = Nothing
                         , successMessage = Just successMsg
                         , errorMessage = Nothing
                       }
@@ -160,6 +161,7 @@ update msg model =
                 Err err ->
                     ( { model
                         | isSubmitting = False
+                        , confirmAction = Nothing
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ユーザー" } err)
                       }
                     , Cmd.none

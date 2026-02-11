@@ -29,7 +29,16 @@ pub trait CoreServiceRoleClient: Send + Sync {
    /// ロール詳細を取得する
    ///
    /// Core Service の `GET /internal/roles/{role_id}` を呼び出す。
-   async fn get_role(&self, role_id: Uuid) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError>;
+   ///
+   /// # 引数
+   ///
+   /// - `role_id`: ロール ID
+   /// - `tenant_id`: テナント ID（テナント分離用）
+   async fn get_role(
+      &self,
+      role_id: Uuid,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError>;
 
    /// カスタムロールを作成する
    ///
@@ -66,8 +75,15 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
       handle_response(response, None).await
    }
 
-   async fn get_role(&self, role_id: Uuid) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
-      let url = format!("{}/internal/roles/{}", self.base_url, role_id);
+   async fn get_role(
+      &self,
+      role_id: Uuid,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/roles/{}?tenant_id={}",
+         self.base_url, role_id, tenant_id
+      );
 
       let response = self.client.get(&url).send().await?;
       handle_response(response, Some(CoreServiceError::RoleNotFound)).await

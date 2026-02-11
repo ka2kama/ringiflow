@@ -212,6 +212,7 @@ impl CoreServiceRoleClient for StubCoreServiceClient {
    async fn get_role(
       &self,
       _role_id: Uuid,
+      _tenant_id: Uuid,
    ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
    {
       unimplemented!("get_role is not used in auth tests")

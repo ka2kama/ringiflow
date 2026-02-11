@@ -160,7 +160,7 @@ pub async fn get_role(
       Err(response) => return response,
    };
 
-   match state.core_service_client.get_role(role_id).await {
+   match state.core_service_client.get_role(role_id, tenant_id).await {
       Ok(core_response) => {
          let dto = core_response.data;
          let response = ApiResponse::new(RoleDetailData {

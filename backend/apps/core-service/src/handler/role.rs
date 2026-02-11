@@ -119,17 +119,26 @@ pub async fn list_roles(
 /// GET /internal/roles/{role_id}
 ///
 /// ロール詳細を取得する。
+/// テナント分離: システムロールは全テナントからアクセス可能、
+/// テナントロールは所属テナントのみアクセス可能。
 pub async fn get_role(
    State(state): State<Arc<RoleState>>,
    Path(role_id): Path<Uuid>,
+   Query(query): Query<RoleTenantQuery>,
 ) -> Result<impl IntoResponse, CoreError> {
    let role_id = RoleId::from_uuid(role_id);
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
 
    let role = state
       .role_repository
       .find_by_id(&role_id)
       .await?
       .ok_or_else(|| CoreError::NotFound("ロールが見つかりません".to_string()))?;
+
+   // テナント分離: テナントロールは所属テナントのみアクセス可能
+   if !role.is_system() && role.tenant_id() != Some(&tenant_id) {
+      return Err(CoreError::NotFound("ロールが見つかりません".to_string()));
+   }
 
    let response = ApiResponse::new(RoleDetailDto {
       id:          *role.id().as_uuid(),
