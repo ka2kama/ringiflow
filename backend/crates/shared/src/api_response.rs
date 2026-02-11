@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(response.data, "hello");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct ApiResponse<T> {
    pub data: T,
 }
@@ -67,5 +68,25 @@ mod tests {
       let json = serde_json::to_value(&response).unwrap();
 
       assert_eq!(json, serde_json::json!({ "data": ["a", "b", "c"] }));
+   }
+}
+
+#[cfg(all(test, feature = "openapi"))]
+mod openapi_tests {
+   use utoipa::PartialSchema;
+
+   use super::*;
+
+   #[test]
+   fn test_api_response_stringにtoschemaが実装されている() {
+      let schema = ApiResponse::<String>::schema();
+      let utoipa::openapi::RefOr::T(schema) = schema else {
+         panic!("expected inline schema, got ref");
+      };
+      let utoipa::openapi::Schema::Object(obj) = schema else {
+         panic!("expected object schema");
+      };
+      // data フィールドがスキーマに含まれていること
+      assert!(obj.properties.contains_key("data"));
    }
 }
