@@ -107,6 +107,68 @@ async fn test_ユーザーとロールを一緒に取得できる(pool: PgPool) 
 }
 
 #[sqlx::test(migrations = "../../migrations")]
+async fn test_find_with_roles_別テナントのロール割り当ては含まれない(
+   pool: PgPool,
+) {
+   let (tenant_id, user_id) = setup_test_data(&pool).await;
+
+   // 自テナントでロールを割り当て
+   assign_role(&pool, &user_id, &tenant_id).await;
+
+   // 別テナントを作成
+   let other_tenant_id = TenantId::from_uuid(Uuid::now_v7());
+   sqlx::query!(
+      r#"
+        INSERT INTO tenants (id, name, subdomain, plan, status)
+        VALUES ($1, 'Other Tenant', 'other', 'free', 'active')
+        "#,
+      other_tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("別テナント作成に失敗");
+
+   // 別テナント用のロールを作成し、同じユーザーに割り当て
+   // （一意制約 (user_id, role_id) があるため別ロールが必要）
+   let other_role_id = Uuid::now_v7();
+   sqlx::query!(
+      r#"
+        INSERT INTO roles (id, tenant_id, name, description, permissions, is_system)
+        VALUES ($1, $2, 'other-admin', 'Other tenant admin', '["admin"]'::jsonb, false)
+        "#,
+      other_role_id,
+      other_tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("別テナントロール作成に失敗");
+
+   sqlx::query!(
+      r#"
+        INSERT INTO user_roles (user_id, role_id, tenant_id)
+        VALUES ($1, $2, $3)
+        "#,
+      user_id.as_uuid(),
+      other_role_id,
+      other_tenant_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .expect("別テナントロール割り当てに失敗");
+
+   let sut = PostgresUserRepository::new(pool);
+
+   let result = sut.find_with_roles(&user_id).await;
+
+   assert!(result.is_ok());
+   let (user, roles) = result.unwrap().unwrap();
+   assert_eq!(user.id(), &user_id);
+   // 自テナントのロールのみ取得（別テナントのロール割り当ては含まれない）
+   assert_eq!(roles.len(), 1);
+   assert_eq!(roles[0].name(), "user");
+}
+
+#[sqlx::test(migrations = "../../migrations")]
 async fn test_複数idでユーザーを一括取得できる(pool: PgPool) {
    let (tenant_id, user_id1) = setup_test_data(&pool).await;
 
