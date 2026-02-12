@@ -209,6 +209,19 @@ impl WorkflowDefinition {
       })
    }
 
+   /// 定義 JSON から承認ステップを順序付きで抽出する
+   ///
+   /// `steps` 配列から `type == "approval"` のステップを配列順で抽出する。
+   /// この順序が承認の実行順序になる。
+   ///
+   /// # Errors
+   ///
+   /// - 承認ステップが1つも見つからない場合
+   /// - `steps` 配列が存在しない場合
+   pub fn extract_approval_steps(&self) -> Result<Vec<ApprovalStepDef>, DomainError> {
+      extract_approval_steps(&self.definition)
+   }
+
    /// 定義をアーカイブした新しいインスタンスを返す
    pub fn archived(self, now: DateTime<Utc>) -> Self {
       Self {
@@ -217,6 +230,59 @@ impl WorkflowDefinition {
          ..self
       }
    }
+}
+
+/// 定義 JSON から抽出された承認ステップ情報
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ApprovalStepDef {
+   /// ステップ ID（定義 JSON 内の `id` フィールド）
+   pub id:   String,
+   /// ステップ名（定義 JSON 内の `name` フィールド）
+   pub name: String,
+}
+
+/// 定義 JSON から承認ステップを順序付きで抽出する
+///
+/// `steps` 配列から `type == "approval"` のステップを配列順で抽出する。
+/// この順序が承認の実行順序になる。
+///
+/// # Errors
+///
+/// - 承認ステップが1つも見つからない場合
+/// - `steps` 配列が存在しない場合
+pub fn extract_approval_steps(definition: &JsonValue) -> Result<Vec<ApprovalStepDef>, DomainError> {
+   let steps = definition
+      .get("steps")
+      .and_then(|v| v.as_array())
+      .ok_or_else(|| {
+         DomainError::Validation("定義 JSON に steps 配列が見つかりません".to_string())
+      })?;
+
+   let approval_steps: Vec<ApprovalStepDef> = steps
+      .iter()
+      .filter(|step| step.get("type").and_then(|t| t.as_str()) == Some("approval"))
+      .map(|step| {
+         let id = step
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+         let name = step
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+         ApprovalStepDef { id, name }
+      })
+      .collect();
+
+   if approval_steps.is_empty() {
+      return Err(DomainError::Validation(
+         "定義に承認ステップが含まれていません".to_string(),
+      ));
+   }
+
+   Ok(approval_steps)
 }
 
 #[cfg(test)]
@@ -243,6 +309,63 @@ mod tests {
          created_by: UserId::new(),
          now,
       })
+   }
+
+   mod extract_approval_steps_tests {
+      use pretty_assertions::assert_eq;
+
+      use super::*;
+
+      #[test]
+      fn test_承認ステップを順序付きで抽出できる() {
+         let definition_json = json!({
+            "steps": [
+               {"id": "start", "type": "start", "name": "開始"},
+               {"id": "manager_approval", "type": "approval", "name": "上長承認"},
+               {"id": "finance_approval", "type": "approval", "name": "経理承認"},
+               {"id": "end_approved", "type": "end", "name": "承認完了", "status": "approved"}
+            ]
+         });
+
+         let result = extract_approval_steps(&definition_json).unwrap();
+
+         assert_eq!(result.len(), 2);
+         assert_eq!(result[0].id, "manager_approval");
+         assert_eq!(result[0].name, "上長承認");
+         assert_eq!(result[1].id, "finance_approval");
+         assert_eq!(result[1].name, "経理承認");
+      }
+
+      #[test]
+      fn test_承認ステップがない定義でエラー() {
+         let definition_json = json!({
+            "steps": [
+               {"id": "start", "type": "start", "name": "開始"},
+               {"id": "end", "type": "end", "name": "完了", "status": "approved"}
+            ]
+         });
+
+         let result = extract_approval_steps(&definition_json);
+
+         assert!(result.is_err());
+      }
+
+      #[test]
+      fn test_approval以外のステップは除外される() {
+         let definition_json = json!({
+            "steps": [
+               {"id": "start", "type": "start", "name": "開始"},
+               {"id": "approval", "type": "approval", "name": "承認"},
+               {"id": "notification", "type": "notification", "name": "通知"},
+               {"id": "end", "type": "end", "name": "完了", "status": "approved"}
+            ]
+         });
+
+         let result = extract_approval_steps(&definition_json).unwrap();
+
+         assert_eq!(result.len(), 1);
+         assert_eq!(result[0].id, "approval");
+      }
    }
 
    mod workflow_definition {

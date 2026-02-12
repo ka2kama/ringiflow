@@ -92,11 +92,18 @@ pub struct CreateWorkflowRequest {
    pub user_id:       Uuid,
 }
 
+/// ステップ承認者リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct StepApproverRequest {
+   pub step_id:     String,
+   pub assigned_to: Uuid,
+}
+
 /// ワークフロー申請リクエスト（Core Service 内部 API 用）
 #[derive(Debug, Serialize)]
 pub struct SubmitWorkflowRequest {
-   pub assigned_to: Uuid,
-   pub tenant_id:   Uuid,
+   pub approvers: Vec<StepApproverRequest>,
+   pub tenant_id: Uuid,
 }
 
 /// ステップ承認/却下リクエスト（Core Service 内部 API 用）

@@ -12,6 +12,7 @@ use ringiflow_domain::{
       WorkflowInstanceStatus,
       WorkflowStep,
       WorkflowStepId,
+      WorkflowStepStatus,
    },
 };
 use ringiflow_infra::InfraError;
@@ -19,6 +20,7 @@ use ringiflow_infra::InfraError;
 use super::{
    ApproveRejectInput,
    CreateWorkflowInput,
+   StepApprover,
    SubmitWorkflowInput,
    WorkflowUseCaseImpl,
    WorkflowWithSteps,
@@ -93,15 +95,15 @@ impl WorkflowUseCaseImpl {
    /// ワークフローを申請する
    ///
    /// 下書き状態のワークフローを申請状態に遷移させ、
-   /// ワークフロー定義に基づいてステップを作成する。
+   /// ワークフロー定義に基づいて複数の承認ステップを作成する。
    ///
    /// ## 処理フロー
    ///
    /// 1. ワークフローインスタンスが存在するか確認
    /// 2. draft 状態であるか確認
    /// 3. ワークフロー定義を取得
-   /// 4. 定義に基づいてステップを作成 (MVP では1段階承認のみ)
-   /// 5. 最初のステップを active に設定
+   /// 4. 定義から承認ステップを抽出し、approvers との整合性を検証
+   /// 5. 各承認ステップを作成（最初を Active、残りを Pending）
    /// 6. ワークフローインスタンスを pending → in_progress に遷移
    /// 7. インスタンスとステップをリポジトリに保存
    ///
@@ -109,6 +111,7 @@ impl WorkflowUseCaseImpl {
    ///
    /// - ワークフローインスタンスが見つからない場合
    /// - ワークフローインスタンスが draft でない場合
+   /// - approvers と定義のステップが一致しない場合
    /// - データベースエラー
    pub async fn submit_workflow(
       &self,
@@ -133,45 +136,75 @@ impl WorkflowUseCaseImpl {
          ));
       }
 
-      // 3. ワークフロー定義を取得（ステップ定義の取得のため）
-      let _definition = self
+      // 3. ワークフロー定義を取得
+      let definition = self
          .definition_repo
          .find_by_id(instance.definition_id(), &tenant_id)
          .await
          .map_err(|e| CoreError::Internal(format!("定義の取得に失敗: {}", e)))?
          .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
 
-      // 4. ステップを作成 (MVP では1段階承認のみ)
-      let now = self.clock.now();
-      let display_number = self
-         .counter_repo
-         .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
-         .await
-         .map_err(|e| CoreError::Internal(format!("採番に失敗: {}", e)))?;
-      let step = WorkflowStep::new(NewWorkflowStep {
-         id: WorkflowStepId::new(),
-         instance_id: instance_id.clone(),
-         display_number,
-         step_id: "approval".to_string(),
-         step_name: "承認".to_string(),
-         step_type: "approval".to_string(),
-         assigned_to: Some(input.assigned_to),
-         now,
-      });
+      // 4. 定義から承認ステップを抽出
+      let approval_step_defs = definition
+         .extract_approval_steps()
+         .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 5. ステップを active に設定
-      let active_step = step.activated(now);
+      // approvers と定義のステップの整合性を検証
+      if input.approvers.len() != approval_step_defs.len() {
+         return Err(CoreError::BadRequest(format!(
+            "承認者の数({})が定義のステップ数({})と一致しません",
+            input.approvers.len(),
+            approval_step_defs.len()
+         )));
+      }
+
+      for (approver, step_def) in input.approvers.iter().zip(&approval_step_defs) {
+         if approver.step_id != step_def.id {
+            return Err(CoreError::BadRequest(format!(
+               "承認者のステップ ID({})が定義のステップ ID({})と一致しません",
+               approver.step_id, step_def.id
+            )));
+         }
+      }
+
+      // 5. 各承認ステップを作成
+      let now = self.clock.now();
+      let mut steps = Vec::with_capacity(approval_step_defs.len());
+
+      for (i, (step_def, approver)) in approval_step_defs.iter().zip(&input.approvers).enumerate() {
+         let display_number = self
+            .counter_repo
+            .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowStep)
+            .await
+            .map_err(|e| CoreError::Internal(format!("採番に失敗: {}", e)))?;
+
+         let step = WorkflowStep::new(NewWorkflowStep {
+            id: WorkflowStepId::new(),
+            instance_id: instance_id.clone(),
+            display_number,
+            step_id: step_def.id.clone(),
+            step_name: step_def.name.clone(),
+            step_type: "approval".to_string(),
+            assigned_to: Some(approver.assigned_to.clone()),
+            now,
+         });
+
+         // 最初のステップのみ Active にする
+         let step = if i == 0 { step.activated(now) } else { step };
+         steps.push(step);
+      }
 
       // 6. ワークフローインスタンスを申請済みに遷移
       let expected_version = instance.version();
+      let first_step_id = approval_step_defs[0].id.clone();
       let submitted_instance = instance
          .submitted(now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 7. current_step_id を設定して in_progress に遷移
-      let in_progress_instance = submitted_instance.with_current_step("approval".to_string(), now);
+      // current_step_id を最初の承認ステップに設定して in_progress に遷移
+      let in_progress_instance = submitted_instance.with_current_step(first_step_id, now);
 
-      // 8. インスタンスとステップを保存
+      // 7. インスタンスとステップを保存
       self
          .instance_repo
          .update_with_version_check(&in_progress_instance, expected_version)
@@ -183,11 +216,13 @@ impl WorkflowUseCaseImpl {
             other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
          })?;
 
-      self
-         .step_repo
-         .insert(&active_step, &tenant_id)
-         .await
-         .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
+      for step in &steps {
+         self
+            .step_repo
+            .insert(step, &tenant_id)
+            .await
+            .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
+      }
 
       Ok(in_progress_instance)
    }
@@ -202,7 +237,9 @@ impl WorkflowUseCaseImpl {
    /// 2. 権限チェック（担当者のみ承認可能）
    /// 3. 楽観的ロック（バージョン一致チェック）
    /// 4. ステップを承認
-   /// 5. インスタンスを完了に遷移
+   /// 5. 次ステップの判定:
+   ///    - 次がある → 次ステップを Active 化、current_step_id を更新
+   ///    - 次がない → インスタンスを Approved に遷移
    /// 6. 保存
    ///
    /// ## エラー
@@ -243,11 +280,12 @@ impl WorkflowUseCaseImpl {
       // 4. ステップを承認
       let now = self.clock.now();
       let step_expected_version = step.version();
+      let current_step_id = step.step_id().to_string();
       let approved_step = step
          .approve(input.comment, now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 5. インスタンスを取得して完了に遷移
+      // 5. インスタンスを取得
       let instance = self
          .instance_repo
          .find_by_id(approved_step.instance_id(), &tenant_id)
@@ -256,11 +294,42 @@ impl WorkflowUseCaseImpl {
          .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
 
       let instance_expected_version = instance.version();
-      let completed_instance = instance
-         .complete_with_approval(now)
-         .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 6. 楽観的ロック付きで保存
+      // 6. 定義から承認ステップの順序を取得し、次ステップを判定
+      let definition = self
+         .definition_repo
+         .find_by_id(instance.definition_id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("定義の取得に失敗: {}", e)))?
+         .ok_or_else(|| CoreError::Internal("定義が見つかりません".to_string()))?;
+
+      let approval_step_defs =
+         ringiflow_domain::workflow::extract_approval_steps(definition.definition())
+            .map_err(|e| CoreError::Internal(format!("定義の解析に失敗: {}", e)))?;
+
+      // 現在のステップの位置を特定し、次のステップがあるか判定
+      let current_index = approval_step_defs
+         .iter()
+         .position(|s| s.id == current_step_id);
+
+      let next_step_def = current_index.and_then(|i| approval_step_defs.get(i + 1));
+
+      // 7. 次ステップの有無でインスタンスの遷移を分岐
+      let (updated_instance, next_step_to_activate) = if let Some(next_def) = next_step_def {
+         // 次ステップあり → current_step_id を更新、InProgress のまま
+         let advanced = instance
+            .advance_to_next_step(next_def.id.clone(), now)
+            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+         (advanced, Some(next_def.id.clone()))
+      } else {
+         // 最終ステップ → インスタンスを Approved に遷移
+         let completed = instance
+            .complete_with_approval(now)
+            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+         (completed, None)
+      };
+
+      // 8. 楽観的ロック付きでステップを保存
       self
          .step_repo
          .update_with_version_check(&approved_step, step_expected_version, &tenant_id)
@@ -272,9 +341,35 @@ impl WorkflowUseCaseImpl {
             other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
          })?;
 
+      // 9. 次ステップがあれば Active 化して保存
+      if let Some(next_step_id) = next_step_to_activate {
+         // インスタンスに紐づくステップから次ステップを見つけて Active 化
+         let all_steps = self
+            .step_repo
+            .find_by_instance(updated_instance.id(), &tenant_id)
+            .await
+            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+         if let Some(next_step) = all_steps.into_iter().find(|s| s.step_id() == next_step_id) {
+            let next_expected_version = next_step.version();
+            let activated_step = next_step.activated(now);
+            self
+               .step_repo
+               .update_with_version_check(&activated_step, next_expected_version, &tenant_id)
+               .await
+               .map_err(|e| match e {
+                  InfraError::Conflict { .. } => CoreError::Conflict(
+                     "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+                  ),
+                  other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+               })?;
+         }
+      }
+
+      // 10. インスタンスを保存
       self
          .instance_repo
-         .update_with_version_check(&completed_instance, instance_expected_version)
+         .update_with_version_check(&updated_instance, instance_expected_version)
          .await
          .map_err(|e| match e {
             InfraError::Conflict { .. } => CoreError::Conflict(
@@ -283,15 +378,15 @@ impl WorkflowUseCaseImpl {
             other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
          })?;
 
-      // 7. 保存後のステップ一覧を取得して返却
+      // 11. 保存後のステップ一覧を取得して返却
       let steps = self
          .step_repo
-         .find_by_instance(completed_instance.id(), &tenant_id)
+         .find_by_instance(updated_instance.id(), &tenant_id)
          .await
          .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
 
       Ok(WorkflowWithSteps {
-         instance: completed_instance,
+         instance: updated_instance,
          steps,
       })
    }
@@ -300,7 +395,13 @@ impl WorkflowUseCaseImpl {
    ///
    /// ## 処理フロー
    ///
-   /// approve_step と同様だが、却下判定で完了する。
+   /// 1. ステップを取得
+   /// 2. 権限チェック（担当者のみ却下可能）
+   /// 3. 楽観的ロック（バージョン一致チェック）
+   /// 4. ステップを却下
+   /// 5. 残りの Pending ステップを Skipped に遷移
+   /// 6. インスタンスを Rejected に遷移
+   /// 7. 保存
    ///
    /// ## エラー
    ///
@@ -344,7 +445,46 @@ impl WorkflowUseCaseImpl {
          .reject(input.comment, now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 5. インスタンスを取得して却下完了に遷移
+      // 5. 却下されたステップを保存
+      self
+         .step_repo
+         .update_with_version_check(&rejected_step, step_expected_version, &tenant_id)
+         .await
+         .map_err(|e| match e {
+            InfraError::Conflict { .. } => CoreError::Conflict(
+               "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+            ),
+            other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+         })?;
+
+      // 6. 残りの Pending ステップを Skipped に遷移
+      let all_steps = self
+         .step_repo
+         .find_by_instance(rejected_step.instance_id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+      for pending_step in all_steps
+         .into_iter()
+         .filter(|s| s.status() == WorkflowStepStatus::Pending)
+      {
+         let pending_expected_version = pending_step.version();
+         let skipped_step = pending_step
+            .skipped(now)
+            .map_err(|e| CoreError::Internal(format!("ステップのスキップに失敗: {}", e)))?;
+         self
+            .step_repo
+            .update_with_version_check(&skipped_step, pending_expected_version, &tenant_id)
+            .await
+            .map_err(|e| match e {
+               InfraError::Conflict { .. } => CoreError::Conflict(
+                  "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+               ),
+               other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+            })?;
+      }
+
+      // 7. インスタンスを取得して Rejected に遷移
       let instance = self
          .instance_repo
          .find_by_id(rejected_step.instance_id(), &tenant_id)
@@ -357,18 +497,6 @@ impl WorkflowUseCaseImpl {
          .complete_with_rejection(now)
          .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-      // 6. 楽観的ロック付きで保存
-      self
-         .step_repo
-         .update_with_version_check(&rejected_step, step_expected_version, &tenant_id)
-         .await
-         .map_err(|e| match e {
-            InfraError::Conflict { .. } => CoreError::Conflict(
-               "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
-            ),
-            other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-         })?;
-
       self
          .instance_repo
          .update_with_version_check(&completed_instance, instance_expected_version)
@@ -380,7 +508,7 @@ impl WorkflowUseCaseImpl {
             other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
          })?;
 
-      // 7. 保存後のステップ一覧を取得して返却
+      // 8. 保存後のステップ一覧を取得して返却
       let steps = self
          .step_repo
          .find_by_instance(completed_instance.id(), &tenant_id)
@@ -568,6 +696,31 @@ mod tests {
 
    use super::*;
 
+   /// テスト用の1段階承認定義 JSON
+   fn single_approval_definition_json() -> serde_json::Value {
+      serde_json::json!({
+         "steps": [
+            {"id": "start", "type": "start", "name": "開始"},
+            {"id": "approval", "type": "approval", "name": "承認"},
+            {"id": "end_approved", "type": "end", "name": "承認完了", "status": "approved"},
+            {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+         ]
+      })
+   }
+
+   /// テスト用の2段階承認定義 JSON
+   fn two_step_approval_definition_json() -> serde_json::Value {
+      serde_json::json!({
+         "steps": [
+            {"id": "start", "type": "start", "name": "開始"},
+            {"id": "manager_approval", "type": "approval", "name": "上長承認"},
+            {"id": "finance_approval", "type": "approval", "name": "経理承認"},
+            {"id": "end_approved", "type": "end", "name": "承認完了", "status": "approved"},
+            {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+         ]
+      })
+   }
+
    #[tokio::test]
    async fn test_create_workflow_正常系() {
       // Arrange
@@ -683,12 +836,26 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      // InProgress のインスタンスを作成
+      // 1段階承認の定義を追加
       let now = chrono::Utc::now();
+      let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+         id: WorkflowDefinitionId::new(),
+         tenant_id: tenant_id.clone(),
+         name: WorkflowName::new("汎用申請").unwrap(),
+         description: Some("テスト用定義".to_string()),
+         definition: single_approval_definition_json(),
+         created_by: user_id.clone(),
+         now,
+      })
+      .published(now)
+      .unwrap();
+      definition_repo.add_definition(definition.clone());
+
+      // InProgress のインスタンスを作成
       let instance = WorkflowInstance::new(NewWorkflowInstance {
          id: WorkflowInstanceId::new(),
          tenant_id: tenant_id.clone(),
-         definition_id: WorkflowDefinitionId::new(),
+         definition_id: definition.id().clone(),
          definition_version: Version::initial(),
          display_number: DisplayNumber::new(100).unwrap(),
          title: "テスト申請".to_string(),
@@ -942,6 +1109,236 @@ mod tests {
 
       // Assert
       assert!(matches!(result, Err(CoreError::Conflict(_))));
+   }
+
+   // ===== 多段階承認テスト =====
+
+   /// 2段階承認用テストヘルパー: 定義・インスタンス・2ステップを作成
+   ///
+   /// 戻り値: (definition, instance, step1(Active), step2(Pending))
+   fn setup_two_step_approval(
+      tenant_id: &TenantId,
+      user_id: &UserId,
+      approver1_id: &UserId,
+      approver2_id: &UserId,
+      now: chrono::DateTime<chrono::Utc>,
+   ) -> (
+      WorkflowDefinition,
+      WorkflowInstance,
+      WorkflowStep,
+      WorkflowStep,
+   ) {
+      let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+         id: WorkflowDefinitionId::new(),
+         tenant_id: tenant_id.clone(),
+         name: WorkflowName::new("2段階承認").unwrap(),
+         description: Some("テスト用定義".to_string()),
+         definition: two_step_approval_definition_json(),
+         created_by: user_id.clone(),
+         now,
+      })
+      .published(now)
+      .unwrap();
+
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: definition.id().clone(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("manager_approval".to_string(), now);
+
+      let step1 = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(1).unwrap(),
+         step_id: "manager_approval".to_string(),
+         step_name: "上長承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver1_id.clone()),
+         now,
+      })
+      .activated(now);
+
+      let step2 = WorkflowStep::new(NewWorkflowStep {
+         id: WorkflowStepId::new(),
+         instance_id: instance.id().clone(),
+         display_number: DisplayNumber::new(2).unwrap(),
+         step_id: "finance_approval".to_string(),
+         step_name: "経理承認".to_string(),
+         step_type: "approval".to_string(),
+         assigned_to: Some(approver2_id.clone()),
+         now,
+      });
+
+      (definition, instance, step1, step2)
+   }
+
+   #[tokio::test]
+   async fn test_approve_step_中間ステップ_次のステップがactiveになる() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver1_id = UserId::new();
+      let approver2_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let (definition, instance, step1, step2) =
+         setup_two_step_approval(&tenant_id, &user_id, &approver1_id, &approver2_id, now);
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      definition_repo.add_definition(definition);
+      instance_repo.insert(&instance).await.unwrap();
+      step_repo.insert(&step1, &tenant_id).await.unwrap();
+      step_repo.insert(&step2, &tenant_id).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      let input = ApproveRejectInput {
+         version: step1.version(),
+         comment: Some("上長承認OK".to_string()),
+      };
+
+      // Act
+      let result = sut
+         .approve_step(
+            input,
+            step1.id().clone(),
+            tenant_id.clone(),
+            approver1_id.clone(),
+         )
+         .await;
+
+      // Assert
+      let result = result.unwrap();
+
+      // インスタンスのステータスは InProgress のまま
+      assert_eq!(
+         result.instance.status(),
+         ringiflow_domain::workflow::WorkflowInstanceStatus::InProgress
+      );
+
+      // current_step_id が次のステップ（finance_approval）に更新されている
+      assert_eq!(result.instance.current_step_id(), Some("finance_approval"));
+
+      // ステップ一覧の確認
+      assert_eq!(result.steps.len(), 2);
+
+      // ステップ1は承認済み
+      let result_step1 = result
+         .steps
+         .iter()
+         .find(|s| s.step_id() == "manager_approval")
+         .unwrap();
+      assert_eq!(
+         result_step1.status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Completed
+      );
+
+      // ステップ2は Active になっている
+      let result_step2 = result
+         .steps
+         .iter()
+         .find(|s| s.step_id() == "finance_approval")
+         .unwrap();
+      assert_eq!(
+         result_step2.status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Active
+      );
+   }
+
+   #[tokio::test]
+   async fn test_approve_step_最終ステップ_インスタンスがapprovedになる() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver1_id = UserId::new();
+      let approver2_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let (definition, instance, step1, step2) =
+         setup_two_step_approval(&tenant_id, &user_id, &approver1_id, &approver2_id, now);
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      definition_repo.add_definition(definition);
+
+      // ステップ1は既に承認済み、current_step_id は finance_approval に移行済み
+      let instance_at_step2 = instance
+         .advance_to_next_step("finance_approval".to_string(), now)
+         .unwrap();
+      instance_repo.insert(&instance_at_step2).await.unwrap();
+
+      let completed_step1 = step1.approve(Some("上長承認OK".to_string()), now).unwrap();
+      let active_step2 = step2.activated(now);
+      step_repo
+         .insert(&completed_step1, &tenant_id)
+         .await
+         .unwrap();
+      step_repo.insert(&active_step2, &tenant_id).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      let input = ApproveRejectInput {
+         version: active_step2.version(),
+         comment: Some("経理承認OK".to_string()),
+      };
+
+      // Act
+      let result = sut
+         .approve_step(
+            input,
+            active_step2.id().clone(),
+            tenant_id.clone(),
+            approver2_id.clone(),
+         )
+         .await;
+
+      // Assert
+      let result = result.unwrap();
+
+      // インスタンスが Approved になっている
+      assert_eq!(
+         result.instance.status(),
+         ringiflow_domain::workflow::WorkflowInstanceStatus::Approved
+      );
+
+      // ステップ2も承認済み
+      let result_step2 = result
+         .steps
+         .iter()
+         .find(|s| s.step_id() == "finance_approval")
+         .unwrap();
+      assert_eq!(
+         result_step2.status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Completed
+      );
    }
 
    // ===== reject_step テスト =====
@@ -1216,10 +1613,174 @@ mod tests {
       assert!(matches!(result, Err(CoreError::Conflict(_))));
    }
 
+   // ===== 多段階却下テスト =====
+
+   #[tokio::test]
+   async fn test_reject_step_中間ステップ_残りのpendingステップがskippedになる() {
+      // Arrange: 2段階承認で、ステップ1を却下する
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver1_id = UserId::new();
+      let approver2_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let (definition, instance, step1, step2) =
+         setup_two_step_approval(&tenant_id, &user_id, &approver1_id, &approver2_id, now);
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      definition_repo.add_definition(definition);
+      instance_repo.insert(&instance).await.unwrap();
+      step_repo.insert(&step1, &tenant_id).await.unwrap();
+      step_repo.insert(&step2, &tenant_id).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      let input = ApproveRejectInput {
+         version: step1.version(),
+         comment: Some("却下理由".to_string()),
+      };
+
+      // Act
+      let result = sut
+         .reject_step(
+            input,
+            step1.id().clone(),
+            tenant_id.clone(),
+            approver1_id.clone(),
+         )
+         .await;
+
+      // Assert
+      let result = result.unwrap();
+
+      // インスタンスが Rejected になっている
+      assert_eq!(
+         result.instance.status(),
+         ringiflow_domain::workflow::WorkflowInstanceStatus::Rejected
+      );
+
+      // ステップ1は却下済み
+      let result_step1 = result
+         .steps
+         .iter()
+         .find(|s| s.step_id() == "manager_approval")
+         .unwrap();
+      assert_eq!(
+         result_step1.status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Completed
+      );
+      assert_eq!(
+         result_step1.decision(),
+         Some(ringiflow_domain::workflow::StepDecision::Rejected)
+      );
+
+      // ステップ2は Skipped
+      let result_step2 = result
+         .steps
+         .iter()
+         .find(|s| s.step_id() == "finance_approval")
+         .unwrap();
+      assert_eq!(
+         result_step2.status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Skipped
+      );
+   }
+
+   #[tokio::test]
+   async fn test_reject_step_最終ステップ_インスタンスがrejectedになる() {
+      // Arrange: 2段階承認で、ステップ1承認後にステップ2を却下する
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver1_id = UserId::new();
+      let approver2_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let (definition, instance, step1, step2) =
+         setup_two_step_approval(&tenant_id, &user_id, &approver1_id, &approver2_id, now);
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      definition_repo.add_definition(definition);
+
+      // ステップ1は既に承認済み、current_step_id は finance_approval に移行済み
+      let instance_at_step2 = instance
+         .advance_to_next_step("finance_approval".to_string(), now)
+         .unwrap();
+      instance_repo.insert(&instance_at_step2).await.unwrap();
+
+      let completed_step1 = step1.approve(Some("上長承認OK".to_string()), now).unwrap();
+      let active_step2 = step2.activated(now);
+      step_repo
+         .insert(&completed_step1, &tenant_id)
+         .await
+         .unwrap();
+      step_repo.insert(&active_step2, &tenant_id).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      let input = ApproveRejectInput {
+         version: active_step2.version(),
+         comment: Some("経理却下".to_string()),
+      };
+
+      // Act
+      let result = sut
+         .reject_step(
+            input,
+            active_step2.id().clone(),
+            tenant_id.clone(),
+            approver2_id.clone(),
+         )
+         .await;
+
+      // Assert
+      let result = result.unwrap();
+
+      // インスタンスが Rejected になっている
+      assert_eq!(
+         result.instance.status(),
+         ringiflow_domain::workflow::WorkflowInstanceStatus::Rejected
+      );
+
+      // ステップ2は却下済み（スキップ対象なし）
+      let result_step2 = result
+         .steps
+         .iter()
+         .find(|s| s.step_id() == "finance_approval")
+         .unwrap();
+      assert_eq!(
+         result_step2.status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Completed
+      );
+      assert_eq!(
+         result_step2.decision(),
+         Some(ringiflow_domain::workflow::StepDecision::Rejected)
+      );
+   }
+
    // ===== submit_workflow テスト =====
 
    #[tokio::test]
-   async fn test_submit_workflow_正常系() {
+   async fn test_submit_workflow_1段階承認の正常系() {
       // Arrange
       let tenant_id = TenantId::new();
       let user_id = UserId::new();
@@ -1230,13 +1791,13 @@ mod tests {
       let instance_repo = MockWorkflowInstanceRepository::new();
       let step_repo = MockWorkflowStepRepository::new();
 
-      // 公開済みの定義を追加
+      // 1段階承認の定義を追加
       let definition = WorkflowDefinition::new(NewWorkflowDefinition {
          id: WorkflowDefinitionId::new(),
          tenant_id: tenant_id.clone(),
          name: WorkflowName::new("汎用申請").unwrap(),
          description: Some("テスト用定義".to_string()),
-         definition: serde_json::json!({"steps": []}),
+         definition: single_approval_definition_json(),
          created_by: user_id.clone(),
          now,
       });
@@ -1267,7 +1828,10 @@ mod tests {
       );
 
       let input = SubmitWorkflowInput {
-         assigned_to: approver_id.clone(),
+         approvers: vec![StepApprover {
+            step_id:     "approval".to_string(),
+            assigned_to: approver_id.clone(),
+         }],
       };
 
       // Act
@@ -1290,6 +1854,170 @@ mod tests {
          .unwrap();
       assert_eq!(steps.len(), 1);
       assert_eq!(steps[0].assigned_to(), Some(&approver_id));
+      assert_eq!(
+         steps[0].status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Active
+      );
+   }
+
+   #[tokio::test]
+   async fn test_submit_workflow_2段階承認の正常系() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver1_id = UserId::new();
+      let approver2_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      // 2段階承認の定義を追加
+      let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+         id: WorkflowDefinitionId::new(),
+         tenant_id: tenant_id.clone(),
+         name: WorkflowName::new("2段階承認").unwrap(),
+         description: Some("テスト用定義".to_string()),
+         definition: two_step_approval_definition_json(),
+         created_by: user_id.clone(),
+         now,
+      });
+      let published_definition = definition.published(now).unwrap();
+      definition_repo.add_definition(published_definition.clone());
+
+      // 下書きのインスタンスを作成
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: published_definition.id().clone(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      });
+      instance_repo.insert(&instance).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo.clone()),
+         Arc::new(step_repo.clone()),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      let input = SubmitWorkflowInput {
+         approvers: vec![
+            StepApprover {
+               step_id:     "manager_approval".to_string(),
+               assigned_to: approver1_id.clone(),
+            },
+            StepApprover {
+               step_id:     "finance_approval".to_string(),
+               assigned_to: approver2_id.clone(),
+            },
+         ],
+      };
+
+      // Act
+      let result = sut
+         .submit_workflow(input, instance.id().clone(), tenant_id.clone())
+         .await;
+
+      // Assert
+      let result = result.unwrap();
+      // current_step_id は最初の承認ステップ
+      assert_eq!(result.current_step_id(), Some("manager_approval"));
+
+      // 2つのステップが作成されていること
+      let steps = step_repo
+         .find_by_instance(result.id(), &tenant_id)
+         .await
+         .unwrap();
+      assert_eq!(steps.len(), 2);
+
+      // 最初のステップは Active
+      assert_eq!(steps[0].step_id(), "manager_approval");
+      assert_eq!(steps[0].assigned_to(), Some(&approver1_id));
+      assert_eq!(
+         steps[0].status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Active
+      );
+
+      // 2番目のステップは Pending
+      assert_eq!(steps[1].step_id(), "finance_approval");
+      assert_eq!(steps[1].assigned_to(), Some(&approver2_id));
+      assert_eq!(
+         steps[1].status(),
+         ringiflow_domain::workflow::WorkflowStepStatus::Pending
+      );
+   }
+
+   #[tokio::test]
+   async fn test_submit_workflow_approversと定義のステップが一致しない場合エラー() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let approver_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+
+      // 2段階承認の定義だが、1人しか指定しない
+      let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+         id: WorkflowDefinitionId::new(),
+         tenant_id: tenant_id.clone(),
+         name: WorkflowName::new("2段階承認").unwrap(),
+         description: Some("テスト用定義".to_string()),
+         definition: two_step_approval_definition_json(),
+         created_by: user_id.clone(),
+         now,
+      });
+      let published_definition = definition.published(now).unwrap();
+      definition_repo.add_definition(published_definition.clone());
+
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: published_definition.id().clone(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      });
+      instance_repo.insert(&instance).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      // 2段階定義に1人しか指定しない
+      let input = SubmitWorkflowInput {
+         approvers: vec![StepApprover {
+            step_id:     "manager_approval".to_string(),
+            assigned_to: approver_id.clone(),
+         }],
+      };
+
+      // Act
+      let result = sut
+         .submit_workflow(input, instance.id().clone(), tenant_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::BadRequest(_))));
    }
 
    #[tokio::test]
@@ -1309,7 +2037,7 @@ mod tests {
          tenant_id:   tenant_id.clone(),
          name:        WorkflowName::new("汎用申請").unwrap(),
          description: Some("テスト用定義".to_string()),
-         definition:  serde_json::json!({"steps": []}),
+         definition:  single_approval_definition_json(),
          created_by:  user_id.clone(),
          now:         chrono::Utc::now(),
       });
@@ -1344,7 +2072,10 @@ mod tests {
       );
 
       let input = SubmitWorkflowInput {
-         assigned_to: approver_id.clone(),
+         approvers: vec![StepApprover {
+            step_id:     "approval".to_string(),
+            assigned_to: approver_id.clone(),
+         }],
       };
 
       // Act: InProgress 状態のインスタンスに対して申請を試みる

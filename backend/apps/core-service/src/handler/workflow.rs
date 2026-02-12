@@ -38,13 +38,22 @@ pub struct CreateWorkflowRequest {
    pub user_id:       Uuid,
 }
 
+/// ステップ承認者リクエスト
+#[derive(Debug, Deserialize)]
+pub struct StepApproverRequest {
+   /// 定義 JSON のステップ ID
+   pub step_id:     String,
+   /// 承認者のユーザー ID
+   pub assigned_to: Uuid,
+}
+
 /// ワークフロー申請リクエスト
 #[derive(Debug, Deserialize)]
 pub struct SubmitWorkflowRequest {
-   /// 承認者のユーザー ID
-   pub assigned_to: Uuid,
+   /// 各承認ステップの承認者リスト
+   pub approvers: Vec<StepApproverRequest>,
    /// テナント ID (内部 API 用)
-   pub tenant_id:   Uuid,
+   pub tenant_id: Uuid,
 }
 
 /// ステップ承認/却下リクエスト

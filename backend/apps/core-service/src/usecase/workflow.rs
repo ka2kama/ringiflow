@@ -47,11 +47,20 @@ pub struct CreateWorkflowInput {
    pub form_data:     JsonValue,
 }
 
+/// 承認ステップごとの承認者指定
+#[derive(Debug, Clone)]
+pub struct StepApprover {
+   /// 定義 JSON のステップ ID
+   pub step_id:     String,
+   /// 承認者のユーザー ID
+   pub assigned_to: UserId,
+}
+
 /// ワークフロー申請入力
 #[derive(Debug, Clone)]
 pub struct SubmitWorkflowInput {
-   /// 承認者のユーザー ID
-   pub assigned_to: UserId,
+   /// 各承認ステップの承認者リスト
+   pub approvers: Vec<StepApprover>,
 }
 
 /// ステップ承認/却下入力

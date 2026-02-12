@@ -28,6 +28,7 @@ pub use core_service::{
    DashboardStatsDto,
    RoleDetailDto,
    RoleItemDto,
+   StepApproverRequest,
    SubmitWorkflowRequest,
    TaskDetailDto,
    TaskItemDto,

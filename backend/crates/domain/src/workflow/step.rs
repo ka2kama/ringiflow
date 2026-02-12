@@ -307,12 +307,26 @@ impl WorkflowStep {
    }
 
    /// ステップをスキップした新しいインスタンスを返す
-   pub fn skipped(self, now: DateTime<Utc>) -> Self {
-      Self {
+   ///
+   /// Pending 状態のステップのみスキップ可能。
+   /// 却下時に残りの待機中ステップをスキップするために使用する。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: Pending 以外の状態で呼び出した場合
+   pub fn skipped(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
+      if self.status != WorkflowStepStatus::Pending {
+         return Err(DomainError::Validation(format!(
+            "スキップは待機中状態でのみ可能です（現在: {}）",
+            self.status
+         )));
+      }
+
+      Ok(Self {
          status: WorkflowStepStatus::Skipped,
          updated_at: now,
          ..self
-      }
+      })
    }
 
    /// ステップを承認する
@@ -608,6 +622,47 @@ mod tests {
          now: DateTime<Utc>,
       ) {
          let result = test_step.reject(None, now);
+
+         assert!(result.is_err());
+      }
+
+      // --- skipped() テスト ---
+
+      #[rstest]
+      fn test_スキップ_待機中から成功(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let before = test_step.clone();
+
+         let sut = test_step.skipped(now).unwrap();
+
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Skipped,
+            version: before.version(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: None,
+            comment: None,
+            due_date: None,
+            started_at: None,
+            completed_at: None,
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
+      }
+
+      #[rstest]
+      fn test_スキップ_待機中以外ではエラー(
+         test_step: WorkflowStep,
+         now: DateTime<Utc>,
+      ) {
+         let step = test_step.activated(now);
+
+         let result = step.skipped(now);
 
          assert!(result.is_err());
       }
