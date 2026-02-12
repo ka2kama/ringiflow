@@ -12,6 +12,7 @@ use super::{
       ApproveRejectRequest,
       CreateWorkflowRequest,
       PostCommentCoreRequest,
+      ResubmitWorkflowRequest,
       SubmitWorkflowRequest,
       WorkflowCommentDto,
       WorkflowDefinitionDto,
@@ -130,6 +131,25 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
       workflow_display_number: i64,
       step_display_number: i64,
       req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// display_number でワークフローステップを差し戻す
+   ///
+   /// Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/request-changes` を呼び出す。
+   async fn request_changes_step_by_display_number(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// display_number でワークフローを再申請する
+   ///
+   /// Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出す。
+   async fn resubmit_workflow_by_display_number(
+      &self,
+      display_number: i64,
+      req: ResubmitWorkflowRequest,
    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
 
    /// ワークフローにコメントを投稿する
@@ -318,6 +338,35 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
 
       let response = self.client.post(&url).json(&req).send().await?;
       handle_response(response, Some(CoreServiceError::StepNotFound)).await
+   }
+
+   async fn request_changes_step_by_display_number(
+      &self,
+      workflow_display_number: i64,
+      step_display_number: i64,
+      req: ApproveRejectRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/steps/by-display-number/{}/request-changes",
+         self.base_url, workflow_display_number, step_display_number
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+      handle_response(response, Some(CoreServiceError::StepNotFound)).await
+   }
+
+   async fn resubmit_workflow_by_display_number(
+      &self,
+      display_number: i64,
+      req: ResubmitWorkflowRequest,
+   ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/resubmit",
+         self.base_url, display_number
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
    }
 
    async fn post_comment(

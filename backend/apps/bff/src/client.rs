@@ -27,6 +27,7 @@ pub use core_service::{
    CreateWorkflowRequest,
    DashboardStatsDto,
    PostCommentCoreRequest,
+   ResubmitWorkflowRequest,
    RoleDetailDto,
    RoleItemDto,
    StepApproverRequest,
