@@ -21,6 +21,7 @@ use super::{
    ApproveRejectRequest,
    CreateWorkflowRequest,
    PostCommentRequest,
+   ResubmitWorkflowRequest,
    StepByDisplayNumberPathParams,
    StepPathParams,
    SubmitWorkflowRequest,
@@ -34,6 +35,7 @@ use crate::{
       ApproveRejectInput,
       CreateWorkflowInput,
       PostCommentInput,
+      ResubmitWorkflowInput,
       StepApprover,
       SubmitWorkflowInput,
    },
@@ -318,6 +320,94 @@ pub async fn approve_step_by_display_number(
    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
+/// ワークフローステップを差し戻す
+///
+/// ## エンドポイント
+/// POST /internal/workflows/{id}/steps/{step_id}/request-changes
+pub async fn request_changes_step(
+   State(state): State<Arc<WorkflowState>>,
+   Path(params): Path<StepPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> Result<Response, CoreError> {
+   let step_id = WorkflowStepId::from_uuid(params.step_id);
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ApproveRejectInput {
+      version,
+      comment: req.comment,
+   };
+
+   let workflow_with_steps = state
+      .usecase
+      .request_changes_step(input, step_id, tenant_id, user_id)
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// ワークフローを再申請する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/{id}/resubmit
+pub async fn resubmit_workflow(
+   State(state): State<Arc<WorkflowState>>,
+   Path(id): Path<Uuid>,
+   Json(req): Json<ResubmitWorkflowRequest>,
+) -> Result<Response, CoreError> {
+   let instance_id = WorkflowInstanceId::from_uuid(id);
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ResubmitWorkflowInput {
+      form_data: req.form_data,
+      approvers: req
+         .approvers
+         .into_iter()
+         .map(|a| StepApprover {
+            step_id:     a.step_id,
+            assigned_to: UserId::from_uuid(a.assigned_to),
+         })
+         .collect(),
+      version,
+   };
+
+   let workflow_with_steps = state
+      .usecase
+      .resubmit_workflow(input, instance_id, tenant_id, user_id)
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
 /// display_number でワークフローステップを却下する
 ///
 /// ## エンドポイント
@@ -356,6 +446,104 @@ pub async fn reject_step_by_display_number(
          tenant_id,
          user_id,
       )
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// display_number でワークフローステップを差し戻す
+///
+/// ## エンドポイント
+/// POST /internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/request-changes
+pub async fn request_changes_step_by_display_number(
+   State(state): State<Arc<WorkflowState>>,
+   Path(params): Path<StepByDisplayNumberPathParams>,
+   Json(req): Json<ApproveRejectRequest>,
+) -> Result<Response, CoreError> {
+   let workflow_display_number = DisplayNumber::try_from(params.display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let step_display_number = DisplayNumber::try_from(params.step_display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な step_display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ApproveRejectInput {
+      version,
+      comment: req.comment,
+   };
+
+   let workflow_with_steps = state
+      .usecase
+      .request_changes_step_by_display_number(
+         input,
+         workflow_display_number,
+         step_display_number,
+         tenant_id,
+         user_id,
+      )
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
+      &workflow_with_steps.instance,
+      &workflow_with_steps.steps,
+   );
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
+      &workflow_with_steps,
+      &user_names,
+   ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// display_number でワークフローを再申請する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/by-display-number/{display_number}/resubmit
+pub async fn resubmit_workflow_by_display_number(
+   State(state): State<Arc<WorkflowState>>,
+   Path(display_number): Path<i64>,
+   Json(req): Json<ResubmitWorkflowRequest>,
+) -> Result<Response, CoreError> {
+   let display_number = DisplayNumber::try_from(display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+   let version = Version::try_from(req.version)
+      .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+
+   let input = ResubmitWorkflowInput {
+      form_data: req.form_data,
+      approvers: req
+         .approvers
+         .into_iter()
+         .map(|a| StepApprover {
+            step_id:     a.step_id,
+            assigned_to: UserId::from_uuid(a.assigned_to),
+         })
+         .collect(),
+      version,
+   };
+
+   let workflow_with_steps = state
+      .usecase
+      .resubmit_workflow_by_display_number(input, display_number, tenant_id, user_id)
       .await?;
 
    // ユーザー名を解決

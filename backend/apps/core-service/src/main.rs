@@ -98,6 +98,10 @@ use handler::{
    post_comment,
    reject_step,
    reject_step_by_display_number,
+   request_changes_step,
+   request_changes_step_by_display_number,
+   resubmit_workflow,
+   resubmit_workflow_by_display_number,
    submit_workflow,
    submit_workflow_by_display_number,
    update_role,
@@ -279,6 +283,14 @@ async fn main() -> anyhow::Result<()> {
          "/internal/workflows/{id}/steps/{step_id}/reject",
          post(reject_step),
       )
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/request-changes",
+         post(request_changes_step),
+      )
+      .route(
+         "/internal/workflows/{id}/resubmit",
+         post(resubmit_workflow),
+      )
       // display_number 対応 API
       .route(
          "/internal/workflows/by-display-number/{display_number}",
@@ -295,6 +307,14 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject",
          post(reject_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/request-changes",
+         post(request_changes_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/resubmit",
+         post(resubmit_workflow_by_display_number),
       )
       .route(
          "/internal/workflows/by-display-number/{display_number}/comments",

@@ -29,6 +29,7 @@ pub use workflow::{
    ApproveRejectInput,
    CreateWorkflowInput,
    PostCommentInput,
+   ResubmitWorkflowInput,
    StepApprover,
    SubmitWorkflowInput,
    WorkflowUseCaseImpl,

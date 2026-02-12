@@ -47,6 +47,10 @@ pub use workflow::{
    post_comment,
    reject_step,
    reject_step_by_display_number,
+   request_changes_step,
+   request_changes_step_by_display_number,
+   resubmit_workflow,
+   resubmit_workflow_by_display_number,
    submit_workflow,
    submit_workflow_by_display_number,
 };
