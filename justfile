@@ -20,7 +20,7 @@ default:
 # 順序: ツール確認 → 環境変数 → Git フック → Docker 起動 → DB マイグレーション → 依存関係ビルド
 # ※ sqlx の query! マクロはコンパイル時に DB スキーマを検証するため、
 #    マイグレーション完了後に cargo build を実行する必要がある
-setup: check-tools setup-env setup-hooks dev-deps setup-db setup-deps
+setup: check-tools setup-env setup-hooks dev-deps setup-db setup-root-deps setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
     @echo "  - just dev-all         : 全サーバー一括起動（推奨）"
@@ -60,6 +60,12 @@ check-tools:
 # worktree の場合は空きポートオフセットを自動割り当て
 setup-env:
     ./scripts/setup-env.sh
+
+# ルート開発ツールをインストール（@redocly/cli, jscpd）
+setup-root-deps:
+    @echo "ルート開発ツールをインストール中..."
+    @pnpm install
+    @echo "✓ ルート開発ツールインストール完了"
 
 # 依存関係をインストール
 setup-deps:
@@ -255,7 +261,7 @@ lint-ci:
 
 # OpenAPI 仕様書 リント（Redocly CLI）
 lint-openapi:
-    npx --yes @redocly/cli@latest lint --config openapi/redocly.yaml
+    pnpm exec redocly lint --config openapi/redocly.yaml
 
 # =============================================================================
 # テスト
@@ -341,10 +347,10 @@ check-file-size:
 # 注: --formats-exts と複数 format の同時指定にバグがあるため、Rust と Elm を分けて実行する
 check-duplicates:
     @echo "=== Rust コード重複チェック ==="
-    npx --yes jscpd@latest --min-lines 10 --min-tokens 50 --format "rust" --gitignore --exitCode 0 backend/
+    pnpm exec jscpd --min-lines 10 --min-tokens 50 --format "rust" --gitignore --exitCode 0 backend/
     @echo ""
     @echo "=== Elm コード重複チェック ==="
-    npx --yes jscpd@latest --min-lines 10 --min-tokens 50 --format "haskell" --formats-exts "haskell:elm" --gitignore --exitCode 0 frontend/src/
+    pnpm exec jscpd --min-lines 10 --min-tokens 50 --format "haskell" --formats-exts "haskell:elm" --gitignore --exitCode 0 frontend/src/
 
 # =============================================================================
 # 未使用依存チェック
@@ -376,7 +382,54 @@ coverage-summary:
 # =============================================================================
 
 # 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、OpenAPI 同期、構造品質）
-check: lint test test-rust-integration build-elm sqlx-check openapi-check check-file-size check-duplicates
+# Rust レーンと Non-Rust レーンを並列実行して高速化
+check:
+    #!/usr/bin/env bash
+    set -uo pipefail
+
+    non_rust_log=$(mktemp)
+    trap 'rm -f "$non_rust_log"' EXIT
+
+    # Non-Rust レーン（バックグラウンド）
+    (
+        set -e
+        just lint-elm
+        just test-elm
+        just build-elm
+        just lint-shell
+        just lint-ci
+        just lint-openapi
+        just check-unused-deps
+        just check-file-size
+        just check-duplicates
+    ) > "$non_rust_log" 2>&1 &
+    non_rust_pid=$!
+
+    # Rust レーン（フォアグラウンド）
+    rust_ok=true
+    just lint-rust && \
+    just test-rust && \
+    just test-rust-integration && \
+    just sqlx-check && \
+    just openapi-check || rust_ok=false
+
+    # Non-Rust レーンの完了待ち
+    non_rust_ok=true
+    wait $non_rust_pid || non_rust_ok=false
+
+    echo ""
+    echo "=== Non-Rust チェック ==="
+    cat "$non_rust_log"
+
+    # 結果判定
+    if ! $rust_ok || ! $non_rust_ok; then
+        echo ""
+        ! $rust_ok && echo "✗ Rust レーン: 失敗"
+        ! $non_rust_ok && echo "✗ Non-Rust レーン: 失敗"
+        exit 1
+    fi
+    echo ""
+    echo "✓ 全チェック完了"
 
 # プッシュ前の全チェック（軽量チェック + セキュリティ + API テスト + E2E テスト）
 check-all: check audit test-api test-e2e
