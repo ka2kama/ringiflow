@@ -634,7 +634,9 @@ getSelectedDefinition maybeId definitions =
 
 {-| 選択された定義の承認ステップ ID と承認者を組み合わせて承認者リストを構築する
 
-現在の UI は単一承認者選択のため、最初の承認ステップに承認者を割り当てる。
+制約: 現在の UI は単一承認者選択のみ対応。全承認ステップに同一承認者を割り当てる。
+2段階以上の承認定義が選択された場合、同一人物が全ステップの承認者になる。
+TODO: Story #478 で各ステップごとに承認者を選択できる UI に対応する。
 
 -}
 buildApprovers : Model -> String -> List WorkflowApi.StepApproverRequest

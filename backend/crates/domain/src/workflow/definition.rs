@@ -265,16 +265,18 @@ pub fn extract_approval_steps(definition: &JsonValue) -> Result<Vec<ApprovalStep
          let id = step
             .get("id")
             .and_then(|v| v.as_str())
-            .unwrap_or_default()
+            .ok_or_else(|| {
+               DomainError::Validation("承認ステップに id フィールドがありません".to_string())
+            })?
             .to_string();
          let name = step
             .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or_default()
             .to_string();
-         ApprovalStepDef { id, name }
+         Ok(ApprovalStepDef { id, name })
       })
-      .collect();
+      .collect::<Result<Vec<_>, _>>()?;
 
    if approval_steps.is_empty() {
       return Err(DomainError::Validation(
@@ -348,6 +350,26 @@ mod tests {
          let result = extract_approval_steps(&definition_json);
 
          assert!(result.is_err());
+      }
+
+      #[test]
+      fn test_承認ステップにidがない場合エラー() {
+         let definition_json = json!({
+            "steps": [
+               {"id": "start", "type": "start", "name": "開始"},
+               {"type": "approval", "name": "承認"},
+               {"id": "end", "type": "end", "name": "完了", "status": "approved"}
+            ]
+         });
+
+         let result = extract_approval_steps(&definition_json);
+
+         assert!(result.is_err());
+         let err_msg = result.unwrap_err().to_string();
+         assert!(
+            err_msg.contains("id フィールド"),
+            "エラーメッセージに 'id フィールド' が含まれるべき: {err_msg}"
+         );
       }
 
       #[test]
