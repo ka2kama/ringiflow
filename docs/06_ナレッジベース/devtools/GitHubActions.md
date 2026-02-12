@@ -69,6 +69,9 @@ CI が「action not allowed」エラーで失敗した場合:
 | `extractions/setup-crate@*` | setup-just の間接依存 |
 | `pnpm/action-setup@*` | pnpm パッケージマネージャ |
 | `EmbarkStudios/cargo-deny-action@*` | 依存関係セキュリティスキャン |
+| `docker/setup-buildx-action@*` | Docker Buildx セットアップ（デモデプロイ） |
+| `docker/login-action@*` | Docker レジストリ認証（デモデプロイ） |
+| `docker/build-push-action@*` | Docker イメージのビルド・プッシュ（デモデプロイ） |
 
 ---
 

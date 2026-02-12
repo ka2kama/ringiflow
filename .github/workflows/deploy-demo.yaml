@@ -1,0 +1,79 @@
+# デモ環境（Lightsail）への自動デプロイ
+#
+# main ブランチへの push 時に、Docker イメージを GHCR にビルド・プッシュし、
+# Lightsail インスタンスにデプロイする。
+#
+# 必要な GitHub Secrets:
+#   LIGHTSAIL_SSH_KEY  - Lightsail への SSH 秘密鍵
+#   LIGHTSAIL_HOST     - Lightsail インスタンスのホスト名または IP アドレス
+#   LIGHTSAIL_USER     - SSH ユーザー名（例: ec2-user）
+#
+# 必要な GitHub Actions 許可設定（Settings > Actions > General）:
+#   docker/setup-buildx-action@*
+#   docker/login-action@*
+#   docker/build-push-action@*
+
+name: Deploy Demo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: true
+
+env:
+  BACKEND_IMAGE: ghcr.io/ka2kama/ringiflow/backend
+  FRONTEND_IMAGE: ghcr.io/ka2kama/ringiflow/frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # バックエンドイメージ（BFF / Core Service / Auth Service の3バイナリ）
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          build-args: CARGO_FEATURES=""
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      # フロントエンドイメージ（静的ファイル出力用）
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          build-args: VITE_DEV_AUTH=true
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Deploy to Lightsail
+        env:
+          SSH_KEY: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.LIGHTSAIL_HOST }}
+          DEPLOY_USER: ${{ secrets.LIGHTSAIL_USER }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/deploy-lightsail.sh

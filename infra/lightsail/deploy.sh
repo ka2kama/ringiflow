@@ -77,6 +77,10 @@ else
 fi
 REMOTE_DIR="/home/$LIGHTSAIL_USER/ringiflow"
 
+# Docker イメージ名（GHCR と合わせる）
+BACKEND_IMAGE="ghcr.io/ka2kama/ringiflow/backend"
+FRONTEND_IMAGE="ghcr.io/ka2kama/ringiflow/frontend"
+
 # オプション解析
 SKIP_BUILD=false
 for arg in "$@"; do
@@ -98,19 +102,19 @@ if [ "$SKIP_BUILD" = false ]; then
     # CARGO_FEATURES="" で default features（dev-auth 含む）を有効化
     docker build \
         --build-arg CARGO_FEATURES="" \
-        -t ringiflow-backend:latest \
+        -t "$BACKEND_IMAGE:latest" \
         -f backend/Dockerfile backend/
 
     info "Frontend イメージをビルド中..."
     # VITE_DEV_AUTH=true で DevAuth Cookie 設定を有効化
     docker build \
         --build-arg VITE_DEV_AUTH=true \
-        -t ringiflow-frontend:latest \
+        -t "$FRONTEND_IMAGE:latest" \
         -f frontend/Dockerfile frontend/
 
     # フロントエンドの静的ファイルを取り出す
     info "Frontend 静的ファイルを取り出し中..."
-    docker create --name frontend-build ringiflow-frontend:latest
+    docker create --name frontend-build "$FRONTEND_IMAGE:latest"
     rm -rf /tmp/ringiflow-frontend-dist
     docker cp frontend-build:/app/dist /tmp/ringiflow-frontend-dist
     docker rm frontend-build
@@ -128,7 +132,7 @@ rm -rf "$EXPORT_DIR"
 mkdir -p "$EXPORT_DIR"
 
 info "Backend イメージを保存中..."
-docker save ringiflow-backend:latest | gzip > "$EXPORT_DIR/backend.tar.gz"
+docker save "$BACKEND_IMAGE:latest" | gzip > "$EXPORT_DIR/backend.tar.gz"
 
 info "エクスポート完了:"
 ls -lh "$EXPORT_DIR"
