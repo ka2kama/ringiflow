@@ -70,6 +70,17 @@ pub struct ApproveRejectRequest {
    pub comment: Option<String>,
 }
 
+/// ワークフロー再申請リクエスト（BFF 公開 API）
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ResubmitWorkflowRequest {
+   /// 更新後のフォームデータ
+   pub form_data: serde_json::Value,
+   /// 各承認ステップの承認者リスト
+   pub approvers: Vec<StepApproverRequest>,
+   /// 楽観的ロック用バージョン
+   pub version:   i32,
+}
+
 /// ステップパスパラメータ（display_number 用）
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Path)]

@@ -519,7 +519,7 @@ CREATE TABLE public.workflow_instances (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     version integer DEFAULT 1 NOT NULL,
     display_number bigint NOT NULL,
-    CONSTRAINT workflow_instances_status_check CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'pending'::character varying, 'in_progress'::character varying, 'approved'::character varying, 'rejected'::character varying, 'cancelled'::character varying])::text[])))
+    CONSTRAINT workflow_instances_status_check CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'pending'::character varying, 'in_progress'::character varying, 'approved'::character varying, 'rejected'::character varying, 'cancelled'::character varying, 'changes_requested'::character varying])::text[])))
 );
 
 --
@@ -568,7 +568,7 @@ COMMENT ON COLUMN public.workflow_instances.form_data IS 'フォームデータ�
 -- Name: COLUMN workflow_instances.status; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.workflow_instances.status IS '状態（draft/pending/in_progress/approved/rejected/cancelled）';
+COMMENT ON COLUMN public.workflow_instances.status IS '状態（draft/pending/in_progress/approved/rejected/cancelled/changes_requested）';
 
 --
 -- Name: COLUMN workflow_instances.current_step_id; Type: COMMENT; Schema: public; Owner: -

@@ -115,6 +115,16 @@ pub struct ApproveRejectRequest {
    pub user_id:   Uuid,
 }
 
+/// ワークフロー再申請リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct ResubmitWorkflowRequest {
+   pub form_data: serde_json::Value,
+   pub approvers: Vec<StepApproverRequest>,
+   pub version:   i32,
+   pub tenant_id: Uuid,
+   pub user_id:   Uuid,
+}
+
 /// ワークフローステップ DTO
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowStepDto {

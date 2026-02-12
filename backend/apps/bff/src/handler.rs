@@ -49,5 +49,7 @@ pub use workflow::{
    list_workflow_definitions,
    post_comment,
    reject_step,
+   request_changes_step,
+   resubmit_workflow,
    submit_workflow,
 };

@@ -56,6 +56,21 @@ pub struct SubmitWorkflowRequest {
    pub tenant_id: Uuid,
 }
 
+/// ワークフロー再申請リクエスト
+#[derive(Debug, Deserialize)]
+pub struct ResubmitWorkflowRequest {
+   /// 更新後のフォームデータ
+   pub form_data: serde_json::Value,
+   /// 各承認ステップの承認者リスト
+   pub approvers: Vec<StepApproverRequest>,
+   /// 楽観的ロック用バージョン
+   pub version:   i32,
+   /// テナント ID (内部 API 用)
+   pub tenant_id: Uuid,
+   /// 操作するユーザー ID (内部 API 用)
+   pub user_id:   Uuid,
+}
+
 /// ステップ承認/却下リクエスト
 #[derive(Debug, Deserialize)]
 pub struct ApproveRejectRequest {

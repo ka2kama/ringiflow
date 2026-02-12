@@ -73,6 +73,17 @@ pub struct ApproveRejectInput {
    pub comment: Option<String>,
 }
 
+/// ワークフロー再申請入力
+#[derive(Debug, Clone)]
+pub struct ResubmitWorkflowInput {
+   /// 更新後のフォームデータ
+   pub form_data: JsonValue,
+   /// 各承認ステップの承認者リスト
+   pub approvers: Vec<StepApprover>,
+   /// 楽観的ロック用バージョン
+   pub version:   Version,
+}
+
 /// WorkflowInstance + Steps からユーザー ID を収集する
 ///
 /// ワークフローの initiated_by と各ステップの assigned_to を

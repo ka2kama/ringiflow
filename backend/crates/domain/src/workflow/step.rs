@@ -383,6 +383,37 @@ impl WorkflowStep {
       })
    }
 
+   /// ステップを差し戻す
+   ///
+   /// Active 状態のステップを Completed (RequestChanges) に遷移させる。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
+   pub fn request_changes(
+      self,
+      comment: Option<String>,
+      now: DateTime<Utc>,
+   ) -> Result<Self, DomainError> {
+      if self.status != WorkflowStepStatus::Active {
+         return Err(DomainError::Validation(format!(
+            "差し戻しはアクティブ状態でのみ可能です（現在: {}）",
+            self.status
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowStepStatus::Completed,
+         version: self.version.next(),
+         decision: Some(StepDecision::RequestChanges),
+         comment,
+         completed_at: Some(now),
+         updated_at: now,
+         ..self
+      })
+   }
+
    /// ステップが期限切れかチェックする
    pub fn is_overdue(&self, now: DateTime<Utc>) -> bool {
       if let Some(due) = self.due_date
@@ -699,6 +730,80 @@ mod tests {
             updated_at: now,
          });
          assert_eq!(sut, expected);
+      }
+
+      // --- request_changes() テスト ---
+
+      #[rstest]
+      fn test_差し戻しステップの状態(test_step: WorkflowStep, now: DateTime<Utc>) {
+         let step = test_step.activated(now);
+         let before = step.clone();
+
+         let sut = step.request_changes(None, now).unwrap();
+
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Completed,
+            version: before.version().next(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: Some(StepDecision::RequestChanges),
+            comment: None,
+            due_date: None,
+            started_at: before.started_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
+      }
+
+      #[rstest]
+      fn test_コメント付き差し戻しステップの状態(
+         test_step: WorkflowStep,
+         now: DateTime<Utc>,
+      ) {
+         let step = test_step.activated(now);
+         let before = step.clone();
+
+         let sut = step
+            .request_changes(Some("金額を修正してください".to_string()), now)
+            .unwrap();
+
+         let expected = WorkflowStep::from_db(WorkflowStepRecord {
+            id: before.id().clone(),
+            instance_id: before.instance_id().clone(),
+            display_number: before.display_number(),
+            step_id: before.step_id().to_string(),
+            step_name: before.step_name().to_string(),
+            step_type: before.step_type().to_string(),
+            status: WorkflowStepStatus::Completed,
+            version: before.version().next(),
+            assigned_to: before.assigned_to().cloned(),
+            decision: Some(StepDecision::RequestChanges),
+            comment: Some("金額を修正してください".to_string()),
+            due_date: None,
+            started_at: before.started_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
+      }
+
+      #[rstest]
+      fn test_アクティブ以外で差し戻しするとエラー(
+         test_step: WorkflowStep,
+         now: DateTime<Utc>,
+      ) {
+         // Pending 状態からは差し戻し不可
+         let result = test_step.request_changes(None, now);
+
+         assert!(result.is_err());
       }
    }
 }

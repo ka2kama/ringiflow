@@ -93,6 +93,8 @@ use handler::{
    me,
    post_comment,
    reject_step,
+   request_changes_step,
+   resubmit_workflow,
    submit_workflow,
    update_role,
    update_user,
@@ -295,6 +297,14 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/api/v1/workflows/{display_number}/steps/{step_display_number}/reject",
          post(reject_step),
+      )
+      .route(
+         "/api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes",
+         post(request_changes_step),
+      )
+      .route(
+         "/api/v1/workflows/{display_number}/resubmit",
+         post(resubmit_workflow),
       )
       // コメント API
       .route(

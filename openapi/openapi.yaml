@@ -802,6 +802,67 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
+  /api/v1/workflows/{display_number}/resubmit:
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows/{display_number}/resubmit
+      description: |-
+        ワークフローを再申請する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し
+        3. 200 OK + 更新されたワークフローを返す
+      operationId: resubmit_workflow
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフロー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResubmitWorkflowRequest'
+        required: true
+      responses:
+        '200':
+          description: 再申請成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: 権限なし
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ワークフローが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 競合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
   /api/v1/workflows/{display_number}/steps/{step_display_number}/approve:
     post:
       tags:
@@ -908,6 +969,74 @@ paths:
       responses:
         '200':
           description: 却下成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: 権限なし
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ステップが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 競合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes:
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes
+      description: |-
+        ワークフローステップを差し戻す
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/request-changes` を呼び出し
+        3. 200 OK + 更新されたワークフローを返す
+      operationId: request_changes_step
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフローの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      - name: step_display_number
+        in: path
+        description: ステップの表示用連番
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRejectRequest'
+        required: true
+      responses:
+        '200':
+          description: 差し戻し成功
           content:
             application/json:
               schema:
@@ -2272,6 +2401,25 @@ components:
           minimum: 0
         detail:
           type: string
+    ResubmitWorkflowRequest:
+      type: object
+      description: ワークフロー再申請リクエスト（BFF 公開 API）
+      required:
+      - form_data
+      - approvers
+      - version
+      properties:
+        form_data:
+          description: 更新後のフォームデータ
+        approvers:
+          type: array
+          items:
+            $ref: '#/components/schemas/StepApproverRequest'
+          description: 各承認ステップの承認者リスト
+        version:
+          type: integer
+          format: int32
+          description: 楽観的ロック用バージョン
     RoleDetailData:
       type: object
       description: ロール詳細データ
