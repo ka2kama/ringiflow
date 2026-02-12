@@ -208,14 +208,8 @@ redis-get key:
 
 # PostgreSQL: 現在のスキーマスナップショットを出力
 db-dump-schema:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \
-        --exclude-table=_sqlx_migrations \
-        "{{ _psql_url }}" \
-    | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d; /^\\restrict /d; /^\\unrestrict /d' \
-    > backend/schema.sql
-    echo "✓ backend/schema.sql を更新しました"
+    ./scripts/dump-schema.sh "{{ _psql_url }}" > backend/schema.sql
+    @echo "✓ backend/schema.sql を更新しました"
 
 # データベースマイグレーション実行 + スキーマスナップショット更新
 db-migrate:
@@ -436,11 +430,7 @@ schema-check:
     set -euo pipefail
     temp=$(mktemp)
     trap 'rm -f "$temp"' EXIT
-    pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \
-        --exclude-table=_sqlx_migrations \
-        "{{ _psql_url }}" \
-    | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d; /^\\restrict /d; /^\\unrestrict /d' \
-    > "$temp"
+    ./scripts/dump-schema.sh "{{ _psql_url }}" > "$temp"
     if ! diff -q backend/schema.sql "$temp" > /dev/null 2>&1; then
         echo "ERROR: backend/schema.sql が現在の DB スキーマと同期していません"
         echo "  'just db-dump-schema' を実行して更新してください"
