@@ -847,97 +847,6 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
-  /api/v1/workflows/{display_number}/comments:
-    get:
-      tags:
-      - workflows
-      summary: GET /api/v1/workflows/{display_number}/comments
-      description: |-
-        ワークフローのコメント一覧を取得する
-
-        ## 処理フロー
-
-        1. セッションから `tenant_id` を取得
-        2. Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出し
-        3. 200 OK + コメント一覧を返す
-      operationId: list_comments
-      parameters:
-      - name: display_number
-        in: path
-        description: ワークフロー表示番号
-        required: true
-        schema:
-          type: integer
-          format: int64
-      responses:
-        '200':
-          description: コメント一覧
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_WorkflowCommentData'
-        '404':
-          description: ワークフローが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-      security:
-      - session_auth: []
-    post:
-      tags:
-      - workflows
-      summary: POST /api/v1/workflows/{display_number}/comments
-      description: |-
-        ワークフローにコメントを投稿する
-
-        ## 処理フロー
-
-        1. セッションから `tenant_id`, `user_id` を取得
-        2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/comments` を呼び出し
-        3. 201 Created + コメントを返す
-      operationId: post_comment
-      parameters:
-      - name: display_number
-        in: path
-        description: ワークフロー表示番号
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PostCommentRequest'
-        required: true
-      responses:
-        '201':
-          description: コメント投稿成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowCommentData'
-        '400':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '403':
-          description: 権限なし
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '404':
-          description: ワークフローが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-      security:
-      - session_auth: []
   /api/v1/workflows/{display_number}/submit:
     post:
       tags:
@@ -1672,30 +1581,6 @@ components:
                 type: string
               updated_at:
                 type: string
-    ApiResponse_Vec_WorkflowCommentData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkflowCommentData'
-    ApiResponse_WorkflowCommentData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-      required:
-      - data
-      properties:
-        data:
-          $ref: '#/components/schemas/WorkflowCommentData'
     ApiResponse_Vec_WorkflowDefinitionData:
       type: object
       description: |-
@@ -2587,32 +2472,6 @@ components:
         created_at:
           type: string
         updated_at:
-          type: string
-    PostCommentRequest:
-      type: object
-      description: コメント投稿リクエスト（BFF 公開 API）
-      required:
-      - body
-      properties:
-        body:
-          type: string
-          description: コメント本文（1〜2000 文字）
-    WorkflowCommentData:
-      type: object
-      description: ワークフローコメントデータ
-      required:
-      - id
-      - posted_by
-      - body
-      - created_at
-      properties:
-        id:
-          type: string
-        posted_by:
-          $ref: '#/components/schemas/UserRefData'
-        body:
-          type: string
-        created_at:
           type: string
     WorkflowStepData:
       type: object
