@@ -52,6 +52,7 @@ check-tools:
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
+    @which pg_dump > /dev/null || (echo "ERROR: pg_dump がインストールされていません" && exit 1)
     @which redis-cli > /dev/null || (echo "ERROR: redis-cli がインストールされていません" && exit 1)
     @cd tests/e2e && npx playwright --version > /dev/null 2>&1 || echo "  ⚠ Playwright: 未インストール（E2E テスト用: cd tests/e2e && pnpm install && npx playwright install chromium）"
     @echo "✓ 全ツール確認済み"
@@ -84,10 +85,11 @@ setup-hooks:
     @lefthook install
     @echo "✓ Git フックセットアップ完了"
 
-# データベースをセットアップ（マイグレーション適用）
+# データベースをセットアップ（マイグレーション適用 + スキーマスナップショット更新）
 setup-db:
     @echo "データベースをセットアップ中..."
     @cd backend && sqlx migrate run
+    @just db-dump-schema
     @echo "✓ データベースセットアップ完了"
 
 # worktree 用セットアップ（Docker 起動 → DB マイグレーション → 依存関係インストール）
@@ -95,10 +97,11 @@ setup-worktree: dev-deps setup-db setup-deps
     @echo ""
     @echo "✓ worktree セットアップ完了"
 
-# データベースをリセット（drop → create → migrate）
+# データベースをリセット（drop → create → migrate + スキーマスナップショット更新）
 reset-db:
     @echo "データベースをリセット中..."
     cd backend && sqlx database reset -y
+    just db-dump-schema
     @echo "✓ データベースリセット完了"
 
 # =============================================================================
@@ -202,6 +205,17 @@ redis-keys pattern='*':
 # Redis: 指定キーの値を取得
 redis-get key:
     @redis-cli -p "${REDIS_PORT}" get "{{key}}"
+
+# PostgreSQL: 現在のスキーマスナップショットを出力
+db-dump-schema:
+    ./scripts/dump-schema.sh "{{ _psql_url }}" > backend/schema.sql
+    @echo "✓ backend/schema.sql を更新しました"
+
+# データベースマイグレーション実行 + スキーマスナップショット更新
+db-migrate:
+    @echo "マイグレーション実行中..."
+    cd backend && sqlx migrate run
+    just db-dump-schema
 
 # =============================================================================
 # フォーマット
@@ -409,6 +423,21 @@ openapi-check:
         exit 1
     fi
     echo "✓ openapi/openapi.yaml は utoipa の定義と同期しています"
+
+# スキーマスナップショットの同期チェック（pg_dump 出力と backend/schema.sql を比較）
+schema-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    temp=$(mktemp)
+    trap 'rm -f "$temp"' EXIT
+    ./scripts/dump-schema.sh "{{ _psql_url }}" > "$temp"
+    if ! diff -q backend/schema.sql "$temp" > /dev/null 2>&1; then
+        echo "ERROR: backend/schema.sql が現在の DB スキーマと同期していません"
+        echo "  'just db-dump-schema' を実行して更新してください"
+        diff --unified backend/schema.sql "$temp" || true
+        exit 1
+    fi
+    echo "✓ backend/schema.sql は現在の DB スキーマと同期しています"
 
 # SQLx オフラインキャッシュの同期チェック（DB 接続が必要）
 # --all-targets: 統合テスト内の sqlx::query! マクロも含めてチェック

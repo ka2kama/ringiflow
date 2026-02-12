@@ -98,6 +98,8 @@ PostgreSQL スキーマやデータの確認に使用する。MCP（PostgreSQL�
 just db-tables              # テーブル一覧
 just db-schema テーブル名    # カラム定義
 just db-query "SELECT ..."  # SQL 実行
+just db-dump-schema         # スキーマスナップショットを更新
+just db-migrate             # マイグレーション + スナップショット更新
 just redis-keys             # Redis キー一覧
 just redis-keys "session:*" # パターン指定
 just redis-get キー名        # Redis 値取得
