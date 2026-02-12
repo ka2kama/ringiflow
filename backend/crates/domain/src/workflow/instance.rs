@@ -62,6 +62,8 @@ pub enum WorkflowInstanceStatus {
    Rejected,
    /// 取り消し
    Cancelled,
+   /// 要修正（差し戻し）
+   ChangesRequested,
 }
 
 impl std::str::FromStr for WorkflowInstanceStatus {
@@ -75,6 +77,7 @@ impl std::str::FromStr for WorkflowInstanceStatus {
          "approved" => Ok(Self::Approved),
          "rejected" => Ok(Self::Rejected),
          "cancelled" => Ok(Self::Cancelled),
+         "changes_requested" => Ok(Self::ChangesRequested),
          _ => Err(DomainError::Validation(format!(
             "不正なワークフローインスタンスステータス: {}",
             s
@@ -380,6 +383,64 @@ impl WorkflowInstance {
          status: WorkflowInstanceStatus::Approved,
          version: self.version.next(),
          completed_at: Some(now),
+         updated_at: now,
+         ..self
+      })
+   }
+
+   /// ステップ差し戻しによる要修正遷移
+   ///
+   /// InProgress 状態のインスタンスを ChangesRequested に遷移させる。
+   /// version をインクリメントして楽観的ロックに対応。
+   /// ChangesRequested は中間状態のため completed_at は設定しない。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: InProgress 以外の状態で呼び出した場合
+   pub fn complete_with_request_changes(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
+      if self.status != WorkflowInstanceStatus::InProgress {
+         return Err(DomainError::Validation(format!(
+            "差し戻しは処理中状態でのみ可能です（現在: {}）",
+            self.status
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowInstanceStatus::ChangesRequested,
+         version: self.version.next(),
+         updated_at: now,
+         ..self
+      })
+   }
+
+   /// 再申請
+   ///
+   /// ChangesRequested 状態のインスタンスを InProgress に遷移させる。
+   /// フォームデータを更新し、新しいステップで再開する。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: ChangesRequested 以外の状態で呼び出した場合
+   pub fn resubmitted(
+      self,
+      form_data: JsonValue,
+      step_id: String,
+      now: DateTime<Utc>,
+   ) -> Result<Self, DomainError> {
+      if self.status != WorkflowInstanceStatus::ChangesRequested {
+         return Err(DomainError::Validation(format!(
+            "再申請は要修正状態でのみ可能です（現在: {}）",
+            self.status
+         )));
+      }
+
+      Ok(Self {
+         status: WorkflowInstanceStatus::InProgress,
+         form_data,
+         current_step_id: Some(step_id),
+         version: self.version.next(),
+         completed_at: None,
          updated_at: now,
          ..self
       })
@@ -804,6 +865,139 @@ mod tests {
          let result = instance.submitted(now);
 
          assert!(result.is_err());
+      }
+
+      // --- complete_with_request_changes() テスト ---
+
+      #[rstest]
+      fn test_差し戻し完了後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+         let before = instance.clone();
+
+         let sut = instance.complete_with_request_changes(now).unwrap();
+
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::ChangesRequested,
+            version: before.version().next(),
+            current_step_id: before.current_step_id().map(|s| s.to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: None,
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
+      }
+
+      #[rstest]
+      fn test_処理中以外で差し戻しするとエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         // Draft 状態からは差し戻し不可
+         let result = test_instance.complete_with_request_changes(now);
+
+         assert!(result.is_err());
+      }
+
+      // --- resubmitted() テスト ---
+
+      #[rstest]
+      fn test_再申請後の状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
+         let new_form_data = json!({"field": "updated_value"});
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now)
+            .complete_with_request_changes(now)
+            .unwrap();
+         let before = instance.clone();
+
+         let sut = instance
+            .resubmitted(new_form_data.clone(), "new_step_1".to_string(), now)
+            .unwrap();
+
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: new_form_data,
+            status: WorkflowInstanceStatus::InProgress,
+            version: before.version().next(),
+            current_step_id: Some("new_step_1".to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: None,
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
+      }
+
+      #[rstest]
+      fn test_要修正以外で再申請するとエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         // InProgress 状態からは再申請不可
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+
+         let result = instance.resubmitted(json!({}), "new_step_1".to_string(), now);
+
+         assert!(result.is_err());
+      }
+
+      // --- 要修正状態からの取消テスト ---
+
+      #[rstest]
+      fn test_要修正状態からの取消後の状態(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now)
+            .complete_with_request_changes(now)
+            .unwrap();
+         let before = instance.clone();
+
+         let sut = instance.cancelled(now).unwrap();
+
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::Cancelled,
+            version: before.version(),
+            current_step_id: before.current_step_id().map(|s| s.to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: Some(now),
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
       }
    }
 }
