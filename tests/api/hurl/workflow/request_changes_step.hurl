@@ -134,13 +134,20 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-# ワークフローインスタンスの状態
+# ワークフローインスタンスの状態（required フィールドすべて検証）
 jsonpath "$.data.id" == "{{workflow_id}}"
+jsonpath "$.data.display_number" == {{workflow_display_number}}
+jsonpath "$.data.title" == "差し戻しテスト申請"
+jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "ChangesRequested"
 jsonpath "$.data.version" == 3
+jsonpath "$.data.form_data.reason" == "テスト"
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # completed_at は設定されない（ChangesRequested は中間状態）
 jsonpath "$.data.completed_at" == null
+jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # ステップの状態
 jsonpath "$.data.steps" count == 1

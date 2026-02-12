@@ -132,9 +132,15 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-# 差し戻し後の状態
+# 差し戻し後の状態（required フィールドすべて検証）
+jsonpath "$.data.display_number" == {{workflow_display_number}}
+jsonpath "$.data.title" == "フルフロー差し戻しテスト"
+jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
 jsonpath "$.data.status" == "ChangesRequested"
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.completed_at" == null
+jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.steps[0].status" == "Completed"
 jsonpath "$.data.steps[0].decision" == "Approved"
 jsonpath "$.data.steps[1].status" == "Completed"
@@ -170,10 +176,16 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-# 再申請後の状態
+# 再申請後の状態（required フィールドすべて検証）
+jsonpath "$.data.display_number" == {{workflow_display_number}}
+jsonpath "$.data.title" == "フルフロー差し戻しテスト"
+jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
 jsonpath "$.data.status" == "InProgress"
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.form_data.justification" == "見積書 No.12345 参照"
 jsonpath "$.data.completed_at" == null
+jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # 新しいステップが作成されている
 jsonpath "$.data.steps" count == 2
 jsonpath "$.data.steps[0].status" == "Active"
@@ -216,9 +228,15 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-# ワークフロー完了
+# ワークフロー完了（required フィールドすべて検証）
+jsonpath "$.data.display_number" == {{workflow_display_number}}
+jsonpath "$.data.title" == "フルフロー差し戻しテスト"
+jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
 jsonpath "$.data.status" == "Approved"
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # 両ステップとも承認完了
 jsonpath "$.data.steps[0].status" == "Completed"
 jsonpath "$.data.steps[0].decision" == "Approved"

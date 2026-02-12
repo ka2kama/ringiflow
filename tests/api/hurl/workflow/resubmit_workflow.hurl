@@ -188,15 +188,21 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-# ワークフローインスタンスの状態
+# ワークフローインスタンスの状態（required フィールドすべて検証）
 jsonpath "$.data.id" == "{{workflow_id}}"
+jsonpath "$.data.display_number" == {{workflow_display_number}}
+jsonpath "$.data.title" == "再申請テスト申請"
+jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.version" == 4
+jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 # form_data が更新されている
 jsonpath "$.data.form_data.reason" == "修正後のデータ"
 jsonpath "$.data.form_data.amount" == 15000
 # completed_at はクリアされる
 jsonpath "$.data.completed_at" == null
+jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # 新しいステップが作成されている
 jsonpath "$.data.steps" count == 1
