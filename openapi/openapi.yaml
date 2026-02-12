@@ -711,67 +711,6 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
-  /api/v1/workflows/{display_number}/resubmit:
-    post:
-      tags:
-      - workflows
-      summary: POST /api/v1/workflows/{display_number}/resubmit
-      description: |-
-        ワークフローを再申請する
-
-        ## 処理フロー
-
-        1. セッションから `tenant_id`, `user_id` を取得
-        2. Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し
-        3. 200 OK + 更新されたワークフローを返す
-      operationId: resubmit_workflow
-      parameters:
-      - name: display_number
-        in: path
-        description: ワークフロー表示番号
-        required: true
-        schema:
-          type: integer
-          format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResubmitWorkflowRequest'
-        required: true
-      responses:
-        '200':
-          description: 再申請成功
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
-        '400':
-          description: バリデーションエラー
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '403':
-          description: 権限なし
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '404':
-          description: ワークフローが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '409':
-          description: 競合
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-      security:
-      - session_auth: []
   /api/v1/workflows/{display_number}/comments:
     get:
       tags:
@@ -857,6 +796,67 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         '404':
           description: ワークフローが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/workflows/{display_number}/resubmit:
+    post:
+      tags:
+      - workflows
+      summary: POST /api/v1/workflows/{display_number}/resubmit
+      description: |-
+        ワークフローを再申請する
+
+        ## 処理フロー
+
+        1. セッションから `tenant_id`, `user_id` を取得
+        2. Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し
+        3. 200 OK + 更新されたワークフローを返す
+      operationId: resubmit_workflow
+      parameters:
+      - name: display_number
+        in: path
+        description: ワークフロー表示番号
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResubmitWorkflowRequest'
+        required: true
+      responses:
+        '200':
+          description: 再申請成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: 権限なし
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: ワークフローが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 競合
           content:
             application/json:
               schema:
