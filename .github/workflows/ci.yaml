@@ -228,7 +228,7 @@ jobs:
 
       - name: Check schema snapshot
         run: |
-          pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \
+          /usr/lib/postgresql/17/bin/pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \
               --exclude-table=_sqlx_migrations \
               "$DATABASE_URL" \
           | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d; /^\\restrict /d; /^\\unrestrict /d' \
