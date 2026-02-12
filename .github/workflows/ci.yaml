@@ -220,6 +220,20 @@ jobs:
         run: sqlx migrate run
         working-directory: backend
 
+      - name: Check schema snapshot
+        run: |
+          pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \
+              --exclude-table=_sqlx_migrations \
+              "$DATABASE_URL" \
+          | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d; /^\\restrict /d; /^\\unrestrict /d' \
+          > /tmp/schema-check.sql
+          if ! diff -q backend/schema.sql /tmp/schema-check.sql > /dev/null 2>&1; then
+            echo "::error::backend/schema.sql is out of sync. Run 'just db-dump-schema' to update."
+            diff --unified backend/schema.sql /tmp/schema-check.sql || true
+            exit 1
+          fi
+          echo "✓ Schema snapshot is in sync"
+
       - name: Test (integration tests)
         run: cargo test --release --all-features --test '*'
         working-directory: backend

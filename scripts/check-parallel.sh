@@ -27,6 +27,7 @@ just lint-rust && \
 just test-rust && \
 just test-rust-integration && \
 just sqlx-check && \
+just schema-check && \
 just openapi-check || rust_ok=false
 
 # Non-Rust レーンの完了待ち
