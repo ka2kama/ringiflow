@@ -57,7 +57,9 @@ X-CSRF-Token: {{admin_csrf_token}}
 Cookie: session_id={{admin_session_cookie}}
 Content-Type: application/json
 {
-    "assigned_to": "{{user_id}}"
+    "approvers": [
+        { "step_id": "approval", "assigned_to": "{{user_id}}" }
+    ]
 }
 
 HTTP 200

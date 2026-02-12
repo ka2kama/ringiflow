@@ -146,8 +146,15 @@ pub async fn submit_workflow(
 
    // Core Service を呼び出し
    let core_req = crate::client::SubmitWorkflowRequest {
-      assigned_to: req.assigned_to,
-      tenant_id:   *session_data.tenant_id().as_uuid(),
+      approvers: req
+         .approvers
+         .into_iter()
+         .map(|a| crate::client::StepApproverRequest {
+            step_id:     a.step_id,
+            assigned_to: a.assigned_to,
+         })
+         .collect(),
+      tenant_id: *session_data.tenant_id().as_uuid(),
    };
 
    match state

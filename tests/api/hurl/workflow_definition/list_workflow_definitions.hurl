@@ -32,16 +32,21 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Asserts]
-# 配列型で 1 件以上（シードデータに「汎用申請」が存在）
+# 配列型で 2 件（シードデータに「汎用申請」と「2段階承認申請」が存在）
 jsonpath "$.data" isCollection
-jsonpath "$.data" count >= 1
+jsonpath "$.data" count == 2
 
-# シードデータのワークフロー定義（required フィールドすべて検証）
-jsonpath "$.data[0].id" == "{{workflow_definition_id}}"
-jsonpath "$.data[0].name" == "汎用申請"
+# 2段階承認申請（新しい定義が先に返される）
+jsonpath "$.data[0].id" == "{{multi_step_definition_id}}"
+jsonpath "$.data[0].name" == "2段階承認申請"
 jsonpath "$.data[0].status" == "Published"
 jsonpath "$.data[0].version" >= 1
 jsonpath "$.data[0].definition" exists
 jsonpath "$.data[0].created_by" matches "^[a-f0-9-]{36}$"
 jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# 汎用申請
+jsonpath "$.data[1].id" == "{{workflow_definition_id}}"
+jsonpath "$.data[1].name" == "汎用申請"
+jsonpath "$.data[1].status" == "Published"

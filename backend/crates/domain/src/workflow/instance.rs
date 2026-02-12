@@ -319,6 +319,9 @@ impl WorkflowInstance {
    }
 
    /// 現在のステップを更新した新しいインスタンスを返す
+   ///
+   /// Submit 時の初期遷移（Pending → InProgress）用。
+   /// 承認後の次ステップ遷移には `advance_to_next_step` を使用する。
    pub fn with_current_step(self, step_id: String, now: DateTime<Utc>) -> Self {
       Self {
          current_step_id: Some(step_id),
@@ -327,6 +330,34 @@ impl WorkflowInstance {
          updated_at: now,
          ..self
       }
+   }
+
+   /// 次の承認ステップに遷移する
+   ///
+   /// InProgress 状態のインスタンスの current_step_id を次のステップに更新する。
+   /// version をインクリメントして楽観的ロックに対応。
+   ///
+   /// # Errors
+   ///
+   /// - `DomainError::Validation`: InProgress 以外の状態で呼び出した場合
+   pub fn advance_to_next_step(
+      self,
+      next_step_id: String,
+      now: DateTime<Utc>,
+   ) -> Result<Self, DomainError> {
+      if self.status != WorkflowInstanceStatus::InProgress {
+         return Err(DomainError::Validation(format!(
+            "次ステップ遷移は処理中状態でのみ可能です（現在: {}）",
+            self.status
+         )));
+      }
+
+      Ok(Self {
+         current_step_id: Some(next_step_id),
+         version: self.version.next(),
+         updated_at: now,
+         ..self
+      })
    }
 
    /// ステップ承認による完了処理
@@ -678,6 +709,72 @@ mod tests {
          let result = instance.cancelled(now);
 
          assert!(result.is_err());
+      }
+
+      // --- advance_to_next_step() テスト ---
+
+      #[rstest]
+      fn test_次ステップ遷移_処理中で成功(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+         let before = instance.clone();
+
+         let sut = instance
+            .advance_to_next_step("step_2".to_string(), now)
+            .unwrap();
+
+         let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
+            id: before.id().clone(),
+            tenant_id: before.tenant_id().clone(),
+            definition_id: before.definition_id().clone(),
+            definition_version: before.definition_version(),
+            display_number: before.display_number(),
+            title: before.title().to_string(),
+            form_data: before.form_data().clone(),
+            status: WorkflowInstanceStatus::InProgress,
+            version: before.version().next(),
+            current_step_id: Some("step_2".to_string()),
+            initiated_by: before.initiated_by().clone(),
+            submitted_at: before.submitted_at(),
+            completed_at: None,
+            created_at: before.created_at(),
+            updated_at: now,
+         });
+         assert_eq!(sut, expected);
+      }
+
+      #[rstest]
+      fn test_次ステップ遷移_処理中以外ではエラー(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         // Draft 状態
+         let result = test_instance.advance_to_next_step("step_2".to_string(), now);
+
+         assert!(result.is_err());
+      }
+
+      #[rstest]
+      fn test_次ステップ遷移_versionがインクリメントされる(
+         test_instance: WorkflowInstance,
+         now: DateTime<Utc>,
+      ) {
+         let instance = test_instance
+            .submitted(now)
+            .unwrap()
+            .with_current_step("step_1".to_string(), now);
+         let before_version = instance.version();
+
+         let sut = instance
+            .advance_to_next_step("step_2".to_string(), now)
+            .unwrap();
+
+         assert_eq!(sut.version(), before_version.next());
       }
 
       // --- submitted() 異常系テスト ---

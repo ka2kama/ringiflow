@@ -37,7 +37,7 @@ import Component.ApproverSelector as ApproverSelector exposing (ApproverSelectio
 import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
 import Data.UserItem as UserItem exposing (UserItem)
-import Data.WorkflowDefinition exposing (WorkflowDefinition)
+import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance exposing (WorkflowInstance)
 import Dict exposing (Dict)
 import Form.DynamicForm as DynamicForm
@@ -404,13 +404,16 @@ update msg model =
                         let
                             ( cleanModel, cleanCmd ) =
                                 clearDirty model
+
+                            approvers =
+                                buildApprovers cleanModel approver.id
                         in
                         ( { cleanModel
                             | submitting = True
                             , saveMessage = Nothing
                           }
                         , Cmd.batch
-                            [ submitWorkflow cleanModel.shared workflow.displayNumber approver.id
+                            [ submitWorkflow cleanModel.shared workflow.displayNumber approvers
                             , cleanCmd
                             ]
                         )
@@ -456,10 +459,13 @@ update msg model =
                     let
                         ( cleanModel, cleanCmd ) =
                             clearDirty model
+
+                        approvers =
+                            buildApprovers cleanModel approverInput
                     in
                     ( { cleanModel | savedWorkflow = Just workflow }
                     , Cmd.batch
-                        [ submitWorkflow cleanModel.shared workflow.displayNumber approverInput
+                        [ submitWorkflow cleanModel.shared workflow.displayNumber approvers
                         , cleanCmd
                         ]
                     )
@@ -626,6 +632,34 @@ getSelectedDefinition maybeId definitions =
         |> Maybe.andThen (\defId -> List.Extra.find (\d -> d.id == defId) definitions)
 
 
+{-| 選択された定義の承認ステップ ID と承認者を組み合わせて承認者リストを構築する
+
+制約: 現在の UI は単一承認者選択のみ対応。全承認ステップに同一承認者を割り当てる。
+2段階以上の承認定義が選択された場合、同一人物が全ステップの承認者になる。
+TODO: Story #478 で各ステップごとに承認者を選択できる UI に対応する。
+
+-}
+buildApprovers : Model -> String -> List WorkflowApi.StepApproverRequest
+buildApprovers model approverId =
+    case RemoteData.toMaybe model.definitions of
+        Just definitions ->
+            case getSelectedDefinition model.selectedDefinitionId definitions of
+                Just def ->
+                    WorkflowDefinition.approvalStepIds def
+                        |> List.map
+                            (\stepId ->
+                                { stepId = stepId
+                                , assignedTo = String.trim approverId
+                                }
+                            )
+
+                Nothing ->
+                    []
+
+        Nothing ->
+            []
+
+
 {-| 下書き保存 API を呼び出す
 -}
 saveDraft : Shared -> String -> String -> Dict String String -> Cmd Msg
@@ -652,12 +686,12 @@ encodeFormValues values =
 
 {-| ワークフローを申請
 -}
-submitWorkflow : Shared -> Int -> String -> Cmd Msg
-submitWorkflow shared workflowDisplayNumber approverInput =
+submitWorkflow : Shared -> Int -> List WorkflowApi.StepApproverRequest -> Cmd Msg
+submitWorkflow shared workflowDisplayNumber approvers =
     WorkflowApi.submitWorkflow
         { config = Shared.toRequestConfig shared
         , displayNumber = workflowDisplayNumber
-        , body = { assignedTo = String.trim approverInput }
+        , body = { approvers = approvers }
         , toMsg = GotSubmitResult
         }
 

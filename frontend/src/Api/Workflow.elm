@@ -1,6 +1,7 @@
 module Api.Workflow exposing
     ( ApproveRejectRequest
     , CreateWorkflowRequest
+    , StepApproverRequest
     , SubmitWorkflowRequest
     , approveStep
     , createWorkflow
@@ -216,7 +217,15 @@ type alias CreateWorkflowRequest =
 {-| ワークフロー申請リクエスト
 -}
 type alias SubmitWorkflowRequest =
-    { assignedTo : String
+    { approvers : List StepApproverRequest
+    }
+
+
+{-| 各承認ステップの承認者指定
+-}
+type alias StepApproverRequest =
+    { stepId : String
+    , assignedTo : String
     }
 
 
@@ -244,7 +253,15 @@ encodeCreateRequest req =
 encodeSubmitRequest : SubmitWorkflowRequest -> Encode.Value
 encodeSubmitRequest req =
     Encode.object
-        [ ( "assigned_to", Encode.string req.assignedTo )
+        [ ( "approvers", Encode.list encodeStepApproverRequest req.approvers )
+        ]
+
+
+encodeStepApproverRequest : StepApproverRequest -> Encode.Value
+encodeStepApproverRequest req =
+    Encode.object
+        [ ( "step_id", Encode.string req.stepId )
+        , ( "assigned_to", Encode.string req.assignedTo )
         ]
 
 

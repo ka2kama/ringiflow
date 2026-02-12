@@ -28,7 +28,7 @@ use super::{
 };
 use crate::{
    error::CoreError,
-   usecase::{ApproveRejectInput, CreateWorkflowInput, SubmitWorkflowInput},
+   usecase::{ApproveRejectInput, CreateWorkflowInput, StepApprover, SubmitWorkflowInput},
 };
 
 /// ワークフローを作成する（下書き）
@@ -89,10 +89,18 @@ pub async fn submit_workflow(
    // ID を変換
    let instance_id = WorkflowInstanceId::from_uuid(id);
    let tenant_id = TenantId::from_uuid(req.tenant_id);
-   let assigned_to = UserId::from_uuid(req.assigned_to);
 
    // ユースケースを呼び出し
-   let input = SubmitWorkflowInput { assigned_to };
+   let input = SubmitWorkflowInput {
+      approvers: req
+         .approvers
+         .into_iter()
+         .map(|a| StepApprover {
+            step_id:     a.step_id,
+            assigned_to: UserId::from_uuid(a.assigned_to),
+         })
+         .collect(),
+   };
 
    let instance = state
       .usecase
@@ -221,9 +229,17 @@ pub async fn submit_workflow_by_display_number(
    let display_number = DisplayNumber::try_from(display_number)
       .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
    let tenant_id = TenantId::from_uuid(req.tenant_id);
-   let assigned_to = UserId::from_uuid(req.assigned_to);
 
-   let input = SubmitWorkflowInput { assigned_to };
+   let input = SubmitWorkflowInput {
+      approvers: req
+         .approvers
+         .into_iter()
+         .map(|a| StepApprover {
+            step_id:     a.step_id,
+            assigned_to: UserId::from_uuid(a.assigned_to),
+         })
+         .collect(),
+   };
 
    let instance = state
       .usecase

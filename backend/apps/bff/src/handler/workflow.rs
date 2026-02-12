@@ -45,11 +45,20 @@ pub struct CreateWorkflowRequest {
    pub form_data:     serde_json::Value,
 }
 
+/// ステップ承認者リクエスト（BFF 公開 API）
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct StepApproverRequest {
+   /// 定義 JSON のステップ ID
+   pub step_id:     String,
+   /// 承認者のユーザー ID
+   pub assigned_to: Uuid,
+}
+
 /// ワークフロー申請リクエスト（BFF 公開 API）
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct SubmitWorkflowRequest {
-   /// 承認者のユーザー ID
-   pub assigned_to: Uuid,
+   /// 各承認ステップの承認者リスト
+   pub approvers: Vec<StepApproverRequest>,
 }
 
 /// ステップ承認/却下リクエスト（BFF 公開 API）

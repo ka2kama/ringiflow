@@ -62,7 +62,9 @@ X-CSRF-Token: {{csrf_token}}
 Cookie: session_id={{session_cookie}}
 Content-Type: application/json
 {
-    "assigned_to": "{{user_id}}"
+    "approvers": [
+        { "step_id": "approval", "assigned_to": "{{user_id}}" }
+    ]
 }
 
 HTTP 200
@@ -90,7 +92,9 @@ POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
 X-Tenant-ID: {{tenant_id}}
 Content-Type: application/json
 {
-    "assigned_to": "{{user_id}}"
+    "approvers": [
+        { "step_id": "approval", "assigned_to": "{{user_id}}" }
+    ]
 }
 
 HTTP 403
@@ -110,7 +114,9 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 Content-Type: application/json
 {
-    "assigned_to": "{{user_id}}"
+    "approvers": [
+        { "step_id": "approval", "assigned_to": "{{user_id}}" }
+    ]
 }
 
 HTTP 403
@@ -131,7 +137,9 @@ X-CSRF-Token: {{csrf_token}}
 Cookie: session_id={{session_cookie}}
 Content-Type: application/json
 {
-    "assigned_to": "{{user_id}}"
+    "approvers": [
+        { "step_id": "approval", "assigned_to": "{{user_id}}" }
+    ]
 }
 
 HTTP 404
