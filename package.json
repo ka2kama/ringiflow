@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "devDependencies": {
+    "@redocly/cli": "^2.18.0",
+    "jscpd": "^4.0.8"
+  }
+}

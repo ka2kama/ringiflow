@@ -19,8 +19,8 @@ npm パッケージとして提供されている。
 # グローバルインストール
 npm install -g @redocly/cli
 
-# npx で直接実行（インストール不要）
-npx @redocly/cli lint openapi.yaml
+# pnpm exec で実行（ルート devDependencies にインストール済み）
+pnpm exec redocly lint openapi.yaml
 ```
 
 確認:
@@ -161,7 +161,7 @@ openapi/
 just lint-openapi
 
 # 直接実行
-npx --yes @redocly/cli@latest lint --config openapi/redocly.yaml
+pnpm exec redocly lint --config openapi/redocly.yaml
 ```
 
 ### CI での実行
@@ -180,6 +180,10 @@ openapi:
     - uses: actions/setup-node@v6
       with:
         node-version: '22'
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - run: pnpm install --frozen-lockfile
     - uses: extractions/setup-just@v3
     - run: just lint-openapi
 ```

@@ -317,6 +317,14 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install root dev tools
+        run: pnpm install --frozen-lockfile
+
       - name: Install just
         uses: extractions/setup-just@v3
 
@@ -602,6 +610,14 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install root dev tools
+        run: pnpm install --frozen-lockfile
 
       - name: Install just
         uses: extractions/setup-just@v3
