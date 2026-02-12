@@ -34,10 +34,12 @@
 //! # }
 //! ```
 
+mod comment;
 mod definition;
 mod instance;
 mod step;
 
+pub use comment::*;
 pub use definition::*;
 pub use instance::*;
 pub use step::*;

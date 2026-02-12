@@ -20,6 +20,7 @@ use ringiflow_domain::{
    user::{Email, User, UserId, UserStatus},
    value_objects::{DisplayIdEntityType, DisplayNumber, Version},
    workflow::{
+      WorkflowComment,
       WorkflowDefinition,
       WorkflowDefinitionId,
       WorkflowDefinitionStatus,
@@ -35,6 +36,7 @@ use crate::{
    repository::{
       DisplayIdCounterRepository,
       UserRepository,
+      WorkflowCommentRepository,
       WorkflowDefinitionRepository,
       WorkflowInstanceRepository,
       WorkflowStepRepository,
@@ -450,5 +452,48 @@ impl DisplayIdCounterRepository for MockDisplayIdCounterRepository {
       let mut counter = self.counter.lock().unwrap();
       *counter += 1;
       Ok(DisplayNumber::new(*counter).unwrap())
+   }
+}
+
+// ===== MockWorkflowCommentRepository =====
+
+#[derive(Clone, Default)]
+pub struct MockWorkflowCommentRepository {
+   comments: Arc<Mutex<Vec<WorkflowComment>>>,
+}
+
+impl MockWorkflowCommentRepository {
+   pub fn new() -> Self {
+      Self {
+         comments: Arc::new(Mutex::new(Vec::new())),
+      }
+   }
+}
+
+#[async_trait]
+impl WorkflowCommentRepository for MockWorkflowCommentRepository {
+   async fn insert(
+      &self,
+      comment: &WorkflowComment,
+      _tenant_id: &TenantId,
+   ) -> Result<(), InfraError> {
+      let mut comments = self.comments.lock().unwrap();
+      comments.push(comment.clone());
+      Ok(())
+   }
+
+   async fn find_by_instance(
+      &self,
+      instance_id: &WorkflowInstanceId,
+      _tenant_id: &TenantId,
+   ) -> Result<Vec<WorkflowComment>, InfraError> {
+      let comments = self.comments.lock().unwrap();
+      let mut result: Vec<_> = comments
+         .iter()
+         .filter(|c| c.instance_id() == instance_id)
+         .cloned()
+         .collect();
+      result.sort_by_key(|c| c.created_at());
+      Ok(result)
    }
 }

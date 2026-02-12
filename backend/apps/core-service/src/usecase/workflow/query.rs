@@ -4,7 +4,7 @@ use ringiflow_domain::{
    tenant::TenantId,
    user::UserId,
    value_objects::DisplayNumber,
-   workflow::{WorkflowDefinition, WorkflowDefinitionId, WorkflowInstanceId},
+   workflow::{WorkflowComment, WorkflowDefinition, WorkflowDefinitionId, WorkflowInstanceId},
 };
 
 use super::{WorkflowUseCaseImpl, WorkflowWithSteps};
@@ -166,5 +166,182 @@ impl WorkflowUseCaseImpl {
          .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
 
       Ok(WorkflowWithSteps { instance, steps })
+   }
+
+   // ===== コメント取得メソッド =====
+
+   /// ワークフローのコメント一覧を取得する
+   ///
+   /// display_number でワークフローを特定し、そのコメント一覧を
+   /// 時系列昇順で返す。
+   ///
+   /// ## 引数
+   ///
+   /// - `display_number`: 表示用連番
+   /// - `tenant_id`: テナント ID
+   ///
+   /// ## 戻り値
+   ///
+   /// - `Ok(Vec<WorkflowComment>)`: コメント一覧（created_at ASC）
+   /// - `Err(NotFound)`: インスタンスが見つからない場合
+   /// - `Err(_)`: データベースエラー
+   pub async fn list_comments(
+      &self,
+      display_number: DisplayNumber,
+      tenant_id: TenantId,
+   ) -> Result<Vec<WorkflowComment>, CoreError> {
+      // 1. ワークフローインスタンスの存在確認
+      let instance = self
+         .instance_repo
+         .find_by_display_number(display_number, &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
+         .ok_or_else(|| {
+            CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
+         })?;
+
+      // 2. コメント一覧を取得
+      self
+         .comment_repo
+         .find_by_instance(instance.id(), &tenant_id)
+         .await
+         .map_err(|e| CoreError::Internal(format!("コメントの取得に失敗: {}", e)))
+   }
+}
+
+#[cfg(test)]
+mod tests {
+   use std::sync::Arc;
+
+   use ringiflow_domain::{
+      clock::FixedClock,
+      tenant::TenantId,
+      user::UserId,
+      value_objects::{DisplayNumber, Version},
+      workflow::{
+         CommentBody,
+         NewWorkflowComment,
+         NewWorkflowInstance,
+         WorkflowComment,
+         WorkflowCommentId,
+         WorkflowDefinitionId,
+         WorkflowInstance,
+         WorkflowInstanceId,
+      },
+   };
+   use ringiflow_infra::{
+      mock::{
+         MockDisplayIdCounterRepository,
+         MockUserRepository,
+         MockWorkflowCommentRepository,
+         MockWorkflowDefinitionRepository,
+         MockWorkflowInstanceRepository,
+         MockWorkflowStepRepository,
+      },
+      repository::{WorkflowCommentRepository, WorkflowInstanceRepository},
+   };
+
+   use super::super::WorkflowUseCaseImpl;
+   use crate::error::CoreError;
+
+   #[tokio::test]
+   async fn test_list_comments_コメント一覧を取得できる() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let user_id = UserId::new();
+      let now = chrono::Utc::now();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+      let comment_repo = MockWorkflowCommentRepository::new();
+
+      let instance = WorkflowInstance::new(NewWorkflowInstance {
+         id: WorkflowInstanceId::new(),
+         tenant_id: tenant_id.clone(),
+         definition_id: WorkflowDefinitionId::new(),
+         definition_version: Version::initial(),
+         display_number: DisplayNumber::new(100).unwrap(),
+         title: "テスト申請".to_string(),
+         form_data: serde_json::json!({}),
+         initiated_by: user_id.clone(),
+         now,
+      })
+      .submitted(now)
+      .unwrap()
+      .with_current_step("approval".to_string(), now);
+      instance_repo.insert(&instance).await.unwrap();
+
+      // コメントを2件追加
+      let comment1 = WorkflowComment::new(NewWorkflowComment {
+         id: WorkflowCommentId::new(),
+         tenant_id: tenant_id.clone(),
+         instance_id: instance.id().clone(),
+         posted_by: user_id.clone(),
+         body: CommentBody::new("コメント1").unwrap(),
+         now,
+      });
+      let comment2 = WorkflowComment::new(NewWorkflowComment {
+         id: WorkflowCommentId::new(),
+         tenant_id: tenant_id.clone(),
+         instance_id: instance.id().clone(),
+         posted_by: user_id.clone(),
+         body: CommentBody::new("コメント2").unwrap(),
+         now,
+      });
+      comment_repo.insert(&comment1, &tenant_id).await.unwrap();
+      comment_repo.insert(&comment2, &tenant_id).await.unwrap();
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(comment_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      // Act
+      let result = sut
+         .list_comments(DisplayNumber::new(100).unwrap(), tenant_id)
+         .await;
+
+      // Assert
+      assert!(result.is_ok());
+      let comments = result.unwrap();
+      assert_eq!(comments.len(), 2);
+   }
+
+   #[tokio::test]
+   async fn test_list_comments_ワークフローが見つからない場合404() {
+      // Arrange
+      let tenant_id = TenantId::new();
+      let now = chrono::Utc::now();
+
+      let definition_repo = MockWorkflowDefinitionRepository::new();
+      let instance_repo = MockWorkflowInstanceRepository::new();
+      let step_repo = MockWorkflowStepRepository::new();
+      let comment_repo = MockWorkflowCommentRepository::new();
+
+      // インスタンスを作成しない
+
+      let sut = WorkflowUseCaseImpl::new(
+         Arc::new(definition_repo),
+         Arc::new(instance_repo),
+         Arc::new(step_repo),
+         Arc::new(comment_repo),
+         Arc::new(MockUserRepository),
+         Arc::new(MockDisplayIdCounterRepository::new()),
+         Arc::new(FixedClock::new(now)),
+      );
+
+      // Act
+      let result = sut
+         .list_comments(DisplayNumber::new(999).unwrap(), tenant_id)
+         .await;
+
+      // Assert
+      assert!(matches!(result, Err(CoreError::NotFound(_))));
    }
 }

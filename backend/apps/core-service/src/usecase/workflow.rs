@@ -17,6 +17,7 @@ use ringiflow_domain::{
 use ringiflow_infra::repository::{
    DisplayIdCounterRepository,
    UserRepository,
+   WorkflowCommentRepository,
    WorkflowDefinitionRepository,
    WorkflowInstanceRepository,
    WorkflowStepRepository,
@@ -86,6 +87,13 @@ pub(crate) fn collect_user_ids_from_workflow(
       .collect()
 }
 
+/// コメント投稿入力
+#[derive(Debug, Clone)]
+pub struct PostCommentInput {
+   /// コメント本文
+   pub body: String,
+}
+
 /// ワークフローユースケース実装
 ///
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
@@ -93,6 +101,7 @@ pub struct WorkflowUseCaseImpl {
    definition_repo: Arc<dyn WorkflowDefinitionRepository>,
    instance_repo:   Arc<dyn WorkflowInstanceRepository>,
    step_repo:       Arc<dyn WorkflowStepRepository>,
+   comment_repo:    Arc<dyn WorkflowCommentRepository>,
    user_repo:       Arc<dyn UserRepository>,
    counter_repo:    Arc<dyn DisplayIdCounterRepository>,
    clock:           Arc<dyn Clock>,
@@ -104,6 +113,7 @@ impl WorkflowUseCaseImpl {
       definition_repo: Arc<dyn WorkflowDefinitionRepository>,
       instance_repo: Arc<dyn WorkflowInstanceRepository>,
       step_repo: Arc<dyn WorkflowStepRepository>,
+      comment_repo: Arc<dyn WorkflowCommentRepository>,
       user_repo: Arc<dyn UserRepository>,
       counter_repo: Arc<dyn DisplayIdCounterRepository>,
       clock: Arc<dyn Clock>,
@@ -112,6 +122,7 @@ impl WorkflowUseCaseImpl {
          definition_repo,
          instance_repo,
          step_repo,
+         comment_repo,
          user_repo,
          counter_repo,
          clock,

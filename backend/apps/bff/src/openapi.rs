@@ -35,6 +35,8 @@ use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workf
       workflow::submit_workflow,
       workflow::approve_step,
       workflow::reject_step,
+      workflow::post_comment,
+      workflow::list_comments,
       // tasks
       task::list_my_tasks,
       workflow::get_task_by_display_numbers,
@@ -88,6 +90,10 @@ use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workf
       workflow::WorkflowStepData,
       workflow::WorkflowData,
       workflow::WorkflowDefinitionData,
+      workflow::PostCommentRequest,
+      workflow::WorkflowCommentData,
+      ringiflow_shared::ApiResponse<workflow::WorkflowCommentData>,
+      ringiflow_shared::ApiResponse<Vec<workflow::WorkflowCommentData>>,
       // task
       task::TaskWorkflowSummaryData,
       task::TaskItemData,

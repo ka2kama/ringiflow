@@ -11,7 +11,9 @@ use super::{
    types::{
       ApproveRejectRequest,
       CreateWorkflowRequest,
+      PostCommentCoreRequest,
       SubmitWorkflowRequest,
+      WorkflowCommentDto,
       WorkflowDefinitionDto,
       WorkflowInstanceDto,
    },
@@ -129,6 +131,24 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
       step_display_number: i64,
       req: ApproveRejectRequest,
    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+
+   /// ワークフローにコメントを投稿する
+   ///
+   /// Core Service の `POST /internal/workflows/by-display-number/{display_number}/comments` を呼び出す。
+   async fn post_comment(
+      &self,
+      display_number: i64,
+      req: PostCommentCoreRequest,
+   ) -> Result<ApiResponse<WorkflowCommentDto>, CoreServiceError>;
+
+   /// ワークフローのコメント一覧を取得する
+   ///
+   /// Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出す。
+   async fn list_comments(
+      &self,
+      display_number: i64,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<Vec<WorkflowCommentDto>>, CoreServiceError>;
 }
 
 #[async_trait]
@@ -298,5 +318,33 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
 
       let response = self.client.post(&url).json(&req).send().await?;
       handle_response(response, Some(CoreServiceError::StepNotFound)).await
+   }
+
+   async fn post_comment(
+      &self,
+      display_number: i64,
+      req: PostCommentCoreRequest,
+   ) -> Result<ApiResponse<WorkflowCommentDto>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/comments",
+         self.base_url, display_number
+      );
+
+      let response = self.client.post(&url).json(&req).send().await?;
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
+   }
+
+   async fn list_comments(
+      &self,
+      display_number: i64,
+      tenant_id: Uuid,
+   ) -> Result<ApiResponse<Vec<WorkflowCommentDto>>, CoreServiceError> {
+      let url = format!(
+         "{}/internal/workflows/by-display-number/{}/comments?tenant_id={}",
+         self.base_url, display_number, tenant_id
+      );
+
+      let response = self.client.get(&url).send().await?;
+      handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
    }
 }

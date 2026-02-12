@@ -365,6 +365,69 @@ COMMENT ON COLUMN public.users.last_login_at IS '最終ログイン日時';
 COMMENT ON COLUMN public.users.display_number IS '表示用連番（テナント内で一意）';
 
 --
+-- Name: workflow_comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.workflow_comments (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    instance_id uuid NOT NULL,
+    posted_by uuid NOT NULL,
+    body text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT workflow_comments_body_length CHECK (((char_length(body) >= 1) AND (char_length(body) <= 2000)))
+);
+
+--
+-- Name: TABLE workflow_comments; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.workflow_comments IS 'ワークフローコメント（コメントスレッド）';
+
+--
+-- Name: COLUMN workflow_comments.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.id IS '主キー';
+
+--
+-- Name: COLUMN workflow_comments.tenant_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.tenant_id IS 'テナントID（FK, RLS用）';
+
+--
+-- Name: COLUMN workflow_comments.instance_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.instance_id IS 'ワークフローインスタンスID（FK）';
+
+--
+-- Name: COLUMN workflow_comments.posted_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.posted_by IS '投稿者ユーザーID（FK）';
+
+--
+-- Name: COLUMN workflow_comments.body; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.body IS 'コメント本文（1〜2000文字）';
+
+--
+-- Name: COLUMN workflow_comments.created_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.created_at IS '作成日時';
+
+--
+-- Name: COLUMN workflow_comments.updated_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.workflow_comments.updated_at IS '更新日時';
+
+--
 -- Name: workflow_definitions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -743,6 +806,13 @@ ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_tenant_email_key UNIQUE (tenant_id, email);
 
 --
+-- Name: workflow_comments workflow_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_comments
+    ADD CONSTRAINT workflow_comments_pkey PRIMARY KEY (id);
+
+--
 -- Name: workflow_definitions workflow_definitions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -818,6 +888,18 @@ CREATE INDEX user_roles_user_idx ON public.user_roles USING btree (user_id);
 CREATE INDEX users_tenant_status_idx ON public.users USING btree (tenant_id, status);
 
 --
+-- Name: workflow_comments_instance_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX workflow_comments_instance_idx ON public.workflow_comments USING btree (instance_id);
+
+--
+-- Name: workflow_comments_tenant_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX workflow_comments_tenant_idx ON public.workflow_comments USING btree (tenant_id);
+
+--
 -- Name: workflow_definitions_tenant_status_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -884,6 +966,12 @@ CREATE TRIGGER tenants_updated_at BEFORE UPDATE ON public.tenants FOR EACH ROW E
 CREATE TRIGGER users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 --
+-- Name: workflow_comments workflow_comments_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER workflow_comments_updated_at BEFORE UPDATE ON public.workflow_comments FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
+
+--
 -- Name: workflow_definitions workflow_definitions_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -942,6 +1030,27 @@ ALTER TABLE ONLY public.user_roles
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+--
+-- Name: workflow_comments workflow_comments_instance_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_comments
+    ADD CONSTRAINT workflow_comments_instance_id_fkey FOREIGN KEY (instance_id) REFERENCES public.workflow_instances(id) ON DELETE CASCADE;
+
+--
+-- Name: workflow_comments workflow_comments_posted_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_comments
+    ADD CONSTRAINT workflow_comments_posted_by_fkey FOREIGN KEY (posted_by) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+--
+-- Name: workflow_comments workflow_comments_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.workflow_comments
+    ADD CONSTRAINT workflow_comments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 --
 -- Name: workflow_definitions workflow_definitions_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -1054,6 +1163,12 @@ CREATE POLICY tenant_isolation ON public.user_roles TO ringiflow_app USING ((ten
 CREATE POLICY tenant_isolation ON public.users TO ringiflow_app USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 --
+-- Name: workflow_comments tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.workflow_comments TO ringiflow_app USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+--
 -- Name: workflow_definitions tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1088,6 +1203,12 @@ ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: workflow_comments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.workflow_comments ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: workflow_definitions; Type: ROW SECURITY; Schema: public; Owner: -

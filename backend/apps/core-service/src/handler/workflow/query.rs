@@ -17,7 +17,14 @@ use ringiflow_domain::{
 use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
-use super::{TenantQuery, UserQuery, WorkflowDefinitionDto, WorkflowInstanceDto, WorkflowState};
+use super::{
+   TenantQuery,
+   UserQuery,
+   WorkflowCommentDto,
+   WorkflowDefinitionDto,
+   WorkflowInstanceDto,
+   WorkflowState,
+};
 use crate::error::CoreError;
 
 /// ワークフロー定義一覧を取得する
@@ -182,6 +189,49 @@ pub async fn get_workflow_by_display_number(
       &workflow_with_steps,
       &user_names,
    ));
+
+   Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+/// ワークフローのコメント一覧を取得する
+///
+/// ## エンドポイント
+/// GET /internal/workflows/by-display-number/{display_number}/comments?tenant_id={tenant_id}
+///
+/// ## 処理フロー
+/// 1. パスパラメータから display_number を取得
+/// 2. クエリパラメータからテナント ID を取得
+/// 3. ユースケースを呼び出し
+/// 4. 200 OK + コメント一覧を返す
+pub async fn list_comments(
+   State(state): State<Arc<WorkflowState>>,
+   Path(display_number): Path<i64>,
+   Query(query): Query<TenantQuery>,
+) -> Result<Response, CoreError> {
+   let display_number = DisplayNumber::try_from(display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(query.tenant_id);
+
+   let comments = state
+      .usecase
+      .list_comments(display_number, tenant_id)
+      .await?;
+
+   // コメント投稿者のユーザー名を一括解決
+   let all_user_ids: Vec<UserId> = comments
+      .iter()
+      .map(|c| c.posted_by().clone())
+      .collect::<HashSet<_>>()
+      .into_iter()
+      .collect();
+   let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
+
+   let response = ApiResponse::new(
+      comments
+         .iter()
+         .map(|c| WorkflowCommentDto::from_comment(c, &user_names))
+         .collect::<Vec<_>>(),
+   );
 
    Ok((StatusCode::OK, Json(response)).into_response())
 }

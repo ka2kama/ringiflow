@@ -1,14 +1,15 @@
 //! # PostgresWorkflowDeleter
 //!
 //! テナントのワークフローデータを削除する。
-//! workflow_steps → workflow_instances → workflow_definitions の順で DELETE する。
+//! workflow_comments → workflow_steps → workflow_instances → workflow_definitions の順で DELETE する。
 //!
 //! ## FK 制約
 //!
+//! - workflow_comments.instance_id → workflow_instances(id) ON DELETE CASCADE
 //! - workflow_steps.instance_id → workflow_instances(id) ON DELETE CASCADE
 //! - workflow_instances.definition_id → workflow_definitions(id)（CASCADE なし）
 //!
-//! CASCADE があるため instances 削除で steps も消えるが、
+//! CASCADE があるため instances 削除で comments/steps も消えるが、
 //! 明示的に全テーブルを削除し、正確な件数を返す。
 
 use async_trait::async_trait;
@@ -39,6 +40,13 @@ impl TenantDeleter for PostgresWorkflowDeleter {
       let mut tx = self.pool.begin().await?;
 
       // FK 制約に従い子テーブルから順に削除（トランザクションで一貫性を保証）
+      let comments = sqlx::query!(
+         "DELETE FROM workflow_comments WHERE tenant_id = $1",
+         tenant_id.as_uuid()
+      )
+      .execute(&mut *tx)
+      .await?;
+
       let steps = sqlx::query!(
          "DELETE FROM workflow_steps WHERE tenant_id = $1",
          tenant_id.as_uuid()
@@ -63,7 +71,8 @@ impl TenantDeleter for PostgresWorkflowDeleter {
       tx.commit().await?;
 
       Ok(DeletionResult {
-         deleted_count: steps.rows_affected()
+         deleted_count: comments.rows_affected()
+            + steps.rows_affected()
             + instances.rows_affected()
             + definitions.rows_affected(),
       })

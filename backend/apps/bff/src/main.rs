@@ -82,6 +82,7 @@ use handler::{
    get_workflow_definition,
    health_check,
    list_audit_logs,
+   list_comments,
    list_my_tasks,
    list_my_workflows,
    list_roles,
@@ -90,6 +91,7 @@ use handler::{
    login,
    logout,
    me,
+   post_comment,
    reject_step,
    submit_workflow,
    update_role,
@@ -293,6 +295,11 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/api/v1/workflows/{display_number}/steps/{step_display_number}/reject",
          post(reject_step),
+      )
+      // コメント API
+      .route(
+         "/api/v1/workflows/{display_number}/comments",
+         get(list_comments).post(post_comment),
       )
       // タスク API
       .route("/api/v1/tasks/my", get(list_my_tasks))

@@ -1,6 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 97
+assertion_line: 98
 expression: json
 ---
 {
@@ -1041,6 +1041,132 @@ expression: json
         ]
       }
     },
+    "/api/v1/workflows/{display_number}/comments": {
+      "get": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "GET /api/v1/workflows/{display_number}/comments",
+        "description": "ワークフローのコメント一覧を取得する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出し\n3. 200 OK + コメント一覧を返す",
+        "operationId": "list_comments",
+        "parameters": [
+          {
+            "name": "display_number",
+            "in": "path",
+            "description": "ワークフロー表示番号",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "コメント一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Vec_WorkflowCommentData"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ワークフローが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "POST /api/v1/workflows/{display_number}/comments",
+        "description": "ワークフローにコメントを投稿する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/comments` を呼び出し\n3. 201 Created + コメントを返す",
+        "operationId": "post_comment",
+        "parameters": [
+          {
+            "name": "display_number",
+            "in": "path",
+            "description": "ワークフロー表示番号",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostCommentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "コメント投稿成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkflowCommentData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "権限なし",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ワークフローが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
     "/api/v1/workflows/{display_number}/steps/{step_display_number}/approve": {
       "post": {
         "tags": [
@@ -1907,6 +2033,42 @@ expression: json
           }
         }
       },
+      "ApiResponse_Vec_WorkflowCommentData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "ワークフローコメントデータ",
+              "required": [
+                "id",
+                "posted_by",
+                "body",
+                "created_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "posted_by": {
+                  "$ref": "#/components/schemas/UserRefData"
+                },
+                "body": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
       "ApiResponse_Vec_WorkflowData": {
         "type": "object",
         "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
@@ -2048,6 +2210,39 @@ expression: json
                 "updated_at": {
                   "type": "string"
                 }
+              }
+            }
+          }
+        }
+      },
+      "ApiResponse_WorkflowCommentData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "ワークフローコメントデータ",
+            "required": [
+              "id",
+              "posted_by",
+              "body",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "posted_by": {
+                "$ref": "#/components/schemas/UserRefData"
+              },
+              "body": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
               }
             }
           }
@@ -2589,6 +2784,19 @@ expression: json
           }
         }
       },
+      "PostCommentRequest": {
+        "type": "object",
+        "description": "コメント投稿リクエスト（BFF 公開 API）",
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "コメント本文（1〜2000 文字）"
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "description": "エラーレスポンス（RFC 9457 Problem Details）\n\nすべてのサービスで統一されたエラーレスポンス形式。\n`type` フィールドは URI で問題の種類を識別する。",
@@ -3028,6 +3236,30 @@ expression: json
             "type": "string"
           },
           "status": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowCommentData": {
+        "type": "object",
+        "description": "ワークフローコメントデータ",
+        "required": [
+          "id",
+          "posted_by",
+          "body",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "posted_by": {
+            "$ref": "#/components/schemas/UserRefData"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
             "type": "string"
           }
         }
