@@ -68,18 +68,30 @@ encodeCreateRequestTests =
 encodeSubmitRequestTests : Test
 encodeSubmitRequestTests =
     describe "encodeSubmitRequest"
-        [ test "assigned_to をエンコード" <|
+        [ test "approvers 配列をエンコード" <|
             \_ ->
                 let
                     request =
-                        { assignedTo = "user-002" }
+                        { approvers =
+                            [ { stepId = "approval", assignedTo = "user-002" }
+                            ]
+                        }
 
                     encoded =
                         Workflow.encodeSubmitRequest request
                             |> Encode.encode 0
+
+                    approversDecoder =
+                        Decode.field "approvers"
+                            (Decode.list
+                                (Decode.map2 Tuple.pair
+                                    (Decode.field "step_id" Decode.string)
+                                    (Decode.field "assigned_to" Decode.string)
+                                )
+                            )
                 in
-                Decode.decodeString (Decode.field "assigned_to" Decode.string) encoded
-                    |> Expect.equal (Ok "user-002")
+                Decode.decodeString approversDecoder encoded
+                    |> Expect.equal (Ok [ ( "approval", "user-002" ) ])
         ]
 
 

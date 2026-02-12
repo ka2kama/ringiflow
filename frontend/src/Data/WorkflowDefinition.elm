@@ -1,6 +1,7 @@
 module Data.WorkflowDefinition exposing
     ( WorkflowDefinition
     , WorkflowDefinitionId
+    , approvalStepIds
     , decoder
     , listDecoder
     )
@@ -81,3 +82,42 @@ API レスポンスの `{ data: [...] }` 形式に対応。
 listDecoder : Decoder (List WorkflowDefinition)
 listDecoder =
     Decode.field "data" (Decode.list decoder)
+
+
+
+-- HELPERS
+
+
+{-| 定義 JSON から承認ステップの ID 一覧を抽出する
+
+定義 JSON の `steps` 配列から `type == "approval"` のステップ ID を順序を保って返す。
+
+-}
+approvalStepIds : WorkflowDefinition -> List String
+approvalStepIds def =
+    case Decode.decodeValue approvalStepIdsDecoder def.definition of
+        Ok ids ->
+            ids
+
+        Err _ ->
+            []
+
+
+approvalStepIdsDecoder : Decoder (List String)
+approvalStepIdsDecoder =
+    Decode.field "steps" (Decode.list stepDecoder)
+        |> Decode.map (List.filterMap identity)
+
+
+stepDecoder : Decoder (Maybe String)
+stepDecoder =
+    Decode.map2
+        (\id stepType ->
+            if stepType == "approval" then
+                Just id
+
+            else
+                Nothing
+        )
+        (Decode.field "id" Decode.string)
+        (Decode.field "type" Decode.string)
