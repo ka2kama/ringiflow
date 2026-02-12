@@ -3,6 +3,7 @@ name = "ringiflow-bff"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+default-run = "ringiflow-bff"
 
 [dependencies]
 ringiflow-domain.workspace = true

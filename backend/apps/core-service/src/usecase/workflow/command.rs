@@ -20,7 +20,6 @@ use ringiflow_infra::InfraError;
 use super::{
    ApproveRejectInput,
    CreateWorkflowInput,
-   StepApprover,
    SubmitWorkflowInput,
    WorkflowUseCaseImpl,
    WorkflowWithSteps,
@@ -694,7 +693,7 @@ mod tests {
       repository::{WorkflowInstanceRepository, WorkflowStepRepository},
    };
 
-   use super::*;
+   use super::{super::StepApprover, *};
 
    /// テスト用の1段階承認定義 JSON
    fn single_approval_definition_json() -> serde_json::Value {

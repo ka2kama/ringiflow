@@ -2148,16 +2148,31 @@ components:
         user_count:
           type: integer
           format: int64
-    SubmitWorkflowRequest:
+    StepApproverRequest:
       type: object
-      description: ワークフロー申請リクエスト（BFF 公開 API）
+      description: ステップ承認者リクエスト（BFF 公開 API）
       required:
+      - step_id
       - assigned_to
       properties:
+        step_id:
+          type: string
+          description: 定義 JSON のステップ ID
         assigned_to:
           type: string
           format: uuid
           description: 承認者のユーザー ID
+    SubmitWorkflowRequest:
+      type: object
+      description: ワークフロー申請リクエスト（BFF 公開 API）
+      required:
+      - approvers
+      properties:
+        approvers:
+          type: array
+          items:
+            $ref: '#/components/schemas/StepApproverRequest'
+          description: 各承認ステップの承認者リスト
     TaskDetailData:
       type: object
       description: タスク詳細データ
