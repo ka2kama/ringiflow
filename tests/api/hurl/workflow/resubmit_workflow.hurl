@@ -47,6 +47,7 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 workflow_display_number: jsonpath "$.data.display_number"
+workflow_display_id: jsonpath "$.data.display_id"
 workflow_id: jsonpath "$.data.id"
 
 # ワークフロー申請（user に承認タスクを割り当て）
@@ -190,12 +191,14 @@ HTTP 200
 [Asserts]
 # ワークフローインスタンスの状態（required フィールドすべて検証）
 jsonpath "$.data.id" == "{{workflow_id}}"
+jsonpath "$.data.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.display_number" == {{workflow_display_number}}
 jsonpath "$.data.title" == "再申請テスト申請"
 jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
 jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.version" == 4
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 # form_data が更新されている
 jsonpath "$.data.form_data.reason" == "修正後のデータ"
 jsonpath "$.data.form_data.amount" == 15000

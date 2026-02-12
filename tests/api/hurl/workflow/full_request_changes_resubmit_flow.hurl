@@ -48,6 +48,7 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 workflow_display_number: jsonpath "$.data.display_number"
+workflow_display_id: jsonpath "$.data.display_id"
 workflow_id: jsonpath "$.data.id"
 
 # ワークフロー申請（Step1: admin、Step2: user）
@@ -133,11 +134,13 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # 差し戻し後の状態（required フィールドすべて検証）
+jsonpath "$.data.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.display_number" == {{workflow_display_number}}
 jsonpath "$.data.title" == "フルフロー差し戻しテスト"
 jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
 jsonpath "$.data.status" == "ChangesRequested"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data.completed_at" == null
 jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
@@ -177,11 +180,13 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # 再申請後の状態（required フィールドすべて検証）
+jsonpath "$.data.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.display_number" == {{workflow_display_number}}
 jsonpath "$.data.title" == "フルフロー差し戻しテスト"
 jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
 jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data.form_data.justification" == "見積書 No.12345 参照"
 jsonpath "$.data.completed_at" == null
 jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
@@ -229,11 +234,13 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # ワークフロー完了（required フィールドすべて検証）
+jsonpath "$.data.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.display_number" == {{workflow_display_number}}
 jsonpath "$.data.title" == "フルフロー差し戻しテスト"
 jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
 jsonpath "$.data.status" == "Approved"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data.completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"

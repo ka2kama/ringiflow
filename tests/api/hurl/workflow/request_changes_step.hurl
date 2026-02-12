@@ -46,6 +46,7 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 workflow_display_number: jsonpath "$.data.display_number"
+workflow_display_id: jsonpath "$.data.display_id"
 workflow_id: jsonpath "$.data.id"
 
 # ワークフロー申請（user に承認タスクを割り当て）
@@ -136,6 +137,7 @@ HTTP 200
 [Asserts]
 # ワークフローインスタンスの状態（required フィールドすべて検証）
 jsonpath "$.data.id" == "{{workflow_id}}"
+jsonpath "$.data.display_id" == "{{workflow_display_id}}"
 jsonpath "$.data.display_number" == {{workflow_display_number}}
 jsonpath "$.data.title" == "差し戻しテスト申請"
 jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
@@ -143,6 +145,7 @@ jsonpath "$.data.status" == "ChangesRequested"
 jsonpath "$.data.version" == 3
 jsonpath "$.data.form_data.reason" == "テスト"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # completed_at は設定されない（ChangesRequested は中間状態）
 jsonpath "$.data.completed_at" == null
