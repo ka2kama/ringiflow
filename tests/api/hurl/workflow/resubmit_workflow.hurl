@@ -199,7 +199,7 @@ jsonpath "$.data.form_data.amount" == 15000
 jsonpath "$.data.completed_at" == null
 
 # 新しいステップが作成されている
-jsonpath "$.data.steps count" == 1
+jsonpath "$.data.steps" count == 1
 jsonpath "$.data.steps[0].status" == "Active"
 jsonpath "$.data.steps[0].version" == 1
 jsonpath "$.data.steps[0].decision" == null

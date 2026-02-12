@@ -175,7 +175,7 @@ jsonpath "$.data.status" == "InProgress"
 jsonpath "$.data.form_data.justification" == "見積書 No.12345 参照"
 jsonpath "$.data.completed_at" == null
 # 新しいステップが作成されている
-jsonpath "$.data.steps count" == 2
+jsonpath "$.data.steps" count == 2
 jsonpath "$.data.steps[0].status" == "Active"
 jsonpath "$.data.steps[0].version" == 1
 jsonpath "$.data.steps[1].status" == "Pending"

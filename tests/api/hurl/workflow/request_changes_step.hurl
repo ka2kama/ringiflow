@@ -86,7 +86,7 @@ Content-Type: application/json
 }
 HTTP 403
 [Asserts]
-jsonpath "$.type" == "csrf-validation-failed"
+jsonpath "$.type" == "https://ringiflow.example.com/errors/csrf-validation-failed"
 
 # 存在しないワークフローで差し戻し → 404
 POST {{bff_url}}/api/v1/workflows/99999999/steps/99999999/request-changes
@@ -143,7 +143,7 @@ jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.completed_at" == null
 
 # ステップの状態
-jsonpath "$.data.steps count" == 1
+jsonpath "$.data.steps" count == 1
 jsonpath "$.data.steps[0].status" == "Completed"
 jsonpath "$.data.steps[0].version" == 2
 jsonpath "$.data.steps[0].decision" == "RequestChanges"
