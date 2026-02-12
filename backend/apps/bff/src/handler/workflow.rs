@@ -182,6 +182,33 @@ impl From<crate::client::WorkflowInstanceDto> for WorkflowData {
    }
 }
 
+/// コメント投稿リクエスト（BFF 公開 API）
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct PostCommentRequest {
+   /// コメント本文（1〜2000 文字）
+   pub body: String,
+}
+
+/// ワークフローコメントデータ
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WorkflowCommentData {
+   pub id:         String,
+   pub posted_by:  UserRefData,
+   pub body:       String,
+   pub created_at: String,
+}
+
+impl From<crate::client::WorkflowCommentDto> for WorkflowCommentData {
+   fn from(dto: crate::client::WorkflowCommentDto) -> Self {
+      Self {
+         id:         dto.id,
+         posted_by:  UserRefData::from(dto.posted_by),
+         body:       dto.body,
+         created_at: dto.created_at,
+      }
+   }
+}
+
 /// ワークフロー定義データ
 #[derive(Debug, Serialize, ToSchema)]
 pub struct WorkflowDefinitionData {

@@ -249,6 +249,25 @@ pub struct UpdateRoleCoreRequest {
    pub permissions: Option<Vec<String>>,
 }
 
+// --- コメント関連の型 ---
+
+/// コメント投稿リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct PostCommentCoreRequest {
+   pub body:      String,
+   pub tenant_id: Uuid,
+   pub user_id:   Uuid,
+}
+
+/// ワークフローコメント DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowCommentDto {
+   pub id:         String,
+   pub posted_by:  UserRefDto,
+   pub body:       String,
+   pub created_at: String,
+}
+
 // --- ダッシュボード関連の型 ---
 
 /// ダッシュボード統計 DTO

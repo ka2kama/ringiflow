@@ -89,11 +89,13 @@ use handler::{
    get_workflow_by_display_number,
    get_workflow_definition,
    health_check,
+   list_comments,
    list_my_tasks,
    list_my_workflows,
    list_roles,
    list_users,
    list_workflow_definitions,
+   post_comment,
    reject_step,
    reject_step_by_display_number,
    submit_workflow,
@@ -110,6 +112,7 @@ use ringiflow_infra::{
       RoleRepository,
       TenantRepository,
       UserRepository,
+      WorkflowCommentRepository,
       WorkflowDefinitionRepository,
       WorkflowInstanceRepository,
       WorkflowStepRepository,
@@ -117,6 +120,7 @@ use ringiflow_infra::{
       role_repository::PostgresRoleRepository,
       tenant_repository::PostgresTenantRepository,
       user_repository::PostgresUserRepository,
+      workflow_comment_repository::PostgresWorkflowCommentRepository,
       workflow_definition_repository::PostgresWorkflowDefinitionRepository,
       workflow_instance_repository::PostgresWorkflowInstanceRepository,
       workflow_step_repository::PostgresWorkflowStepRepository,
@@ -175,6 +179,8 @@ async fn main() -> anyhow::Result<()> {
       Arc::new(PostgresWorkflowInstanceRepository::new(pool.clone()));
    let step_repo: Arc<dyn WorkflowStepRepository> =
       Arc::new(PostgresWorkflowStepRepository::new(pool.clone()));
+   let comment_repo: Arc<dyn WorkflowCommentRepository> =
+      Arc::new(PostgresWorkflowCommentRepository::new(pool.clone()));
    let counter_repo: Arc<dyn DisplayIdCounterRepository> =
       Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
 
@@ -203,6 +209,7 @@ async fn main() -> anyhow::Result<()> {
       definition_repo,
       instance_repo.clone(),
       step_repo.clone(),
+      comment_repo,
       user_repo.clone(),
       counter_repo,
       clock,
@@ -288,6 +295,10 @@ async fn main() -> anyhow::Result<()> {
       .route(
          "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject",
          post(reject_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/comments",
+         get(list_comments).post(post_comment),
       )
       .with_state(workflow_state)
       // タスク API

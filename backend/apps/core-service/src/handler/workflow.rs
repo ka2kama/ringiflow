@@ -16,7 +16,7 @@ pub use query::*;
 use ringiflow_domain::{
    user::UserId,
    value_objects::{DisplayId, display_prefix},
-   workflow::{WorkflowDefinition, WorkflowInstance, WorkflowStep},
+   workflow::{WorkflowComment, WorkflowDefinition, WorkflowInstance, WorkflowStep},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -273,6 +273,40 @@ impl WorkflowInstanceDto {
          completed_at: instance.completed_at().map(|t| t.to_rfc3339()),
          created_at: instance.created_at().to_rfc3339(),
          updated_at: instance.updated_at().to_rfc3339(),
+      }
+   }
+}
+
+/// コメント投稿リクエスト
+#[derive(Debug, Deserialize)]
+pub struct PostCommentRequest {
+   /// コメント本文
+   pub body:      String,
+   /// テナント ID (内部 API 用)
+   pub tenant_id: Uuid,
+   /// 投稿者のユーザー ID (内部 API 用)
+   pub user_id:   Uuid,
+}
+
+/// ワークフローコメント DTO
+#[derive(Debug, Serialize)]
+pub struct WorkflowCommentDto {
+   pub id:         String,
+   pub posted_by:  UserRefDto,
+   pub body:       String,
+   pub created_at: String,
+}
+
+impl WorkflowCommentDto {
+   pub(crate) fn from_comment(
+      comment: &WorkflowComment,
+      user_names: &HashMap<UserId, String>,
+   ) -> Self {
+      Self {
+         id:         comment.id().to_string(),
+         posted_by:  to_user_ref(comment.posted_by(), user_names),
+         body:       comment.body().as_str().to_string(),
+         created_at: comment.created_at().to_rfc3339(),
       }
    }
 }

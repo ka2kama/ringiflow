@@ -12,7 +12,13 @@ use axum_extra::extract::CookieJar;
 use ringiflow_shared::{ApiResponse, ErrorResponse};
 use uuid::Uuid;
 
-use super::{StepPathParams, WorkflowData, WorkflowDefinitionData, WorkflowState};
+use super::{
+   StepPathParams,
+   WorkflowCommentData,
+   WorkflowData,
+   WorkflowDefinitionData,
+   WorkflowState,
+};
 use crate::{
    client::CoreServiceError,
    error::{
@@ -336,6 +342,79 @@ pub async fn get_task_by_display_numbers(
       Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
       Err(e) => {
          tracing::error!("タスク詳細取得で内部エラー: {}", e);
+         internal_error_response()
+      }
+   }
+}
+
+// ===== コメントハンドラ =====
+
+/// GET /api/v1/workflows/{display_number}/comments
+///
+/// ワークフローのコメント一覧を取得する
+///
+/// ## 処理フロー
+///
+/// 1. セッションから `tenant_id` を取得
+/// 2. Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出し
+/// 3. 200 OK + コメント一覧を返す
+#[utoipa::path(
+   get,
+   path = "/api/v1/workflows/{display_number}/comments",
+   tag = "workflows",
+   security(("session_auth" = [])),
+   params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
+   responses(
+      (status = 200, description = "コメント一覧", body = ApiResponse<Vec<WorkflowCommentData>>),
+      (status = 404, description = "ワークフローが見つからない", body = ErrorResponse)
+   )
+)]
+pub async fn list_comments(
+   State(state): State<Arc<WorkflowState>>,
+   headers: HeaderMap,
+   jar: CookieJar,
+   Path(display_number): Path<i64>,
+) -> impl IntoResponse {
+   // display_number の検証
+   if display_number <= 0 {
+      return validation_error_response("display_number は 1 以上である必要があります");
+   }
+
+   // X-Tenant-ID ヘッダーからテナント ID を取得
+   let tenant_id = match extract_tenant_id(&headers) {
+      Ok(id) => id,
+      Err(e) => return e.into_response(),
+   };
+
+   // セッションを取得
+   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
+      Ok(data) => data,
+      Err(response) => return response,
+   };
+
+   // Core Service を呼び出し
+   match state
+      .core_service_client
+      .list_comments(display_number, *session_data.tenant_id().as_uuid())
+      .await
+   {
+      Ok(core_response) => {
+         let response = ApiResponse::new(
+            core_response
+               .data
+               .into_iter()
+               .map(WorkflowCommentData::from)
+               .collect::<Vec<_>>(),
+         );
+         (StatusCode::OK, Json(response)).into_response()
+      }
+      Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
+         "workflow-instance-not-found",
+         "Workflow Instance Not Found",
+         "ワークフローインスタンスが見つかりません",
+      ),
+      Err(e) => {
+         tracing::error!("コメント一覧取得で内部エラー: {}", e);
          internal_error_response()
       }
    }

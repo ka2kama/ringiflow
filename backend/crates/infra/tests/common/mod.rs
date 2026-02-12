@@ -13,8 +13,12 @@ use ringiflow_domain::{
    user::UserId,
    value_objects::{DisplayNumber, Version},
    workflow::{
+      CommentBody,
+      NewWorkflowComment,
       NewWorkflowInstance,
       NewWorkflowStep,
+      WorkflowComment,
+      WorkflowCommentId,
       WorkflowDefinitionId,
       WorkflowInstance,
       WorkflowInstanceId,
@@ -66,6 +70,22 @@ pub fn create_test_instance(display_number: i64) -> WorkflowInstance {
       form_data: json!({}),
       initiated_by: seed_user_id(),
       now: test_now(),
+   })
+}
+
+/// デフォルト値で WorkflowComment を作成
+pub fn create_test_comment(
+   instance_id: &WorkflowInstanceId,
+   posted_by: &UserId,
+   body: &str,
+) -> WorkflowComment {
+   WorkflowComment::new(NewWorkflowComment {
+      id:          WorkflowCommentId::new(),
+      tenant_id:   seed_tenant_id(),
+      instance_id: instance_id.clone(),
+      posted_by:   posted_by.clone(),
+      body:        CommentBody::new(body).unwrap(),
+      now:         test_now(),
    })
 }
 

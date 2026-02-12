@@ -20,15 +20,23 @@ use uuid::Uuid;
 use super::{
    ApproveRejectRequest,
    CreateWorkflowRequest,
+   PostCommentRequest,
    StepByDisplayNumberPathParams,
    StepPathParams,
    SubmitWorkflowRequest,
+   WorkflowCommentDto,
    WorkflowInstanceDto,
    WorkflowState,
 };
 use crate::{
    error::CoreError,
-   usecase::{ApproveRejectInput, CreateWorkflowInput, StepApprover, SubmitWorkflowInput},
+   usecase::{
+      ApproveRejectInput,
+      CreateWorkflowInput,
+      PostCommentInput,
+      StepApprover,
+      SubmitWorkflowInput,
+   },
 };
 
 /// ワークフローを作成する（下書き）
@@ -363,4 +371,42 @@ pub async fn reject_step_by_display_number(
    ));
 
    Ok((StatusCode::OK, Json(response)).into_response())
+}
+
+// ===== コメントハンドラ =====
+
+/// ワークフローにコメントを投稿する
+///
+/// ## エンドポイント
+/// POST /internal/workflows/by-display-number/{display_number}/comments
+///
+/// ## 処理フロー
+/// 1. パスパラメータから display_number を取得
+/// 2. リクエストをパース
+/// 3. ユースケースを呼び出し
+/// 4. 201 Created + コメントを返す
+pub async fn post_comment(
+   State(state): State<Arc<WorkflowState>>,
+   Path(display_number): Path<i64>,
+   Json(req): Json<PostCommentRequest>,
+) -> Result<Response, CoreError> {
+   let display_number = DisplayNumber::try_from(display_number)
+      .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+   let tenant_id = TenantId::from_uuid(req.tenant_id);
+   let user_id = UserId::from_uuid(req.user_id);
+
+   let input = PostCommentInput { body: req.body };
+
+   let comment = state
+      .usecase
+      .post_comment(input, display_number, tenant_id, user_id)
+      .await?;
+
+   // ユーザー名を解決
+   let user_ids = vec![comment.posted_by().clone()];
+   let user_names = state.usecase.resolve_user_names(&user_ids).await?;
+
+   let response = ApiResponse::new(WorkflowCommentDto::from_comment(&comment, &user_names));
+
+   Ok((StatusCode::CREATED, Json(response)).into_response())
 }

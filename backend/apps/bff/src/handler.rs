@@ -44,8 +44,10 @@ pub use workflow::{
    get_task_by_display_numbers,
    get_workflow,
    get_workflow_definition,
+   list_comments,
    list_my_workflows,
    list_workflow_definitions,
+   post_comment,
    reject_step,
    submit_workflow,
 };

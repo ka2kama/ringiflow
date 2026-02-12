@@ -28,6 +28,7 @@ pub use user::UserUseCaseImpl;
 pub use workflow::{
    ApproveRejectInput,
    CreateWorkflowInput,
+   PostCommentInput,
    StepApprover,
    SubmitWorkflowInput,
    WorkflowUseCaseImpl,
