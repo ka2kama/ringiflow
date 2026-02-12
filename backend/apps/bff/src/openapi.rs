@@ -35,6 +35,8 @@ use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workf
       workflow::submit_workflow,
       workflow::approve_step,
       workflow::reject_step,
+      workflow::request_changes_step,
+      workflow::resubmit_workflow,
       workflow::post_comment,
       workflow::list_comments,
       // tasks
@@ -86,6 +88,7 @@ use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workf
       workflow::CreateWorkflowRequest,
       workflow::SubmitWorkflowRequest,
       workflow::ApproveRejectRequest,
+      workflow::ResubmitWorkflowRequest,
       workflow::UserRefData,
       workflow::WorkflowStepData,
       workflow::WorkflowData,
