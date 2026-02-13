@@ -94,6 +94,7 @@ ringiflow-infra = { path = "crates/infra" }
 ringiflow-shared = { path = "crates/shared" }
 
 [profile.release]
+opt-level = 1
 overflow-checks = true
 debug = "line-tables-only"
 strip = "none"
