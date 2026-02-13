@@ -46,6 +46,7 @@ check-tools:
     @which actionlint > /dev/null || (echo "ERROR: actionlint がインストールされていません" && exit 1)
     @which cargo-watch > /dev/null || (echo "ERROR: cargo-watch がインストールされていません" && exit 1)
     @which cargo-deny > /dev/null || (echo "ERROR: cargo-deny がインストールされていません" && exit 1)
+    @which cargo-outdated > /dev/null || (echo "ERROR: cargo-outdated がインストールされていません" && exit 1)
     @which cargo-llvm-cov > /dev/null || (echo "ERROR: cargo-llvm-cov がインストールされていません" && exit 1)
     @which cargo-machete > /dev/null || (echo "ERROR: cargo-machete がインストールされていません" && exit 1)
     @which sccache > /dev/null || (echo "ERROR: sccache がインストールされていません" && exit 1)
@@ -346,6 +347,15 @@ test-e2e: api-test-deps api-test-reset-db
 # 依存関係の脆弱性・ライセンスチェック（cargo-deny）
 audit:
     cd backend && cargo deny check
+
+# =============================================================================
+# 依存関係鮮度チェック
+# =============================================================================
+
+# 依存関係の更新状況を確認（cargo-outdated + pnpm outdated）
+outdated:
+    cd backend && cargo outdated --root-deps-only
+    -cd frontend && pnpm outdated
 
 # =============================================================================
 # 構造品質チェック

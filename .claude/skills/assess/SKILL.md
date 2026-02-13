@@ -118,9 +118,9 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 |---------|---------|------|
 | Rust outdated | `cd backend && cargo outdated --root-deps-only 2>/dev/null` | outdated 件数 |
 | Frontend outdated | `cd frontend && pnpm outdated 2>/dev/null` | outdated 件数 |
-| セキュリティ監査 | `cd backend && cargo audit 2>/dev/null` | 脆弱性件数 |
+| セキュリティ監査 | `cd backend && cargo deny check advisories 2>/dev/null` | 脆弱性件数 |
 
-ツールがインストールされていない場合（コマンドが見つからない場合）はスキップし、その旨を報告する。
+`cargo-outdated` がインストールされていない場合はスキップし、その旨を報告する。`cargo-deny` は必須ツール（`just check-tools` で確認済み）のため常に利用可能。
 
 #### 3d. テスト品質
 
@@ -271,4 +271,4 @@ Step 1-3 の診断結果に対し、以下の観点でセルフレビューを�
 - `/assess` は診断レポートの提示が役割。次の 1 タスク選定は `/next` で行う
 - 診断結果に基づく Issue 作成は提案のみ行い、ユーザー確認後に実行する
 - 推奨アクションを Issue 化する際は、レポートの優先度に対応する `priority:high` / `priority:medium` / `priority:low` ラベルを付与する（`/next` が優先度を参照するため）
-- 依存関係チェック（`cargo outdated`, `cargo audit`）はツールのインストール状態に依存する。未インストール時はスキップし「未インストールのためスキップ」と報告する
+- 依存関係鮮度チェック（`cargo outdated`）はツールのインストール状態に依存する。未インストール時はスキップし「未インストールのためスキップ」と報告する。セキュリティ監査（`cargo deny`）は必須ツールのため常に利用可能
