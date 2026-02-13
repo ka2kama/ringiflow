@@ -57,9 +57,9 @@ jobs:
               - 'frontend/**'
               - 'tests/e2e/**'
 
-  # Rust チェック: リント、テスト
-  rust:
-    name: Rust
+  # Rust リント: フォーマット、clippy、未使用依存チェック
+  rust-lint:
+    name: Rust Lint
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -67,8 +67,7 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       SCCACHE_GHA_ENABLED: "true"
-      RUST_BACKTRACE: 1
-      SQLX_OFFLINE: true  # CI では DB 接続なしでビルド
+      SQLX_OFFLINE: true
 
     steps:
       - name: Checkout
@@ -119,6 +118,43 @@ jobs:
 
       - name: Lint
         run: just lint-rust
+
+  # Rust テスト: ユニットテスト、OpenAPI 同期チェック、本番ビルド検証
+  rust-test:
+    name: Rust Test
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+
+    env:
+      CARGO_TERM_COLOR: always
+      SCCACHE_GHA_ENABLED: "true"
+      RUST_BACKTRACE: 1
+      SQLX_OFFLINE: true  # CI では DB 接続なしでビルド
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.0
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Cache Cargo
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Test (unit tests)
         # 統合テスト（tests/）は rust-integration ジョブで実行
@@ -666,7 +702,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust, rust-integration, elm, shell, openapi, api-test, e2e-test, security]
+    needs: [changes, rust-lint, rust-test, rust-integration, elm, shell, openapi, api-test, e2e-test, security]
     if: always()
     steps:
       - name: Check results
@@ -676,8 +712,13 @@ jobs:
             exit 1
           fi
 
-          if [[ "${{ needs.rust.result }}" == "failure" ]]; then
-            echo "Rust checks failed"
+          if [[ "${{ needs.rust-lint.result }}" == "failure" ]]; then
+            echo "Rust lint failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.rust-test.result }}" == "failure" ]]; then
+            echo "Rust tests failed"
             exit 1
           fi
 
