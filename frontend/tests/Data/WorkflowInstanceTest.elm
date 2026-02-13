@@ -6,7 +6,7 @@ module Data.WorkflowInstanceTest exposing (suite)
 
 -}
 
-import Data.WorkflowInstance as WorkflowInstance exposing (Status(..), StepStatus(..))
+import Data.WorkflowInstance as WorkflowInstance exposing (Decision(..), Status(..), StepStatus(..))
 import Expect
 import Json.Decode as Decode
 import Test exposing (..)
@@ -20,6 +20,8 @@ suite =
         , statusToJapaneseTests
         , statusToCssClassTests
         , stepStatusToCssClassTests
+        , decisionToStringTests
+        , decisionFromStringTests
         , decoderTests
         , listDecoderTests
         ]
@@ -56,6 +58,10 @@ statusToStringTests =
             \_ ->
                 WorkflowInstance.statusToString Cancelled
                     |> Expect.equal "Cancelled"
+        , test "ChangesRequested → \"ChangesRequested\"" <|
+            \_ ->
+                WorkflowInstance.statusToString ChangesRequested
+                    |> Expect.equal "ChangesRequested"
         ]
 
 
@@ -90,6 +96,10 @@ statusFromStringTests =
             \_ ->
                 WorkflowInstance.statusFromString "Cancelled"
                     |> Expect.equal (Just Cancelled)
+        , test "\"ChangesRequested\" → Just ChangesRequested" <|
+            \_ ->
+                WorkflowInstance.statusFromString "ChangesRequested"
+                    |> Expect.equal (Just ChangesRequested)
         , test "未知の文字列 → Nothing" <|
             \_ ->
                 WorkflowInstance.statusFromString "Unknown"
@@ -132,6 +142,10 @@ statusToJapaneseTests =
             \_ ->
                 WorkflowInstance.statusToJapanese Cancelled
                     |> Expect.equal "キャンセル"
+        , test "ChangesRequested → 差し戻し" <|
+            \_ ->
+                WorkflowInstance.statusToJapanese ChangesRequested
+                    |> Expect.equal "差し戻し"
         ]
 
 
@@ -166,6 +180,10 @@ statusToCssClassTests =
             \_ ->
                 WorkflowInstance.statusToCssClass Cancelled
                     |> Expect.equal "bg-secondary-100 text-secondary-500"
+        , test "ChangesRequested → Tailwind warning classes" <|
+            \_ ->
+                WorkflowInstance.statusToCssClass ChangesRequested
+                    |> Expect.equal "bg-warning-50 text-warning-600"
         ]
 
 
@@ -192,6 +210,63 @@ stepStatusToCssClassTests =
             \_ ->
                 WorkflowInstance.stepStatusToCssClass StepSkipped
                     |> Expect.equal "bg-secondary-100 text-secondary-500"
+        ]
+
+
+
+-- decisionToString
+
+
+decisionToStringTests : Test
+decisionToStringTests =
+    describe "decisionToString"
+        [ test "DecisionApproved → \"Approved\"" <|
+            \_ ->
+                WorkflowInstance.decisionToString DecisionApproved
+                    |> Expect.equal "Approved"
+        , test "DecisionRejected → \"Rejected\"" <|
+            \_ ->
+                WorkflowInstance.decisionToString DecisionRejected
+                    |> Expect.equal "Rejected"
+        , test "DecisionRequestChanges → \"RequestChanges\"" <|
+            \_ ->
+                WorkflowInstance.decisionToString DecisionRequestChanges
+                    |> Expect.equal "RequestChanges"
+        ]
+
+
+
+-- decisionFromString
+
+
+decisionFromStringTests : Test
+decisionFromStringTests =
+    describe "decisionFromString"
+        [ test "\"Approved\" → Just DecisionApproved" <|
+            \_ ->
+                WorkflowInstance.decisionFromString "Approved"
+                    |> Expect.equal (Just DecisionApproved)
+        , test "\"Rejected\" → Just DecisionRejected" <|
+            \_ ->
+                WorkflowInstance.decisionFromString "Rejected"
+                    |> Expect.equal (Just DecisionRejected)
+        , test "\"RequestChanges\" → Just DecisionRequestChanges" <|
+            \_ ->
+                WorkflowInstance.decisionFromString "RequestChanges"
+                    |> Expect.equal (Just DecisionRequestChanges)
+        , test "未知の文字列 → Nothing" <|
+            \_ ->
+                WorkflowInstance.decisionFromString "Unknown"
+                    |> Expect.equal Nothing
+        , test "decisionToString >> decisionFromString の往復" <|
+            \_ ->
+                [ DecisionApproved, DecisionRejected, DecisionRequestChanges ]
+                    |> List.map (\d -> WorkflowInstance.decisionToString d |> WorkflowInstance.decisionFromString)
+                    |> Expect.equal
+                        [ Just DecisionApproved
+                        , Just DecisionRejected
+                        , Just DecisionRequestChanges
+                        ]
         ]
 
 
@@ -339,6 +414,7 @@ decoderTests =
                 , decodeStatus "Approved"
                 , decodeStatus "Rejected"
                 , decodeStatus "Cancelled"
+                , decodeStatus "ChangesRequested"
                 ]
                     |> Expect.equal
                         [ Ok Draft
@@ -347,6 +423,7 @@ decoderTests =
                         , Ok Approved
                         , Ok Rejected
                         , Ok Cancelled
+                        , Ok ChangesRequested
                         ]
         , test "未知のステータスはエラー" <|
             \_ ->

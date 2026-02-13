@@ -5,7 +5,9 @@ module Data.WorkflowInstance exposing
     , WorkflowInstance
     , WorkflowInstanceId
     , WorkflowStep
+    , decisionFromString
     , decisionToJapanese
+    , decisionToString
     , decoder
     , listDecoder
     , statusFromString
@@ -77,11 +79,12 @@ type StepStatus
     | StepSkipped
 
 
-{-| 承認/却下の判定結果
+{-| 承認/却下/差し戻しの判定結果
 -}
 type Decision
     = DecisionApproved
     | DecisionRejected
+    | DecisionRequestChanges
 
 
 {-| ワークフローのステータス
@@ -97,6 +100,7 @@ type Status
     | Approved
     | Rejected
     | Cancelled
+    | ChangesRequested
 
 
 {-| ワークフローインスタンス
@@ -149,6 +153,9 @@ statusToString status =
         Cancelled ->
             "Cancelled"
 
+        ChangesRequested ->
+            "ChangesRequested"
+
 
 {-| 文字列からステータスに変換
 -}
@@ -172,6 +179,9 @@ statusFromString str =
 
         "Cancelled" ->
             Just Cancelled
+
+        "ChangesRequested" ->
+            Just ChangesRequested
 
         _ ->
             Nothing
@@ -200,6 +210,9 @@ statusToJapanese status =
         Cancelled ->
             "キャンセル"
 
+        ChangesRequested ->
+            "差し戻し"
+
 
 {-| ステータスを Tailwind CSS クラスに変換（バッジスタイリング用）
 -}
@@ -223,6 +236,9 @@ statusToCssClass status =
 
         Cancelled ->
             "bg-secondary-100 text-secondary-500"
+
+        ChangesRequested ->
+            "bg-warning-50 text-warning-600"
 
 
 {-| ステップステータスを Tailwind CSS クラスに変換（バッジスタイリング用）
@@ -261,6 +277,39 @@ stepStatusToJapanese status =
             "スキップ"
 
 
+{-| 判定結果を文字列に変換
+-}
+decisionToString : Decision -> String
+decisionToString decision =
+    case decision of
+        DecisionApproved ->
+            "Approved"
+
+        DecisionRejected ->
+            "Rejected"
+
+        DecisionRequestChanges ->
+            "RequestChanges"
+
+
+{-| 文字列から判定結果に変換
+-}
+decisionFromString : String -> Maybe Decision
+decisionFromString str =
+    case str of
+        "Approved" ->
+            Just DecisionApproved
+
+        "Rejected" ->
+            Just DecisionRejected
+
+        "RequestChanges" ->
+            Just DecisionRequestChanges
+
+        _ ->
+            Nothing
+
+
 {-| 判定結果を日本語に変換
 -}
 decisionToJapanese : Decision -> String
@@ -271,6 +320,9 @@ decisionToJapanese decision =
 
         DecisionRejected ->
             "却下"
+
+        DecisionRequestChanges ->
+            "差し戻し"
 
 
 
@@ -325,14 +377,11 @@ decisionDecoder =
     Decode.string
         |> Decode.andThen
             (\str ->
-                case str of
-                    "Approved" ->
-                        Decode.succeed DecisionApproved
+                case decisionFromString str of
+                    Just decision ->
+                        Decode.succeed decision
 
-                    "Rejected" ->
-                        Decode.succeed DecisionRejected
-
-                    _ ->
+                    Nothing ->
                         Decode.fail ("Unknown decision: " ++ str)
             )
 

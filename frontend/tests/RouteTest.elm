@@ -114,6 +114,11 @@ fromUrlTests =
                     parseUrlWithQuery "/workflows" "status=approved&completed_today=true"
                         |> Expect.equal
                             (Workflows { status = Just Approved, completedToday = True })
+            , test "/workflows?status=changes_requested → ChangesRequested フィルタ" <|
+                \_ ->
+                    parseUrlWithQuery "/workflows" "status=changes_requested"
+                        |> Expect.equal
+                            (Workflows { status = Just ChangesRequested, completedToday = False })
             , test "/workflows?status=invalid → 無効値は無視" <|
                 \_ ->
                     parseUrlWithQuery "/workflows" "status=invalid"
@@ -196,6 +201,10 @@ toStringTests =
                 \_ ->
                     Route.toString (Workflows { status = Just InProgress, completedToday = False })
                         |> Expect.equal "/workflows?status=in_progress"
+            , test "status=ChangesRequested → /workflows?status=changes_requested" <|
+                \_ ->
+                    Route.toString (Workflows { status = Just ChangesRequested, completedToday = False })
+                        |> Expect.equal "/workflows?status=changes_requested"
             , test "completedToday=True → /workflows?completed_today=true" <|
                 \_ ->
                     Route.toString (Workflows { status = Nothing, completedToday = True })

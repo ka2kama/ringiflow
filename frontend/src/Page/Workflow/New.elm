@@ -72,8 +72,8 @@ type alias Model =
     , formValues : Dict String String
     , validationErrors : Dict String String
 
-    -- 承認者選択
-    , approver : ApproverSelector.State
+    -- 承認者選択（キー: ステップ ID）
+    , approvers : Dict String ApproverSelector.State
 
     -- 保存状態
     , savedWorkflow : Maybe WorkflowInstance
@@ -108,7 +108,7 @@ init shared =
       , title = ""
       , formValues = Dict.empty
       , validationErrors = Dict.empty
-      , approver = ApproverSelector.init
+      , approvers = Dict.empty
       , savedWorkflow = Nothing
       , saveMessage = Nothing
       , submitting = False
@@ -206,17 +206,17 @@ type Msg
       -- フォーム入力
     | UpdateTitle String
     | UpdateField String String
-      -- 承認者選択
-    | UpdateApproverSearch String
-    | SelectApprover UserItem
-    | ClearApprover
-    | ApproverKeyDown String
-    | CloseApproverDropdown
+      -- 承認者選択（第1引数: ステップ ID）
+    | UpdateApproverSearch String String
+    | SelectApprover String UserItem
+    | ClearApprover String
+    | ApproverKeyDown String String
+    | CloseApproverDropdown String
       -- 保存・申請
     | SaveDraft
     | GotSaveResult (Result ApiError WorkflowInstance)
     | Submit
-    | GotSaveAndSubmitResult String (Result ApiError WorkflowInstance)
+    | GotSaveAndSubmitResult (List WorkflowApi.StepApproverRequest) (Result ApiError WorkflowInstance)
     | GotSubmitResult (Result ApiError WorkflowInstance)
       -- メッセージクリア
     | ClearMessage
@@ -255,11 +255,27 @@ update msg model =
             let
                 ( dirtyModel, dirtyCmd ) =
                     markDirty model
+
+                approverStates =
+                    case model.definitions of
+                        Success definitions ->
+                            case getSelectedDefinition (Just definitionId) definitions of
+                                Just def ->
+                                    WorkflowDefinition.approvalStepInfos def
+                                        |> List.map (\info -> ( info.id, ApproverSelector.init ))
+                                        |> Dict.fromList
+
+                                Nothing ->
+                                    Dict.empty
+
+                        _ ->
+                            Dict.empty
             in
             ( { dirtyModel
                 | selectedDefinitionId = Just definitionId
                 , formValues = Dict.empty
                 , validationErrors = Dict.empty
+                , approvers = approverStates
               }
             , dirtyCmd
             )
@@ -282,61 +298,63 @@ update msg model =
             , dirtyCmd
             )
 
-        UpdateApproverSearch query ->
-            let
-                approver =
-                    model.approver
-            in
+        UpdateApproverSearch stepId query ->
             ( { model
-                | approver =
-                    { approver
-                        | search = query
-                        , dropdownOpen = not (String.isEmpty (String.trim query))
-                        , highlightIndex = 0
-                    }
+                | approvers =
+                    updateApproverState stepId
+                        (\s ->
+                            { s
+                                | search = query
+                                , dropdownOpen = not (String.isEmpty (String.trim query))
+                                , highlightIndex = 0
+                            }
+                        )
+                        model.approvers
               }
             , Cmd.none
             )
 
-        SelectApprover user ->
+        SelectApprover stepId user ->
             let
                 ( dirtyModel, dirtyCmd ) =
                     markDirty model
-
-                approver =
-                    dirtyModel.approver
             in
             ( { dirtyModel
-                | approver =
-                    { approver
-                        | selection = Selected user
-                        , search = ""
-                        , dropdownOpen = False
-                        , highlightIndex = 0
-                    }
-                , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
+                | approvers =
+                    updateApproverState stepId
+                        (\s ->
+                            { s
+                                | selection = Selected user
+                                , search = ""
+                                , dropdownOpen = False
+                                , highlightIndex = 0
+                            }
+                        )
+                        dirtyModel.approvers
+                , validationErrors = Dict.remove ("approver_" ++ stepId) dirtyModel.validationErrors
               }
             , dirtyCmd
             )
 
-        ClearApprover ->
+        ClearApprover stepId ->
             let
                 ( dirtyModel, dirtyCmd ) =
                     markDirty model
             in
-            ( { dirtyModel | approver = ApproverSelector.init }
+            ( { dirtyModel | approvers = Dict.insert stepId ApproverSelector.init dirtyModel.approvers }
             , dirtyCmd
             )
 
-        ApproverKeyDown key ->
-            handleApproverKeyDown key model
+        ApproverKeyDown stepId key ->
+            handleApproverKeyDown stepId key model
 
-        CloseApproverDropdown ->
-            let
-                approver =
-                    model.approver
-            in
-            ( { model | approver = { approver | dropdownOpen = False } }
+        CloseApproverDropdown stepId ->
+            ( { model
+                | approvers =
+                    updateApproverState stepId
+                        (\s -> { s | dropdownOpen = False })
+                        model.approvers
+              }
             , Cmd.none
             )
 
@@ -397,16 +415,16 @@ update msg model =
                     validateFormWithApprover model
             in
             if Dict.isEmpty validationErrors then
-                case ( model.approver.selection, model.savedWorkflow ) of
-                    ( Selected approver, Just workflow ) ->
+                let
+                    approvers =
+                        buildApprovers model
+                in
+                case model.savedWorkflow of
+                    Just workflow ->
                         -- 既に下書き保存済みならそのまま申請
-                        -- データは永続化済みなので dirty をクリア
                         let
                             ( cleanModel, cleanCmd ) =
                                 clearDirty model
-
-                            approvers =
-                                buildApprovers cleanModel approver.id
                         in
                         ( { cleanModel
                             | submitting = True
@@ -418,7 +436,7 @@ update msg model =
                             ]
                         )
 
-                    ( Selected approver, Nothing ) ->
+                    Nothing ->
                         -- 未保存の場合、まず保存してから申請
                         case model.selectedDefinitionId of
                             Just definitionId ->
@@ -430,7 +448,7 @@ update msg model =
                                     definitionId
                                     model.title
                                     model.formValues
-                                    approver.id
+                                    approvers
                                 )
 
                             Nothing ->
@@ -440,10 +458,6 @@ update msg model =
                                 , Cmd.none
                                 )
 
-                    ( NotSelected, _ ) ->
-                        -- バリデーションで弾かれるはずだが念のため
-                        ( model, Cmd.none )
-
             else
                 ( { model
                     | validationErrors = validationErrors
@@ -452,16 +466,13 @@ update msg model =
                 , Cmd.none
                 )
 
-        GotSaveAndSubmitResult approverInput result ->
+        GotSaveAndSubmitResult approvers result ->
             case result of
                 Ok workflow ->
                     -- 保存成功 → 続けて申請（データは永続化済みなので dirty リセット）
                     let
                         ( cleanModel, cleanCmd ) =
                             clearDirty model
-
-                        approvers =
-                            buildApprovers cleanModel approverInput
                     in
                     ( { cleanModel | savedWorkflow = Just workflow }
                     , Cmd.batch
@@ -555,73 +566,89 @@ validateFormWithApprover model =
             validateForm model
 
         approverErrors =
-            case model.approver.selection of
-                NotSelected ->
-                    Dict.singleton "approver" "承認者を選択してください"
+            model.approvers
+                |> Dict.toList
+                |> List.filterMap
+                    (\( stepId, state ) ->
+                        case state.selection of
+                            NotSelected ->
+                                Just ( "approver_" ++ stepId, "承認者を選択してください" )
 
-                Selected _ ->
-                    Dict.empty
+                            Selected _ ->
+                                Nothing
+                    )
+                |> Dict.fromList
     in
     Dict.union formErrors approverErrors
 
 
 {-| 承認者検索のキーボードイベントを処理
 -}
-handleApproverKeyDown : String -> Model -> ( Model, Cmd Msg )
-handleApproverKeyDown key model =
-    let
-        candidates =
-            case model.users of
-                Success users ->
-                    UserItem.filterUsers model.approver.search users
+handleApproverKeyDown : String -> String -> Model -> ( Model, Cmd Msg )
+handleApproverKeyDown stepId key model =
+    case Dict.get stepId model.approvers of
+        Just state ->
+            let
+                candidates =
+                    case model.users of
+                        Success users ->
+                            UserItem.filterUsers state.search users
 
-                _ ->
-                    []
+                        _ ->
+                            []
 
-        result =
-            ApproverSelector.handleKeyDown
-                { key = key
-                , candidates = candidates
-                , highlightIndex = model.approver.highlightIndex
-                }
+                result =
+                    ApproverSelector.handleKeyDown
+                        { key = key
+                        , candidates = candidates
+                        , highlightIndex = state.highlightIndex
+                        }
+            in
+            case result of
+                ApproverSelector.NoChange ->
+                    ( model, Cmd.none )
 
-        approver =
-            model.approver
-    in
-    case result of
-        ApproverSelector.NoChange ->
+                ApproverSelector.Navigate newIndex ->
+                    ( { model | approvers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) model.approvers }
+                    , Cmd.none
+                    )
+
+                ApproverSelector.Select user ->
+                    let
+                        ( dirtyModel, dirtyCmd ) =
+                            markDirty model
+                    in
+                    ( { dirtyModel
+                        | approvers =
+                            updateApproverState stepId
+                                (\s ->
+                                    { s
+                                        | selection = Selected user
+                                        , search = ""
+                                        , dropdownOpen = False
+                                        , highlightIndex = 0
+                                    }
+                                )
+                                dirtyModel.approvers
+                        , validationErrors = Dict.remove ("approver_" ++ stepId) dirtyModel.validationErrors
+                      }
+                    , dirtyCmd
+                    )
+
+                ApproverSelector.Close ->
+                    ( { model | approvers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) model.approvers }
+                    , Cmd.none
+                    )
+
+        Nothing ->
             ( model, Cmd.none )
 
-        ApproverSelector.Navigate newIndex ->
-            ( { model | approver = { approver | highlightIndex = newIndex } }
-            , Cmd.none
-            )
 
-        ApproverSelector.Select user ->
-            let
-                ( dirtyModel, dirtyCmd ) =
-                    markDirty model
-
-                dirtyApprover =
-                    dirtyModel.approver
-            in
-            ( { dirtyModel
-                | approver =
-                    { dirtyApprover
-                        | selection = Selected user
-                        , search = ""
-                        , dropdownOpen = False
-                        , highlightIndex = 0
-                    }
-                , validationErrors = Dict.remove "approver" dirtyModel.validationErrors
-              }
-            , dirtyCmd
-            )
-
-        ApproverSelector.Close ->
-            ( { model | approver = { approver | dropdownOpen = False } }
-            , Cmd.none
-            )
+{-| ApproverSelector.State を更新するヘルパー
+-}
+updateApproverState : String -> (ApproverSelector.State -> ApproverSelector.State) -> Dict String ApproverSelector.State -> Dict String ApproverSelector.State
+updateApproverState stepId updater dict =
+    Dict.update stepId (Maybe.map updater) dict
 
 
 {-| 選択されたワークフロー定義を取得
@@ -632,32 +659,21 @@ getSelectedDefinition maybeId definitions =
         |> Maybe.andThen (\defId -> List.Extra.find (\d -> d.id == defId) definitions)
 
 
-{-| 選択された定義の承認ステップ ID と承認者を組み合わせて承認者リストを構築する
-
-制約: 現在の UI は単一承認者選択のみ対応。全承認ステップに同一承認者を割り当てる。
-2段階以上の承認定義が選択された場合、同一人物が全ステップの承認者になる。
-TODO: Story #478 で各ステップごとに承認者を選択できる UI に対応する。
-
+{-| 各ステップの承認者選択から承認者リストを構築する
 -}
-buildApprovers : Model -> String -> List WorkflowApi.StepApproverRequest
-buildApprovers model approverId =
-    case RemoteData.toMaybe model.definitions of
-        Just definitions ->
-            case getSelectedDefinition model.selectedDefinitionId definitions of
-                Just def ->
-                    WorkflowDefinition.approvalStepIds def
-                        |> List.map
-                            (\stepId ->
-                                { stepId = stepId
-                                , assignedTo = String.trim approverId
-                                }
-                            )
+buildApprovers : Model -> List WorkflowApi.StepApproverRequest
+buildApprovers model =
+    model.approvers
+        |> Dict.toList
+        |> List.filterMap
+            (\( stepId, state ) ->
+                case state.selection of
+                    Selected user ->
+                        Just { stepId = stepId, assignedTo = user.id }
 
-                Nothing ->
-                    []
-
-        Nothing ->
-            []
+                    NotSelected ->
+                        Nothing
+            )
 
 
 {-| 下書き保存 API を呼び出す
@@ -705,8 +721,8 @@ MVP では保存結果を GotSaveResult で受け取り、そこから申請を�
 将来的には Task.andThen パターンで連結する方がエレガント。
 
 -}
-saveAndSubmit : Shared -> String -> String -> Dict String String -> String -> Cmd Msg
-saveAndSubmit shared definitionId title formValues approverInput =
+saveAndSubmit : Shared -> String -> String -> Dict String String -> List WorkflowApi.StepApproverRequest -> Cmd Msg
+saveAndSubmit shared definitionId title formValues approvers =
     -- MVP では簡略化: 保存のみ行い、保存成功後にユーザーが再度申請ボタンを押す
     -- 理由: Elm で Cmd のチェーンは Task 変換が必要で複雑になるため
     -- TODO: 将来的には保存→申請の連続処理を実装
@@ -717,7 +733,7 @@ saveAndSubmit shared definitionId title formValues approverInput =
             , title = title
             , formData = encodeFormValues formValues
             }
-        , toMsg = GotSaveAndSubmitResult approverInput
+        , toMsg = GotSaveAndSubmitResult approvers
         }
 
 
@@ -913,7 +929,7 @@ viewFormInputs model definition =
         , viewDynamicFormFields definition model
 
         -- Step 3: 承認者選択
-        , viewApproverSection model
+        , viewApproverSection definition model
 
         -- アクションボタン
         , viewActions model
@@ -921,30 +937,49 @@ viewFormInputs model definition =
 
 
 {-| 承認者選択セクション
+
+各承認ステップごとに承認者を選択する UI を表示する。
+ステップ情報は WorkflowDefinition から取得する。
+
 -}
-viewApproverSection : Model -> Html Msg
-viewApproverSection model =
+viewApproverSection : WorkflowDefinition -> Model -> Html Msg
+viewApproverSection definition model =
+    let
+        stepInfos =
+            WorkflowDefinition.approvalStepInfos definition
+    in
     div []
         [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 3: 承認者選択" ]
-        , div [ class "mb-6" ]
-            [ label
-                [ for "approver-search"
-                , class "block mb-2 font-medium"
-                ]
-                [ text "承認者"
-                , span [ class "text-error-600" ] [ text " *" ]
-                ]
-            , ApproverSelector.view
-                { state = model.approver
-                , users = model.users
-                , validationError = Dict.get "approver" model.validationErrors
-                , onSearch = UpdateApproverSearch
-                , onSelect = SelectApprover
-                , onClear = ClearApprover
-                , onKeyDown = ApproverKeyDown
-                , onCloseDropdown = CloseApproverDropdown
-                }
+        , div [ class "flex flex-col gap-4" ]
+            (List.map (viewApproverStep model) stepInfos)
+        ]
+
+
+{-| 承認ステップごとの承認者選択
+-}
+viewApproverStep : Model -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
+viewApproverStep model stepInfo =
+    let
+        state =
+            Dict.get stepInfo.id model.approvers
+                |> Maybe.withDefault ApproverSelector.init
+    in
+    div [ class "mb-2" ]
+        [ label
+            [ class "block mb-2 font-medium" ]
+            [ text stepInfo.name
+            , span [ class "text-error-600" ] [ text " *" ]
             ]
+        , ApproverSelector.view
+            { state = state
+            , users = model.users
+            , validationError = Dict.get ("approver_" ++ stepInfo.id) model.validationErrors
+            , onSearch = UpdateApproverSearch stepInfo.id
+            , onSelect = SelectApprover stepInfo.id
+            , onClear = ClearApprover stepInfo.id
+            , onKeyDown = ApproverKeyDown stepInfo.id
+            , onCloseDropdown = CloseApproverDropdown stepInfo.id
+            }
         ]
 
 

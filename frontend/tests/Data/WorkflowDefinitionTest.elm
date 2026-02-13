@@ -6,6 +6,7 @@ module Data.WorkflowDefinitionTest exposing (suite)
 import Data.WorkflowDefinition as WorkflowDefinition
 import Expect
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Test exposing (..)
 
 
@@ -14,6 +15,7 @@ suite =
     describe "Data.WorkflowDefinition"
         [ decoderTests
         , listDecoderTests
+        , approvalStepInfosTests
         ]
 
 
@@ -179,3 +181,99 @@ listDecoderTests =
                 Decode.decodeString WorkflowDefinition.listDecoder json
                     |> Expect.err
         ]
+
+
+
+-- approvalStepInfos
+
+
+approvalStepInfosTests : Test
+approvalStepInfosTests =
+    describe "approvalStepInfos"
+        [ test "複数の承認ステップから id と name を抽出" <|
+            \_ ->
+                let
+                    definition =
+                        makeDefinition
+                            (Encode.object
+                                [ ( "steps"
+                                  , Encode.list identity
+                                        [ Encode.object
+                                            [ ( "id", Encode.string "step-1" )
+                                            , ( "name", Encode.string "部長承認" )
+                                            , ( "type", Encode.string "approval" )
+                                            ]
+                                        , Encode.object
+                                            [ ( "id", Encode.string "step-2" )
+                                            , ( "name", Encode.string "経理承認" )
+                                            , ( "type", Encode.string "approval" )
+                                            ]
+                                        ]
+                                  )
+                                ]
+                            )
+                in
+                WorkflowDefinition.approvalStepInfos definition
+                    |> List.map (\info -> ( info.id, info.name ))
+                    |> Expect.equal
+                        [ ( "step-1", "部長承認" )
+                        , ( "step-2", "経理承認" )
+                        ]
+        , test "承認ステップが空の場合は空リスト" <|
+            \_ ->
+                let
+                    definition =
+                        makeDefinition
+                            (Encode.object
+                                [ ( "steps", Encode.list identity [] ) ]
+                            )
+                in
+                WorkflowDefinition.approvalStepInfos definition
+                    |> Expect.equal []
+        , test "approval 以外のステップは除外" <|
+            \_ ->
+                let
+                    definition =
+                        makeDefinition
+                            (Encode.object
+                                [ ( "steps"
+                                  , Encode.list identity
+                                        [ Encode.object
+                                            [ ( "id", Encode.string "step-1" )
+                                            , ( "name", Encode.string "部長承認" )
+                                            , ( "type", Encode.string "approval" )
+                                            ]
+                                        , Encode.object
+                                            [ ( "id", Encode.string "step-notify" )
+                                            , ( "name", Encode.string "通知" )
+                                            , ( "type", Encode.string "notification" )
+                                            ]
+                                        ]
+                                  )
+                                ]
+                            )
+                in
+                WorkflowDefinition.approvalStepInfos definition
+                    |> List.map .id
+                    |> Expect.equal [ "step-1" ]
+        ]
+
+
+
+-- Helpers
+
+
+{-| テスト用の WorkflowDefinition を構築するヘルパー
+-}
+makeDefinition : Encode.Value -> WorkflowDefinition.WorkflowDefinition
+makeDefinition def =
+    { id = "def-001"
+    , name = "テスト定義"
+    , description = Nothing
+    , version = 1
+    , definition = def
+    , status = "active"
+    , createdBy = "user-001"
+    , createdAt = "2026-01-01T00:00:00Z"
+    , updatedAt = "2026-01-01T00:00:00Z"
+    }
