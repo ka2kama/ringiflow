@@ -162,6 +162,7 @@ CI 検証:
 - [ ] sccache-action の設定方法（環境変数、キャッシュキー）→ 公式 README
 - [ ] actions/cache から target/ を除外した場合の影響 → sccache がカバーするか確認
 - [ ] security ジョブの CARGO_BUILD_RUSTC_WRAPPER 設定の理由 → cargo-deny の Docker コンテナとの関係
+- [x] sccache-action の間接依存（内部で呼び出す Action）の有無 → action.yml 確認済み、間接依存なし（自己完結型 Node.js アクション）
 
 #### 変更内容
 
