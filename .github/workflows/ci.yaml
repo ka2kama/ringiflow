@@ -173,10 +173,6 @@ jobs:
           echo "✓ OpenAPI spec is in sync"
         working-directory: backend
 
-      - name: Verify production build (no dev features)
-        # 本番ビルド（dev-auth feature 除外）がコンパイルできることを検証
-        run: cargo build --release --no-default-features --bin ringiflow-bff
-        working-directory: backend
 
   # Rust 統合テスト: PostgreSQL / Redis を使用するテスト
   rust-integration:
@@ -456,8 +452,8 @@ jobs:
       - name: Reset database
         run: just api-test-reset-db
 
-      - name: Build services
-        run: cargo build --release
+      - name: Build services (production config, no dev features)
+        run: cargo build --release --no-default-features
         working-directory: backend
 
       - name: Run API tests
@@ -565,8 +561,8 @@ jobs:
       - name: Reset database
         run: just api-test-reset-db
 
-      - name: Build backend services
-        run: cargo build --release
+      - name: Build backend services (production config, no dev features)
+        run: cargo build --release --no-default-features
         working-directory: backend
 
       - name: Install frontend dependencies
