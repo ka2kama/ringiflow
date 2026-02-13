@@ -23,6 +23,7 @@
       "Bash(gh *)",
       "Bash(gh issue create:*)",
       "Bash(gh issue edit:*)",
+      "Bash(gh issue view:*)",
       "Bash(gh pr create --draft:*)",
       "Bash(gh pr edit:*)",
       "Bash(terraform *)",
