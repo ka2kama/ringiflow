@@ -1,3 +1,4 @@
+# CI trigger: verify cargo-binstall and sccache integration
 [workspace]
 resolver = "2"
 members = [
