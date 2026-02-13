@@ -122,13 +122,12 @@ CI の安定性を優先する。
 - name: Install sqlx-cli
   run: |
     if ! command -v sqlx &> /dev/null; then
-      cargo binstall sqlx-cli --locked --no-confirm --no-default-features --features rustls,postgres
+      cargo binstall sqlx-cli --locked --no-confirm
     fi
 ```
 
-注: cargo-binstall の `--no-default-features --features` は `cargo install` と同じ構文で対応。
-ただし、binstall はバイナリ配布を探す際に features を考慮するが、
-プリビルドバイナリがない場合は `cargo install` にフォールバックする（デフォルト動作）。
+注: cargo-binstall は `--no-default-features --features` フラグをサポートしていない（実装時に判明）。
+プリビルドバイナリは全機能を含むため、features 指定なしで問題ない。
 
 #### テストリスト
 
@@ -247,6 +246,7 @@ actions/cache + Cargo.lock ハッシュ方式との比較:
 | 1回目 | security ジョブの `CARGO_BUILD_RUSTC_WRAPPER` は cargo-deny の Docker コンテナ内で sccache が存在しないため必要 → 変更対象外にすべき | アーキテクチャ不整合 | security ジョブを Phase 2 の変更対象から除外 |
 | 2回目 | `--release` 除去は OpenAPI 生成・production build と連動するため、テストだけ dev にすると2プロファイルのコンパイルが発生し逆効果の可能性 | 既存手段の見落とし | `--release` 除去はスコープ外（別途ベンチマーク後に判断）として明記 |
 | 3回目 | cargo-binstall の `--no-default-features --features` がバイナリインストール時にどう扱われるか不明 | 曖昧 | binstall はプリビルドバイナリがない場合 cargo install にフォールバックする旨を記載。実装時に公式ドキュメントで確認 |
+| 4回目 | cargo-binstall は `--no-default-features --features` フラグをサポートしていない（実装時に Auto Review で判明） | 技術的前提 | Phase 1 の sqlx-cli コマンドから features 指定を削除。プリビルドバイナリは全機能を含むため影響なし |
 
 ## 収束確認（設計・計画）
 
