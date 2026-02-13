@@ -52,7 +52,7 @@ jobs:
         with:
           context: backend
           file: backend/Dockerfile
-          build-args: CARGO_FEATURES=""
+          build-args: CARGO_FEATURES=
           push: true
           tags: ${{ env.BACKEND_IMAGE }}:latest
           cache-from: type=gha,scope=backend
