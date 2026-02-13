@@ -133,10 +133,10 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 
 | チェック | 手法 | 基準 |
 |---------|------|------|
-| 改善記録（月次） | Glob `prompts/improvements/YYYY-MM/` のファイル数 | 直近 2 ヶ月の推移 |
-| セッションログ（月次） | Glob `prompts/runs/YYYY-MM/` のファイル数 | 直近 2 ヶ月の推移 |
+| 改善記録 | Glob `prompts/improvements/YYYY-MM/` のファイル数 | 前回診断時点との差分 |
+| セッションログ | Glob `prompts/runs/YYYY-MM/` のファイル数 | 前回診断時点との差分 |
 
-`YYYY-MM` は現在の年月と前月を対象とする。
+比較基準: 前回の診断レポート（`prompts/reports/` の直近ファイル）の値と比較する。初回実行時は月次累計のみ報告する。
 
 ---
 
@@ -216,8 +216,8 @@ Step 1-3 の診断結果に対し、以下の観点でセルフレビューを�
 - API テストファイル数: N 件
 
 #### プロセス
-- 改善記録（今月/先月）: N 件 / M 件
-- セッションログ（今月/先月）: N 件 / M 件
+- 改善記録: N 件（前回比 +X）
+- セッションログ: N 件（前回比 +X）
 
 ---
 
