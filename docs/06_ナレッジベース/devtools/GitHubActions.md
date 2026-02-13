@@ -69,6 +69,7 @@ CI が「action not allowed」エラーで失敗した場合:
 | `extractions/setup-crate@*` | setup-just の間接依存 |
 | `pnpm/action-setup@*` | pnpm パッケージマネージャ |
 | `EmbarkStudios/cargo-deny-action@*` | 依存関係セキュリティスキャン |
+| `mozilla-actions/sccache-action@*` | Rust コンパイルキャッシュ |
 | `docker/setup-buildx-action@*` | Docker Buildx セットアップ（デモデプロイ） |
 | `docker/login-action@*` | Docker レジストリ認証（デモデプロイ） |
 | `docker/build-push-action@*` | Docker イメージのビルド・プッシュ（デモデプロイ） |
@@ -306,6 +307,7 @@ Bot アカウント（例: `claude[bot]`）で複数のワークフローから�
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-13 | sccache-action を許可設定テーブルに追加（#447） |
 | 2026-02-10 | PR レビューシステムの制約セクションを追加（#390） |
 | 2026-01-18 | workflow_run イベントセクションを追加 |
 | 2026-01-15 | 初版作成（アクション許可設定） |
