@@ -71,14 +71,14 @@ CI の安定性を優先する。
 
 ## Phase 1: cargo-binstall の導入
 
-### 確認事項
+#### 確認事項
 
 - [ ] cargo-binstall インストールスクリプトの URL と使い方 → 公式 README
 - [ ] cargo-machete のバイナリ配布有無 → crates.io / GitHub releases
 - [ ] sqlx-cli のバイナリ配布有無 → crates.io / GitHub releases
 - [ ] sqlx-cli の features 指定が binstall でサポートされるか → cargo-binstall ドキュメント
 
-### 変更内容
+#### 変更内容
 
 **rust ジョブ（cargo-machete）:**
 
@@ -130,7 +130,7 @@ CI の安定性を優先する。
 ただし、binstall はバイナリ配布を探す際に features を考慮するが、
 プリビルドバイナリがない場合は `cargo install` にフォールバックする（デフォルト動作）。
 
-### テストリスト
+#### テストリスト
 
 ユニットテスト: 該当なし（CI ワークフローの変更）
 
@@ -146,7 +146,7 @@ CI 検証:
 - [ ] api-test ジョブで sqlx-cli が正常にインストールされること
 - [ ] e2e-test ジョブで sqlx-cli が正常にインストールされること
 
-### 期待効果
+#### 期待効果
 
 | ジョブ | ツール | Before | After | 削減 |
 |-------|--------|--------|-------|------|
@@ -157,14 +157,14 @@ CI 検証:
 
 ## Phase 2: sccache の CI 有効化
 
-### 確認事項
+#### 確認事項
 
 - [ ] mozilla-actions/sccache-action の最新バージョン → GitHub releases
 - [ ] sccache-action の設定方法（環境変数、キャッシュキー）→ 公式 README
 - [ ] actions/cache から target/ を除外した場合の影響 → sccache がカバーするか確認
 - [ ] security ジョブの CARGO_BUILD_RUSTC_WRAPPER 設定の理由 → cargo-deny の Docker コンテナとの関係
 
-### 変更内容
+#### 変更内容
 
 **全 Rust ジョブ（rust, rust-integration, api-test, e2e-test）に共通:**
 
@@ -204,7 +204,7 @@ CI 検証:
 | `mozilla-actions/sccache-action@*` | Rust コンパイルキャッシュ |
 ```
 
-### テストリスト
+#### テストリスト
 
 ユニットテスト: 該当なし
 
@@ -221,7 +221,7 @@ CI 検証:
 - [ ] e2e-test ジョブで sccache が有効化され、テストが通ること
 - [ ] sccache のキャッシュヒット統計が出力されること（sccache --show-stats）
 
-### 期待効果
+#### 期待効果
 
 sccache は初回実行時にキャッシュを構築し、2回目以降で効果を発揮する。
 
