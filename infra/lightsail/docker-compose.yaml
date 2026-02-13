@@ -52,6 +52,8 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       # 本番環境設定（Secure cookie を有効化）
       ENV: production
+      # DynamoDB 接続（監査ログ）
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
       # デモ環境では DevAuth を有効化（BFF 起動時に開発用セッションを自動作成）
       DEV_AUTH_ENABLED: "true"
     healthcheck:
@@ -66,6 +68,8 @@ services:
       auth-service:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      dynamodb:
         condition: service_healthy
     networks:
       - frontend
@@ -165,6 +169,23 @@ services:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # ==========================================================
+  # DynamoDB Local（監査ログ）
+  # ==========================================================
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: ringiflow-dynamodb
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
