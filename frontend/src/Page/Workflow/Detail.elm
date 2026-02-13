@@ -39,7 +39,7 @@ import Component.ConfirmDialog as ConfirmDialog
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.FormField exposing (FormField)
-import Data.UserItem exposing (UserItem)
+import Data.UserItem as UserItem exposing (UserItem)
 import Data.WorkflowComment exposing (WorkflowComment)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, WorkflowStep)
@@ -468,7 +468,7 @@ update msg model =
                     let
                         candidates =
                             RemoteData.withDefault [] model.users
-                                |> filterUsers state.search
+                                |> UserItem.filterUsers state.search
 
                         result =
                             ApproverSelector.handleKeyDown
@@ -614,21 +614,6 @@ handleApprovalResult successMsg result model =
 updateApproverState : String -> (ApproverSelector.State -> ApproverSelector.State) -> Dict String ApproverSelector.State -> Dict String ApproverSelector.State
 updateApproverState stepId updater dict =
     Dict.update stepId (Maybe.map updater) dict
-
-
-{-| ユーザー一覧を検索文字列でフィルタ
--}
-filterUsers : String -> List UserItem -> List UserItem
-filterUsers search users =
-    if String.isEmpty search then
-        users
-
-    else
-        let
-            lowerSearch =
-                String.toLower search
-        in
-        List.filter (\u -> String.contains lowerSearch (String.toLower u.name)) users
 
 
 {-| 再提出のバリデーション
@@ -799,13 +784,17 @@ viewStepProgress workflow =
     else
         div [ class "rounded-lg border border-secondary-100 p-4" ]
             [ h2 [ class "mb-3 text-sm font-semibold text-secondary-700" ] [ text "進行状況" ]
-            , div [ class "flex items-center gap-1" ]
+            , let
+                totalSteps =
+                    List.length workflow.steps
+              in
+              div [ class "flex items-center gap-1" ]
                 (workflow.steps
                     |> List.indexedMap
                         (\index step ->
                             let
                                 isLast =
-                                    index == List.length workflow.steps - 1
+                                    index == totalSteps - 1
                             in
                             div [ class "flex items-center gap-1 flex-1 min-w-0" ]
                                 (viewStepProgressItem step
