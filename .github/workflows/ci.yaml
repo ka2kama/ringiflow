@@ -223,7 +223,7 @@ jobs:
       - name: Install sqlx-cli
         run: |
           if ! command -v sqlx &> /dev/null; then
-            cargo binstall sqlx-cli --locked --no-confirm --no-default-features --features rustls,postgres
+            cargo binstall sqlx-cli --locked --no-confirm
           fi
 
       - name: Run migrations
@@ -408,7 +408,7 @@ jobs:
       - name: Install sqlx-cli
         run: |
           if ! command -v sqlx &> /dev/null; then
-            cargo binstall sqlx-cli --locked --no-confirm --no-default-features --features rustls,postgres
+            cargo binstall sqlx-cli --locked --no-confirm
           fi
 
       - name: Install just
@@ -517,7 +517,7 @@ jobs:
       - name: Install sqlx-cli
         run: |
           if ! command -v sqlx &> /dev/null; then
-            cargo binstall sqlx-cli --locked --no-confirm --no-default-features --features rustls,postgres
+            cargo binstall sqlx-cli --locked --no-confirm
           fi
 
       - name: Install just
