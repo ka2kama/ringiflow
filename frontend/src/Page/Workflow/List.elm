@@ -313,6 +313,7 @@ viewStatusDropdown currentFilter =
             , ( Just WorkflowInstance.InProgress, "承認中" )
             , ( Just WorkflowInstance.Approved, "承認済み" )
             , ( Just WorkflowInstance.Rejected, "却下" )
+            , ( Just WorkflowInstance.ChangesRequested, "差し戻し" )
             , ( Just WorkflowInstance.Cancelled, "キャンセル" )
             ]
 

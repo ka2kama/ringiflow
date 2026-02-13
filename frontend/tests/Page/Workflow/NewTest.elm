@@ -7,7 +7,7 @@ init → update の Model 変更を検証する。
 
 -}
 
-import Component.ApproverSelector exposing (ApproverSelection(..))
+import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowInstance exposing (Status(..))
 import Dict
@@ -89,6 +89,22 @@ testWorkflowInstance =
     }
 
 
+{-| テスト用のステップ ID
+-}
+testStepId : String
+testStepId =
+    "step-1"
+
+
+{-| 承認者ステップが1つある Model を構築するヘルパー
+-}
+modelWithStep : New.Model -> New.Model
+modelWithStep model =
+    { model
+        | approvers = Dict.singleton testStepId ApproverSelector.init
+    }
+
+
 
 -- ────────────────────────────────────
 -- SaveDraft バリデーション
@@ -151,11 +167,12 @@ submitTests =
                             | selectedDefinitionId = Just "def-001"
                             , title = "テスト申請"
                         }
+                            |> modelWithStep
 
                     sut =
                         New.update Submit model |> Tuple.first
                 in
-                Dict.member "approver" sut.validationErrors
+                Dict.member ("approver_" ++ testStepId) sut.validationErrors
                     |> Expect.equal True
         , test "タイトル空 + 承認者未選択で複数エラー" <|
             \_ ->
@@ -164,13 +181,14 @@ submitTests =
                         { initialModel
                             | selectedDefinitionId = Just "def-001"
                         }
+                            |> modelWithStep
 
                     sut =
                         New.update Submit model |> Tuple.first
                 in
                 Expect.all
                     [ \m -> Dict.member "title" m.validationErrors |> Expect.equal True
-                    , \m -> Dict.member "approver" m.validationErrors |> Expect.equal True
+                    , \m -> Dict.member ("approver_" ++ testStepId) m.validationErrors |> Expect.equal True
                     ]
                     sut
         ]
@@ -185,53 +203,60 @@ submitTests =
 approverKeyboardTests : Test
 approverKeyboardTests =
     let
-        approver =
-            initialModel.approver
+        approverState =
+            let
+                s =
+                    ApproverSelector.init
+            in
+            { s
+                | search = "山田"
+                , dropdownOpen = True
+                , highlightIndex = 0
+            }
 
         modelWithUsers =
             { initialModel
                 | users = Success [ testUser1, testUser2 ]
-                , approver =
-                    { approver
-                        | search = "山田"
-                        , dropdownOpen = True
-                        , highlightIndex = 0
-                    }
+                , approvers = Dict.singleton testStepId approverState
             }
+
+        getApproverState model =
+            Dict.get testStepId model.approvers
+                |> Maybe.withDefault ApproverSelector.init
     in
     describe "ApproverKeyDown"
         [ test "ArrowDown でインデックス増加" <|
             \_ ->
                 let
                     sut =
-                        New.update (ApproverKeyDown "ArrowDown") modelWithUsers |> Tuple.first
+                        New.update (ApproverKeyDown testStepId "ArrowDown") modelWithUsers |> Tuple.first
                 in
-                sut.approver.highlightIndex
+                (getApproverState sut).highlightIndex
                     |> Expect.equal 1
         , test "ArrowUp でインデックス循環（0 → 末尾）" <|
             \_ ->
                 let
                     sut =
-                        New.update (ApproverKeyDown "ArrowUp") modelWithUsers |> Tuple.first
+                        New.update (ApproverKeyDown testStepId "ArrowUp") modelWithUsers |> Tuple.first
                 in
                 -- index 0 → modBy 2 (0 - 1 + 2) = 1（末尾に循環）
-                sut.approver.highlightIndex
+                (getApproverState sut).highlightIndex
                     |> Expect.equal 1
         , test "Enter で候補選択" <|
             \_ ->
                 let
                     sut =
-                        New.update (ApproverKeyDown "Enter") modelWithUsers |> Tuple.first
+                        New.update (ApproverKeyDown testStepId "Enter") modelWithUsers |> Tuple.first
                 in
-                sut.approver.selection
+                (getApproverState sut).selection
                     |> Expect.equal (Selected testUser1)
         , test "Escape でドロップダウン閉じる" <|
             \_ ->
                 let
                     sut =
-                        New.update (ApproverKeyDown "Escape") modelWithUsers |> Tuple.first
+                        New.update (ApproverKeyDown testStepId "Escape") modelWithUsers |> Tuple.first
                 in
-                sut.approver.dropdownOpen
+                (getApproverState sut).dropdownOpen
                     |> Expect.equal False
         ]
 

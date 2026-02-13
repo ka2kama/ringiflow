@@ -188,6 +188,7 @@ workflowQueryParser =
                 , ( "approved", Approved )
                 , ( "rejected", Rejected )
                 , ( "cancelled", Cancelled )
+                , ( "changes_requested", ChangesRequested )
                 ]
             )
         )
@@ -340,6 +341,9 @@ statusToQueryValue status =
 
         Cancelled ->
             "cancelled"
+
+        ChangesRequested ->
+            "changes_requested"
 
 
 {-| 現在のルートがナビゲーション項目に対応するかを判定

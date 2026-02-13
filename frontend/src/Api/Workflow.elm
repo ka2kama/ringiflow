@@ -1,16 +1,24 @@
 module Api.Workflow exposing
     ( ApproveRejectRequest
     , CreateWorkflowRequest
+    , PostCommentRequest
+    , ResubmitRequest
     , StepApproverRequest
     , SubmitWorkflowRequest
     , approveStep
     , createWorkflow
     , encodeApproveRejectRequest
     , encodeCreateRequest
+    , encodePostCommentRequest
+    , encodeResubmitRequest
     , encodeSubmitRequest
     , getWorkflow
+    , listComments
     , listMyWorkflows
+    , postComment
     , rejectStep
+    , requestChangesStep
+    , resubmitWorkflow
     , submitWorkflow
     )
 
@@ -39,6 +47,7 @@ BFF の `/api/v1/workflows` エンドポイントへのアクセスを提供。
 -}
 
 import Api exposing (ApiError, RequestConfig)
+import Data.WorkflowComment as WorkflowComment exposing (WorkflowComment)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance)
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -201,6 +210,108 @@ rejectStep { config, workflowDisplayNumber, stepDisplayNumber, body, toMsg } =
         }
 
 
+{-| ステップを差し戻し
+
+`POST /api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes`
+
+指定されたステップを差し戻す。
+楽観的ロックにより、バージョン不一致の場合は 409 Conflict が返る。
+
+-}
+requestChangesStep :
+    { config : RequestConfig
+    , workflowDisplayNumber : Int
+    , stepDisplayNumber : Int
+    , body : ApproveRejectRequest
+    , toMsg : Result ApiError WorkflowInstance -> msg
+    }
+    -> Cmd msg
+requestChangesStep { config, workflowDisplayNumber, stepDisplayNumber, body, toMsg } =
+    Api.post
+        { config = config
+        , url =
+            "/api/v1/workflows/"
+                ++ String.fromInt workflowDisplayNumber
+                ++ "/steps/"
+                ++ String.fromInt stepDisplayNumber
+                ++ "/request-changes"
+        , body = Http.jsonBody (encodeApproveRejectRequest body)
+        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , toMsg = toMsg
+        }
+
+
+{-| ワークフローを再申請
+
+`POST /api/v1/workflows/{display_number}/resubmit`
+
+差し戻しされたワークフローを修正して再申請する。
+楽観的ロックにより、バージョン不一致の場合は 409 Conflict が返る。
+
+-}
+resubmitWorkflow :
+    { config : RequestConfig
+    , displayNumber : Int
+    , body : ResubmitRequest
+    , toMsg : Result ApiError WorkflowInstance -> msg
+    }
+    -> Cmd msg
+resubmitWorkflow { config, displayNumber, body, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/resubmit"
+        , body = Http.jsonBody (encodeResubmitRequest body)
+        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , toMsg = toMsg
+        }
+
+
+{-| コメント一覧を取得
+
+`GET /api/v1/workflows/{display_number}/comments`
+
+ワークフローに紐づくコメント一覧を返す。
+
+-}
+listComments :
+    { config : RequestConfig
+    , displayNumber : Int
+    , toMsg : Result ApiError (List WorkflowComment) -> msg
+    }
+    -> Cmd msg
+listComments { config, displayNumber, toMsg } =
+    Api.get
+        { config = config
+        , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/comments"
+        , decoder = WorkflowComment.listDecoder
+        , toMsg = toMsg
+        }
+
+
+{-| コメントを投稿
+
+`POST /api/v1/workflows/{display_number}/comments`
+
+ワークフローにコメントを投稿する。
+
+-}
+postComment :
+    { config : RequestConfig
+    , displayNumber : Int
+    , body : PostCommentRequest
+    , toMsg : Result ApiError WorkflowComment -> msg
+    }
+    -> Cmd msg
+postComment { config, displayNumber, body, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/comments"
+        , body = Http.jsonBody (encodePostCommentRequest body)
+        , decoder = Decode.field "data" WorkflowComment.decoder
+        , toMsg = toMsg
+        }
+
+
 
 -- REQUEST/RESPONSE TYPES
 
@@ -234,6 +345,22 @@ type alias StepApproverRequest =
 type alias ApproveRejectRequest =
     { version : Int
     , comment : Maybe String
+    }
+
+
+{-| 再申請リクエスト
+-}
+type alias ResubmitRequest =
+    { version : Int
+    , formData : Encode.Value
+    , approvers : List StepApproverRequest
+    }
+
+
+{-| コメント投稿リクエスト
+-}
+type alias PostCommentRequest =
+    { body : String
     }
 
 
@@ -280,6 +407,22 @@ encodeApproveRejectRequest req =
                     []
     in
     Encode.object (baseFields ++ commentField)
+
+
+encodeResubmitRequest : ResubmitRequest -> Encode.Value
+encodeResubmitRequest req =
+    Encode.object
+        [ ( "version", Encode.int req.version )
+        , ( "form_data", req.formData )
+        , ( "approvers", Encode.list encodeStepApproverRequest req.approvers )
+        ]
+
+
+encodePostCommentRequest : PostCommentRequest -> Encode.Value
+encodePostCommentRequest req =
+    Encode.object
+        [ ( "body", Encode.string req.body )
+        ]
 
 
 

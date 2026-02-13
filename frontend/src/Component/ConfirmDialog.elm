@@ -52,11 +52,13 @@ import Json.Decode as Decode
 {-| 確認ボタンのスタイル
 
   - Positive: 承認など前向きな操作（success-600 系）
+  - Caution: 差し戻しなど注意を要する操作（warning-600 系）
   - Destructive: 却下など破壊的な操作（error-600 系）
 
 -}
 type ActionStyle
     = Positive
+    | Caution
     | Destructive
 
 
@@ -183,6 +185,9 @@ actionStyleToVariant actionStyle =
     case actionStyle of
         Positive ->
             Button.Success
+
+        Caution ->
+            Button.Warning
 
         Destructive ->
             Button.Error

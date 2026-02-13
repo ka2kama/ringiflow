@@ -1,7 +1,8 @@
 module Data.WorkflowDefinition exposing
-    ( WorkflowDefinition
+    ( ApprovalStepInfo
+    , WorkflowDefinition
     , WorkflowDefinitionId
-    , approvalStepIds
+    , approvalStepInfos
     , decoder
     , listDecoder
     )
@@ -88,36 +89,46 @@ listDecoder =
 -- HELPERS
 
 
-{-| 定義 JSON から承認ステップの ID 一覧を抽出する
+{-| 承認ステップの情報（ID と名前のペア）
+-}
+type alias ApprovalStepInfo =
+    { id : String
+    , name : String
+    }
 
-定義 JSON の `steps` 配列から `type == "approval"` のステップ ID を順序を保って返す。
+
+{-| 定義 JSON から承認ステップの情報（ID と名前）一覧を抽出する
+
+定義 JSON の `steps` 配列から `type == "approval"` のステップの ID と名前を
+順序を保って返す。
 
 -}
-approvalStepIds : WorkflowDefinition -> List String
-approvalStepIds def =
-    case Decode.decodeValue approvalStepIdsDecoder def.definition of
-        Ok ids ->
-            ids
+approvalStepInfos : WorkflowDefinition -> List ApprovalStepInfo
+approvalStepInfos def =
+    case Decode.decodeValue approvalStepInfosDecoder def.definition of
+        Ok infos ->
+            infos
 
         Err _ ->
             []
 
 
-approvalStepIdsDecoder : Decoder (List String)
-approvalStepIdsDecoder =
-    Decode.field "steps" (Decode.list stepDecoder)
+approvalStepInfosDecoder : Decoder (List ApprovalStepInfo)
+approvalStepInfosDecoder =
+    Decode.field "steps" (Decode.list stepInfoDecoder)
         |> Decode.map (List.filterMap identity)
 
 
-stepDecoder : Decoder (Maybe String)
-stepDecoder =
-    Decode.map2
-        (\id stepType ->
+stepInfoDecoder : Decoder (Maybe ApprovalStepInfo)
+stepInfoDecoder =
+    Decode.map3
+        (\id name stepType ->
             if stepType == "approval" then
-                Just id
+                Just { id = id, name = name }
 
             else
                 Nothing
         )
         (Decode.field "id" Decode.string)
+        (Decode.field "name" Decode.string)
         (Decode.field "type" Decode.string)
