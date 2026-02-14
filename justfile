@@ -365,6 +365,24 @@ outdated:
 check-file-size:
     ./scripts/check-file-size.sh
 
+# 関数の行数閾値チェック（50 行超で警告）
+# clippy::too_many_lines を使用。閾値は backend/clippy.toml で設定。
+# 警告のみ（exit 0）: CI をブロックしない。肥大化の可視化が目的。
+check-fn-size:
+    #!/usr/bin/env bash
+    # clippy 出力から "warning + -->" のペアを抽出し、テストファイルを除外
+    output=$(cd backend && cargo clippy {{ _cargo_q }} --all-targets --all-features -- -W clippy::too_many_lines 2>&1 \
+        | grep -E "(-->|this function has too many lines)" \
+        | paste - - \
+        | grep -v "/tests/" \
+        | sed 's/\t/\n/')
+    if [ -n "$output" ]; then
+        echo "⚠ 50 行を超える関数（分割を検討してください）:"
+        echo "$output"
+    else
+        echo "✓ 50 行を超える関数はありません"
+    fi
+
 # コード重複（コピー＆ペースト）を検出（jscpd）
 # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
 # 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md

@@ -74,6 +74,7 @@
       "Bash(just redis-keys:*)",
       "Bash(just redis-get:*)",
       "Bash(just check-file-size:*)",
+      "Bash(just check-fn-size)",
       "Bash(just check-duplicates)",
       "Bash(just check-unused-deps)",
       "Bash(just openapi-generate)",
