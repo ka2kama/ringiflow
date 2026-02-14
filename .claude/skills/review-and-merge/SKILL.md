@@ -115,7 +115,7 @@ Review コメント: N 件
 
 ### Step 4: 対応（半自動）
 
-Review コメントが存在する場合、各コメントについて以下を行う:
+指摘を含むコメントが存在する場合、各コメントについて以下を行う。対象は Review コメント（inline）と PR コメント（全体フィードバック内の指摘）の両方。
 
 1. コメント内容と該当コードを表示（ファイルを読んで前後のコンテキストを含める）
 2. 修正案を提示する
@@ -149,6 +149,8 @@ APPROVED（コメントあり）の場合:
 - 対応するかどうかはユーザーの判断に委ねる
 - 対応した場合は同様にコミット・プッシュ → Step 2 に戻る
 - 対応しない場合は Step 5 へ
+
+#### Review コメント（inline）への返信
 
 対応完了後、レビューコメントに返信し、スレッドを resolve する:
 
@@ -192,6 +194,27 @@ mutation {
 
 注意: `required_review_thread_resolution` ブランチ保護ルールにより、未 resolve スレッドがあるとマージがブロックされる。返信だけでは自動 resolve されないため、明示的に resolve が必要。
 
+#### PR コメント（全体フィードバック）への返信
+
+PR コメント（issues/comments）に指摘事項が含まれる場合も、対応完了後に返信コメントを投稿する。PR コメントはスレッド構造を持たないため、元コメントの URL を含めて関連性を明示する。
+
+```bash
+# 元コメントの URL を取得（Step 3 で取得済みの html_url を使用）
+# 対応した場合
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
+  -f body="[コメント]({comment_url}) への対応: 修正しました。"
+
+# スキップした場合（理由を記載）
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
+  -f body="[コメント]({comment_url}) への対応: （スキップ理由）"
+
+# 延期した場合（Issue 番号必須）
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
+  -f body="[コメント]({comment_url}) への対応: Issue #<番号> で対応予定です。"
+```
+
+注意: PR コメントには resolve の仕組みがない。返信の有無が Step 5 の未対応検証で使用される。
+
 改善の経緯:
 - [レビュー返信の検討事項に Issue 追跡が欠如](../../../prompts/improvements/2026-02/2026-02-11_2234_レビュー返信の検討事項にIssue追跡が欠如.md)
 - Issue [#451](https://github.com/ka2kama/ringiflow/issues/451): review-and-merge でレビュースレッドの resolve 漏れ
@@ -199,6 +222,52 @@ mutation {
 ### Step 5: マージ
 
 マージ前に以下を確認する。
+
+#### 未対応レビュー指摘のゼロ検証
+
+Step 3 と同じ API で最新のレビュー状態を**再取得**し、未対応の指摘がゼロであることを検証する。セッション復元の有無に関わらず常に実行する。
+
+検証項目:
+
+| # | 対象 | 検証方法 | 合格基準 |
+|---|------|---------|---------|
+| 1 | reviewDecision | `gh pr view --json reviewDecision` | APPROVED |
+| 2 | Review threads（inline） | GraphQL `reviewThreads` の `isResolved` | 未 resolve がゼロ |
+| 3 | PR コメント（全体フィードバック） | `gh api issues/{pr_number}/comments` で claude[bot] のコメントを取得し、指摘事項を含むコメントに返信があるか確認 | 指摘を含む未返信コメントがゼロ |
+
+```bash
+# 1. reviewDecision
+gh pr view --json reviewDecision --jq '.reviewDecision'
+
+# 2. 未 resolve の review threads
+gh api graphql -f query='
+query {
+  repository(owner: "{owner}", name: "{repo}") {
+    pullRequest(number: {pr_number}) {
+      reviewThreads(first: 100) {
+        nodes { id isResolved }
+      }
+    }
+  }
+}'
+
+# 3. claude[bot] の PR コメントと全コメントを取得し、返信の有無を確認
+gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
+  --jq '[.[] | select(.user.login == "claude[bot]")]'
+```
+
+検証 #3 の判定手順:
+1. claude[bot] の PR コメントを取得する
+2. 各コメントの内容を読み、具体的な指摘事項を含むか判定する（サマリーのみのコメントは対象外）
+3. 指摘を含むコメントについて、そのコメント URL を参照する返信コメントが存在するか確認する
+4. 指摘を含む未返信のコメントがあれば、ユーザーに提示してマージを止める
+
+| 検証結果 | 対応 |
+|---------|------|
+| 全て合格 | 全チェックの pass 確認へ |
+| 未対応あり | ユーザーに未対応の指摘を提示し、Step 4 に戻る |
+
+改善の経緯: [セッション復元時のレビューコメント検証省略](../../../prompts/improvements/2026-02/2026-02-13_1148_セッション復元時のレビューコメント検証省略.md)
 
 #### 全チェックの pass 確認
 
