@@ -10,8 +10,8 @@ rules:
   # 開発環境用に localhost や example.com を許容
   no-server-example.com: off
 
-  # ヘルスチェック API には 4XX レスポンス不要
-  operation-4xx-response: warn
+  # すべてのエンドポイントに 4XX レスポンスを要求
+  operation-4xx-response: error
 
-  # 将来使用予定のコンポーネントを許容
-  no-unused-components: warn
+  # 未使用コンポーネントを禁止
+  no-unused-components: error

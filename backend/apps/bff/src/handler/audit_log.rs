@@ -24,7 +24,7 @@ use ringiflow_infra::{
    SessionManager,
    repository::audit_log_repository::{AuditLogFilter, AuditLogRepository},
 };
-use ringiflow_shared::PaginatedResponse;
+use ringiflow_shared::{ErrorResponse, PaginatedResponse};
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -83,7 +83,8 @@ pub struct AuditLogItemData {
    security(("session_auth" = [])),
    params(ListAuditLogsQuery),
    responses(
-      (status = 200, description = "監査ログ一覧", body = PaginatedResponse<AuditLogItemData>)
+      (status = 200, description = "監査ログ一覧", body = PaginatedResponse<AuditLogItemData>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn list_audit_logs(

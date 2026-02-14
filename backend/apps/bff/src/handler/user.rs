@@ -173,7 +173,8 @@ fn generate_initial_password() -> String {
    security(("session_auth" = [])),
    params(ListUsersQuery),
    responses(
-      (status = 200, description = "ユーザー一覧", body = ApiResponse<Vec<UserItemData>>)
+      (status = 200, description = "ユーザー一覧", body = ApiResponse<Vec<UserItemData>>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn list_users(

@@ -1,5 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
+assertion_line: 103
 expression: json
 ---
 {
@@ -96,6 +97,16 @@ expression: json
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_AuditLogItemData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -282,6 +293,16 @@ expression: json
                 }
               }
             }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -306,6 +327,16 @@ expression: json
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_Vec_RoleItemData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -547,6 +578,16 @@ expression: json
                 }
               }
             }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -581,6 +622,16 @@ expression: json
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_Vec_UserItemData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -851,6 +902,16 @@ expression: json
                 }
               }
             }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -924,6 +985,16 @@ expression: json
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_Vec_WorkflowData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -1678,28 +1749,6 @@ expression: json
             "session_auth": []
           }
         ]
-      }
-    },
-    "/health": {
-      "get": {
-        "tags": [
-          "health"
-        ],
-        "summary": "ヘルスチェックエンドポイント",
-        "description": "サーバーが正常に稼働していることを確認するためのエンドポイント。",
-        "operationId": "health_check",
-        "responses": {
-          "200": {
-            "description": "サーバー稼働中",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
       }
     }
   },
@@ -2783,24 +2832,6 @@ expression: json
           }
         }
       },
-      "HealthResponse": {
-        "type": "object",
-        "description": "ヘルスチェックレスポンス",
-        "required": [
-          "status",
-          "version"
-        ],
-        "properties": {
-          "status": {
-            "type": "string",
-            "description": "稼働状態（`\"healthy\"` または `\"unhealthy\"`）"
-          },
-          "version": {
-            "type": "string",
-            "description": "アプリケーションバージョン（Cargo.toml から取得）"
-          }
-        }
-      },
       "LoginRequest": {
         "type": "object",
         "description": "ログインリクエスト",
@@ -3699,10 +3730,6 @@ expression: json
     }
   },
   "tags": [
-    {
-      "name": "health",
-      "description": "ヘルスチェック"
-    },
     {
       "name": "auth",
       "description": "認証"

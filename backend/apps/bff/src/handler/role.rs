@@ -105,7 +105,8 @@ pub struct RoleDetailData {
    tag = "roles",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "ロール一覧", body = ApiResponse<Vec<RoleItemData>>)
+      (status = 200, description = "ロール一覧", body = ApiResponse<Vec<RoleItemData>>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn list_roles(

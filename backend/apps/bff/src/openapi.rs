@@ -9,7 +9,7 @@ use utoipa::{
    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
 };
 
-use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workflow};
+use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -19,8 +19,6 @@ use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workf
       description = "ワークフロー管理システム RingiFlow の BFF API"
    ),
    paths(
-      // health
-      health::health_check,
       // auth
       auth::login,
       auth::logout,
@@ -60,70 +58,9 @@ use crate::handler::{audit_log, auth, dashboard, health, role, task, user, workf
       dashboard::get_dashboard_stats,
    ),
    components(schemas(
-      // shared
-      ringiflow_shared::ApiResponse<auth::LoginResponseData>,
-      ringiflow_shared::ApiResponse<auth::MeResponseData>,
-      ringiflow_shared::ApiResponse<auth::CsrfResponseData>,
-      ringiflow_shared::ApiResponse<Vec<workflow::WorkflowDefinitionData>>,
-      ringiflow_shared::ApiResponse<workflow::WorkflowDefinitionData>,
-      ringiflow_shared::ApiResponse<Vec<workflow::WorkflowData>>,
-      ringiflow_shared::ApiResponse<workflow::WorkflowData>,
-      ringiflow_shared::ApiResponse<Vec<task::TaskItemData>>,
-      ringiflow_shared::ApiResponse<task::TaskDetailData>,
-      ringiflow_shared::ApiResponse<Vec<user::UserItemData>>,
-      ringiflow_shared::ApiResponse<user::CreateUserResponseData>,
-      ringiflow_shared::ApiResponse<user::UserDetailData>,
-      ringiflow_shared::ApiResponse<user::UserResponseData>,
-      ringiflow_shared::ApiResponse<dashboard::DashboardStatsData>,
       ringiflow_shared::ErrorResponse,
-      // health
-      health::HealthResponse,
-      // auth
-      auth::LoginRequest,
-      auth::LoginResponseData,
-      auth::LoginUserResponse,
-      auth::MeResponseData,
-      auth::CsrfResponseData,
-      // workflow
-      workflow::CreateWorkflowRequest,
-      workflow::SubmitWorkflowRequest,
-      workflow::ApproveRejectRequest,
-      workflow::ResubmitWorkflowRequest,
-      workflow::UserRefData,
-      workflow::WorkflowStepData,
-      workflow::WorkflowData,
-      workflow::WorkflowDefinitionData,
-      workflow::PostCommentRequest,
-      workflow::WorkflowCommentData,
-      ringiflow_shared::ApiResponse<workflow::WorkflowCommentData>,
-      ringiflow_shared::ApiResponse<Vec<workflow::WorkflowCommentData>>,
-      // task
-      task::TaskWorkflowSummaryData,
-      task::TaskItemData,
-      task::TaskDetailData,
-      // user
-      user::CreateUserRequest,
-      user::UpdateUserRequest,
-      user::UpdateUserStatusRequest,
-      user::UserItemData,
-      user::CreateUserResponseData,
-      user::UserDetailData,
-      user::UserResponseData,
-      // audit_log
-      audit_log::AuditLogItemData,
-      ringiflow_shared::PaginatedResponse<audit_log::AuditLogItemData>,
-      // role
-      role::CreateRoleRequest,
-      role::UpdateRoleRequest,
-      role::RoleItemData,
-      role::RoleDetailData,
-      ringiflow_shared::ApiResponse<Vec<role::RoleItemData>>,
-      ringiflow_shared::ApiResponse<role::RoleDetailData>,
-      // dashboard
-      dashboard::DashboardStatsData,
    )),
    tags(
-      (name = "health", description = "ヘルスチェック"),
       (name = "auth", description = "認証"),
       (name = "workflows", description = "ワークフロー管理"),
       (name = "tasks", description = "タスク管理"),
