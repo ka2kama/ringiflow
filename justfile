@@ -94,7 +94,7 @@ setup-db:
     @echo "✓ データベースセットアップ完了"
 
 # worktree 用セットアップ（Docker 起動 → DB マイグレーション → 依存関係インストール）
-setup-worktree: dev-deps setup-db setup-deps
+setup-worktree: dev-deps setup-db setup-root-deps setup-deps
     @echo ""
     @echo "✓ worktree セットアップ完了"
 
