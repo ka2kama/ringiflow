@@ -365,6 +365,10 @@ outdated:
 check-file-size:
     ./scripts/check-file-size.sh
 
+# 関数の行数閾値チェック（50 行超で警告）
+check-fn-size:
+    ./scripts/check-fn-size.sh {{ _cargo_q }}
+
 # コード重複（コピー＆ペースト）を検出（jscpd）
 # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
 # 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
