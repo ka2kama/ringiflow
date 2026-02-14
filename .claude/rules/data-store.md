@@ -6,6 +6,7 @@ paths:
   - "**/redis/**/*.rs"
   - "**/repository/**/*.rs"
   - "**/deletion/**/*.rs"
+  - "infra/**/docker-compose*.yaml"
 ---
 
 # データストア変更時のルール
@@ -15,6 +16,7 @@ paths:
 - `infra/dynamodb/**` - DynamoDB テーブル定義
 - `infra/s3/**` - S3 バケット定義
 - `**/redis/**` - Redis 関連コード
+- `infra/**/docker-compose*.yaml` - Docker Compose 構成
 
 ## 必須チェックリスト
 
@@ -45,7 +47,23 @@ paths:
    - `crates/infra/tests/deletion_registry_test.rs` の期待リストに追加
    - 統合テストで削除→検証のフローを確認
 
-### 3. 設計書の更新
+### 3. デプロイ環境の docker-compose 同期
+
+新しいデータストアをローカル開発環境（`infra/docker/docker-compose.yaml`）に追加した場合、全デプロイ環境の docker-compose にも同じサービスを追加する。
+
+対象ファイル:
+
+| 環境 | ファイル |
+|------|---------|
+| ローカル開発 | `infra/docker/docker-compose.yaml` |
+| API テスト | `infra/docker/docker-compose.api-test.yaml` |
+| Lightsail デモ | `infra/lightsail/docker-compose.yaml` |
+
+確認事項:
+- サービス定義（イメージ、ポート、環境変数）が各環境で適切に設定されているか
+- 依存サービスの環境変数（エンドポイント URL 等）がアプリケーション設定に追加されているか
+
+### 4. 設計書の更新
 
 `docs/03_詳細設計書/06_テナント退会時データ削除設計.md` の「削除対象データ一覧」セクションに追記。
 
@@ -66,8 +84,10 @@ paths:
 - tenant_id なしでアクセスできるテーブル/バケット/キーの作成
 - 削除ハンドラなしでのデータストア追加
 - マイグレーション追加後に適用せずに放置すること
+- ローカル開発環境の docker-compose にデータストアを追加しながら、他のデプロイ環境の docker-compose を更新しないこと
 
 ## 参照
 
 - 設計書: [06_テナント退会時データ削除設計.md](../../docs/03_詳細設計書/06_テナント退会時データ削除設計.md)
 - ADR: [007_テナント退会時のデータ削除方針.md](../../docs/05_ADR/007_テナント退会時のデータ削除方針.md)
+- 改善記録: [デプロイ環境のインフラ依存追加漏れ](../../prompts/improvements/2026-02/2026-02-13_2221_デプロイ環境のインフラ依存追加漏れ.md)
