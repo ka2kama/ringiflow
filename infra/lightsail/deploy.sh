@@ -66,15 +66,7 @@ SSH_OPTS=(-o StrictHostKeyChecking=accept-new)
 if [ -n "${LIGHTSAIL_SSH_KEY:-}" ]; then
     SSH_OPTS+=(-i "${LIGHTSAIL_SSH_KEY/#\~/$HOME}")
 fi
-# SSH と SCP で IPv6 アドレスの扱いが異なる:
-#   SSH: ssh user@2406:da14:...（角括弧なし）
-#   SCP: scp file user@[2406:da14:...]:path（角括弧必要。: がホスト/パス区切りと衝突するため）
 SSH_TARGET="$LIGHTSAIL_USER@$LIGHTSAIL_HOST"
-if [[ "$LIGHTSAIL_HOST" == *:* ]]; then
-    SCP_TARGET="$LIGHTSAIL_USER@[$LIGHTSAIL_HOST]"
-else
-    SCP_TARGET="$SSH_TARGET"
-fi
 REMOTE_DIR="/home/$LIGHTSAIL_USER/ringiflow"
 
 # Docker イメージ名（GHCR と合わせる）
@@ -147,18 +139,18 @@ step "Step 3: Lightsail にファイルを転送"
 ssh "${SSH_OPTS[@]}" "$SSH_TARGET" "mkdir -p $REMOTE_DIR/{config/nginx/conf.d,images,frontend,config/init}"
 
 info "Docker イメージを転送中..."
-scp "${SSH_OPTS[@]}" "$EXPORT_DIR/backend.tar.gz" "$SCP_TARGET:$REMOTE_DIR/images/"
+scp "${SSH_OPTS[@]}" "$EXPORT_DIR/backend.tar.gz" "$SSH_TARGET:$REMOTE_DIR/images/"
 
 info "設定ファイルを転送中..."
-scp "${SSH_OPTS[@]}" infra/lightsail/docker-compose.yaml "$SCP_TARGET:$REMOTE_DIR/docker-compose.yaml"
-scp "${SSH_OPTS[@]}" infra/lightsail/nginx/nginx.conf "$SCP_TARGET:$REMOTE_DIR/config/nginx/"
-scp "${SSH_OPTS[@]}" infra/lightsail/nginx/conf.d/default.conf "$SCP_TARGET:$REMOTE_DIR/config/nginx/conf.d/"
+scp "${SSH_OPTS[@]}" infra/lightsail/docker-compose.yaml "$SSH_TARGET:$REMOTE_DIR/docker-compose.yaml"
+scp "${SSH_OPTS[@]}" infra/lightsail/nginx/nginx.conf "$SSH_TARGET:$REMOTE_DIR/config/nginx/"
+scp "${SSH_OPTS[@]}" infra/lightsail/nginx/conf.d/default.conf "$SSH_TARGET:$REMOTE_DIR/config/nginx/conf.d/"
 
 info "Frontend 静的ファイルを転送中..."
-scp "${SSH_OPTS[@]}" -r /tmp/ringiflow-frontend-dist/* "$SCP_TARGET:$REMOTE_DIR/frontend/"
+scp "${SSH_OPTS[@]}" -r /tmp/ringiflow-frontend-dist/* "$SSH_TARGET:$REMOTE_DIR/frontend/"
 
 # init スクリプトも転送
-scp "${SSH_OPTS[@]}" infra/lightsail/init/01_extensions.sql "$SCP_TARGET:$REMOTE_DIR/config/init/"
+scp "${SSH_OPTS[@]}" infra/lightsail/init/01_extensions.sql "$SSH_TARGET:$REMOTE_DIR/config/init/"
 
 # ==========================================================
 # 4. Lightsail 上でデプロイ

@@ -27,7 +27,7 @@ echo "$SSH_KEY" > ~/.ssh/deploy_key
 chmod 600 ~/.ssh/deploy_key
 SSH_OPTS="-i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new"
 
-# 設定ファイルを転送（tar over SSH で IPv6 アドレスにも対応）
+# 設定ファイルを転送（tar over SSH）
 STAGING=$(mktemp -d)
 trap 'rm -rf "$STAGING"' EXIT
 

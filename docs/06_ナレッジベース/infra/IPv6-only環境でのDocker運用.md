@@ -1,5 +1,7 @@
 # IPv6-only 環境での Docker 運用
 
+> **注記**: [ADR-047](../../05_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md) により、Lightsail はデュアルスタックに切り替え済み。本ドキュメントは IPv6-only 環境での知見の記録として残す。
+
 ## 概要
 
 IPv6-only のサーバー（Lightsail 等）で Docker を運用する際のハマりポイントと対処法をまとめる。
@@ -71,7 +73,7 @@ Cloudflare のリバースプロキシを使えば、IPv4 しか持たないク�
 
 ## プロジェクトでの使用箇所
 
-- `infra/lightsail/deploy.sh` — `SSH_TARGET` と `SCP_TARGET` を分離して IPv6 対応
+- `infra/lightsail/deploy.sh` — デュアルスタック切り替えにより `SCP_TARGET` 分離は廃止。`SSH_TARGET` に統一
 - `infra/lightsail/README.md` — Cloudflare SSL/TLS 設定手順
 
 ## 関連リソース
