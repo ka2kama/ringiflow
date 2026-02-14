@@ -16,7 +16,7 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -110,7 +110,8 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
    tag = "tasks",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "タスク一覧", body = ApiResponse<Vec<TaskItemData>>)
+      (status = 200, description = "タスク一覧", body = ApiResponse<Vec<TaskItemData>>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn list_my_tasks(

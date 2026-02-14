@@ -15,7 +15,7 @@ use axum::{
    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::ApiResponse;
+use ringiflow_shared::{ApiResponse, ErrorResponse};
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -56,7 +56,8 @@ impl From<DashboardStatsDto> for DashboardStatsData {
    tag = "dashboard",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "ダッシュボード統計", body = ApiResponse<DashboardStatsData>)
+      (status = 200, description = "ダッシュボード統計", body = ApiResponse<DashboardStatsData>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn get_dashboard_stats(

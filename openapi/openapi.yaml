@@ -68,6 +68,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedResponse_AuditLogItemData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
   /api/v1/auth/csrf:
@@ -205,6 +211,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_DashboardStatsData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
   /api/v1/roles:
@@ -223,6 +235,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_Vec_RoleItemData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
     post:
@@ -368,6 +386,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_Vec_TaskItemData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
   /api/v1/users:
@@ -392,6 +416,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_Vec_UserItemData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
     post:
@@ -572,6 +602,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_Vec_WorkflowDefinitionData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
   /api/v1/workflow-definitions/{id}:
@@ -632,6 +668,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse_Vec_WorkflowData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
     post:
@@ -1153,20 +1195,6 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
-  /health:
-    get:
-      tags:
-      - health
-      summary: ヘルスチェックエンドポイント
-      description: サーバーが正常に稼働していることを確認するためのエンドポイント。
-      operationId: health_check
-      responses:
-        '200':
-          description: サーバー稼働中
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
 components:
   schemas:
     ApiResponse_CreateUserResponseData:
@@ -2086,40 +2114,6 @@ components:
           - string
           - 'null'
           description: コメント（任意）
-    AuditLogItemData:
-      type: object
-      description: 監査ログ一覧の要素データ
-      required:
-      - id
-      - actor_id
-      - actor_name
-      - action
-      - result
-      - resource_type
-      - resource_id
-      - created_at
-      properties:
-        id:
-          type: string
-        actor_id:
-          type: string
-        actor_name:
-          type: string
-        action:
-          type: string
-        result:
-          type: string
-        resource_type:
-          type: string
-        resource_id:
-          type: string
-        detail: {}
-        source_ip:
-          type:
-          - string
-          - 'null'
-        created_at:
-          type: string
     CreateRoleRequest:
       type: object
       description: ロール作成リクエスト
@@ -2151,33 +2145,6 @@ components:
           type: string
         role_name:
           type: string
-    CreateUserResponseData:
-      type: object
-      description: ユーザー作成レスポンス（初期パスワード付き）
-      required:
-      - id
-      - display_id
-      - display_number
-      - name
-      - email
-      - role
-      - initial_password
-      properties:
-        id:
-          type: string
-        display_id:
-          type: string
-        display_number:
-          type: integer
-          format: int64
-        name:
-          type: string
-        email:
-          type: string
-        role:
-          type: string
-        initial_password:
-          type: string
     CreateWorkflowRequest:
       type: object
       description: ワークフロー作成リクエスト（BFF 公開 API）
@@ -2195,44 +2162,6 @@ components:
           description: ワークフロータイトル
         form_data:
           description: フォームデータ
-    CsrfResponseData:
-      type: object
-      description: CSRF トークンデータ
-      required:
-      - token
-      properties:
-        token:
-          type: string
-    DashboardStatsData:
-      type: object
-      description: ダッシュボード統計データ
-      required:
-      - pending_tasks
-      - my_workflows_in_progress
-      - completed_today
-      properties:
-        pending_tasks:
-          type: integer
-          format: int64
-        my_workflows_in_progress:
-          type: integer
-          format: int64
-        completed_today:
-          type: integer
-          format: int64
-    HealthResponse:
-      type: object
-      description: ヘルスチェックレスポンス
-      required:
-      - status
-      - version
-      properties:
-        status:
-          type: string
-          description: 稼働状態（`"healthy"` または `"unhealthy"`）
-        version:
-          type: string
-          description: アプリケーションバージョン（Cargo.toml から取得）
     LoginRequest:
       type: object
       description: ログインリクエスト
@@ -2244,14 +2173,6 @@ components:
           type: string
         password:
           type: string
-    LoginResponseData:
-      type: object
-      description: ログインレスポンスデータ
-      required:
-      - user
-      properties:
-        user:
-          $ref: '#/components/schemas/LoginUserResponse'
     LoginUserResponse:
       type: object
       description: ログインユーザー情報
@@ -2273,38 +2194,6 @@ components:
           type: string
           format: uuid
         roles:
-          type: array
-          items:
-            type: string
-    MeResponseData:
-      type: object
-      description: 現在のユーザー情報データ
-      required:
-      - id
-      - email
-      - name
-      - tenant_id
-      - tenant_name
-      - roles
-      - permissions
-      properties:
-        id:
-          type: string
-          format: uuid
-        email:
-          type: string
-        name:
-          type: string
-        tenant_id:
-          type: string
-          format: uuid
-        tenant_name:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
-        permissions:
           type: array
           items:
             type: string
@@ -2420,62 +2309,6 @@ components:
           type: integer
           format: int32
           description: 楽観的ロック用バージョン
-    RoleDetailData:
-      type: object
-      description: ロール詳細データ
-      required:
-      - id
-      - name
-      - permissions
-      - is_system
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type:
-          - string
-          - 'null'
-        permissions:
-          type: array
-          items:
-            type: string
-        is_system:
-          type: boolean
-        created_at:
-          type: string
-        updated_at:
-          type: string
-    RoleItemData:
-      type: object
-      description: ロール一覧の要素データ
-      required:
-      - id
-      - name
-      - permissions
-      - is_system
-      - user_count
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type:
-          - string
-          - 'null'
-        permissions:
-          type: array
-          items:
-            type: string
-        is_system:
-          type: boolean
-        user_count:
-          type: integer
-          format: int64
     StepApproverRequest:
       type: object
       description: ステップ承認者リクエスト（BFF 公開 API）
@@ -2501,57 +2334,6 @@ components:
           items:
             $ref: '#/components/schemas/StepApproverRequest'
           description: 各承認ステップの承認者リスト
-    TaskDetailData:
-      type: object
-      description: タスク詳細データ
-      required:
-      - step
-      - workflow
-      properties:
-        step:
-          $ref: '#/components/schemas/WorkflowStepData'
-        workflow:
-          $ref: '#/components/schemas/WorkflowData'
-    TaskItemData:
-      type: object
-      description: タスク一覧の要素データ
-      required:
-      - id
-      - display_number
-      - step_name
-      - status
-      - version
-      - created_at
-      - workflow
-      properties:
-        id:
-          type: string
-        display_number:
-          type: integer
-          format: int64
-        step_name:
-          type: string
-        status:
-          type: string
-        version:
-          type: integer
-          format: int32
-        assigned_to:
-          oneOf:
-          - type: 'null'
-          - $ref: '#/components/schemas/UserRefData'
-        due_date:
-          type:
-          - string
-          - 'null'
-        started_at:
-          type:
-          - string
-          - 'null'
-        created_at:
-          type: string
-        workflow:
-          $ref: '#/components/schemas/TaskWorkflowSummaryData'
     TaskWorkflowSummaryData:
       type: object
       description: ワークフロー概要データ（タスク一覧用）
@@ -2618,72 +2400,6 @@ components:
       properties:
         status:
           type: string
-    UserDetailData:
-      type: object
-      description: ユーザー詳細レスポンス
-      required:
-      - id
-      - display_id
-      - display_number
-      - name
-      - email
-      - status
-      - roles
-      - permissions
-      - tenant_name
-      properties:
-        id:
-          type: string
-        display_id:
-          type: string
-        display_number:
-          type: integer
-          format: int64
-        name:
-          type: string
-        email:
-          type: string
-        status:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
-        permissions:
-          type: array
-          items:
-            type: string
-        tenant_name:
-          type: string
-    UserItemData:
-      type: object
-      description: ユーザー一覧の要素データ
-      required:
-      - id
-      - display_id
-      - display_number
-      - name
-      - email
-      - status
-      - roles
-      properties:
-        id:
-          type: string
-        display_id:
-          type: string
-        display_number:
-          type: integer
-          format: int64
-        name:
-          type: string
-        email:
-          type: string
-        status:
-          type: string
-        roles:
-          type: array
-          items:
-            type: string
     UserRefData:
       type: object
       description: ユーザー参照データ（フロントエンドへの Serialize 用）
@@ -2694,40 +2410,6 @@ components:
         id:
           type: string
         name:
-          type: string
-    UserResponseData:
-      type: object
-      description: ユーザー簡易レスポンス（更新・ステータス変更用）
-      required:
-      - id
-      - name
-      - email
-      - status
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        email:
-          type: string
-        status:
-          type: string
-    WorkflowCommentData:
-      type: object
-      description: ワークフローコメントデータ
-      required:
-      - id
-      - posted_by
-      - body
-      - created_at
-      properties:
-        id:
-          type: string
-        posted_by:
-          $ref: '#/components/schemas/UserRefData'
-        body:
-          type: string
-        created_at:
           type: string
     WorkflowData:
       type: object
@@ -2781,39 +2463,6 @@ components:
           type:
           - string
           - 'null'
-        created_at:
-          type: string
-        updated_at:
-          type: string
-    WorkflowDefinitionData:
-      type: object
-      description: ワークフロー定義データ
-      required:
-      - id
-      - name
-      - version
-      - definition
-      - status
-      - created_by
-      - created_at
-      - updated_at
-      properties:
-        id:
-          type: string
-        name:
-          type: string
-        description:
-          type:
-          - string
-          - 'null'
-        version:
-          type: integer
-          format: int32
-        definition: {}
-        status:
-          type: string
-        created_by:
-          type: string
         created_at:
           type: string
         updated_at:
@@ -2885,8 +2534,6 @@ components:
       in: cookie
       name: session_id
 tags:
-- name: health
-  description: ヘルスチェック
 - name: auth
   description: 認証
 - name: workflows

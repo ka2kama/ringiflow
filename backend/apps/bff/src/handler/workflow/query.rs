@@ -46,7 +46,8 @@ use crate::{
    tag = "workflows",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "ワークフロー定義一覧", body = ApiResponse<Vec<WorkflowDefinitionData>>)
+      (status = 200, description = "ワークフロー定義一覧", body = ApiResponse<Vec<WorkflowDefinitionData>>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn list_workflow_definitions(
@@ -164,7 +165,8 @@ pub async fn get_workflow_definition(
    tag = "workflows",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "自分のワークフロー一覧", body = ApiResponse<Vec<WorkflowData>>)
+      (status = 200, description = "自分のワークフロー一覧", body = ApiResponse<Vec<WorkflowData>>),
+      (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
 pub async fn list_my_workflows(
