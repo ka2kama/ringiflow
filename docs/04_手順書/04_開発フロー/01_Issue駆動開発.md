@@ -105,6 +105,13 @@ E2E 基準がないと、各レイヤーが個別に正しくてもレイヤー�
 
 ### 2. ブランチを作成
 
+ブランチ作成前に、ローカルの main を最新化する:
+
+```bash
+git checkout main
+git pull origin main
+```
+
 ```bash
 # Issue 番号に基づいてブランチを作成
 git checkout -b feature/34-user-auth
@@ -113,6 +120,8 @@ git checkout -b feature/34-user-auth
 命名規則:
 - `feature/{issue番号}-{機能名}` — 新機能
 - `fix/{issue番号}-{バグ名}` — バグ修正
+
+改善の経緯: [新規作業開始時の main 同期漏れ](../../../prompts/improvements/2026-02/2026-02-14_2120_新規作業開始時のmain同期漏れ.md)
 
 ### 3. Draft PR を作成
 
@@ -832,6 +841,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-14 | Step 2 にブランチ作成前の main 最新化ステップを追加（#516） |
 | 2026-02-11 | 6.2 にコンテキスト依存の必須ドキュメント確認項目を追加 |
 | 2026-02-10 | Step 9 に改善記録の検証ステップを追加（#375） |
 | 2026-02-09 | 6.4 に base branch 同期確認ステップを追加（#356） |
