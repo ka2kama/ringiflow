@@ -39,7 +39,7 @@ Issue 本文の現状分析は「作成時点の仮説」であり、着手時�
    - まだ未改善 → Issue の現状分析を信頼して進める
    - 現状分析が間違っている → 正しい As-Is で再評価
 
-改善の経緯: [Issue 精査時の As-Is 確認不足](../../prompts/improvements/2026-02/2026-02-14_Issue精査時のAs-Is確認不足.md)
+改善の経緯: [Issue 精査時の As-Is 確認不足](../../prompts/improvements/2026-02/2026-02-14_2115_Issue精査時のAs-Is確認不足.md)
 
 ## 本質: Want と How
 
