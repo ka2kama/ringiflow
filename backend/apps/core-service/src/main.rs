@@ -62,83 +62,83 @@ mod usecase;
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
-   Router,
-   routing::{get, patch, post},
+    Router,
+    routing::{get, patch, post},
 };
 use config::CoreConfig;
 use handler::{
-   DashboardState,
-   RoleState,
-   TaskState,
-   UserState,
-   WorkflowState,
-   approve_step,
-   approve_step_by_display_number,
-   create_role,
-   create_user,
-   create_workflow,
-   delete_role,
-   get_dashboard_stats,
-   get_role,
-   get_task,
-   get_task_by_display_numbers,
-   get_user,
-   get_user_by_display_number,
-   get_user_by_email,
-   get_workflow,
-   get_workflow_by_display_number,
-   get_workflow_definition,
-   health_check,
-   list_comments,
-   list_my_tasks,
-   list_my_workflows,
-   list_roles,
-   list_users,
-   list_workflow_definitions,
-   post_comment,
-   reject_step,
-   reject_step_by_display_number,
-   request_changes_step,
-   request_changes_step_by_display_number,
-   resubmit_workflow,
-   resubmit_workflow_by_display_number,
-   submit_workflow,
-   submit_workflow_by_display_number,
-   update_role,
-   update_user,
-   update_user_status,
+    DashboardState,
+    RoleState,
+    TaskState,
+    UserState,
+    WorkflowState,
+    approve_step,
+    approve_step_by_display_number,
+    create_role,
+    create_user,
+    create_workflow,
+    delete_role,
+    get_dashboard_stats,
+    get_role,
+    get_task,
+    get_task_by_display_numbers,
+    get_user,
+    get_user_by_display_number,
+    get_user_by_email,
+    get_workflow,
+    get_workflow_by_display_number,
+    get_workflow_definition,
+    health_check,
+    list_comments,
+    list_my_tasks,
+    list_my_workflows,
+    list_roles,
+    list_users,
+    list_workflow_definitions,
+    post_comment,
+    reject_step,
+    reject_step_by_display_number,
+    request_changes_step,
+    request_changes_step_by_display_number,
+    resubmit_workflow,
+    resubmit_workflow_by_display_number,
+    submit_workflow,
+    submit_workflow_by_display_number,
+    update_role,
+    update_user,
+    update_user_status,
 };
 use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
-   db,
-   repository::{
-      DisplayIdCounterRepository,
-      RoleRepository,
-      TenantRepository,
-      UserRepository,
-      WorkflowCommentRepository,
-      WorkflowDefinitionRepository,
-      WorkflowInstanceRepository,
-      WorkflowStepRepository,
-      display_id_counter_repository::PostgresDisplayIdCounterRepository,
-      role_repository::PostgresRoleRepository,
-      tenant_repository::PostgresTenantRepository,
-      user_repository::PostgresUserRepository,
-      workflow_comment_repository::PostgresWorkflowCommentRepository,
-      workflow_definition_repository::PostgresWorkflowDefinitionRepository,
-      workflow_instance_repository::PostgresWorkflowInstanceRepository,
-      workflow_step_repository::PostgresWorkflowStepRepository,
-   },
+    db,
+    repository::{
+        DisplayIdCounterRepository,
+        RoleRepository,
+        TenantRepository,
+        UserRepository,
+        WorkflowCommentRepository,
+        WorkflowDefinitionRepository,
+        WorkflowInstanceRepository,
+        WorkflowStepRepository,
+        display_id_counter_repository::PostgresDisplayIdCounterRepository,
+        role_repository::PostgresRoleRepository,
+        tenant_repository::PostgresTenantRepository,
+        user_repository::PostgresUserRepository,
+        workflow_comment_repository::PostgresWorkflowCommentRepository,
+        workflow_definition_repository::PostgresWorkflowDefinitionRepository,
+        workflow_instance_repository::PostgresWorkflowInstanceRepository,
+        workflow_step_repository::PostgresWorkflowStepRepository,
+    },
 };
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use usecase::{
-   DashboardUseCaseImpl,
-   RoleUseCaseImpl,
-   TaskUseCaseImpl,
-   UserUseCaseImpl,
-   WorkflowUseCaseImpl,
+    DashboardUseCaseImpl,
+    RoleUseCaseImpl,
+    TaskUseCaseImpl,
+    UserUseCaseImpl,
+    WorkflowUseCaseImpl,
 };
 
 /// Core Service サーバーのエントリーポイント
@@ -146,96 +146,96 @@ use usecase::{
 /// BFF とは独立した設定（`CORE_HOST`, `CORE_PORT`）を使用する。
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-   // .env ファイルを読み込む（存在する場合）
-   dotenvy::dotenv().ok();
+    // .env ファイルを読み込む（存在する場合）
+    dotenvy::dotenv().ok();
 
-   // トレーシング初期化
-   tracing_subscriber::registry()
-      .with(
-         tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "info,ringiflow=debug".into()),
-      )
-      .with(tracing_subscriber::fmt::layer())
-      .init();
+    // トレーシング初期化
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,ringiflow=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
-   // 設定読み込み
-   let config = CoreConfig::from_env().expect("設定の読み込みに失敗しました");
+    // 設定読み込み
+    let config = CoreConfig::from_env().expect("設定の読み込みに失敗しました");
 
-   tracing::info!(
-      "Core Service サーバーを起動します: {}:{}",
-      config.host,
-      config.port
-   );
+    tracing::info!(
+        "Core Service サーバーを起動します: {}:{}",
+        config.host,
+        config.port
+    );
 
-   // データベース接続プールを作成
-   let pool = db::create_pool(&config.database_url)
-      .await
-      .expect("データベース接続に失敗しました");
-   tracing::info!("データベースに接続しました");
+    // データベース接続プールを作成
+    let pool = db::create_pool(&config.database_url)
+        .await
+        .expect("データベース接続に失敗しました");
+    tracing::info!("データベースに接続しました");
 
-   // 共有リポジトリインスタンスを初期化
-   let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
-   let tenant_repo: Arc<dyn TenantRepository> =
-      Arc::new(PostgresTenantRepository::new(pool.clone()));
-   let definition_repo: Arc<dyn WorkflowDefinitionRepository> =
-      Arc::new(PostgresWorkflowDefinitionRepository::new(pool.clone()));
-   let instance_repo: Arc<dyn WorkflowInstanceRepository> =
-      Arc::new(PostgresWorkflowInstanceRepository::new(pool.clone()));
-   let step_repo: Arc<dyn WorkflowStepRepository> =
-      Arc::new(PostgresWorkflowStepRepository::new(pool.clone()));
-   let comment_repo: Arc<dyn WorkflowCommentRepository> =
-      Arc::new(PostgresWorkflowCommentRepository::new(pool.clone()));
-   let counter_repo: Arc<dyn DisplayIdCounterRepository> =
-      Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
+    // 共有リポジトリインスタンスを初期化
+    let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let tenant_repo: Arc<dyn TenantRepository> =
+        Arc::new(PostgresTenantRepository::new(pool.clone()));
+    let definition_repo: Arc<dyn WorkflowDefinitionRepository> =
+        Arc::new(PostgresWorkflowDefinitionRepository::new(pool.clone()));
+    let instance_repo: Arc<dyn WorkflowInstanceRepository> =
+        Arc::new(PostgresWorkflowInstanceRepository::new(pool.clone()));
+    let step_repo: Arc<dyn WorkflowStepRepository> =
+        Arc::new(PostgresWorkflowStepRepository::new(pool.clone()));
+    let comment_repo: Arc<dyn WorkflowCommentRepository> =
+        Arc::new(PostgresWorkflowCommentRepository::new(pool.clone()));
+    let counter_repo: Arc<dyn DisplayIdCounterRepository> =
+        Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
 
-   let role_repo: Arc<dyn RoleRepository> = Arc::new(PostgresRoleRepository::new(pool.clone()));
+    let role_repo: Arc<dyn RoleRepository> = Arc::new(PostgresRoleRepository::new(pool.clone()));
 
-   // Clock（複数ユースケースで共有）
-   let clock: Arc<dyn ringiflow_domain::clock::Clock> = Arc::new(SystemClock);
+    // Clock（複数ユースケースで共有）
+    let clock: Arc<dyn ringiflow_domain::clock::Clock> = Arc::new(SystemClock);
 
-   // ユーザー UseCase + State
-   let user_usecase = UserUseCaseImpl::new(user_repo.clone(), counter_repo.clone(), clock.clone());
-   let user_state = Arc::new(UserState {
-      user_repository:   user_repo.clone(),
-      tenant_repository: tenant_repo,
-      usecase:           user_usecase,
-   });
+    // ユーザー UseCase + State
+    let user_usecase = UserUseCaseImpl::new(user_repo.clone(), counter_repo.clone(), clock.clone());
+    let user_state = Arc::new(UserState {
+        user_repository:   user_repo.clone(),
+        tenant_repository: tenant_repo,
+        usecase:           user_usecase,
+    });
 
-   // ロール UseCase + State
-   let role_usecase = RoleUseCaseImpl::new(role_repo.clone(), clock.clone());
-   let role_state = Arc::new(RoleState {
-      role_repository: role_repo,
-      usecase:         role_usecase,
-   });
+    // ロール UseCase + State
+    let role_usecase = RoleUseCaseImpl::new(role_repo.clone(), clock.clone());
+    let role_state = Arc::new(RoleState {
+        role_repository: role_repo,
+        usecase:         role_usecase,
+    });
 
-   // ワークフロー UseCase
-   let workflow_usecase = WorkflowUseCaseImpl::new(
-      definition_repo,
-      instance_repo.clone(),
-      step_repo.clone(),
-      comment_repo,
-      user_repo.clone(),
-      counter_repo,
-      clock,
-   );
-   let workflow_state = Arc::new(WorkflowState {
-      usecase: workflow_usecase,
-   });
+    // ワークフロー UseCase
+    let workflow_usecase = WorkflowUseCaseImpl::new(
+        definition_repo,
+        instance_repo.clone(),
+        step_repo.clone(),
+        comment_repo,
+        user_repo.clone(),
+        counter_repo,
+        clock,
+    );
+    let workflow_state = Arc::new(WorkflowState {
+        usecase: workflow_usecase,
+    });
 
-   // タスク UseCase
-   let task_usecase = TaskUseCaseImpl::new(instance_repo.clone(), step_repo.clone(), user_repo);
-   let task_state = Arc::new(TaskState {
-      usecase: task_usecase,
-   });
+    // タスク UseCase
+    let task_usecase = TaskUseCaseImpl::new(instance_repo.clone(), step_repo.clone(), user_repo);
+    let task_state = Arc::new(TaskState {
+        usecase: task_usecase,
+    });
 
-   // ダッシュボード UseCase
-   let dashboard_usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
-   let dashboard_state = Arc::new(DashboardState {
-      usecase: dashboard_usecase,
-   });
+    // ダッシュボード UseCase
+    let dashboard_usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+    let dashboard_state = Arc::new(DashboardState {
+        usecase: dashboard_usecase,
+    });
 
-   // ルーター構築
-   let app = Router::new()
+    // ルーター構築
+    let app = Router::new()
       .route("/health", get(health_check))
       .route("/internal/users", get(list_users).post(create_user))
       .route("/internal/users/by-email", get(get_user_by_email))
@@ -334,15 +334,15 @@ async fn main() -> anyhow::Result<()> {
       .with_state(dashboard_state)
       .layer(TraceLayer::new_for_http());
 
-   // サーバー起動
-   let addr: SocketAddr = format!("{}:{}", config.host, config.port)
-      .parse()
-      .expect("アドレスのパースに失敗しました");
+    // サーバー起動
+    let addr: SocketAddr = format!("{}:{}", config.host, config.port)
+        .parse()
+        .expect("アドレスのパースに失敗しました");
 
-   let listener = TcpListener::bind(addr).await?;
-   tracing::info!("Core Service サーバーが起動しました: {}", addr);
+    let listener = TcpListener::bind(addr).await?;
+    tracing::info!("Core Service サーバーが起動しました: {}", addr);
 
-   axum::serve(listener, app).await?;
+    axum::serve(listener, app).await?;
 
-   Ok(())
+    Ok(())
 }

@@ -30,10 +30,10 @@ use utoipa::ToSchema;
 /// ヘルスチェックレスポンス
 #[derive(Debug, Serialize, ToSchema)]
 pub struct HealthResponse {
-   /// 稼働状態（`"healthy"` または `"unhealthy"`）
-   pub status:  String,
-   /// アプリケーションバージョン（Cargo.toml から取得）
-   pub version: String,
+    /// 稼働状態（`"healthy"` または `"unhealthy"`）
+    pub status:  String,
+    /// アプリケーションバージョン（Cargo.toml から取得）
+    pub version: String,
 }
 
 /// ヘルスチェックエンドポイント
@@ -48,8 +48,8 @@ pub struct HealthResponse {
    )
 )]
 pub async fn health_check() -> Json<HealthResponse> {
-   Json(HealthResponse {
-      status:  "healthy".to_string(),
-      version: env!("CARGO_PKG_VERSION").to_string(),
-   })
+    Json(HealthResponse {
+        status:  "healthy".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    })
 }

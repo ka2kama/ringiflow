@@ -35,8 +35,8 @@
 //!
 //! // ドメインエラーの生成
 //! let error = DomainError::NotFound {
-//!    entity_type: "Workflow",
-//!    id:          "wf-123".to_string(),
+//!     entity_type: "Workflow",
+//!     id:          "wf-123".to_string(),
 //! };
 //! ```
 

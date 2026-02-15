@@ -4,9 +4,9 @@
 //! `ApiDoc::openapi()` で OpenAPI ドキュメントを取得できる。
 
 use utoipa::{
-   Modify,
-   OpenApi,
-   openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
+    Modify,
+    OpenApi,
+    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
 };
 
 use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow};
@@ -79,11 +79,11 @@ pub struct ApiDoc;
 struct SecurityAddon;
 
 impl Modify for SecurityAddon {
-   fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
-      let components = openapi.components.get_or_insert_default();
-      components.add_security_scheme(
-         "session_auth",
-         SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::new("session_id"))),
-      );
-   }
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_default();
+        components.add_security_scheme(
+            "session_auth",
+            SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::new("session_id"))),
+        );
+    }
 }

@@ -57,16 +57,16 @@ mod usecase;
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
-   Router,
-   routing::{delete, get, post},
+    Router,
+    routing::{delete, get, post},
 };
 use config::AuthConfig;
 use handler::{AuthState, create_credentials, delete_credentials, health_check, verify};
 use ringiflow_infra::{
-   Argon2PasswordChecker,
-   PasswordChecker,
-   db,
-   repository::{CredentialsRepository, PostgresCredentialsRepository},
+    Argon2PasswordChecker,
+    PasswordChecker,
+    db,
+    repository::{CredentialsRepository, PostgresCredentialsRepository},
 };
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -76,63 +76,63 @@ use usecase::AuthUseCaseImpl;
 /// Auth Service サーバーのエントリーポイント
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-   // .env ファイルを読み込む（存在する場合）
-   dotenvy::dotenv().ok();
+    // .env ファイルを読み込む（存在する場合）
+    dotenvy::dotenv().ok();
 
-   // トレーシング初期化
-   tracing_subscriber::registry()
-      .with(
-         tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "info,ringiflow=debug".into()),
-      )
-      .with(tracing_subscriber::fmt::layer())
-      .init();
+    // トレーシング初期化
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info,ringiflow=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
-   // 設定読み込み
-   let config = AuthConfig::from_env().expect("設定の読み込みに失敗しました");
+    // 設定読み込み
+    let config = AuthConfig::from_env().expect("設定の読み込みに失敗しました");
 
-   tracing::info!(
-      "Auth Service サーバーを起動します: {}:{}",
-      config.host,
-      config.port
-   );
+    tracing::info!(
+        "Auth Service サーバーを起動します: {}:{}",
+        config.host,
+        config.port
+    );
 
-   // データベース接続プールを作成
-   let pool = db::create_pool(&config.database_url)
-      .await
-      .expect("データベース接続に失敗しました");
-   tracing::info!("データベースに接続しました");
+    // データベース接続プールを作成
+    let pool = db::create_pool(&config.database_url)
+        .await
+        .expect("データベース接続に失敗しました");
+    tracing::info!("データベースに接続しました");
 
-   // 依存コンポーネントを初期化
-   let credentials_repo: Arc<dyn CredentialsRepository> =
-      Arc::new(PostgresCredentialsRepository::new(pool));
-   let password_checker: Arc<dyn PasswordChecker> = Arc::new(Argon2PasswordChecker::new());
-   let auth_usecase = AuthUseCaseImpl::new(credentials_repo, password_checker);
-   let auth_state = Arc::new(AuthState {
-      usecase: Arc::new(auth_usecase),
-   });
+    // 依存コンポーネントを初期化
+    let credentials_repo: Arc<dyn CredentialsRepository> =
+        Arc::new(PostgresCredentialsRepository::new(pool));
+    let password_checker: Arc<dyn PasswordChecker> = Arc::new(Argon2PasswordChecker::new());
+    let auth_usecase = AuthUseCaseImpl::new(credentials_repo, password_checker);
+    let auth_state = Arc::new(AuthState {
+        usecase: Arc::new(auth_usecase),
+    });
 
-   // ルーター構築
-   let app = Router::new()
-      .route("/health", get(health_check))
-      .route("/internal/auth/verify", post(verify))
-      .route("/internal/auth/credentials", post(create_credentials))
-      .route(
-         "/internal/auth/credentials/{tenant_id}/{user_id}",
-         delete(delete_credentials),
-      )
-      .with_state(auth_state)
-      .layer(TraceLayer::new_for_http());
+    // ルーター構築
+    let app = Router::new()
+        .route("/health", get(health_check))
+        .route("/internal/auth/verify", post(verify))
+        .route("/internal/auth/credentials", post(create_credentials))
+        .route(
+            "/internal/auth/credentials/{tenant_id}/{user_id}",
+            delete(delete_credentials),
+        )
+        .with_state(auth_state)
+        .layer(TraceLayer::new_for_http());
 
-   // サーバー起動
-   let addr: SocketAddr = format!("{}:{}", config.host, config.port)
-      .parse()
-      .expect("アドレスのパースに失敗しました");
+    // サーバー起動
+    let addr: SocketAddr = format!("{}:{}", config.host, config.port)
+        .parse()
+        .expect("アドレスのパースに失敗しました");
 
-   let listener = TcpListener::bind(addr).await?;
-   tracing::info!("Auth Service サーバーが起動しました: {}", addr);
+    let listener = TcpListener::bind(addr).await?;
+    tracing::info!("Auth Service サーバーが起動しました: {}", addr);
 
-   axum::serve(listener, app).await?;
+    axum::serve(listener, app).await?;
 
-   Ok(())
+    Ok(())
 }

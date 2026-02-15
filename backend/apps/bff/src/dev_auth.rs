@@ -62,57 +62,57 @@ pub const DEV_USER_PERMISSIONS: &[&str] = &["tenant:*", "user:*", "workflow:*", 
 ///
 /// 作成された CSRF トークン
 pub async fn setup_dev_session<S: SessionManager>(session_manager: &S) -> anyhow::Result<String> {
-   let tenant_id = TenantId::from_uuid(DEV_TENANT_ID);
-   let user_id = UserId::from_uuid(DEV_USER_ID);
+    let tenant_id = TenantId::from_uuid(DEV_TENANT_ID);
+    let user_id = UserId::from_uuid(DEV_USER_ID);
 
-   // セッションデータを作成
-   let session_data = SessionData::new(
-      user_id,
-      tenant_id.clone(),
-      DEV_USER_EMAIL.to_string(),
-      DEV_USER_NAME.to_string(),
-      DEV_USER_ROLES.iter().map(|s| s.to_string()).collect(),
-      DEV_USER_PERMISSIONS.iter().map(|s| s.to_string()).collect(),
-   );
+    // セッションデータを作成
+    let session_data = SessionData::new(
+        user_id,
+        tenant_id.clone(),
+        DEV_USER_EMAIL.to_string(),
+        DEV_USER_NAME.to_string(),
+        DEV_USER_ROLES.iter().map(|s| s.to_string()).collect(),
+        DEV_USER_PERMISSIONS.iter().map(|s| s.to_string()).collect(),
+    );
 
-   // 既存のセッションを削除（冪等性のため）
-   let _ = session_manager.delete(&tenant_id, DEV_SESSION_ID).await;
+    // 既存のセッションを削除（冪等性のため）
+    let _ = session_manager.delete(&tenant_id, DEV_SESSION_ID).await;
 
-   // セッションを作成（固定のセッション ID を使用）
-   session_manager
-      .create_with_id(DEV_SESSION_ID, &session_data)
-      .await?;
+    // セッションを作成（固定のセッション ID を使用）
+    session_manager
+        .create_with_id(DEV_SESSION_ID, &session_data)
+        .await?;
 
-   // CSRF トークンを作成
-   let csrf_token = session_manager
-      .create_csrf_token(&tenant_id, DEV_SESSION_ID)
-      .await?;
+    // CSRF トークンを作成
+    let csrf_token = session_manager
+        .create_csrf_token(&tenant_id, DEV_SESSION_ID)
+        .await?;
 
-   Ok(csrf_token)
+    Ok(csrf_token)
 }
 
 #[cfg(test)]
 mod tests {
-   use super::*;
+    use super::*;
 
-   #[test]
-   fn test_開発用テナントidが固定のuuidである() {
-      assert_eq!(
-         DEV_TENANT_ID,
-         Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
-      );
-   }
+    #[test]
+    fn test_開発用テナントidが固定のuuidである() {
+        assert_eq!(
+            DEV_TENANT_ID,
+            Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
+        );
+    }
 
-   #[test]
-   fn test_開発用ユーザーidが固定のuuidである() {
-      assert_eq!(
-         DEV_USER_ID,
-         Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
-      );
-   }
+    #[test]
+    fn test_開発用ユーザーidが固定のuuidである() {
+        assert_eq!(
+            DEV_USER_ID,
+            Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
+        );
+    }
 
-   #[test]
-   fn test_開発用セッションidがdev_sessionである() {
-      assert_eq!(DEV_SESSION_ID, "dev-session");
-   }
+    #[test]
+    fn test_開発用セッションidがdev_sessionである() {
+        assert_eq!(DEV_SESSION_ID, "dev-session");
+    }
 }

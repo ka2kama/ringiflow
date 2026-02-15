@@ -84,8 +84,8 @@ use redis::{Client, aio::ConnectionManager};
 /// - 接続エラー: Redis サーバーに接続できない
 /// - 認証エラー: パスワードが不正
 pub async fn create_connection_manager(
-   redis_url: &str,
+    redis_url: &str,
 ) -> Result<ConnectionManager, redis::RedisError> {
-   let client = Client::open(redis_url)?;
-   ConnectionManager::new(client).await
+    let client = Client::open(redis_url)?;
+    ConnectionManager::new(client).await
 }
