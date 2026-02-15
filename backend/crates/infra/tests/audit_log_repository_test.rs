@@ -3,6 +3,10 @@
 //! DynamoDB Local を使用した統合テスト。
 //! テスト毎にランダムな `TenantId` を生成し、テナントベースで分離する。
 //!
+//! 並列実行対策:
+//! - DynamoDB クライアントを全テストで共有（`OnceCell` による遅延初期化）
+//! - テーブルセットアップは一度だけ実行（`Mutex` による排他制御）
+//!
 //! 実行方法:
 //! ```bash
 //! just dev-deps
@@ -23,6 +27,13 @@ use ringiflow_infra::{
       DynamoDbAuditLogRepository,
    },
 };
+use tokio::sync::{Mutex, OnceCell};
+
+/// 共有 DynamoDB クライアント（全テストで使い回す）
+static CLIENT: OnceCell<aws_sdk_dynamodb::Client> = OnceCell::const_new();
+
+/// セットアップの排他制御
+static SETUP_LOCK: Mutex<()> = Mutex::const_new(());
 
 /// テスト用の DynamoDB エンドポイント
 fn dynamodb_endpoint() -> String {
@@ -36,12 +47,31 @@ fn dynamodb_endpoint() -> String {
 const TEST_TABLE_NAME: &str = "test_audit_logs";
 
 /// テスト用のリポジトリをセットアップする
+///
+/// 並列実行時の競合を防ぐため、クライアント生成とテーブルセットアップは一度だけ実行する。
 async fn setup() -> DynamoDbAuditLogRepository {
-   let client = dynamodb::create_client(&dynamodb_endpoint()).await;
-   dynamodb::ensure_audit_log_table(&client, TEST_TABLE_NAME)
-      .await
-      .expect("テーブルのセットアップに失敗");
-   DynamoDbAuditLogRepository::new(client, TEST_TABLE_NAME.to_string())
+   // 排他制御（並列実行時に複数のテストが同時にセットアップを試みるのを防ぐ）
+   let guard = SETUP_LOCK.lock().await;
+
+   // クライアントの初期化とテーブルセットアップを一度だけ実行
+   if CLIENT.get().is_none() {
+      let client = dynamodb::create_client(&dynamodb_endpoint()).await;
+      dynamodb::ensure_audit_log_table(&client, TEST_TABLE_NAME)
+         .await
+         .expect("テーブルのセットアップに失敗");
+      CLIENT
+         .set(client)
+         .expect("クライアントの初期化は一度だけ行われるべき");
+   }
+
+   let client = CLIENT
+      .get()
+      .expect("クライアントは既に初期化されているべき");
+
+   // ロックを早めに解放
+   drop(guard);
+
+   DynamoDbAuditLogRepository::new(client.clone(), TEST_TABLE_NAME.to_string())
 }
 
 /// テスト用の監査ログを作成する

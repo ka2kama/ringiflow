@@ -191,7 +191,7 @@ jobs:
           POSTGRES_PASSWORD: ringiflow
           POSTGRES_DB: ringiflow_test
         options: >-
-          --health-cmd "pg_isready -U ringiflow"
+          --health-cmd "pg_isready -U ringiflow -d ringiflow_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -280,7 +280,7 @@ jobs:
           echo "✓ Schema snapshot is in sync"
 
       - name: Test (integration tests)
-        run: cargo test --release --all-features --test '*'
+        run: cargo test --release --all-features --test '*' -- --test-threads=1
         working-directory: backend
 
   # Elm チェック: リント、テスト、ビルド
