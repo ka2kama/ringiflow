@@ -7,8 +7,7 @@
 //! 各データストア（PostgreSQL, DynamoDB, Redis）に対応する `TenantDeleter`
 //! 実装を `DeletionRegistry` に登録し、一括削除・件数確認を行う。
 //!
-//! 詳細: [テナント退会時データ削除設計](../../../../docs/03_詳細設計書/
-//! 06_テナント退会時データ削除設計.md)
+//! 詳細: [テナント退会時データ削除設計](../../../../docs/03_詳細設計書/06_テナント退会時データ削除設計.md)
 
 mod auth_credentials;
 mod dynamodb_audit_log;

@@ -6,8 +6,7 @@
 //!
 //! - `POST /internal/auth/verify` - パスワード認証
 //!
-//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/
-//! 08_AuthService設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};

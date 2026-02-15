@@ -219,8 +219,7 @@ pub async fn list_my_workflows(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id` を取得
-/// 2. Core Service の `GET
-///    /internal/workflows/by-display-number/{display_number}` を呼び出し
+/// 2. Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出し
 /// 3. レスポンスを返す
 #[utoipa::path(
    get,
@@ -359,9 +358,7 @@ pub async fn get_task_by_display_numbers(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id` を取得
-/// 2. Core Service の `GET
-///    /internal/workflows/by-display-number/{display_number}/comments`
-///    を呼び出し
+/// 2. Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出し
 /// 3. 200 OK + コメント一覧を返す
 #[utoipa::path(
    get,
