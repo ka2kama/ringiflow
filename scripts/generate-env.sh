@@ -80,7 +80,7 @@ cat > "$PROJECT_ROOT/backend/.env" << EOF
 # -----------------------------------------------------------------------------
 # データベース接続
 # -----------------------------------------------------------------------------
-DATABASE_URL=postgres://ringiflow:ringiflow@localhost:$POSTGRES_PORT/ringiflow_dev
+DATABASE_URL=postgres://ringiflow:ringiflow@localhost:$POSTGRES_PORT/ringiflow
 
 # -----------------------------------------------------------------------------
 # Redis 接続
