@@ -72,6 +72,17 @@ pub fn pool_options() -> PgPoolOptions {
     })
 }
 
+/// データベースマイグレーションを実行する
+///
+/// `sqlx::migrate!()` マクロで埋め込まれたマイグレーションファイルを
+/// 順番に適用する。適用済みのマイグレーションはスキップされる。
+///
+/// sqlx が PostgreSQL の advisory lock を使用するため、
+/// 複数プロセスから同時に呼び出しても安全。
+pub async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    sqlx::migrate!("../../migrations").run(pool).await
+}
+
 /// PostgreSQL 接続プールを作成する
 ///
 /// アプリケーション起動時に一度だけ呼び出し、作成したプールを
