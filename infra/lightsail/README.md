@@ -22,7 +22,7 @@ graph TB
         CF["Cloudflare<br/>SSL終端・CDN・DDoS防御"]
     end
 
-    subgraph Lightsail["Lightsail ($5/月)"]
+    subgraph Lightsail["Lightsail ($7/月)"]
         subgraph Frontend["frontend network"]
             Nginx["Nginx<br/>:80"]
             BFF["BFF<br/>:13000"]
@@ -58,7 +58,7 @@ graph TB
 | リージョン | 東京 (ap-northeast-1) |
 | プラットフォーム | Linux/Unix |
 | ブループリント | OS のみ → AlmaLinux 9.4 |
-| インスタンスプラン | $5 USD/月（1GB RAM, 40GB SSD） |
+| インスタンスプラン | $7 USD/月（1GB RAM, 40GB SSD、デュアルスタック） |
 | インスタンス名 | ringiflow-demo |
 
 4. SSH キーを設定:
@@ -243,28 +243,11 @@ scp -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~/ringiflow/migrations/
 
 #### 7.2 マイグレーション実行
 
-Lightsail 上でマイグレーションを実行する。環境に応じて方法を選択する。
+Lightsail 上でマイグレーションを実行する。
 
-##### 方法 A: psql で直接実行（IPv6-only 環境向け）
+##### 方法 A: sqlx-cli で実行（推奨）
 
-IPv6-only 環境では Docker コンテナからインターネットに出られないため、sqlx-cli のインストールができない。PostgreSQL コンテナ内の psql を使って直接実行する:
-
-```bash
-ssh ec2-user@<LIGHTSAIL_IP>
-cd ~/ringiflow
-
-# 全マイグレーションをファイル名順に実行
-ls migrations/*.sql | sort | while read f; do
-  echo "Running $f..."
-  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow < "$f"
-done
-```
-
-注意: この方法では sqlx の `_sqlx_migrations` テーブルによる適用履歴管理が行われない。既に適用済みのマイグレーションを再実行しないよう注意すること。
-
-##### 方法 B: sqlx-cli で実行（デュアルスタック環境向け）
-
-コンテナからインターネットにアクセスできる環境（デュアルスタック等）では、sqlx-cli を使用できる:
+sqlx-cli を使用してマイグレーションを実行する。適用履歴が `_sqlx_migrations` テーブルで管理される:
 
 ```bash
 ssh ec2-user@<LIGHTSAIL_IP>
@@ -280,31 +263,22 @@ docker run --rm \
 
 注意: 初回は sqlx-cli のインストールに時間がかかる。頻繁に実行する場合は sqlx-cli を含む専用イメージの作成を推奨。
 
-## IPv6-only 環境の注意事項
+##### 方法 B: psql で直接実行（フォールバック）
 
-現在のインスタンスは IPv6-only（$5/月プラン）で運用している。以下の制約に注意すること。
-
-### Docker コンテナからの外部通信
-
-Docker のデフォルトブリッジネットワークは IPv4 のみで動作するため、コンテナ内からインターネットに出られない。`cargo install`、`npm install` 等のコンテナ内でのパッケージ取得は失敗する。
-
-`docker pull` はデーモンがホストのネットワークスタックを直接使用するため、影響を受けない。
-
-### SCP での IPv6 アドレス
-
-SCP はコロン（`:`）をホストとパスの区切り文字に使用するため、IPv6 アドレスと衝突する。角括弧で IPv6 アドレスを囲む必要がある:
+sqlx-cli が使えない場合のフォールバック。PostgreSQL コンテナ内の psql を使って直接実行する:
 
 ```bash
-# NG
-scp file ec2-user@2406:da14:...:/path
+ssh ec2-user@<LIGHTSAIL_IP>
+cd ~/ringiflow
 
-# OK（zsh ではグロブ展開を防ぐため全体をクォート）
-scp file "ec2-user@[2406:da14:...]:/path"
+# 全マイグレーションをファイル名順に実行
+ls migrations/*.sql | sort | while read f; do
+  echo "Running $f..."
+  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow < "$f"
+done
 ```
 
-SSH は角括弧なしでそのまま使用できる。
-
-→ 詳細: [IPv6-only 環境での Docker 運用](../../docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md)
+注意: この方法では sqlx の `_sqlx_migrations` テーブルによる適用履歴管理が行われない。既に適用済みのマイグレーションを再実行しないよう注意すること。
 
 ## 運用
 
@@ -437,9 +411,9 @@ find ~/ringiflow/backup -mtime +7 -delete
 
 | サービス | 月額 |
 |----------|------|
-| Lightsail 1GB | $5 |
+| Lightsail 1GB（デュアルスタック） | $7 |
 | Cloudflare Free | $0 |
-| 合計 | $5 |
+| 合計 | $7 |
 
 ## 関連ドキュメント
 
