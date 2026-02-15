@@ -256,6 +256,85 @@ jobs:
             学習のための解説コメントは承認判断に影響しない。
             問題がなければ、躊躇なく承認してください。
 
+            ## メタデータ埋め込み（必須）
+
+            PR コメント投稿時には、本文の末尾に以下の形式でメタデータを埋め込むこと:
+
+            ```html
+            <!-- review-metadata
+            type: auto-review
+            severity-critical: <数値>
+            severity-high: <数値>
+            severity-medium: <数値>
+            severity-low: <数値>
+            action-required: true | false
+            -->
+            ```
+
+            ### メタデータの各フィールド
+
+            | フィールド | 型 | 説明 | 例 |
+            |-----------|-----|------|-----|
+            | `type` | enum | レビュータイプ。`auto-review` 固定 | `type: auto-review` |
+            | `severity-critical` | int | Critical 指摘の件数 | `severity-critical: 0` |
+            | `severity-high` | int | High 指摘の件数 | `severity-high: 1` |
+            | `severity-medium` | int | Medium 指摘の件数 | `severity-medium: 2` |
+            | `severity-low` | int | Low 指摘の件数 | `severity-low: 3` |
+            | `action-required` | boolean | 対応必須か。`true` = CHANGES_REQUESTED, `false` = APPROVED | `action-required: false` |
+
+            ### 指摘件数のカウント方法
+
+            インラインコメントと PR コメント本文の両方に含まれる指摘を重大度別にカウントする:
+
+            1. インラインコメントで指摘した箇所をすべて数える
+            2. PR コメント本文に記載した全体的な指摘（特定行に紐づかない指摘）もカウントする
+            3. 学習のための解説コメント（指摘を含まないもの）はカウントしない
+
+            ### 配置場所
+
+            メタデータブロックは PR コメント本文の**末尾**に配置する。他のテキストの後に配置すること。
+
+            ### フォーマット例
+
+            **例1: 指摘なし（APPROVED）**
+
+            ```html
+            <!-- review-metadata
+            type: auto-review
+            severity-critical: 0
+            severity-high: 0
+            severity-medium: 0
+            severity-low: 0
+            action-required: false
+            -->
+            ```
+
+            **例2: 軽微な指摘あり（APPROVED）**
+
+            ```html
+            <!-- review-metadata
+            type: auto-review
+            severity-critical: 0
+            severity-high: 0
+            severity-medium: 2
+            severity-low: 1
+            action-required: false
+            -->
+            ```
+
+            **例3: 重大な指摘あり（CHANGES_REQUESTED）**
+
+            ```html
+            <!-- review-metadata
+            type: auto-review
+            severity-critical: 1
+            severity-high: 2
+            severity-medium: 0
+            severity-low: 0
+            action-required: true
+            -->
+            ```
+
             ## 承認メッセージの書き方
 
             `gh pr review --approve -b "メッセージ"` の承認メッセージは簡潔に要点のみ記載する。
