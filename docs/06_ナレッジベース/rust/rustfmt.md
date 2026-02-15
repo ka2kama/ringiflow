@@ -22,7 +22,6 @@ rustfmt 公式のベストプラクティスに基づいた包括的な設定を
 **Unstable 設定:**
 - **`style_edition = "2024"`**: フォーマットスタイルのバージョン統一（最重要）
 - **Import 自動整理**: `group_imports`、`imports_granularity`、`imports_layout`
-- **コメント自動整形**: `wrap_comments`、`normalize_comments`
 - **その他**: ドキュメント内コードのフォーマット、impl 並び順、構造体整列
 
 ### 実行方法
@@ -47,13 +46,20 @@ cargo +nightly fmt
 | Import | `group_imports` | import を std/external/crate で自動グループ化 |
 | Import | `imports_granularity` | import をクレート単位で整理 |
 | Import | `imports_layout` | 長い import リストを垂直展開 |
-| Comment | `wrap_comments` | 長いコメントを自動折り返し |
-| Comment | `normalize_comments` | コメントスタイルを統一 |
 | Doc | `format_code_in_doc_comments` | ドキュメント内のコード例もフォーマット |
 | Impl | `reorder_impl_items` | impl ブロック内を一貫した順序で並び替え |
 | Struct | `struct_field_align_threshold` | 構造体フィールドを整列 |
 
 参考: rustfmt は全86個の設定オプションを提供。このプロジェクトではベストプラクティスに基づき厳選して使用。
+
+### 除外した設定と理由
+
+| 設定 | 除外理由 |
+|------|---------|
+| `wrap_comments` | OpenAPI 仕様の破損（doc コメントの改行が `summary` フィールドに混入）、Markdown リンクの破壊（約15箇所）、日本語の不自然な折り返し |
+| `normalize_comments` | `wrap_comments` と同様の問題を引き起こすため一緒に除外 |
+
+**詳細**: [ADR-048](../../05_ADR/048_Rustフォーマッター設定の標準化.md#comment-関連設定の除外理由)
 
 ## 環境構築
 

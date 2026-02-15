@@ -31,8 +31,17 @@ rustfmt のベストプラクティスを起点とした包括的な設定を採
 
 1. **`style_edition = "2024"`**: rustfmt と cargo fmt の整合性確保（最重要）
 2. **Import 関連**: `group_imports`、`imports_granularity`、`imports_layout`
-3. **コメント関連**: `wrap_comments`、`normalize_comments`（新規追加）
-4. **その他**: `format_code_in_doc_comments`、`reorder_impl_items`、`struct_field_align_threshold`
+3. **その他**: `format_code_in_doc_comments`、`reorder_impl_items`、`struct_field_align_threshold`
+
+### 除外した設定
+
+**`wrap_comments` / `normalize_comments`**: 当初追加したが、以下の問題が発覚し除外
+
+- OpenAPI 仕様の破損: doc コメントの改行が `summary` フィールドに混入
+- Markdown リンクの破壊: リンクが改行で分断され、レンダリングが壊れる（約15箇所）
+- 日本語の不自然な折り返し: 単語の途中や不自然な位置で改行
+
+これらはコメントの自動折り返し機能だが、Markdown や日本語との相性が悪く、プロジェクトの文脈では有害と判断
 
 ### rustfmt-nightly の使用
 
@@ -69,8 +78,17 @@ Rust 本体は stable を維持し、rustfmt のみ nightly 版を使用する
 手動維持が困難で、自動化の価値が高い機能を厳選:
 
 - Import 関連: 手動での一貫性維持は現実的でない
-- Comment 関連（新規追加）: 長いコメントの自動折り返しとスタイル統一
 - その他: ドキュメント品質向上、impl ブロックの並び順統一
+
+### Comment 関連設定の除外理由
+
+当初 `wrap_comments` と `normalize_comments` を採用したが、レビューで以下の問題が判明:
+
+1. **OpenAPI 仕様との非互換性**: utoipa は doc コメントを OpenAPI の `summary` フィールドに変換するが、`wrap_comments` による改行がそのまま仕様に混入し、API 仕様として不適切な形式になる
+2. **Markdown との非互換性**: doc コメント内の Markdown リンクが改行で分断され、レンダリングが壊れる（プロジェクト全体で約15箇所）
+3. **日本語処理の限界**: 日本語の自然な区切り位置を判定できず、単語の途中や不自然な位置で改行が発生
+
+自動折り返しは魅力的だが、プロジェクトの文脈（OpenAPI 生成、Markdown ドキュメント、日本語コメント）では有害と判断し、手動管理を選択
 
 ## 代替案
 
