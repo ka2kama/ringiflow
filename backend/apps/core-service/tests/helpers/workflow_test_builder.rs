@@ -196,7 +196,7 @@ mod tests {
    }
 
    #[tokio::test]
-   async fn test_build_workflow_usecase_impl_SUTが作成される() {
+   async fn test_build_workflow_usecase_impl_sutが作成される() {
       // Arrange
       let builder = WorkflowTestBuilder::new();
 
