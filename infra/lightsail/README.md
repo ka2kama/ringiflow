@@ -130,7 +130,7 @@ vim .env
 # PostgreSQL（強力なパスワードを生成）
 POSTGRES_USER=ringiflow
 POSTGRES_PASSWORD=$(openssl rand -base64 24)
-POSTGRES_DB=ringiflow_prod
+POSTGRES_DB=ringiflow
 
 # Redis（強力なパスワードを生成）
 REDIS_PASSWORD=$(openssl rand -base64 24)
@@ -256,7 +256,7 @@ cd ~/ringiflow
 # 全マイグレーションをファイル名順に実行
 ls migrations/*.sql | sort | while read f; do
   echo "Running $f..."
-  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow_prod < "$f"
+  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow < "$f"
 done
 ```
 

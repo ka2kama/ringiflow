@@ -54,7 +54,7 @@ if [ -f "$RINGIFLOW_DIR/.env" ]; then
 fi
 
 : "${POSTGRES_USER:=ringiflow}"
-: "${POSTGRES_DB:=ringiflow_prod}"
+: "${POSTGRES_DB:=ringiflow}"
 
 # ==========================================================
 # バックアップ処理
