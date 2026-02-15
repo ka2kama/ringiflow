@@ -51,7 +51,7 @@ const TEST_TABLE_NAME: &str = "test_audit_logs";
 /// 並列実行時の競合を防ぐため、クライアント生成とテーブルセットアップは一度だけ実行する。
 async fn setup() -> DynamoDbAuditLogRepository {
    // 排他制御（並列実行時に複数のテストが同時にセットアップを試みるのを防ぐ）
-   let mut guard = SETUP_LOCK.lock().await;
+   let guard = SETUP_LOCK.lock().await;
 
    // クライアントの初期化とテーブルセットアップを一度だけ実行
    if CLIENT.get().is_none() {
