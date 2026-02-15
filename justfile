@@ -527,12 +527,10 @@ worktree-remove name:
 
     echo "worktree を削除中: {{name}}"
 
-    # Docker コンテナを停止・削除
-    containers=$(docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml ps -q 2>/dev/null || true)
-    if [[ -n "$containers" ]]; then
-        echo "  Docker コンテナを停止中..."
-        docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v
-    fi
+    # Docker コンテナ・ボリュームを停止・削除
+    # コンテナが停止済みでもボリュームが残っている場合があるため、常に実行する
+    echo "  Docker リソースを削除中..."
+    docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.yaml down -v 2>/dev/null || true
 
     # worktree を削除
     git worktree remove "$WORKTREE_PATH" --force
