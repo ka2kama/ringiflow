@@ -8,5 +8,6 @@ pub mod handler;
 pub mod usecase;
 
 // テストユーティリティ（内部実装、ドキュメントからは隠す）
+#[cfg(any(test, feature = "test-utils"))]
 #[doc(hidden)]
 pub mod test_utils;

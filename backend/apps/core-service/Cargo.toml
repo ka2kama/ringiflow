@@ -30,3 +30,10 @@ ringiflow-infra = { workspace = true, features = ["test-utils"] }
 tokio-test.workspace = true
 pretty_assertions.workspace = true
 async-trait.workspace = true
+
+[features]
+# テストユーティリティを公開する feature
+test-utils = [
+    "ringiflow-domain/test-support",
+    "ringiflow-infra/test-utils",
+]
