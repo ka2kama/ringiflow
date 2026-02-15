@@ -274,7 +274,7 @@ cd ~/ringiflow
 # 全マイグレーションをファイル名順に実行
 ls migrations/*.sql | sort | while read f; do
   echo "Running $f..."
-  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow_prod < "$f"
+  docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow < "$f"
 done
 ```
 
