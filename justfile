@@ -291,8 +291,9 @@ test-rust:
     cd backend && cargo test {{ _cargo_q }} --all-features --doc
 
 # Rust 統合テスト（DB 接続が必要）
+# 順次実行（DynamoDB Local への同時接続過多を防ぐ）
 test-rust-integration:
-    cd backend && cargo test {{ _cargo_q }} --all-features --test '*'
+    cd backend && cargo test {{ _cargo_q }} --all-features --test '*' -- --test-threads=1
 
 # Elm テスト
 test-elm:
