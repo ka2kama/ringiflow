@@ -180,8 +180,12 @@ Cookie セッションから Bearer Token（JWT など）に移行する。
 
 ### 整合性担保の仕組み
 
-```
-Rust (BFF) → [utoipa] → OpenAPI 仕様 → [E2E テスト] → Elm 整合性検証
+```mermaid
+flowchart LR
+    Rust["Rust (BFF)"] --> utoipa
+    utoipa --> OpenAPI["OpenAPI 仕様"]
+    OpenAPI --> E2ETest["E2E テスト"]
+    E2ETest --> Elm["Elm 整合性検証"]
 ```
 
 1. utoipa が Rust の型から OpenAPI を自動生成
@@ -201,4 +205,4 @@ Rust (BFF) → [utoipa] → OpenAPI 仕様 → [E2E テスト] → Elm 整合性
 - Issue #137: API 仕様と実装の整合性担保（OpenAPI / BFF / Elm）
 - PR #444: utoipa 導入による OpenAPI Code First 移行
 - ADR-025: 情報管理とローカル知識集約の方針
-- セッションログ: [prompts/runs/2026-02/2026-02-15_1140_ElmOpenAPIクライアント生成ツール評価.md](../../prompts/runs/2026-02/2026-02-15_1140_ElmOpenAPIクライアント生成ツール評価.md)（作成予定）
+- セッションログ: [prompts/runs/2026-02/2026-02-15_1140_ElmOpenAPIクライアント生成ツール評価.md](../../prompts/runs/2026-02/2026-02-15_1140_ElmOpenAPIクライアント生成ツール評価.md)
