@@ -1,13 +1,40 @@
-# stable
-tab_spaces = 3
-newline_style = "Unix"
-use_field_init_shorthand = true
+# Stable configuration options
+# These can be used with stable Rust toolchain
 
-# unstable
+# Rust edition - must match Cargo.toml to avoid inconsistencies
+edition = "2024"
+
+# Indentation
+tab_spaces = 4
+hard_tabs = false
+
+# Line width
+max_width = 100
+
+# Line endings
+newline_style = "Unix"
+
+# Modern Rust idioms
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+# Unstable configuration options
+# These require rustfmt-nightly (cargo +nightly fmt)
 unstable_features = true
+
+# Style edition - ensures consistency between rustfmt and cargo fmt
+style_edition = "2024"
+
+# Import organization
 group_imports = "StdExternalCrate"
 imports_granularity = "Crate"
 imports_layout = "HorizontalVertical"
+
+# Code formatting in documentation
 format_code_in_doc_comments = true
+
+# Implementation items ordering
 reorder_impl_items = true
+
+# Struct field alignment
 struct_field_align_threshold = 10

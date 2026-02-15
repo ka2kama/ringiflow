@@ -22,6 +22,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PaginatedResponse<T> {
-   pub data:        Vec<T>,
-   pub next_cursor: Option<String>,
+    pub data:        Vec<T>,
+    pub next_cursor: Option<String>,
 }

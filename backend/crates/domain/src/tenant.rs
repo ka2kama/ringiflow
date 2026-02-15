@@ -75,70 +75,70 @@ use crate::DomainError;
 pub struct TenantId(Uuid);
 
 impl TenantId {
-   /// 新しいテナント ID を生成する
-   ///
-   /// UUID v7 を使用するため、生成順にソート可能。
-   /// 新規テナント登録時に使用する。
-   ///
-   /// # 例
-   ///
-   /// ```rust
-   /// use ringiflow_domain::tenant::TenantId;
-   ///
-   /// let tenant_id = TenantId::new();
-   /// // UUID v7 形式の文字列が生成される
-   /// println!("{}", tenant_id);
-   /// ```
-   pub fn new() -> Self {
-      Self(Uuid::now_v7())
-   }
+    /// 新しいテナント ID を生成する
+    ///
+    /// UUID v7 を使用するため、生成順にソート可能。
+    /// 新規テナント登録時に使用する。
+    ///
+    /// # 例
+    ///
+    /// ```rust
+    /// use ringiflow_domain::tenant::TenantId;
+    ///
+    /// let tenant_id = TenantId::new();
+    /// // UUID v7 形式の文字列が生成される
+    /// println!("{}", tenant_id);
+    /// ```
+    pub fn new() -> Self {
+        Self(Uuid::now_v7())
+    }
 
-   /// 既存の UUID からテナント ID を作成する
-   ///
-   /// データベースから取得した値や、外部システムから受け取った値を
-   /// 型安全な `TenantId` に変換する際に使用する。
-   ///
-   /// # 引数
-   ///
-   /// * `uuid` - 変換元の UUID
-   ///
-   /// # 例
-   ///
-   /// ```rust
-   /// use ringiflow_domain::tenant::TenantId;
-   /// use uuid::Uuid;
-   ///
-   /// // データベースから取得した UUID を TenantId に変換
-   /// let uuid = Uuid::nil(); // 実際にはDBから取得
-   /// let tenant_id = TenantId::from_uuid(uuid);
-   /// ```
-   pub fn from_uuid(uuid: Uuid) -> Self {
-      Self(uuid)
-   }
+    /// 既存の UUID からテナント ID を作成する
+    ///
+    /// データベースから取得した値や、外部システムから受け取った値を
+    /// 型安全な `TenantId` に変換する際に使用する。
+    ///
+    /// # 引数
+    ///
+    /// * `uuid` - 変換元の UUID
+    ///
+    /// # 例
+    ///
+    /// ```rust
+    /// use ringiflow_domain::tenant::TenantId;
+    /// use uuid::Uuid;
+    ///
+    /// // データベースから取得した UUID を TenantId に変換
+    /// let uuid = Uuid::nil(); // 実際にはDBから取得
+    /// let tenant_id = TenantId::from_uuid(uuid);
+    /// ```
+    pub fn from_uuid(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
 
-   /// 内部の UUID 参照を取得する
-   ///
-   /// データベースへの保存や、外部 API との連携時に使用する。
-   ///
-   /// # 例
-   ///
-   /// ```rust
-   /// use ringiflow_domain::tenant::TenantId;
-   ///
-   /// let tenant_id = TenantId::new();
-   /// let uuid = tenant_id.as_uuid();
-   /// // sqlx などでパラメータとして使用
-   /// ```
-   pub fn as_uuid(&self) -> &Uuid {
-      &self.0
-   }
+    /// 内部の UUID 参照を取得する
+    ///
+    /// データベースへの保存や、外部 API との連携時に使用する。
+    ///
+    /// # 例
+    ///
+    /// ```rust
+    /// use ringiflow_domain::tenant::TenantId;
+    ///
+    /// let tenant_id = TenantId::new();
+    /// let uuid = tenant_id.as_uuid();
+    /// // sqlx などでパラメータとして使用
+    /// ```
+    pub fn as_uuid(&self) -> &Uuid {
+        &self.0
+    }
 }
 
 impl Default for TenantId {
-   /// デフォルトで新しいテナント ID を生成する
-   fn default() -> Self {
-      Self::new()
-   }
+    /// デフォルトで新しいテナント ID を生成する
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // =========================================================================
@@ -158,38 +158,38 @@ impl Default for TenantId {
 pub struct TenantName(String);
 
 impl TenantName {
-   /// テナント名を作成する
-   ///
-   /// # バリデーション
-   ///
-   /// - 空文字列ではない
-   /// - 前後の空白はトリミング
-   /// - 最大 255 文字
-   pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
-      let value = value.into().trim().to_string();
+    /// テナント名を作成する
+    ///
+    /// # バリデーション
+    ///
+    /// - 空文字列ではない
+    /// - 前後の空白はトリミング
+    /// - 最大 255 文字
+    pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
+        let value = value.into().trim().to_string();
 
-      if value.is_empty() {
-         return Err(DomainError::Validation("テナント名は必須です".to_string()));
-      }
+        if value.is_empty() {
+            return Err(DomainError::Validation("テナント名は必須です".to_string()));
+        }
 
-      if value.chars().count() > 255 {
-         return Err(DomainError::Validation(
-            "テナント名は 255 文字以内である必要があります".to_string(),
-         ));
-      }
+        if value.chars().count() > 255 {
+            return Err(DomainError::Validation(
+                "テナント名は 255 文字以内である必要があります".to_string(),
+            ));
+        }
 
-      Ok(Self(value))
-   }
+        Ok(Self(value))
+    }
 
-   /// 文字列参照を取得する
-   pub fn as_str(&self) -> &str {
-      &self.0
-   }
+    /// 文字列参照を取得する
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 
-   /// 所有権を持つ文字列に変換する
-   pub fn into_string(self) -> String {
-      self.0
-   }
+    /// 所有権を持つ文字列に変換する
+    pub fn into_string(self) -> String {
+        self.0
+    }
 }
 
 // =========================================================================
@@ -206,79 +206,79 @@ impl TenantName {
 /// - `id` はシステム内で一意
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tenant {
-   id:   TenantId,
-   name: TenantName,
+    id:   TenantId,
+    name: TenantName,
 }
 
 impl Tenant {
-   /// データベースからテナントを復元する
-   pub fn from_db(id: TenantId, name: TenantName) -> Self {
-      Self { id, name }
-   }
+    /// データベースからテナントを復元する
+    pub fn from_db(id: TenantId, name: TenantName) -> Self {
+        Self { id, name }
+    }
 
-   /// テナント ID を取得する
-   pub fn id(&self) -> &TenantId {
-      &self.id
-   }
+    /// テナント ID を取得する
+    pub fn id(&self) -> &TenantId {
+        &self.id
+    }
 
-   /// テナント名を取得する
-   pub fn name(&self) -> &TenantName {
-      &self.name
-   }
+    /// テナント名を取得する
+    pub fn name(&self) -> &TenantName {
+        &self.name
+    }
 }
 
 #[cfg(test)]
 mod tests {
-   use pretty_assertions::assert_eq;
+    use pretty_assertions::assert_eq;
 
-   use super::*;
+    use super::*;
 
-   // TenantName のテスト
+    // TenantName のテスト
 
-   #[test]
-   fn test_テナント名は正常な名前を受け入れる() {
-      let name = TenantName::new("Development Tenant");
-      assert!(name.is_ok());
-      assert_eq!(name.unwrap().as_str(), "Development Tenant");
-   }
+    #[test]
+    fn test_テナント名は正常な名前を受け入れる() {
+        let name = TenantName::new("Development Tenant");
+        assert!(name.is_ok());
+        assert_eq!(name.unwrap().as_str(), "Development Tenant");
+    }
 
-   #[test]
-   fn test_テナント名は空文字列を拒否する() {
-      assert!(TenantName::new("").is_err());
-   }
+    #[test]
+    fn test_テナント名は空文字列を拒否する() {
+        assert!(TenantName::new("").is_err());
+    }
 
-   #[test]
-   fn test_テナント名は空白のみの文字列を拒否する() {
-      assert!(TenantName::new("   ").is_err());
-   }
+    #[test]
+    fn test_テナント名は空白のみの文字列を拒否する() {
+        assert!(TenantName::new("   ").is_err());
+    }
 
-   #[test]
-   fn test_テナント名は前後の空白をトリミングする() {
-      let name = TenantName::new("  Test Tenant  ").unwrap();
-      assert_eq!(name.as_str(), "Test Tenant");
-   }
+    #[test]
+    fn test_テナント名は前後の空白をトリミングする() {
+        let name = TenantName::new("  Test Tenant  ").unwrap();
+        assert_eq!(name.as_str(), "Test Tenant");
+    }
 
-   #[test]
-   fn test_テナント名は255文字を超えると拒否する() {
-      let long_name = "a".repeat(256);
-      assert!(TenantName::new(long_name).is_err());
-   }
+    #[test]
+    fn test_テナント名は255文字を超えると拒否する() {
+        let long_name = "a".repeat(256);
+        assert!(TenantName::new(long_name).is_err());
+    }
 
-   #[test]
-   fn test_テナント名は255文字以内を受け入れる() {
-      let name = "a".repeat(255);
-      assert!(TenantName::new(name).is_ok());
-   }
+    #[test]
+    fn test_テナント名は255文字以内を受け入れる() {
+        let name = "a".repeat(255);
+        assert!(TenantName::new(name).is_ok());
+    }
 
-   // Tenant のテスト
+    // Tenant のテスト
 
-   #[test]
-   fn test_from_dbでテナントを復元できる() {
-      let id = TenantId::new();
-      let name = TenantName::new("Test Tenant").unwrap();
-      let sut = Tenant::from_db(id.clone(), name.clone());
+    #[test]
+    fn test_from_dbでテナントを復元できる() {
+        let id = TenantId::new();
+        let name = TenantName::new("Test Tenant").unwrap();
+        let sut = Tenant::from_db(id.clone(), name.clone());
 
-      let expected = Tenant::from_db(id, name);
-      assert_eq!(sut, expected);
-   }
+        let expected = Tenant::from_db(id, name);
+        assert_eq!(sut, expected);
+    }
 }

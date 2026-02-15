@@ -4,8 +4,8 @@
 //!
 //! ## 概要
 //!
-//! 各データストア（PostgreSQL, DynamoDB, Redis）に対応する `TenantDeleter` 実装を
-//! `DeletionRegistry` に登録し、一括削除・件数確認を行う。
+//! 各データストア（PostgreSQL, DynamoDB, Redis）に対応する `TenantDeleter`
+//! 実装を `DeletionRegistry` に登録し、一括削除・件数確認を行う。
 //!
 //! 詳細: [テナント退会時データ削除設計](../../../../docs/03_詳細設計書/06_テナント退会時データ削除設計.md)
 
@@ -34,8 +34,8 @@ use crate::error::InfraError;
 /// テナントデータの削除結果
 #[derive(Debug, Clone)]
 pub struct DeletionResult {
-   /// 削除された件数
-   pub deleted_count: u64,
+    /// 削除された件数
+    pub deleted_count: u64,
 }
 
 /// テナントデータ削除トレイト
@@ -43,12 +43,12 @@ pub struct DeletionResult {
 /// 各データストアがこのトレイトを実装し、テナント退会時のデータ削除を提供する。
 #[async_trait]
 pub trait TenantDeleter: Send + Sync {
-   /// この Deleter の名前（例: `"postgres:users"`）
-   fn name(&self) -> &'static str;
+    /// この Deleter の名前（例: `"postgres:users"`）
+    fn name(&self) -> &'static str;
 
-   /// 指定テナントのデータを削除する
-   async fn delete(&self, tenant_id: &TenantId) -> Result<DeletionResult, InfraError>;
+    /// 指定テナントのデータを削除する
+    async fn delete(&self, tenant_id: &TenantId) -> Result<DeletionResult, InfraError>;
 
-   /// 指定テナントのデータ件数を返す
-   async fn count(&self, tenant_id: &TenantId) -> Result<u64, InfraError>;
+    /// 指定テナントのデータ件数を返す
+    async fn count(&self, tenant_id: &TenantId) -> Result<u64, InfraError>;
 }

@@ -1,6 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 103
+assertion_line: 101
 expression: json
 ---
 {

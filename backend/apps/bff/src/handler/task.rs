@@ -5,15 +5,16 @@
 //! ## エンドポイント
 //!
 //! - `GET /api/v1/tasks/my` - 自分のタスク一覧
-//! - `GET /api/v1/workflows/{display_number}/tasks/{step_display_number}` - タスク詳細（workflow ハンドラに移動）
+//! - `GET /api/v1/workflows/{display_number}/tasks/{step_display_number}` -
+//!   タスク詳細（workflow ハンドラに移動）
 
 use std::sync::Arc;
 
 use axum::{
-   Json,
-   extract::State,
-   http::{HeaderMap, StatusCode},
-   response::IntoResponse,
+    Json,
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_shared::{ApiResponse, ErrorResponse};
@@ -28,75 +29,75 @@ use crate::error::{extract_tenant_id, get_session, internal_error_response};
 /// ワークフロー概要データ（タスク一覧用）
 #[derive(Debug, Serialize, ToSchema)]
 pub struct TaskWorkflowSummaryData {
-   pub id: String,
-   pub display_id: String,
-   pub display_number: i64,
-   pub title: String,
-   pub status: String,
-   pub initiated_by: UserRefData,
-   pub submitted_at: Option<String>,
+    pub id: String,
+    pub display_id: String,
+    pub display_number: i64,
+    pub title: String,
+    pub status: String,
+    pub initiated_by: UserRefData,
+    pub submitted_at: Option<String>,
 }
 
 impl From<crate::client::TaskWorkflowSummaryDto> for TaskWorkflowSummaryData {
-   fn from(dto: crate::client::TaskWorkflowSummaryDto) -> Self {
-      Self {
-         id: dto.id,
-         display_id: dto.display_id,
-         display_number: dto.display_number,
-         title: dto.title,
-         status: dto.status,
-         initiated_by: UserRefData::from(dto.initiated_by),
-         submitted_at: dto.submitted_at,
-      }
-   }
+    fn from(dto: crate::client::TaskWorkflowSummaryDto) -> Self {
+        Self {
+            id: dto.id,
+            display_id: dto.display_id,
+            display_number: dto.display_number,
+            title: dto.title,
+            status: dto.status,
+            initiated_by: UserRefData::from(dto.initiated_by),
+            submitted_at: dto.submitted_at,
+        }
+    }
 }
 
 /// タスク一覧の要素データ
 #[derive(Debug, Serialize, ToSchema)]
 pub struct TaskItemData {
-   pub id: String,
-   pub display_number: i64,
-   pub step_name: String,
-   pub status: String,
-   pub version: i32,
-   pub assigned_to: Option<UserRefData>,
-   pub due_date: Option<String>,
-   pub started_at: Option<String>,
-   pub created_at: String,
-   pub workflow: TaskWorkflowSummaryData,
+    pub id: String,
+    pub display_number: i64,
+    pub step_name: String,
+    pub status: String,
+    pub version: i32,
+    pub assigned_to: Option<UserRefData>,
+    pub due_date: Option<String>,
+    pub started_at: Option<String>,
+    pub created_at: String,
+    pub workflow: TaskWorkflowSummaryData,
 }
 
 impl From<crate::client::TaskItemDto> for TaskItemData {
-   fn from(dto: crate::client::TaskItemDto) -> Self {
-      Self {
-         id: dto.id,
-         display_number: dto.display_number,
-         step_name: dto.step_name,
-         status: dto.status,
-         version: dto.version,
-         assigned_to: dto.assigned_to.map(UserRefData::from),
-         due_date: dto.due_date,
-         started_at: dto.started_at,
-         created_at: dto.created_at,
-         workflow: TaskWorkflowSummaryData::from(dto.workflow),
-      }
-   }
+    fn from(dto: crate::client::TaskItemDto) -> Self {
+        Self {
+            id: dto.id,
+            display_number: dto.display_number,
+            step_name: dto.step_name,
+            status: dto.status,
+            version: dto.version,
+            assigned_to: dto.assigned_to.map(UserRefData::from),
+            due_date: dto.due_date,
+            started_at: dto.started_at,
+            created_at: dto.created_at,
+            workflow: TaskWorkflowSummaryData::from(dto.workflow),
+        }
+    }
 }
 
 /// タスク詳細データ
 #[derive(Debug, Serialize, ToSchema)]
 pub struct TaskDetailData {
-   pub step:     WorkflowStepData,
-   pub workflow: WorkflowData,
+    pub step:     WorkflowStepData,
+    pub workflow: WorkflowData,
 }
 
 impl From<crate::client::TaskDetailDto> for TaskDetailData {
-   fn from(dto: crate::client::TaskDetailDto) -> Self {
-      Self {
-         step:     WorkflowStepData::from(dto.step),
-         workflow: WorkflowData::from(dto.workflow),
-      }
-   }
+    fn from(dto: crate::client::TaskDetailDto) -> Self {
+        Self {
+            step:     WorkflowStepData::from(dto.step),
+            workflow: WorkflowData::from(dto.workflow),
+        }
+    }
 }
 
 // --- ハンドラ ---
@@ -115,41 +116,41 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
    )
 )]
 pub async fn list_my_tasks(
-   State(state): State<Arc<WorkflowState>>,
-   headers: HeaderMap,
-   jar: CookieJar,
+    State(state): State<Arc<WorkflowState>>,
+    headers: HeaderMap,
+    jar: CookieJar,
 ) -> impl IntoResponse {
-   let tenant_id = match extract_tenant_id(&headers) {
-      Ok(id) => id,
-      Err(e) => return e.into_response(),
-   };
+    let tenant_id = match extract_tenant_id(&headers) {
+        Ok(id) => id,
+        Err(e) => return e.into_response(),
+    };
 
-   let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-      Ok(data) => data,
-      Err(response) => return response,
-   };
+    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
+        Ok(data) => data,
+        Err(response) => return response,
+    };
 
-   match state
-      .core_service_client
-      .list_my_tasks(
-         *session_data.tenant_id().as_uuid(),
-         *session_data.user_id().as_uuid(),
-      )
-      .await
-   {
-      Ok(core_response) => {
-         let response = ApiResponse::new(
-            core_response
-               .data
-               .into_iter()
-               .map(TaskItemData::from)
-               .collect::<Vec<_>>(),
-         );
-         (StatusCode::OK, Json(response)).into_response()
-      }
-      Err(e) => {
-         tracing::error!("タスク一覧取得で内部エラー: {}", e);
-         internal_error_response()
-      }
-   }
+    match state
+        .core_service_client
+        .list_my_tasks(
+            *session_data.tenant_id().as_uuid(),
+            *session_data.user_id().as_uuid(),
+        )
+        .await
+    {
+        Ok(core_response) => {
+            let response = ApiResponse::new(
+                core_response
+                    .data
+                    .into_iter()
+                    .map(TaskItemData::from)
+                    .collect::<Vec<_>>(),
+            );
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("タスク一覧取得で内部エラー: {}", e);
+            internal_error_response()
+        }
+    }
 }

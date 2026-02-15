@@ -29,18 +29,18 @@ use serde::Serialize;
 /// ヘルスチェックレスポンス
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
-   /// 稼働状態（`"healthy"` または `"unhealthy"`）
-   pub status:  String,
-   /// アプリケーションバージョン（Cargo.toml から取得）
-   pub version: String,
+    /// 稼働状態（`"healthy"` または `"unhealthy"`）
+    pub status:  String,
+    /// アプリケーションバージョン（Cargo.toml から取得）
+    pub version: String,
 }
 
 /// ヘルスチェックエンドポイント
 ///
 /// サーバーが正常に稼働していることを確認するためのエンドポイント。
 pub async fn health_check() -> Json<HealthResponse> {
-   Json(HealthResponse {
-      status:  "healthy".to_string(),
-      version: env!("CARGO_PKG_VERSION").to_string(),
-   })
+    Json(HealthResponse {
+        status:  "healthy".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    })
 }

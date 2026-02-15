@@ -26,14 +26,14 @@ pub use role::RoleUseCaseImpl;
 pub use task::TaskUseCaseImpl;
 pub use user::UserUseCaseImpl;
 pub use workflow::{
-   ApproveRejectInput,
-   CreateWorkflowInput,
-   PostCommentInput,
-   ResubmitWorkflowInput,
-   StepApprover,
-   SubmitWorkflowInput,
-   WorkflowUseCaseImpl,
-   WorkflowWithSteps,
+    ApproveRejectInput,
+    CreateWorkflowInput,
+    PostCommentInput,
+    ResubmitWorkflowInput,
+    StepApprover,
+    SubmitWorkflowInput,
+    WorkflowUseCaseImpl,
+    WorkflowWithSteps,
 };
 
 use crate::error::CoreError;
@@ -43,20 +43,20 @@ use crate::error::CoreError;
 /// 返り値は `UserId → ユーザー名` の HashMap。
 /// 空の ID リストを渡した場合は空の HashMap を返す。
 pub(crate) async fn resolve_user_names(
-   user_repo: &dyn UserRepository,
-   user_ids: &[UserId],
+    user_repo: &dyn UserRepository,
+    user_ids: &[UserId],
 ) -> Result<HashMap<UserId, String>, CoreError> {
-   if user_ids.is_empty() {
-      return Ok(HashMap::new());
-   }
+    if user_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
 
-   let users = user_repo
-      .find_by_ids(user_ids)
-      .await
-      .map_err(|e| CoreError::Internal(e.to_string()))?;
+    let users = user_repo
+        .find_by_ids(user_ids)
+        .await
+        .map_err(|e| CoreError::Internal(e.to_string()))?;
 
-   Ok(users
-      .into_iter()
-      .map(|user| (user.id().clone(), user.name().as_str().to_string()))
-      .collect())
+    Ok(users
+        .into_iter()
+        .map(|user| (user.id().clone(), user.name().as_str().to_string()))
+        .collect())
 }
