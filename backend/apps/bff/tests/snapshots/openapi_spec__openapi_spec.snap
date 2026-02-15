@@ -1,6 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 103
+assertion_line: 101
 expression: json
 ---
 {
@@ -1068,7 +1068,7 @@ expression: json
           "workflows"
         ],
         "summary": "GET /api/v1/workflows/{display_number}",
-        "description": "ワークフローの詳細を取得する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出し\n3. レスポンスを返す",
+        "description": "ワークフローの詳細を取得する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `GET\n   /internal/workflows/by-display-number/{display_number}` を呼び出し\n3. レスポンスを返す",
         "operationId": "get_workflow",
         "parameters": [
           {
@@ -1117,7 +1117,7 @@ expression: json
           "workflows"
         ],
         "summary": "GET /api/v1/workflows/{display_number}/comments",
-        "description": "ワークフローのコメント一覧を取得する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出し\n3. 200 OK + コメント一覧を返す",
+        "description": "ワークフローのコメント一覧を取得する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `GET\n   /internal/workflows/by-display-number/{display_number}/comments`\n   を呼び出し\n3. 200 OK + コメント一覧を返す",
         "operationId": "list_comments",
         "parameters": [
           {
@@ -1164,7 +1164,7 @@ expression: json
           "workflows"
         ],
         "summary": "POST /api/v1/workflows/{display_number}/comments",
-        "description": "ワークフローにコメントを投稿する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/comments` を呼び出し\n3. 201 Created + コメントを返す",
+        "description": "ワークフローにコメントを投稿する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST\n   /internal/workflows/by-display-number/{display_number}/comments`\n   を呼び出し\n3. 201 Created + コメントを返す",
         "operationId": "post_comment",
         "parameters": [
           {
@@ -1243,7 +1243,7 @@ expression: json
           "workflows"
         ],
         "summary": "POST /api/v1/workflows/{display_number}/resubmit",
-        "description": "ワークフローを再申請する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
+        "description": "ワークフローを再申請する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST\n   /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
         "operationId": "resubmit_workflow",
         "parameters": [
           {
@@ -1332,7 +1332,7 @@ expression: json
           "workflows"
         ],
         "summary": "POST /api/v1/workflows/{display_number}/steps/{step_display_number}/approve",
-        "description": "ワークフローステップを承認する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
+        "description": "ワークフローステップを承認する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST\n   /internal/workflows/by-display-number/{dn}/steps/by-display-number/\n   {step_dn}/approve` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
         "operationId": "approve_step",
         "parameters": [
           {
@@ -1431,7 +1431,7 @@ expression: json
           "workflows"
         ],
         "summary": "POST /api/v1/workflows/{display_number}/steps/{step_display_number}/reject",
-        "description": "ワークフローステップを却下する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
+        "description": "ワークフローステップを却下する\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST\n   /internal/workflows/by-display-number/{dn}/steps/by-display-number/\n   {step_dn}/reject` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
         "operationId": "reject_step",
         "parameters": [
           {
@@ -1529,8 +1529,8 @@ expression: json
         "tags": [
           "workflows"
         ],
-        "summary": "POST /api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes",
-        "description": "ワークフローステップを差し戻す\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/request-changes` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
+        "summary": "POST /api/v1/workflows/{display_number}/steps/{step_display_number}/\nrequest-changes",
+        "description": "ワークフローステップを差し戻す\n\n## 処理フロー\n\n1. セッションから `tenant_id`, `user_id` を取得\n2. Core Service の `POST\n   /internal/workflows/by-display-number/{dn}/steps/by-display-number/\n   {step_dn}/request-changes` を呼び出し\n3. 200 OK + 更新されたワークフローを返す",
         "operationId": "request_changes_step",
         "parameters": [
           {
@@ -1629,7 +1629,7 @@ expression: json
           "workflows"
         ],
         "summary": "POST /api/v1/workflows/{display_number}/submit",
-        "description": "ワークフローを申請する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出し\n3. レスポンスを返す",
+        "description": "ワークフローを申請する\n\n## 処理フロー\n\n1. セッションから `tenant_id` を取得\n2. Core Service の `POST\n   /internal/workflows/by-display-number/{display_number}/submit` を呼び出し\n3. レスポンスを返す",
         "operationId": "submit_workflow",
         "parameters": [
           {
