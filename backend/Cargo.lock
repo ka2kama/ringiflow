@@ -2401,6 +2401,7 @@ dependencies = [
  "dotenvy",
  "itertools",
  "pretty_assertions",
+ "ringiflow-core-service",
  "ringiflow-domain",
  "ringiflow-infra",
  "ringiflow-shared",
