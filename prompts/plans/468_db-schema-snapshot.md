@@ -54,9 +54,9 @@ pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \
 |---------|--------|------|
 | `db-dump-schema` | `_psql_url`（justfile 変数） | ローカル開発専用。既存 DB コマンド（`db-tables` 等）と統一 |
 | `schema-check` | `_psql_url`（justfile 変数） | ローカル開発専用 |
-| CI のチェック | `$DATABASE_URL`（環境変数） | CI 環境のDB名（`ringiflow_test`）に対応 |
+| CI のチェック | `$DATABASE_URL`（環境変数） | CI 環境のDB（`ringiflow`）に対応 |
 
-スキーマ定義自体は DB名に依存しないため、`ringiflow_dev` と `ringiflow_test` で同一の出力になる。
+スキーマ定義自体は DB名に依存しないため、全環境で同一の出力になる。
 
 ### CI のチェック配置
 

@@ -185,7 +185,7 @@ dev-kill:
 # データストア操作（開発用）
 # =============================================================================
 
-_psql_url := "postgres://ringiflow:ringiflow@localhost:" + env_var_or_default("POSTGRES_PORT", "15432") + "/ringiflow_dev"
+_psql_url := "postgres://ringiflow:ringiflow@localhost:" + env_var_or_default("POSTGRES_PORT", "15432") + "/ringiflow"
 
 # PostgreSQL: テーブル一覧を表示
 db-tables:
@@ -320,7 +320,7 @@ api-test-deps:
 # API テスト用の DB をリセット
 api-test-reset-db:
     @echo "API テスト用データベースをリセット中..."
-    cd backend && DATABASE_URL=postgres://ringiflow:ringiflow@localhost:15433/ringiflow_api_test sqlx database reset -y
+    cd backend && DATABASE_URL=postgres://ringiflow:ringiflow@localhost:15433/ringiflow sqlx database reset -y
     @echo "✓ API テスト用データベースリセット完了"
 
 # API テスト用の DB/Redis を停止

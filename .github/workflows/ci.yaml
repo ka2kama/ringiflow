@@ -189,9 +189,9 @@ jobs:
         env:
           POSTGRES_USER: ringiflow
           POSTGRES_PASSWORD: ringiflow
-          POSTGRES_DB: ringiflow_test
+          POSTGRES_DB: ringiflow
         options: >-
-          --health-cmd "pg_isready -U ringiflow -d ringiflow_test"
+          --health-cmd "pg_isready -U ringiflow -d ringiflow"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -221,7 +221,7 @@ jobs:
       SCCACHE_GHA_ENABLED: "true"
       RUST_BACKTRACE: 1
       SQLX_OFFLINE: true
-      DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow_test
+      DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow
       REDIS_URL: redis://localhost:16379
       DYNAMODB_ENDPOINT: http://localhost:18000
 

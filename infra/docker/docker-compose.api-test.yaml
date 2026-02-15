@@ -18,7 +18,7 @@ services:
     environment:
       POSTGRES_USER: ringiflow
       POSTGRES_PASSWORD: ringiflow
-      POSTGRES_DB: ringiflow_api_test
+      POSTGRES_DB: ringiflow
       TZ: Asia/Tokyo
       PGTZ: Asia/Tokyo
     ports:
@@ -27,7 +27,7 @@ services:
       - postgres_api_test_data:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ringiflow -d ringiflow_api_test"]
+      test: ["CMD-SHELL", "pg_isready -U ringiflow -d ringiflow"]
       interval: 5s
       timeout: 5s
       retries: 5

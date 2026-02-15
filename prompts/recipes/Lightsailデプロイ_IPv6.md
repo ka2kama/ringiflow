@@ -24,7 +24,7 @@ scp -r backend/migrations/ "ec2-user@[IPv6アドレス]:/home/ec2-user/ringiflow
 # Lightsail 上で psql 経由で実行
 ssh ec2-user@IPv6アドレス
 cd ~/ringiflow
-ls migrations/*.sql | sort | while read f; do echo "Running $f..."; docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow_prod < "$f"; done
+ls migrations/*.sql | sort | while read f; do echo "Running $f..."; docker exec -i ringiflow-postgres psql -U ringiflow -d ringiflow < "$f"; done
 ```
 
 ### SCP で IPv6 アドレスを使う

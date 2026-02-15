@@ -229,7 +229,7 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: ringiflow_api_test       # ① 専用 DB 名
+      POSTGRES_DB: ringiflow       # ① 専用 DB 名
     ports:
       - "15433:5432"                         # ② 開発（15432）と異なるポート
     volumes:
@@ -243,7 +243,7 @@ services:
 
 注目ポイント:
 
-- ① DB 名を `ringiflow_api_test` にして開発用 DB と区別
+- ① DB 名を `ringiflow` にして、環境ごとにDB名を分けず、インスタンスで分離
 - ② ポート番号をオフセット（+1）して開発環境と並行起動可能
 - ③ ボリュームも分離し、データの相互干渉を防止
 - ④ Redis も同様にポートを分離
