@@ -191,7 +191,7 @@ jobs:
           POSTGRES_PASSWORD: ringiflow
           POSTGRES_DB: ringiflow
         options: >-
-          --health-cmd "pg_isready -U ringiflow -d ringiflow_test"
+          --health-cmd "pg_isready -U ringiflow -d ringiflow"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
