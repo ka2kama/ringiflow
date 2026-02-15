@@ -80,6 +80,17 @@ gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
 
 `{owner}/{repo}` と `{pr_number}` は実際の値に置き換える。`gh pr view --json number --jq '.number'` で PR 番号を、`gh repo view --json nameWithOwner --jq '.nameWithOwner'` でリポジトリ名を取得できる。
 
+#### メタデータ抽出
+
+取得した各 PR レベルコメント（3 の結果）について、メタデータブロックを抽出する:
+
+```bash
+# コメント本文からメタデータを抽出（grep の -z オプションで複数行マッチ）
+echo "$COMMENT_BODY" | grep -Pzo '(?<=<!-- review-metadata\n)[\s\S]*?(?=\n-->)' || echo ""
+```
+
+メタデータが存在する場合はそれを使用し、存在しない場合は従来通り本文を解釈する。
+
 取得した情報を以下の形式でユーザーに提示する:
 
 ```
@@ -89,11 +100,26 @@ gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
 Review コメント: N 件
 
 ### 全体フィードバック
+
 #### コメント 1（Auto Review）
+
+**メタデータ:**
+- Type: auto-review
+- 重大度: Critical=0, High=1, Medium=2, Low=3
+- 対応要否: false（APPROVED）
+
 （内容要約）
 
 #### コメント 2（Rules Check）
+
+**メタデータ:**
+- Type: rules-check
+- 重大度: Critical=0, High=0, Medium=0, Low=0
+- 対応要否: false（pass）
+
 （内容要約）
+
+注: メタデータが存在しない場合（古いコメント）は、「メタデータ:」セクションを省略し、従来通り本文を解釈してサマリーを提示する。
 
 ### Review コメント一覧
 1. `ファイルパス:行番号` — 内容要約
@@ -252,10 +278,44 @@ gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
 ```
 
 検証 #3 の判定手順:
+
 1. claude[bot] の PR コメントを取得する
-2. 各コメントの内容を読み、具体的な指摘事項を含むか判定する（サマリーのみのコメントは対象外）
-3. 指摘を含むコメントについて、そのコメント URL を参照する返信コメントが存在するか確認する
-4. 指摘を含む未返信のコメントがあれば、ユーザーに提示してマージを止める
+2. 各コメントからメタデータを抽出する:
+   ```bash
+   echo "$COMMENT_BODY" | grep -Pzo '(?<=<!-- review-metadata\n)[\s\S]*?(?=\n-->)' || echo ""
+   ```
+3. メタデータが存在する場合（機械的判定）:
+   - 指摘件数（severity-critical, severity-high, severity-medium, severity-low）の合計を計算する
+   - 合計がゼロでなければ「指摘を含むコメント」として扱う
+4. メタデータが存在しない場合（後方互換性）:
+   - 従来通り、コメントの内容を読んで具体的な指摘事項を含むか判定する（サマリーのみのコメントは対象外）
+5. 指摘を含むコメントについて、そのコメント URL を参照する返信コメントが存在するか確認する
+6. 指摘を含む未返信のコメントがあれば、ユーザーに提示してマージを止める
+
+判定ロジックの疑似コード:
+
+```python
+for comment in claude_bot_comments:
+    metadata = extract_metadata(comment.body)
+    if metadata:
+        # メタデータがある場合（機械的判定）
+        total_issues = (
+            metadata["severity-critical"] +
+            metadata["severity-high"] +
+            metadata["severity-medium"] +
+            metadata["severity-low"]
+        )
+        has_issues = total_issues > 0
+    else:
+        # メタデータがない場合（従来の解釈）
+        has_issues = contains_specific_feedback(comment.body)
+
+    if has_issues:
+        # 返信の有無を確認
+        if not has_reply(comment):
+            # 未返信の指摘があるのでマージを止める
+            abort_merge(comment)
+```
 
 | 検証結果 | 対応 |
 |---------|------|

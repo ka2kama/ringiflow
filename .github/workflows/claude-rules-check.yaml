@@ -229,6 +229,80 @@ jobs:
             - `gh pr review` は使用しない（Auto Review の承認判断との競合を防ぐため）
             - 結果マーカー（HTML コメント）を必ずコメント末尾に含めること
 
+            ## メタデータ埋め込み（必須）
+
+            PR コメント投稿時には、結果マーカー `<!-- rules-check-result:pass/fail -->` に加えて、
+            以下のメタデータブロックを本文の末尾に配置すること:
+
+            ```html
+            <!-- review-metadata
+            type: rules-check
+            severity-critical: <数値>
+            severity-high: 0
+            severity-medium: 0
+            severity-low: 0
+            action-required: true | false
+            -->
+            ```
+
+            ### Rules Check でのメタデータルール
+
+            Rules Check では以下のルールに従う:
+
+            - `type`: `rules-check` 固定
+            - `severity-critical`: ルール違反の件数（ルール違反はすべて Critical 扱い）
+            - `severity-high`, `severity-medium`, `severity-low`: 常に `0`（Rules Check では使用しない）
+            - `action-required`: ルール違反がある場合は `true`、ない場合は `false`
+
+            ### 配置場所
+
+            1. PR コメント本文
+            2. 結果マーカー `<!-- rules-check-result:pass/fail -->`
+            3. メタデータブロック（このブロック）
+
+            の順で、末尾に両方を配置する。
+
+            ### フォーマット例
+
+            **例1: ルール違反なし（pass）**
+
+            ```
+            Rules Check: LGTM ✅
+
+            チェックしたルール:
+            - xxx.md
+            - yyy.md
+
+            <!-- rules-check-result:pass -->
+            <!-- review-metadata
+            type: rules-check
+            severity-critical: 0
+            severity-high: 0
+            severity-medium: 0
+            severity-low: 0
+            action-required: false
+            -->
+            ```
+
+            **例2: ルール違反あり（fail）**
+
+            ```
+            Rules Check: 以下のルール違反が見つかりました
+
+            - xxx.md: 違反内容1
+            - yyy.md: 違反内容2
+
+            <!-- rules-check-result:fail -->
+            <!-- review-metadata
+            type: rules-check
+            severity-critical: 2
+            severity-high: 0
+            severity-medium: 0
+            severity-low: 0
+            action-required: true
+            -->
+            ```
+
             ## 注意
 
             - コードの品質、設計、セキュリティ、パフォーマンスについては指摘しない（Code Review の責務）
