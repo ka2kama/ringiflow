@@ -53,6 +53,36 @@ nightly ツールチェーン全体は不要。rustfmt のみで十分。
 
 `.github/workflows/ci.yaml` で nightly rustfmt を使用するよう設定済み。
 
+## git blame の保護
+
+### `.git-blame-ignore-revs` とは
+
+全体的なリフォーマットを行うと、すべての行の最終変更者が「リフォーマットを実行した人」になってしまい、`git blame` で実際のロジックを書いた人を追跡できなくなる。
+
+`.git-blame-ignore-revs` は、フォーマット変更などの「意味のない変更」を `git blame` から除外するための Git の標準機能。
+
+### 設定方法
+
+```bash
+# Git にこのファイルを認識させる（1回のみ、各開発者が実行）
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+### このプロジェクトでの使用
+
+`.git-blame-ignore-revs` に以下のコミットが登録されている:
+
+```
+# Rustfmt standardization: 3->4 spaces + nightly features
+9457099d94f40a83a672c70574c2a11ba404c3b5
+```
+
+これにより、rustfmt 標準化のリフォーマットコミットが `git blame` でスキップされる。
+
+### 今後の運用
+
+全体的なフォーマット変更を行った場合は、`.git-blame-ignore-revs` にコミットハッシュを追加する。
+
 ## 参照
 
 - ADR: [048_Rustフォーマッター設定の標準化](../../05_ADR/048_Rustフォーマッター設定の標準化.md)
