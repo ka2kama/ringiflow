@@ -56,13 +56,21 @@ while IFS= read -r line; do
     elif [[ "$line" == branch\ refs/heads/* ]]; then
         wt_branch="${line#branch refs/heads/}"
     elif [[ -z "$line" && -n "$wt_path" && -n "$wt_branch" ]]; then
-        # 空行でレコード区切り。main は除外
-        if [[ "$wt_branch" != "main" ]]; then
+        # 空行でレコード区切り。main worktree はパスで除外
+        if [[ "$wt_path" != "$main_worktree" ]]; then
             reason=""
 
+            # secondary worktree が main をチェックアウトしている場合
+            # （gh pr merge --delete-branch 等でフォールバックした結果）
+            if [[ "$wt_branch" == "main" ]]; then
+                reason="main ブランチをチェックアウト中（不要な worktree）"
+            fi
+
             # マージ済みかチェック
-            if git branch --merged origin/main | grep -qw "$wt_branch"; then
-                reason="マージ済み"
+            if [[ -z "$reason" ]]; then
+                if git branch --merged origin/main | grep -qw "$wt_branch"; then
+                    reason="マージ済み"
+                fi
             fi
 
             # リモートブランチが削除されているかチェック（squash merge 対応）
@@ -117,8 +125,10 @@ else
             # ワークツリーを削除
             git worktree remove "$path" --force 2>/dev/null || true
 
-            # ローカルブランチを削除
-            git branch -D "$branch" 2>/dev/null || true
+            # ローカルブランチを削除（main ブランチは削除しない）
+            if [[ "$branch" != "main" ]]; then
+                git branch -D "$branch" 2>/dev/null || true
+            fi
 
             echo "      ✓ 削除完了"
         fi
