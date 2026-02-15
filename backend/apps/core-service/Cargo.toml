@@ -25,6 +25,7 @@ dotenvy.workspace = true
 itertools.workspace = true
 
 [dev-dependencies]
+ringiflow-core-service = { path = ".", features = ["test-utils"] }
 ringiflow-domain = { workspace = true, features = ["test-support"] }
 ringiflow-infra = { workspace = true, features = ["test-utils"] }
 tokio-test.workspace = true
