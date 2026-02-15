@@ -34,6 +34,7 @@ check-tools:
     @echo "開発ツールを確認中..."
     @which rustc > /dev/null || (echo "ERROR: Rust がインストールされていません" && exit 1)
     @which cargo > /dev/null || (echo "ERROR: Cargo がインストールされていません" && exit 1)
+    @rustfmt +nightly --version > /dev/null 2>&1 || (echo "ERROR: rustfmt-nightly がインストールされていません" && exit 1)
     @which node > /dev/null || (echo "ERROR: Node.js がインストールされていません" && exit 1)
     @which pnpm > /dev/null || (echo "ERROR: pnpm がインストールされていません" && exit 1)
     @which elm > /dev/null || (echo "ERROR: Elm がインストールされていません" && exit 1)
