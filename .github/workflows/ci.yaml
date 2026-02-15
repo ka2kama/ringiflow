@@ -280,7 +280,7 @@ jobs:
           echo "✓ Schema snapshot is in sync"
 
       - name: Test (integration tests)
-        run: cargo test --release --all-features --test '*'
+        run: cargo test --release --all-features --test '*' -- --test-threads=1
         working-directory: backend
 
   # Elm チェック: リント、テスト、ビルド
