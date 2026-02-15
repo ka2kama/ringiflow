@@ -38,7 +38,3 @@ reorder_impl_items = true
 
 # Struct field alignment
 struct_field_align_threshold = 10
-
-# Comment formatting
-wrap_comments = true
-normalize_comments = true
