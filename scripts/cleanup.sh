@@ -108,13 +108,11 @@ else
         fi
 
         if [[ "$DRY_RUN" == false ]]; then
-            # Docker コンテナを停止・削除
+            # Docker コンテナ・ボリュームを停止・削除
+            # コンテナが停止済みでもボリュームが残っている場合があるため、常に実行する
             project_name="ringiflow-${name}"
-            containers=$(docker compose -p "$project_name" -f infra/docker/docker-compose.yaml ps -q 2>/dev/null || true)
-            if [[ -n "$containers" ]]; then
-                echo "      Docker コンテナを停止中..."
-                docker compose -p "$project_name" -f infra/docker/docker-compose.yaml down -v 2>/dev/null || true
-            fi
+            echo "      Docker リソースを削除中..."
+            docker compose -p "$project_name" -f infra/docker/docker-compose.yaml down -v 2>/dev/null || true
 
             # ワークツリーを削除
             git worktree remove "$path" --force 2>/dev/null || true
