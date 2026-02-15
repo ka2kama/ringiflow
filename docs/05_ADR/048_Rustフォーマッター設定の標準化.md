@@ -6,40 +6,71 @@
 
 ## 文脈
 
-当初の `.rustfmt.toml` は `tab_spaces = 3` を使用しており、Rust 公式デフォルト（4スペース）から逸脱していた。また、unstable features を使用していたが、その選択理由が文書化されていなかった。
+当初の `.rustfmt.toml` は以下の問題があった:
+
+1. `tab_spaces = 3` を使用しており、Rust 公式デフォルト（4スペース）から逸脱
+2. 設定項目が最小限（7個のみ）で、rustfmt が提供する86個の設定オプションのうちほとんどが未設定
+3. unstable features の選択理由が文書化されていない
+4. `edition` や `style_edition` が未設定で、rustfmt と cargo fmt の不整合リスクがあった
 
 ## 決定
 
-以下の設定で Rust フォーマッターを標準化する:
+rustfmt のベストプラクティスを起点とした包括的な設定を採用する:
 
-1. **`tab_spaces = 4`**: Rust 公式デフォルトに準拠
-2. **unstable features を維持**: import 自動整理などの価値を優先
-3. **rustfmt-nightly を使用**: unstable features を有効化
+### Stable オプション
 
-## 理由
+1. **`edition = "2024"`**: Cargo.toml との整合性確保（rustfmt のデフォルトは "2015"）
+2. **`tab_spaces = 4`**: Rust 公式デフォルトに準拠
+3. **`max_width = 100`**: 明示的に記載（デフォルトだが重要な設定）
+4. **`hard_tabs = false`**: スペース使用を明示
+5. **`newline_style = "Unix"`**: Linux 環境での明示的指定
+6. **`use_field_init_shorthand = true`**: より簡潔な記法を採用
+7. **`use_try_shorthand = true`**: `?` 演算子の使用を推奨（モダンな Rust）
 
-### `tab_spaces = 4`
+### Unstable オプション
 
-- Rust 公式デフォルトとの一致
-- LLM が生成するコードとの整合性
-- 科学的根拠（Miara et al., 1983）: 4スペースが最適な可読性
-
-### unstable features の維持
-
-以下の機能は手動維持が困難で、自動化の価値が高い:
-
-- `group_imports`: import を標準ライブラリ・外部・自クレートで自動グループ化
-- `imports_granularity`: import をクレート単位で整理
-- `imports_layout`: 長い import リストを垂直展開
-- `format_code_in_doc_comments`: ドキュメント内のコード例もフォーマット
-- `reorder_impl_items`: impl ブロック内の一貫した並び順
-- `struct_field_align_threshold`: 構造体フィールドの整列
+1. **`style_edition = "2024"`**: rustfmt と cargo fmt の整合性確保（最重要）
+2. **Import 関連**: `group_imports`、`imports_granularity`、`imports_layout`
+3. **コメント関連**: `wrap_comments`、`normalize_comments`（新規追加）
+4. **その他**: `format_code_in_doc_comments`、`reorder_impl_items`、`struct_field_align_threshold`
 
 ### rustfmt-nightly の使用
 
-- Rust 本体は stable を維持
-- rustfmt のみ nightly 版を使用（`cargo +nightly fmt`）
-- justfile で既に設定済み、CI でも対応済み
+Rust 本体は stable を維持し、rustfmt のみ nightly 版を使用する
+
+## 理由
+
+### ベストプラクティス起点のアプローチ
+
+従来は既存の設定を部分的に修正するアプローチだったが、rustfmt 公式のベストプラクティスを起点とした包括的なレビューに変更した。これにより:
+
+- rustfmt が提供する全86個の設定オプションを検討対象に
+- 公式ドキュメントとコミュニティのベストプラクティスに基づく選択
+- edition 設定の重要性など、見落としがちな設定を発見
+
+### Edition 設定の重要性
+
+`edition` と `style_edition` を明示的に設定することで:
+
+- rustfmt（デフォルト "2015"）と cargo fmt（Cargo.toml から推論）の不整合を防止
+- プロジェクト全体で一貫したフォーマットを保証
+- 将来の Rust Edition 移行時の混乱を回避
+
+### Stable オプションの充実
+
+デフォルト値であっても重要な設定は明示的に記載:
+
+- `max_width = 100`: コード幅の基準を明確化
+- `hard_tabs = false`: スペース使用を明示
+- `use_try_shorthand = true`: モダンな Rust イディオムの採用
+
+### Unstable Features の選択理由
+
+手動維持が困難で、自動化の価値が高い機能を厳選:
+
+- Import 関連: 手動での一貫性維持は現実的でない
+- Comment 関連（新規追加）: 長いコメントの自動折り返しとスタイル統一
+- その他: ドキュメント品質向上、impl ブロックの並び順統一
 
 ## 代替案
 

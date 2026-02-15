@@ -10,8 +10,20 @@ Rust の公式コードフォーマッター。一貫したコードスタイル
 
 ### 基本設定
 
+rustfmt 公式のベストプラクティスに基づいた包括的な設定を採用:
+
+**Stable 設定:**
+- **`edition = "2024"`**: Cargo.toml と一致（rustfmt と cargo fmt の不整合を防止）
 - **`tab_spaces = 4`**: Rust 公式デフォルト
-- **unstable features を使用**: import 自動整理などの高度な機能を有効化
+- **`max_width = 100`**: コード幅の基準
+- **`use_field_init_shorthand = true`**: 簡潔な記法を推奨
+- **`use_try_shorthand = true`**: `?` 演算子を推奨
+
+**Unstable 設定:**
+- **`style_edition = "2024"`**: フォーマットスタイルのバージョン統一（最重要）
+- **Import 自動整理**: `group_imports`、`imports_granularity`、`imports_layout`
+- **コメント自動整形**: `wrap_comments`、`normalize_comments`
+- **その他**: ドキュメント内コードのフォーマット、impl 並び順、構造体整列
 
 ### 実行方法
 
@@ -25,20 +37,23 @@ cargo +nightly fmt
 
 **重要**: `cargo fmt`（stable）ではなく、必ず `cargo +nightly fmt` または `just fmt-rust` を使用すること。
 
-### unstable features
+### Unstable Features の選択理由
 
-以下の機能が有効:
+以下の機能を有効化（手動維持が困難で、自動化の価値が高い）:
 
-| 設定 | 効果 |
-|------|------|
-| `group_imports` | import を std/external/crate で自動グループ化 |
-| `imports_granularity` | import をクレート単位で整理 |
-| `imports_layout` | 長い import リストを垂直展開 |
-| `format_code_in_doc_comments` | ドキュメント内のコード例もフォーマット |
-| `reorder_impl_items` | impl ブロック内を一貫した順序で並び替え |
-| `struct_field_align_threshold` | 構造体フィールドを整列 |
+| カテゴリ | 設定 | 効果 |
+|---------|------|------|
+| Edition | `style_edition` | フォーマットスタイルのバージョン統一（rustfmt と cargo fmt の整合性） |
+| Import | `group_imports` | import を std/external/crate で自動グループ化 |
+| Import | `imports_granularity` | import をクレート単位で整理 |
+| Import | `imports_layout` | 長い import リストを垂直展開 |
+| Comment | `wrap_comments` | 長いコメントを自動折り返し |
+| Comment | `normalize_comments` | コメントスタイルを統一 |
+| Doc | `format_code_in_doc_comments` | ドキュメント内のコード例もフォーマット |
+| Impl | `reorder_impl_items` | impl ブロック内を一貫した順序で並び替え |
+| Struct | `struct_field_align_threshold` | 構造体フィールドを整列 |
 
-これらは手動では維持困難で、自動化の価値が高い。
+参考: rustfmt は全86個の設定オプションを提供。このプロジェクトではベストプラクティスに基づき厳選して使用。
 
 ## 環境構築
 
@@ -73,11 +88,11 @@ git config blame.ignoreRevsFile .git-blame-ignore-revs
 `.git-blame-ignore-revs` に以下のコミットが登録されている:
 
 ```
-# Rustfmt standardization: 3->4 spaces + nightly features
-9457099d94f40a83a672c70574c2a11ba404c3b5
+# Rustfmt standardization: comprehensive settings based on best practices
+c47998301859a4dd05ff4cb2dec4e9e4e4cb1cbb
 ```
 
-これにより、rustfmt 標準化のリフォーマットコミットが `git blame` でスキップされる。
+これにより、rustfmt 包括的設定適用のリフォーマットコミットが `git blame` でスキップされる。
 
 ### 今後の運用
 
