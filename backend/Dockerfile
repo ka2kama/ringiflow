@@ -59,6 +59,9 @@ COPY Cargo.toml Cargo.lock ./
 COPY apps/ apps/
 COPY crates/ crates/
 
+# マイグレーションファイルをコピー（sqlx::migrate! マクロがコンパイル時に埋め込む）
+COPY migrations/ migrations/
+
 # SQLx のオフラインモード用データをコピー
 COPY .sqlx/ .sqlx/
 ENV SQLX_OFFLINE=true

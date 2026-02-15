@@ -103,6 +103,12 @@ async fn main() -> anyhow::Result<()> {
         .expect("データベース接続に失敗しました");
     tracing::info!("データベースに接続しました");
 
+    // マイグレーション実行
+    db::run_migrations(&pool)
+        .await
+        .expect("マイグレーションの実行に失敗しました");
+    tracing::info!("マイグレーションを適用しました");
+
     // 依存コンポーネントを初期化
     let credentials_repo: Arc<dyn CredentialsRepository> =
         Arc::new(PostgresCredentialsRepository::new(pool));

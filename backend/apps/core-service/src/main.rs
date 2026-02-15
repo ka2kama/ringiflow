@@ -173,6 +173,12 @@ async fn main() -> anyhow::Result<()> {
         .expect("データベース接続に失敗しました");
     tracing::info!("データベースに接続しました");
 
+    // マイグレーション実行
+    db::run_migrations(&pool)
+        .await
+        .expect("マイグレーションの実行に失敗しました");
+    tracing::info!("マイグレーションを適用しました");
+
     // 共有リポジトリインスタンスを初期化
     let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
     let tenant_repo: Arc<dyn TenantRepository> =
