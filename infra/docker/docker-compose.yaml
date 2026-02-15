@@ -26,7 +26,7 @@ services:
     environment:
       POSTGRES_USER: ringiflow
       POSTGRES_PASSWORD: ringiflow
-      POSTGRES_DB: ringiflow_dev
+      POSTGRES_DB: ringiflow
       # タイムゾーン設定（本番環境と統一）
       TZ: Asia/Tokyo
       PGTZ: Asia/Tokyo
@@ -38,7 +38,7 @@ services:
       # 初期化スクリプト
       - ./init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ringiflow -d ringiflow_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ringiflow -d ringiflow"]
       interval: 5s
       timeout: 5s
       retries: 5
