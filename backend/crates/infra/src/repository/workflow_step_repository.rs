@@ -27,14 +27,16 @@ use crate::error::InfraError;
 pub trait WorkflowStepRepository: Send + Sync {
     /// 新規ステップを作成する
     ///
-    /// `tenant_id` は RLS 二重防御用。ドメインモデルではなくインフラ層で管理する。
+    /// `tenant_id` は RLS
+    /// 二重防御用。ドメインモデルではなくインフラ層で管理する。
     async fn insert(&self, step: &WorkflowStep, tenant_id: &TenantId) -> Result<(), InfraError>;
 
     /// 楽観的ロック付きでステップを更新する
     ///
     /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
     /// 不一致の場合は `InfraError::Conflict` を返す。
-    /// `tenant_id` は RLS 二重防御用。アプリケーション層でもテナント分離を保証する。
+    /// `tenant_id` は RLS
+    /// 二重防御用。アプリケーション層でもテナント分離を保証する。
     async fn update_with_version_check(
         &self,
         step: &WorkflowStep,

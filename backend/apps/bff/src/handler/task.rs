@@ -5,7 +5,8 @@
 //! ## エンドポイント
 //!
 //! - `GET /api/v1/tasks/my` - 自分のタスク一覧
-//! - `GET /api/v1/workflows/{display_number}/tasks/{step_display_number}` - タスク詳細（workflow ハンドラに移動）
+//! - `GET /api/v1/workflows/{display_number}/tasks/{step_display_number}` -
+//!   タスク詳細（workflow ハンドラに移動）
 
 use std::sync::Arc;
 

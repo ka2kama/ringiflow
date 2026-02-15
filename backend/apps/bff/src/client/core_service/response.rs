@@ -13,7 +13,8 @@ use super::error::CoreServiceError;
 /// # 引数
 ///
 /// - `response`: Core Service からの HTTP レスポンス
-/// - `not_found_error`: 404 レスポンス時に返すエラー。`None` の場合は `Unexpected` にフォールスルー
+/// - `not_found_error`: 404 レスポンス時に返すエラー。`None` の場合は
+///   `Unexpected` にフォールスルー
 pub(super) async fn handle_response<T: DeserializeOwned>(
     response: reqwest::Response,
     not_found_error: Option<CoreServiceError>,

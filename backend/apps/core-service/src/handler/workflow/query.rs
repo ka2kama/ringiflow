@@ -157,7 +157,8 @@ pub async fn get_workflow(
 /// display_number でワークフローの詳細を取得する
 ///
 /// ## エンドポイント
-/// GET /internal/workflows/by-display-number/{display_number}?tenant_id={tenant_id}
+/// GET /internal/workflows/by-display-number/{display_number}?
+/// tenant_id={tenant_id}
 ///
 /// ## 処理フロー
 /// 1. パスパラメータから display_number を取得
@@ -196,7 +197,8 @@ pub async fn get_workflow_by_display_number(
 /// ワークフローのコメント一覧を取得する
 ///
 /// ## エンドポイント
-/// GET /internal/workflows/by-display-number/{display_number}/comments?tenant_id={tenant_id}
+/// GET /internal/workflows/by-display-number/{display_number}/comments?
+/// tenant_id={tenant_id}
 ///
 /// ## 処理フロー
 /// 1. パスパラメータから display_number を取得

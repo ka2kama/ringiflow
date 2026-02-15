@@ -1,13 +1,15 @@
 //! # PostgresWorkflowDeleter
 //!
 //! テナントのワークフローデータを削除する。
-//! workflow_comments → workflow_steps → workflow_instances → workflow_definitions の順で DELETE する。
+//! workflow_comments → workflow_steps → workflow_instances →
+//! workflow_definitions の順で DELETE する。
 //!
 //! ## FK 制約
 //!
 //! - workflow_comments.instance_id → workflow_instances(id) ON DELETE CASCADE
 //! - workflow_steps.instance_id → workflow_instances(id) ON DELETE CASCADE
-//! - workflow_instances.definition_id → workflow_definitions(id)（CASCADE なし）
+//! - workflow_instances.definition_id → workflow_definitions(id)（CASCADE
+//!   なし）
 //!
 //! CASCADE があるため instances 削除で comments/steps も消えるが、
 //! 明示的に全テーブルを削除し、正確な件数を返す。

@@ -123,7 +123,8 @@ impl WorkflowTestBuilder {
     ///
     /// # 戻り値
     ///
-    /// submitted状態のワークフローインスタンス（current_stepが"approval"に設定済み）
+    /// submitted状態のワークフローインスタンス（current_stepが"approval"
+    /// に設定済み）
     pub fn build_submitted_instance(&self, title: &str, display_number: i64) -> WorkflowInstance {
         WorkflowInstance::new(NewWorkflowInstance {
             id: WorkflowInstanceId::new(),

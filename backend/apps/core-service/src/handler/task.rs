@@ -181,7 +181,8 @@ pub async fn get_task(
 /// display_number でタスク詳細を取得する
 ///
 /// ## エンドポイント
-/// GET /internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}?tenant_id={tenant_id}&user_id={user_id}
+/// GET /internal/workflows/by-display-number/{workflow_display_number}/tasks/
+/// {step_display_number}?tenant_id={tenant_id}&user_id={user_id}
 pub async fn get_task_by_display_numbers(
     State(state): State<Arc<TaskState>>,
     Path(params): Path<TaskByDisplayNumberPathParams>,

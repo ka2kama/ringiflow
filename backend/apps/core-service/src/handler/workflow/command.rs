@@ -268,7 +268,8 @@ pub async fn submit_workflow_by_display_number(
 /// display_number でワークフローステップを承認する
 ///
 /// ## エンドポイント
-/// POST /internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/approve
+/// POST /internal/workflows/by-display-number/{display_number}/steps/
+/// by-display-number/{step_display_number}/approve
 ///
 /// ## 処理フロー
 /// 1. パスパラメータから display_number を取得
@@ -411,7 +412,8 @@ pub async fn resubmit_workflow(
 /// display_number でワークフローステップを却下する
 ///
 /// ## エンドポイント
-/// POST /internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject
+/// POST /internal/workflows/by-display-number/{display_number}/steps/
+/// by-display-number/{step_display_number}/reject
 ///
 /// ## 処理フロー
 /// 1. パスパラメータから display_number を取得
@@ -466,7 +468,8 @@ pub async fn reject_step_by_display_number(
 /// display_number でワークフローステップを差し戻す
 ///
 /// ## エンドポイント
-/// POST /internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/request-changes
+/// POST /internal/workflows/by-display-number/{display_number}/steps/
+/// by-display-number/{step_display_number}/request-changes
 pub async fn request_changes_step_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepByDisplayNumberPathParams>,

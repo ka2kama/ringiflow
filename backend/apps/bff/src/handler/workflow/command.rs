@@ -108,7 +108,8 @@ pub async fn create_workflow(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id` を取得
-/// 2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出し
+/// 2. Core Service の `POST
+///    /internal/workflows/by-display-number/{display_number}/submit` を呼び出し
 /// 3. レスポンスを返す
 #[utoipa::path(
    post,
@@ -191,7 +192,9 @@ pub async fn submit_workflow(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出し
+/// 2. Core Service の `POST
+///    /internal/workflows/by-display-number/{dn}/steps/by-display-number/
+///    {step_dn}/approve` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
 #[utoipa::path(
    post,
@@ -279,7 +282,9 @@ pub async fn approve_step(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出し
+/// 2. Core Service の `POST
+///    /internal/workflows/by-display-number/{dn}/steps/by-display-number/
+///    {step_dn}/reject` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
 #[utoipa::path(
    post,
@@ -360,14 +365,17 @@ pub async fn reject_step(
     }
 }
 
-/// POST /api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes
+/// POST /api/v1/workflows/{display_number}/steps/{step_display_number}/
+/// request-changes
 ///
 /// ワークフローステップを差し戻す
 ///
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/request-changes` を呼び出し
+/// 2. Core Service の `POST
+///    /internal/workflows/by-display-number/{dn}/steps/by-display-number/
+///    {step_dn}/request-changes` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
 #[utoipa::path(
    post,
@@ -459,7 +467,8 @@ pub async fn request_changes_step(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し
+/// 2. Core Service の `POST
+///    /internal/workflows/by-display-number/{dn}/resubmit` を呼び出し
 /// 3. 200 OK + 更新されたワークフローを返す
 #[utoipa::path(
    post,
@@ -549,7 +558,9 @@ pub async fn resubmit_workflow(
 /// ## 処理フロー
 ///
 /// 1. セッションから `tenant_id`, `user_id` を取得
-/// 2. Core Service の `POST /internal/workflows/by-display-number/{display_number}/comments` を呼び出し
+/// 2. Core Service の `POST
+///    /internal/workflows/by-display-number/{display_number}/comments`
+///    を呼び出し
 /// 3. 201 Created + コメントを返す
 #[utoipa::path(
    post,

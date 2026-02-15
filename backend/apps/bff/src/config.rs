@@ -22,7 +22,8 @@ pub struct BffConfig {
     /// 開発用認証バイパス（DevAuth）の有効化
     ///
     /// `DEV_AUTH_ENABLED=true` のときに有効になる。
-    /// 本番ビルドでは `dev-auth` feature が無効化され、このフィールド自体が存在しない。
+    /// 本番ビルドでは `dev-auth` feature
+    /// が無効化され、このフィールド自体が存在しない。
     #[cfg(feature = "dev-auth")]
     pub dev_auth_enabled: bool,
 }

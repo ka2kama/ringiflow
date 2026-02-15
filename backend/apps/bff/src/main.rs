@@ -194,7 +194,8 @@ async fn main() -> anyhow::Result<()> {
         session_manager: session_manager.clone(),
     };
 
-    // AuthState は CoreServiceUserClient のみ必要（ISP: 認証に不要なメソッドを公開しない）
+    // AuthState は CoreServiceUserClient のみ必要（ISP:
+    // 認証に不要なメソッドを公開しない）
     let auth_state = Arc::new(AuthState {
         core_service_client: core_service_client.clone(),
         auth_service_client: auth_service_client.clone(),

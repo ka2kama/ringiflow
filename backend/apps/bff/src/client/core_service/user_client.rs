@@ -81,7 +81,8 @@ pub trait CoreServiceUserClient: Send + Sync {
 
     /// 表示用連番でユーザーを取得する
     ///
-    /// Core Service の `GET /internal/users/by-display-number/{display_number}` を呼び出す。
+    /// Core Service の `GET /internal/users/by-display-number/{display_number}`
+    /// を呼び出す。
     async fn get_user_by_display_number(
         &self,
         tenant_id: Uuid,

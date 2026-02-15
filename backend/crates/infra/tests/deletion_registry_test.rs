@@ -1,6 +1,7 @@
 //! DeletionRegistry 登録漏れ検出テスト
 //!
-//! `with_all_deleters` で登録される Deleter と期待リストが完全一致することを検証する。
+//! `with_all_deleters` で登録される Deleter
+//! と期待リストが完全一致することを検証する。
 //! DB 接続不要（`expected_deleter_names` は定数関数）。
 //!
 //! 実行方法:

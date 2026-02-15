@@ -7,7 +7,8 @@
 //! - **DynamoDB**: 監査ログは DynamoDB に格納（PostgreSQL ではない）
 //! - **テナント分離**: PK = tenant_id で論理分離
 //! - **時系列ソート**: SK = `{timestamp}#{uuid}` でレキシカル順ソート
-//! - **カーソルページネーション**: DynamoDB の `LastEvaluatedKey` を base64 でエンコード
+//! - **カーソルページネーション**: DynamoDB の `LastEvaluatedKey` を base64
+//!   でエンコード
 
 use std::collections::HashMap;
 

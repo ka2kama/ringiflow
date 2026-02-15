@@ -337,7 +337,8 @@ impl WorkflowInstance {
 
     /// 次の承認ステップに遷移する
     ///
-    /// InProgress 状態のインスタンスの current_step_id を次のステップに更新する。
+    /// InProgress 状態のインスタンスの current_step_id
+    /// を次のステップに更新する。
     /// version をインクリメントして楽観的ロックに対応。
     ///
     /// # Errors

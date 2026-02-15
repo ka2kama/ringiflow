@@ -7,7 +7,8 @@
 //! パスワード検証では、ユーザーが存在しない場合もダミーハッシュで
 //! 検証を実行し、処理時間を均一化する。
 //!
-//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/
+//! 08_AuthService設計.md)
 
 use std::sync::Arc;
 
@@ -104,7 +105,8 @@ impl AuthUseCaseImpl {
     /// 認証情報を作成する
     ///
     /// パスワードの場合、平文をハッシュ化して保存する。
-    /// 現状はハッシュ化済みの値を受け取る設計（Core API が作成時にハッシュ化）。
+    /// 現状はハッシュ化済みの値を受け取る設計（Core API
+    /// が作成時にハッシュ化）。
     pub async fn create_credential(
         &self,
         user_id: Uuid,

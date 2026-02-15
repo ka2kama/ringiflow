@@ -77,7 +77,8 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// ワークフローステップを承認する
     ///
-    /// Core Service の `POST /internal/workflows/{id}/steps/{step_id}/approve` を呼び出す。
+    /// Core Service の `POST /internal/workflows/{id}/steps/{step_id}/approve`
+    /// を呼び出す。
     async fn approve_step(
         &self,
         workflow_id: Uuid,
@@ -87,7 +88,8 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// ワークフローステップを却下する
     ///
-    /// Core Service の `POST /internal/workflows/{id}/steps/{step_id}/reject` を呼び出す。
+    /// Core Service の `POST /internal/workflows/{id}/steps/{step_id}/reject`
+    /// を呼び出す。
     async fn reject_step(
         &self,
         workflow_id: Uuid,
@@ -97,7 +99,8 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// display_number でワークフローの詳細を取得する
     ///
-    /// Core Service の `GET /internal/workflows/by-display-number/{display_number}` を呼び出す。
+    /// Core Service の `GET
+    /// /internal/workflows/by-display-number/{display_number}` を呼び出す。
     async fn get_workflow_by_display_number(
         &self,
         display_number: i64,
@@ -106,7 +109,9 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// display_number でワークフローを申請する
     ///
-    /// Core Service の `POST /internal/workflows/by-display-number/{display_number}/submit` を呼び出す。
+    /// Core Service の `POST
+    /// /internal/workflows/by-display-number/{display_number}/submit`
+    /// を呼び出す。
     async fn submit_workflow_by_display_number(
         &self,
         display_number: i64,
@@ -115,7 +120,9 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// display_number でワークフローステップを承認する
     ///
-    /// Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/approve` を呼び出す。
+    /// Core Service の `POST
+    /// /internal/workflows/by-display-number/{dn}/steps/by-display-number/
+    /// {step_dn}/approve` を呼び出す。
     async fn approve_step_by_display_number(
         &self,
         workflow_display_number: i64,
@@ -125,7 +132,9 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// display_number でワークフローステップを却下する
     ///
-    /// Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/reject` を呼び出す。
+    /// Core Service の `POST
+    /// /internal/workflows/by-display-number/{dn}/steps/by-display-number/
+    /// {step_dn}/reject` を呼び出す。
     async fn reject_step_by_display_number(
         &self,
         workflow_display_number: i64,
@@ -135,7 +144,9 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// display_number でワークフローステップを差し戻す
     ///
-    /// Core Service の `POST /internal/workflows/by-display-number/{dn}/steps/by-display-number/{step_dn}/request-changes` を呼び出す。
+    /// Core Service の `POST
+    /// /internal/workflows/by-display-number/{dn}/steps/by-display-number/
+    /// {step_dn}/request-changes` を呼び出す。
     async fn request_changes_step_by_display_number(
         &self,
         workflow_display_number: i64,
@@ -145,7 +156,8 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// display_number でワークフローを再申請する
     ///
-    /// Core Service の `POST /internal/workflows/by-display-number/{dn}/resubmit` を呼び出す。
+    /// Core Service の `POST
+    /// /internal/workflows/by-display-number/{dn}/resubmit` を呼び出す。
     async fn resubmit_workflow_by_display_number(
         &self,
         display_number: i64,
@@ -154,7 +166,9 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// ワークフローにコメントを投稿する
     ///
-    /// Core Service の `POST /internal/workflows/by-display-number/{display_number}/comments` を呼び出す。
+    /// Core Service の `POST
+    /// /internal/workflows/by-display-number/{display_number}/comments`
+    /// を呼び出す。
     async fn post_comment(
         &self,
         display_number: i64,
@@ -163,7 +177,9 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
     /// ワークフローのコメント一覧を取得する
     ///
-    /// Core Service の `GET /internal/workflows/by-display-number/{display_number}/comments` を呼び出す。
+    /// Core Service の `GET
+    /// /internal/workflows/by-display-number/{display_number}/comments`
+    /// を呼び出す。
     async fn list_comments(
         &self,
         display_number: i64,

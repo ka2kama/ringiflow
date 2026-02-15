@@ -121,8 +121,8 @@ pub async fn create_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
 /// コネクション取得時に `app.tenant_id` PostgreSQL セッション変数を設定する。
 /// RLS ポリシーがこの変数を参照してテナント分離を実現する。
 ///
-/// ドロップ時（プールへの返却時）に [`pool_options`] の `after_release` フックが
-/// `app.tenant_id` をリセットする。
+/// ドロップ時（プールへの返却時）に [`pool_options`] の `after_release`
+/// フックが `app.tenant_id` をリセットする。
 pub struct TenantConnection {
     conn:      PoolConnection<Postgres>,
     tenant_id: TenantId,

@@ -8,7 +8,8 @@
 //! - **ステータス管理**: ライフサイクルに応じた状態遷移をサポート
 //! - **型安全なクエリ**: sqlx のコンパイル時検証を活用
 //!
-//! 詳細: [データベース設計](../../../../docs/03_詳細設計書/02_データベース設計.md)
+//! 詳細: [データベース設計](../../../../docs/03_詳細設計書/02_データベース設計.
+//! md)
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -54,11 +55,13 @@ pub trait WorkflowInstanceRepository: Send + Sync {
     /// # 引数
     ///
     /// - `instance`: 更新後のワークフローインスタンス
-    /// - `expected_version`: 読み取り時のバージョン（DB 上の現在値と一致すべき値）
+    /// - `expected_version`: 読み取り時のバージョン（DB
+    ///   上の現在値と一致すべき値）
     ///
     /// # エラー
     ///
-    /// - `InfraError::Conflict`: バージョン不一致（別のリクエストが先に更新済み）
+    /// - `InfraError::Conflict`:
+    ///   バージョン不一致（別のリクエストが先に更新済み）
     /// - `InfraError::Database`: データベースエラー
     async fn update_with_version_check(
         &self,

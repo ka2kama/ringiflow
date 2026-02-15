@@ -44,7 +44,9 @@ pub trait CoreServiceTaskClient: Send + Sync {
 
     /// display_number でタスク詳細を取得する
     ///
-    /// Core Service の `GET /internal/workflows/by-display-number/{wf_dn}/tasks/{step_dn}` を呼び出す。
+    /// Core Service の `GET
+    /// /internal/workflows/by-display-number/{wf_dn}/tasks/{step_dn}`
+    /// を呼び出す。
     async fn get_task_by_display_numbers(
         &self,
         workflow_display_number: i64,

@@ -14,7 +14,8 @@
 //! [`CoreServiceClient`] はスーパートレイトとして 4 つを束ね、
 //! `dyn CoreServiceClient` は引き続き使用可能。
 //!
-//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/
+//! 08_AuthService設計.md)
 
 mod client_impl;
 mod error;

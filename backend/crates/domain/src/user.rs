@@ -188,7 +188,8 @@ impl std::str::FromStr for UserStatus {
 ///
 /// システムのユーザーを表現する。テナントに所属し、
 /// メール/パスワード認証または SSO 認証でログインする。
-/// 認証情報（パスワードハッシュ等）は Auth Service の `auth.credentials` テーブルで管理。
+/// 認証情報（パスワードハッシュ等）は Auth Service の `auth.credentials`
+/// テーブルで管理。
 ///
 /// # 不変条件
 ///

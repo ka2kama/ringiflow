@@ -5,7 +5,8 @@
 //! ## 設計
 //!
 //! - `ErrorResponse` は純粋なデータ構造（`Serialize` / `Deserialize` のみ）
-//! - axum の `IntoResponse` 変換は各サービスの責務（shared に axum 依存を入れない）
+//! - axum の `IntoResponse` 変換は各サービスの責務（shared に axum
+//!   依存を入れない）
 //! - よく使うエラー種別は便利コンストラクタで提供し、URI のハードコードを排除
 //! - サービス固有のエラーは `new()` で自由に作成可能
 
@@ -33,7 +34,8 @@ impl ErrorResponse {
     /// 汎用コンストラクタ
     ///
     /// サービス固有のエラー種別を作成する場合に使用する。
-    /// `error_type_suffix` はベース URI に付加される（例: `"credential-not-found"`）。
+    /// `error_type_suffix` はベース URI に付加される（例:
+    /// `"credential-not-found"`）。
     pub fn new(
         error_type_suffix: &str,
         title: impl Into<String>,

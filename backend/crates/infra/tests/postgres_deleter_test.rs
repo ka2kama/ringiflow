@@ -296,8 +296,9 @@ async fn test_auth_credentials_deleter_他テナントのcredentialsは削除さ
 // DeletionRegistry::delete_all 統合テスト
 // =============================================================================
 
-/// 全 PostgreSQL Deleter + Auth の delete_all が FK 制約に違反せず完了することを検証する。
-/// DynamoDB / Redis は DB 統合テスト環境では接続できないため、PostgreSQL 系のみ登録。
+/// 全 PostgreSQL Deleter + Auth の delete_all が FK
+/// 制約に違反せず完了することを検証する。 DynamoDB / Redis は DB
+/// 統合テスト環境では接続できないため、PostgreSQL 系のみ登録。
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_delete_allがfk制約に違反せず全テーブルを削除できる(pool: PgPool) {
     let (tenant_id, user_id) = setup_test_data(&pool).await;

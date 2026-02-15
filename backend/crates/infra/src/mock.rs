@@ -316,7 +316,8 @@ impl WorkflowStepRepository for MockWorkflowStepRepository {
 /// テスト用のモック UserRepository
 ///
 /// ユーザー名解決テストが必要な場合に使用する。
-/// ワークフローユースケースのテストでは直接利用しないが、型パラメータを満たすために必要。
+/// ワークフローユースケースのテストでは直接利用しないが、
+/// 型パラメータを満たすために必要。
 #[derive(Clone)]
 pub struct MockUserRepository;
 

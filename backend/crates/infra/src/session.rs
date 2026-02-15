@@ -3,7 +3,8 @@
 //! Redis を使用したセッション管理と CSRF トークン管理を提供する。
 //!
 //! - 設計: [07_認証機能設計.md](../../../docs/03_詳細設計書/07_認証機能設計.md)
-//! - Redis: [Redis.md](../../../docs/06_ナレッジベース/infra/Redis.md)（Pipeline、SCAN など）
+//! - Redis: [Redis.md](../../../docs/06_ナレッジベース/infra/Redis.
+//!   md)（Pipeline、SCAN など）
 //!
 //! ## Redis キー設計
 //!
@@ -16,7 +17,8 @@
 //!
 //! - `delete_all_for_tenant` で以下を削除:
 //!   - `session:{tenant_id}:*` パターンを SCAN して削除
-//!   - `csrf:{tenant_id}:*` パターンを SCAN して削除（セッションに紐づくCSRFトークン）
+//!   - `csrf:{tenant_id}:*` パターンを SCAN
+//!     して削除（セッションに紐づくCSRFトークン）
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -168,7 +170,8 @@ pub trait SessionManager: Send + Sync {
 
     /// CSRF トークンを作成する
     ///
-    /// 64文字の暗号論的ランダム文字列（hex エンコード）を生成して Redis に保存する。
+    /// 64文字の暗号論的ランダム文字列（hex エンコード）を生成して Redis
+    /// に保存する。
     ///
     /// # 引数
     ///

@@ -8,7 +8,8 @@
 //! - **テナント分離**: すべてのクエリでテナント ID を考慮
 //! - **型安全なクエリ**: sqlx のコンパイル時検証を活用
 //!
-//! 詳細: [Auth Service 設計](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! 詳細: [Auth Service
+//! 設計](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 use std::str::FromStr;
 
