@@ -382,6 +382,10 @@ check-duplicates:
     @echo "=== Elm コード重複チェック ==="
     pnpm exec jscpd --min-lines 10 --min-tokens 50 --format "haskell" --formats-exts "haskell:elm" --gitignore --exitCode 0 frontend/src/
 
+# 改善記録の標準フォーマット準拠チェック（カテゴリ・失敗タイプの値検証）
+lint-improvements:
+    ./scripts/check-improvement-records.sh
+
 # =============================================================================
 # 未使用依存チェック
 # =============================================================================

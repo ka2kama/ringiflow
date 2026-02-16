@@ -15,6 +15,7 @@ trap 'rm -f "$non_rust_log"' EXIT
     just lint-shell
     just lint-ci
     just lint-openapi
+    just lint-improvements
     just check-unused-deps
     just check-file-size
     just check-duplicates
