@@ -8,7 +8,7 @@
 
 mod common;
 
-use common::setup_test_data;
+use common::{create_other_tenant, insert_user_raw, setup_test_data};
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::deletion::{
     AuthCredentialsDeleter,
@@ -25,29 +25,24 @@ use uuid::Uuid;
 /// テスト用に別テナントのデータも作成するヘルパー
 async fn setup_two_tenants(pool: &PgPool) -> (TenantId, TenantId) {
     let (tenant_a, _) = setup_test_data(pool).await;
-
-    // テナント B を作成
-    let tenant_b = TenantId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-      "INSERT INTO tenants (id, name, subdomain, plan, status) VALUES ($1, 'Tenant B', 'tenant-b', 'free', 'active')",
-      tenant_b.as_uuid()
-   )
-   .execute(pool)
-   .await
-   .expect("テナント B 作成に失敗");
-
-    // テナント B にユーザーを作成
-    let user_b_id = Uuid::now_v7();
-    sqlx::query!(
-      "INSERT INTO users (id, tenant_id, display_number, email, name, status) VALUES ($1, $2, 1, 'b@example.com', 'User B', 'active')",
-      user_b_id,
-      tenant_b.as_uuid()
-   )
-   .execute(pool)
-   .await
-   .expect("テナント B ユーザー作成に失敗");
-
+    let tenant_b = create_other_tenant(pool).await;
+    insert_user_raw(pool, &tenant_b, 1, "b@example.com", "User B", "active").await;
     (tenant_a, tenant_b)
+}
+
+/// count → delete → count=0 の共通アサーション
+async fn assert_count_delete_count<T: TenantDeleter>(
+    sut: &T,
+    tenant_id: &TenantId,
+    expected_count: u64,
+    expected_deleted: u64,
+) {
+    let count = sut.count(tenant_id).await.unwrap();
+    assert_eq!(count, expected_count);
+    let result = sut.delete(tenant_id).await.unwrap();
+    assert_eq!(result.deleted_count, expected_deleted);
+    let count_after = sut.count(tenant_id).await.unwrap();
+    assert_eq!(count_after, 0);
 }
 
 // =============================================================================
@@ -112,14 +107,7 @@ async fn test_role_deleter_countとdeleteが正しく動作する(pool: PgPool) 
 
     let sut = PostgresRoleDeleter::new(pool);
 
-    let count = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count, 1);
-
-    let result = sut.delete(&tenant_id).await.unwrap();
-    assert_eq!(result.deleted_count, 1);
-
-    let count_after = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count_after, 0);
+    assert_count_delete_count(&sut, &tenant_id, 1, 1).await;
 }
 
 // =============================================================================
@@ -169,16 +157,8 @@ async fn test_workflow_deleter_countとdeleteが正しく動作する(pool: PgPo
 
     let sut = PostgresWorkflowDeleter::new(pool);
 
-    // count は definitions の件数
-    let count = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count, 1);
-
-    // delete は steps + instances + definitions の合計件数
-    let result = sut.delete(&tenant_id).await.unwrap();
-    assert_eq!(result.deleted_count, 3); // 1 step + 1 instance + 1 definition
-
-    let count_after = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count_after, 0);
+    // count は definitions の件数、delete は steps + instances + definitions の合計件数
+    assert_count_delete_count(&sut, &tenant_id, 1, 3).await;
 }
 
 // =============================================================================
@@ -200,14 +180,7 @@ async fn test_display_id_counter_deleter_countとdeleteが正しく動作する(
 
     let sut = PostgresDisplayIdCounterDeleter::new(pool);
 
-    let count = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count, 1);
-
-    let result = sut.delete(&tenant_id).await.unwrap();
-    assert_eq!(result.deleted_count, 1);
-
-    let count_after = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count_after, 0);
+    assert_count_delete_count(&sut, &tenant_id, 1, 1).await;
 }
 
 // =============================================================================
@@ -231,14 +204,7 @@ async fn test_auth_credentials_deleter_countとdeleteが正しく動作する(po
 
     let sut = AuthCredentialsDeleter::new(pool);
 
-    let count = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count, 1);
-
-    let result = sut.delete(&tenant_id).await.unwrap();
-    assert_eq!(result.deleted_count, 1);
-
-    let count_after = sut.count(&tenant_id).await.unwrap();
-    assert_eq!(count_after, 0);
+    assert_count_delete_count(&sut, &tenant_id, 1, 1).await;
 }
 
 #[sqlx::test(migrations = "../../migrations")]
