@@ -11,7 +11,7 @@
 
 mod common;
 
-use common::{assign_role, setup_test_data};
+use common::{assign_role, create_other_tenant, insert_user_raw, setup_test_data};
 use ringiflow_domain::{
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
@@ -73,19 +73,7 @@ async fn test_存在しないメールアドレスの場合noneを返す(pool: P
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_別テナントのユーザーは取得できない(pool: PgPool) {
     let (_, _user_id) = setup_test_data(&pool).await;
-    let other_tenant_id = TenantId::from_uuid(Uuid::now_v7());
-
-    // 別テナントを作成
-    sqlx::query!(
-        r#"
-        INSERT INTO tenants (id, name, subdomain, plan, status)
-        VALUES ($1, 'Other Tenant', 'other', 'free', 'active')
-        "#,
-        other_tenant_id.as_uuid()
-    )
-    .execute(&pool)
-    .await
-    .expect("別テナント作成に失敗");
+    let other_tenant_id = create_other_tenant(&pool).await;
 
     let sut = PostgresUserRepository::new(pool);
     let email = Email::new("test@example.com").unwrap();
@@ -138,17 +126,7 @@ async fn test_find_with_roles_別テナントのロール割り当ては含ま�
     assign_role(&pool, &user_id, &tenant_id).await;
 
     // 別テナントを作成
-    let other_tenant_id = TenantId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO tenants (id, name, subdomain, plan, status)
-        VALUES ($1, 'Other Tenant', 'other', 'free', 'active')
-        "#,
-        other_tenant_id.as_uuid()
-    )
-    .execute(&pool)
-    .await
-    .expect("別テナント作成に失敗");
+    let other_tenant_id = create_other_tenant(&pool).await;
 
     // 別テナント用のロールを作成し、同じユーザーに割り当て
     // （一意制約 (user_id, role_id) があるため別ロールが必要）
@@ -195,18 +173,15 @@ async fn test_複数idでユーザーを一括取得できる(pool: PgPool) {
     let (tenant_id, user_id1) = setup_test_data(&pool).await;
 
     // 2人目のユーザーを追加
-    let user_id2 = UserId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 2, 'user2@example.com', 'User Two', 'active')
-        "#,
-        user_id2.as_uuid(),
-        tenant_id.as_uuid()
+    let user_id2 = insert_user_raw(
+        &pool,
+        &tenant_id,
+        2,
+        "user2@example.com",
+        "User Two",
+        "active",
     )
-    .execute(&pool)
-    .await
-    .expect("ユーザー2作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
@@ -271,18 +246,15 @@ async fn test_テナント内のアクティブユーザー一覧を取得でき
     let (tenant_id, user_id1) = setup_test_data(&pool).await;
 
     // 2人目のユーザーを追加
-    let user_id2 = UserId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 2, 'user2@example.com', 'User Two', 'active')
-        "#,
-        user_id2.as_uuid(),
-        tenant_id.as_uuid()
+    let user_id2 = insert_user_raw(
+        &pool,
+        &tenant_id,
+        2,
+        "user2@example.com",
+        "User Two",
+        "active",
     )
-    .execute(&pool)
-    .await
-    .expect("ユーザー2作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
@@ -301,18 +273,15 @@ async fn test_非アクティブユーザーは除外される(pool: PgPool) {
     let (tenant_id, _active_user_id) = setup_test_data(&pool).await;
 
     // 非アクティブユーザーを追加
-    let inactive_user_id = UserId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 2, 'inactive@example.com', 'Inactive User', 'inactive')
-        "#,
-        inactive_user_id.as_uuid(),
-        tenant_id.as_uuid()
+    insert_user_raw(
+        &pool,
+        &tenant_id,
+        2,
+        "inactive@example.com",
+        "Inactive User",
+        "inactive",
     )
-    .execute(&pool)
-    .await
-    .expect("非アクティブユーザー作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
@@ -330,31 +299,18 @@ async fn test_他テナントのユーザーは含まれない(pool: PgPool) {
     let (tenant_id, _user_id) = setup_test_data(&pool).await;
 
     // 別テナントを作成
-    let other_tenant_id = TenantId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO tenants (id, name, subdomain, plan, status)
-        VALUES ($1, 'Other Tenant', 'other', 'free', 'active')
-        "#,
-        other_tenant_id.as_uuid()
-    )
-    .execute(&pool)
-    .await
-    .expect("別テナント作成に失敗");
+    let other_tenant_id = create_other_tenant(&pool).await;
 
     // 別テナントのユーザーを追加
-    let other_user_id = UserId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 1, 'other@example.com', 'Other User', 'active')
-        "#,
-        other_user_id.as_uuid(),
-        other_tenant_id.as_uuid()
+    insert_user_raw(
+        &pool,
+        &other_tenant_id,
+        1,
+        "other@example.com",
+        "Other User",
+        "active",
     )
-    .execute(&pool)
-    .await
-    .expect("別テナントユーザー作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
@@ -435,18 +391,15 @@ async fn test_find_all_by_tenantでステータスフィルタが機能する(po
     let (tenant_id, _active_user_id) = setup_test_data(&pool).await;
 
     // 非アクティブユーザーを追加
-    let inactive_user_id = UserId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 2, 'inactive@example.com', 'Inactive User', 'inactive')
-        "#,
-        inactive_user_id.as_uuid(),
-        tenant_id.as_uuid()
+    insert_user_raw(
+        &pool,
+        &tenant_id,
+        2,
+        "inactive@example.com",
+        "Inactive User",
+        "inactive",
     )
-    .execute(&pool)
-    .await
-    .expect("非アクティブユーザー作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
@@ -476,17 +429,15 @@ async fn test_find_all_by_tenantでdeletedユーザーは除外される(pool: P
     let (tenant_id, _user_id) = setup_test_data(&pool).await;
 
     // 削除済みユーザーを追加
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 2, 'deleted@example.com', 'Deleted User', 'deleted')
-        "#,
-        Uuid::now_v7(),
-        tenant_id.as_uuid()
+    insert_user_raw(
+        &pool,
+        &tenant_id,
+        2,
+        "deleted@example.com",
+        "Deleted User",
+        "deleted",
     )
-    .execute(&pool)
-    .await
-    .expect("削除済みユーザー作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
@@ -648,18 +599,15 @@ async fn test_find_roles_for_usersで複数ユーザーのロールを一括取�
     let (tenant_id, user_id1) = setup_test_data(&pool).await;
 
     // 2人目のユーザーを追加
-    let user_id2 = UserId::from_uuid(Uuid::now_v7());
-    sqlx::query!(
-        r#"
-        INSERT INTO users (id, tenant_id, display_number, email, name, status)
-        VALUES ($1, $2, 2, 'user2@example.com', 'User Two', 'active')
-        "#,
-        user_id2.as_uuid(),
-        tenant_id.as_uuid()
+    let user_id2 = insert_user_raw(
+        &pool,
+        &tenant_id,
+        2,
+        "user2@example.com",
+        "User Two",
+        "active",
     )
-    .execute(&pool)
-    .await
-    .expect("ユーザー2作成に失敗");
+    .await;
 
     let sut = PostgresUserRepository::new(pool);
 
