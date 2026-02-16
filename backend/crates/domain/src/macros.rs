@@ -76,10 +76,13 @@ macro_rules! define_uuid_id {
 /// # 使用例
 ///
 /// ```rust
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use ringiflow_domain::value_objects::UserName;
 ///
-/// let name = UserName::new("山田太郎").unwrap();
+/// let name = UserName::new("山田太郎")?;
 /// assert_eq!(name.as_str(), "山田太郎");
+/// # Ok(())
+/// # }
 /// ```
 macro_rules! define_validated_string {
     (
