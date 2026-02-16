@@ -6,10 +6,10 @@ use axum::{
     Json,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ApiResponse;
 
 use super::{
     ApproveRejectRequest,
@@ -22,18 +22,7 @@ use super::{
     WorkflowData,
     WorkflowState,
 };
-use crate::{
-    client::CoreServiceError,
-    error::{
-        conflict_response,
-        extract_tenant_id,
-        forbidden_response,
-        get_session,
-        internal_error_response,
-        not_found_response,
-        validation_error_response,
-    },
-};
+use crate::error::{authenticate, log_and_convert_core_error, validation_error_response};
 
 /// POST /api/v1/workflows
 ///
@@ -52,8 +41,8 @@ use crate::{
    request_body = CreateWorkflowRequest,
    responses(
       (status = 201, description = "ワークフロー作成", body = ApiResponse<WorkflowData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 404, description = "定義が見つからない", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn create_workflow(
@@ -61,20 +50,9 @@ pub async fn create_workflow(
     headers: HeaderMap,
     jar: CookieJar,
     Json(req): Json<CreateWorkflowRequest>,
-) -> impl IntoResponse {
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+) -> Result<Response, Response> {
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::CreateWorkflowRequest {
         definition_id: req.definition_id,
         title:         req.title,
@@ -83,22 +61,14 @@ pub async fn create_workflow(
         user_id:       *session_data.user_id().as_uuid(),
     };
 
-    match state.core_service_client.create_workflow(core_req).await {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowData::from(core_response.data));
-            (StatusCode::CREATED, Json(response)).into_response()
-        }
-        Err(CoreServiceError::WorkflowDefinitionNotFound) => not_found_response(
-            "workflow-definition-not-found",
-            "Workflow Definition Not Found",
-            "ワークフロー定義が見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(e) => {
-            tracing::error!("ワークフロー作成で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+    let core_response = state
+        .core_service_client
+        .create_workflow(core_req)
+        .await
+        .map_err(|e| log_and_convert_core_error("ワークフロー作成", e))?;
+
+    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    Ok((StatusCode::CREATED, Json(response)).into_response())
 }
 
 /// POST /api/v1/workflows/{display_number}/submit
@@ -119,8 +89,8 @@ pub async fn create_workflow(
    request_body = SubmitWorkflowRequest,
    responses(
       (status = 200, description = "申請成功", body = ApiResponse<WorkflowData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 404, description = "ワークフローが見つからない", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn submit_workflow(
@@ -129,25 +99,15 @@ pub async fn submit_workflow(
     jar: CookieJar,
     Path(display_number): Path<i64>,
     Json(req): Json<SubmitWorkflowRequest>,
-) -> impl IntoResponse {
-    // display_number の検証
+) -> Result<Response, Response> {
     if display_number <= 0 {
-        return validation_error_response("display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "display_number は 1 以上である必要があります",
+        ));
     }
 
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::SubmitWorkflowRequest {
         approvers: req
             .approvers
@@ -160,26 +120,14 @@ pub async fn submit_workflow(
         tenant_id: *session_data.tenant_id().as_uuid(),
     };
 
-    match state
+    let core_response = state
         .core_service_client
         .submit_workflow_by_display_number(display_number, core_req)
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowData::from(core_response.data));
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-            "workflow-instance-not-found",
-            "Workflow Instance Not Found",
-            "ワークフローインスタンスが見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(e) => {
-            tracing::error!("ワークフロー申請で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("ワークフロー申請", e))?;
+
+    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 // ===== 承認/却下ハンドラ =====
@@ -202,10 +150,10 @@ pub async fn submit_workflow(
    request_body = ApproveRejectRequest,
    responses(
       (status = 200, description = "承認成功", body = ApiResponse<WorkflowData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 403, description = "権限なし", body = ErrorResponse),
-      (status = 404, description = "ステップが見つからない", body = ErrorResponse),
-      (status = 409, description = "競合", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "ステップが見つからない", body = ringiflow_shared::ErrorResponse),
+      (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn approve_step(
@@ -214,28 +162,20 @@ pub async fn approve_step(
     jar: CookieJar,
     Path(params): Path<StepPathParams>,
     Json(req): Json<ApproveRejectRequest>,
-) -> impl IntoResponse {
-    // display_number の検証
+) -> Result<Response, Response> {
     if params.display_number <= 0 {
-        return validation_error_response("display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "display_number は 1 以上である必要があります",
+        ));
     }
     if params.step_display_number <= 0 {
-        return validation_error_response("step_display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "step_display_number は 1 以上である必要があります",
+        ));
     }
 
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::ApproveRejectRequest {
         version:   req.version,
         comment:   req.comment,
@@ -243,33 +183,14 @@ pub async fn approve_step(
         user_id:   *session_data.user_id().as_uuid(),
     };
 
-    match state
+    let core_response = state
         .core_service_client
         .approve_step_by_display_number(params.display_number, params.step_display_number, core_req)
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowData::from(core_response.data));
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(CoreServiceError::StepNotFound) => not_found_response(
-            "step-not-found",
-            "Step Not Found",
-            "ステップが見つかりません",
-        ),
-        Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-            "workflow-instance-not-found",
-            "Workflow Instance Not Found",
-            "ワークフローインスタンスが見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
-        Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
-        Err(e) => {
-            tracing::error!("ステップ承認で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("ステップ承認", e))?;
+
+    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 /// POST /api/v1/workflows/{display_number}/steps/{step_display_number}/reject
@@ -290,10 +211,10 @@ pub async fn approve_step(
    request_body = ApproveRejectRequest,
    responses(
       (status = 200, description = "却下成功", body = ApiResponse<WorkflowData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 403, description = "権限なし", body = ErrorResponse),
-      (status = 404, description = "ステップが見つからない", body = ErrorResponse),
-      (status = 409, description = "競合", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "ステップが見つからない", body = ringiflow_shared::ErrorResponse),
+      (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn reject_step(
@@ -302,28 +223,20 @@ pub async fn reject_step(
     jar: CookieJar,
     Path(params): Path<StepPathParams>,
     Json(req): Json<ApproveRejectRequest>,
-) -> impl IntoResponse {
-    // display_number の検証
+) -> Result<Response, Response> {
     if params.display_number <= 0 {
-        return validation_error_response("display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "display_number は 1 以上である必要があります",
+        ));
     }
     if params.step_display_number <= 0 {
-        return validation_error_response("step_display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "step_display_number は 1 以上である必要があります",
+        ));
     }
 
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::ApproveRejectRequest {
         version:   req.version,
         comment:   req.comment,
@@ -331,33 +244,14 @@ pub async fn reject_step(
         user_id:   *session_data.user_id().as_uuid(),
     };
 
-    match state
+    let core_response = state
         .core_service_client
         .reject_step_by_display_number(params.display_number, params.step_display_number, core_req)
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowData::from(core_response.data));
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(CoreServiceError::StepNotFound) => not_found_response(
-            "step-not-found",
-            "Step Not Found",
-            "ステップが見つかりません",
-        ),
-        Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-            "workflow-instance-not-found",
-            "Workflow Instance Not Found",
-            "ワークフローインスタンスが見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
-        Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
-        Err(e) => {
-            tracing::error!("ステップ却下で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("ステップ却下", e))?;
+
+    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 /// POST /api/v1/workflows/{display_number}/steps/{step_display_number}/request-changes
@@ -378,10 +272,10 @@ pub async fn reject_step(
    request_body = ApproveRejectRequest,
    responses(
       (status = 200, description = "差し戻し成功", body = ApiResponse<WorkflowData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 403, description = "権限なし", body = ErrorResponse),
-      (status = 404, description = "ステップが見つからない", body = ErrorResponse),
-      (status = 409, description = "競合", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "ステップが見つからない", body = ringiflow_shared::ErrorResponse),
+      (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn request_changes_step(
@@ -390,28 +284,20 @@ pub async fn request_changes_step(
     jar: CookieJar,
     Path(params): Path<StepPathParams>,
     Json(req): Json<ApproveRejectRequest>,
-) -> impl IntoResponse {
-    // display_number の検証
+) -> Result<Response, Response> {
     if params.display_number <= 0 {
-        return validation_error_response("display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "display_number は 1 以上である必要があります",
+        ));
     }
     if params.step_display_number <= 0 {
-        return validation_error_response("step_display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "step_display_number は 1 以上である必要があります",
+        ));
     }
 
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::ApproveRejectRequest {
         version:   req.version,
         comment:   req.comment,
@@ -419,7 +305,7 @@ pub async fn request_changes_step(
         user_id:   *session_data.user_id().as_uuid(),
     };
 
-    match state
+    let core_response = state
         .core_service_client
         .request_changes_step_by_display_number(
             params.display_number,
@@ -427,29 +313,10 @@ pub async fn request_changes_step(
             core_req,
         )
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowData::from(core_response.data));
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(CoreServiceError::StepNotFound) => not_found_response(
-            "step-not-found",
-            "Step Not Found",
-            "ステップが見つかりません",
-        ),
-        Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-            "workflow-instance-not-found",
-            "Workflow Instance Not Found",
-            "ワークフローインスタンスが見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
-        Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
-        Err(e) => {
-            tracing::error!("ステップ差し戻しで内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("ステップ差し戻し", e))?;
+
+    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 /// POST /api/v1/workflows/{display_number}/resubmit
@@ -470,10 +337,10 @@ pub async fn request_changes_step(
    request_body = ResubmitWorkflowRequest,
    responses(
       (status = 200, description = "再申請成功", body = ApiResponse<WorkflowData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 403, description = "権限なし", body = ErrorResponse),
-      (status = 404, description = "ワークフローが見つからない", body = ErrorResponse),
-      (status = 409, description = "競合", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse),
+      (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn resubmit_workflow(
@@ -482,25 +349,15 @@ pub async fn resubmit_workflow(
     jar: CookieJar,
     Path(display_number): Path<i64>,
     Json(req): Json<ResubmitWorkflowRequest>,
-) -> impl IntoResponse {
-    // display_number の検証
+) -> Result<Response, Response> {
     if display_number <= 0 {
-        return validation_error_response("display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "display_number は 1 以上である必要があります",
+        ));
     }
 
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::ResubmitWorkflowRequest {
         form_data: req.form_data,
         approvers: req
@@ -516,28 +373,14 @@ pub async fn resubmit_workflow(
         user_id:   *session_data.user_id().as_uuid(),
     };
 
-    match state
+    let core_response = state
         .core_service_client
         .resubmit_workflow_by_display_number(display_number, core_req)
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowData::from(core_response.data));
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-            "workflow-instance-not-found",
-            "Workflow Instance Not Found",
-            "ワークフローインスタンスが見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
-        Err(CoreServiceError::Conflict(detail)) => conflict_response(&detail),
-        Err(e) => {
-            tracing::error!("ワークフロー再申請で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("ワークフロー再申請", e))?;
+
+    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
 
 // ===== コメントハンドラ =====
@@ -560,9 +403,9 @@ pub async fn resubmit_workflow(
    request_body = PostCommentRequest,
    responses(
       (status = 201, description = "コメント投稿成功", body = ApiResponse<WorkflowCommentData>),
-      (status = 400, description = "バリデーションエラー", body = ErrorResponse),
-      (status = 403, description = "権限なし", body = ErrorResponse),
-      (status = 404, description = "ワークフローが見つからない", body = ErrorResponse)
+      (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
+      (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
+      (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
 pub async fn post_comment(
@@ -571,50 +414,27 @@ pub async fn post_comment(
     jar: CookieJar,
     Path(display_number): Path<i64>,
     Json(req): Json<PostCommentRequest>,
-) -> impl IntoResponse {
-    // display_number の検証
+) -> Result<Response, Response> {
     if display_number <= 0 {
-        return validation_error_response("display_number は 1 以上である必要があります");
+        return Err(validation_error_response(
+            "display_number は 1 以上である必要があります",
+        ));
     }
 
-    // X-Tenant-ID ヘッダーからテナント ID を取得
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    // セッションを取得
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    // Core Service を呼び出し
     let core_req = crate::client::PostCommentCoreRequest {
         body:      req.body,
         tenant_id: *session_data.tenant_id().as_uuid(),
         user_id:   *session_data.user_id().as_uuid(),
     };
 
-    match state
+    let core_response = state
         .core_service_client
         .post_comment(display_number, core_req)
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(WorkflowCommentData::from(core_response.data));
-            (StatusCode::CREATED, Json(response)).into_response()
-        }
-        Err(CoreServiceError::WorkflowInstanceNotFound) => not_found_response(
-            "workflow-instance-not-found",
-            "Workflow Instance Not Found",
-            "ワークフローインスタンスが見つかりません",
-        ),
-        Err(CoreServiceError::ValidationError(detail)) => validation_error_response(&detail),
-        Err(CoreServiceError::Forbidden(detail)) => forbidden_response(&detail),
-        Err(e) => {
-            tracing::error!("コメント投稿で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("コメント投稿", e))?;
+
+    let response = ApiResponse::new(WorkflowCommentData::from(core_response.data));
+    Ok((StatusCode::CREATED, Json(response)).into_response())
 }

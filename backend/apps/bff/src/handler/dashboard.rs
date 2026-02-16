@@ -12,7 +12,7 @@ use axum::{
     Json,
     extract::State,
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_shared::{ApiResponse, ErrorResponse};
@@ -22,7 +22,7 @@ use utoipa::ToSchema;
 use super::workflow::WorkflowState;
 use crate::{
     client::DashboardStatsDto,
-    error::{extract_tenant_id, get_session, internal_error_response},
+    error::{authenticate, log_and_convert_core_error},
 };
 
 // --- レスポンス型 ---
@@ -64,32 +64,18 @@ pub async fn get_dashboard_stats(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
     jar: CookieJar,
-) -> impl IntoResponse {
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+) -> Result<Response, Response> {
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    match state
+    let core_response = state
         .core_service_client
         .get_dashboard_stats(
             *session_data.tenant_id().as_uuid(),
             *session_data.user_id().as_uuid(),
         )
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(DashboardStatsData::from(core_response.data));
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("ダッシュボード統計取得で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("ダッシュボード統計取得", e))?;
+
+    let response = ApiResponse::new(DashboardStatsData::from(core_response.data));
+    Ok((StatusCode::OK, Json(response)).into_response())
 }
