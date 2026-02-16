@@ -321,32 +321,11 @@ impl SessionManager for RedisSessionManager {
     }
 
     async fn delete_all_for_tenant(&self, tenant_id: &TenantId) -> Result<(), InfraError> {
-        // セッションを削除
-        let pattern = Self::tenant_session_pattern(tenant_id);
         let mut conn = self.conn.clone();
 
-        // SCAN でパターンにマッチするキーを取得して削除
-        // KEYS コマンドは本番環境では非推奨だが、SCAN は安全
-        let mut cursor = 0u64;
-        loop {
-            let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg(&pattern)
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
-
-            if !keys.is_empty() {
-                let _: () = conn.del(&keys).await?;
-            }
-
-            cursor = next_cursor;
-            if cursor == 0 {
-                break;
-            }
-        }
+        // セッションを削除
+        let pattern = Self::tenant_session_pattern(tenant_id);
+        scan_and_delete_keys(&mut conn, &pattern).await?;
 
         // セッションに紐づく CSRF トークンも削除
         self.delete_all_csrf_for_tenant(tenant_id).await?;
@@ -410,30 +389,36 @@ impl SessionManager for RedisSessionManager {
     async fn delete_all_csrf_for_tenant(&self, tenant_id: &TenantId) -> Result<(), InfraError> {
         let pattern = Self::tenant_csrf_pattern(tenant_id);
         let mut conn = self.conn.clone();
+        scan_and_delete_keys(&mut conn, &pattern).await
+    }
+}
 
-        let mut cursor = 0u64;
-        loop {
-            let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
-                .arg(cursor)
-                .arg("MATCH")
-                .arg(&pattern)
-                .arg("COUNT")
-                .arg(100)
-                .query_async(&mut conn)
-                .await?;
+/// SCAN でパターンにマッチするキーを全て削除する
+async fn scan_and_delete_keys(
+    conn: &mut ConnectionManager,
+    pattern: &str,
+) -> Result<(), InfraError> {
+    let mut cursor = 0u64;
+    loop {
+        let (next_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+            .arg(cursor)
+            .arg("MATCH")
+            .arg(pattern)
+            .arg("COUNT")
+            .arg(100)
+            .query_async(conn)
+            .await?;
 
-            if !keys.is_empty() {
-                let _: () = conn.del(&keys).await?;
-            }
-
-            cursor = next_cursor;
-            if cursor == 0 {
-                break;
-            }
+        if !keys.is_empty() {
+            let _: () = conn.del(&keys).await?;
         }
 
-        Ok(())
+        cursor = next_cursor;
+        if cursor == 0 {
+            break;
+        }
     }
+    Ok(())
 }
 
 #[cfg(test)]

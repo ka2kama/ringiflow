@@ -13,15 +13,17 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use ringiflow_domain::{
-    role::{Permission, Role, RoleId},
+    role::{Role, RoleId},
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
     value_objects::{DisplayNumber, UserName},
 };
 use sqlx::PgPool;
+use uuid::Uuid;
 
-use crate::error::InfraError;
+use crate::{error::InfraError, repository::role_repository::parse_permissions};
 
 /// ユーザーリポジトリトレイト
 ///
@@ -133,6 +135,43 @@ pub trait UserRepository: Send + Sync {
     ) -> Result<HashMap<UserId, Vec<String>>, InfraError>;
 }
 
+/// DB の users テーブルの行を表す中間構造体
+///
+/// `query_as!` マクロが SQL 結果を直接マッピングする対象。
+/// `TryFrom` で `User` への変換ロジックを一箇所に集約する。
+struct UserRow {
+    id: Uuid,
+    tenant_id: Uuid,
+    display_number: i64,
+    email: String,
+    name: String,
+    status: String,
+    last_login_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl TryFrom<UserRow> for User {
+    type Error = InfraError;
+
+    fn try_from(row: UserRow) -> Result<Self, Self::Error> {
+        Ok(User::from_db(
+            UserId::from_uuid(row.id),
+            TenantId::from_uuid(row.tenant_id),
+            DisplayNumber::new(row.display_number)
+                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+            Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+            UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+            row.status
+                .parse::<UserStatus>()
+                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+            row.last_login_at,
+            row.created_at,
+            row.updated_at,
+        ))
+    }
+}
+
 /// PostgreSQL 実装の UserRepository
 #[derive(Debug, Clone)]
 pub struct PostgresUserRepository {
@@ -153,7 +192,8 @@ impl UserRepository for PostgresUserRepository {
         tenant_id: &TenantId,
         email: &Email,
     ) -> Result<Option<User>, InfraError> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            UserRow,
             r#"
             SELECT
                 id,
@@ -174,30 +214,12 @@ impl UserRepository for PostgresUserRepository {
         .fetch_optional(&self.pool)
         .await?;
 
-        let Some(row) = row else {
-            return Ok(None);
-        };
-
-        let user = User::from_db(
-            UserId::from_uuid(row.id),
-            TenantId::from_uuid(row.tenant_id),
-            DisplayNumber::new(row.display_number)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            row.status
-                .parse::<UserStatus>()
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            row.last_login_at,
-            row.created_at,
-            row.updated_at,
-        );
-
-        Ok(Some(user))
+        row.map(User::try_from).transpose()
     }
 
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, InfraError> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            UserRow,
             r#"
             SELECT
                 id,
@@ -217,26 +239,7 @@ impl UserRepository for PostgresUserRepository {
         .fetch_optional(&self.pool)
         .await?;
 
-        let Some(row) = row else {
-            return Ok(None);
-        };
-
-        let user = User::from_db(
-            UserId::from_uuid(row.id),
-            TenantId::from_uuid(row.tenant_id),
-            DisplayNumber::new(row.display_number)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            row.status
-                .parse::<UserStatus>()
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            row.last_login_at,
-            row.created_at,
-            row.updated_at,
-        );
-
-        Ok(Some(user))
+        row.map(User::try_from).transpose()
     }
 
     async fn find_with_roles(&self, id: &UserId) -> Result<Option<(User, Vec<Role>)>, InfraError> {
@@ -271,22 +274,12 @@ impl UserRepository for PostgresUserRepository {
         let roles = role_rows
             .into_iter()
             .map(|row| {
-                let permissions: Vec<Permission> = row
-                    .permissions
-                    .as_array()
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str().map(Permission::new))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
                 Role::from_db(
                     RoleId::from_uuid(row.id),
                     row.tenant_id.map(TenantId::from_uuid),
                     row.name,
                     row.description,
-                    permissions,
+                    parse_permissions(row.permissions),
                     row.is_system,
                     row.created_at,
                     row.updated_at,
@@ -302,9 +295,10 @@ impl UserRepository for PostgresUserRepository {
             return Ok(Vec::new());
         }
 
-        let uuid_ids: Vec<uuid::Uuid> = ids.iter().map(|id| *id.as_uuid()).collect();
+        let uuid_ids: Vec<Uuid> = ids.iter().map(|id| *id.as_uuid()).collect();
 
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            UserRow,
             r#"
             SELECT
                 id,
@@ -324,31 +318,15 @@ impl UserRepository for PostgresUserRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        rows.into_iter()
-            .map(|row| {
-                Ok(User::from_db(
-                    UserId::from_uuid(row.id),
-                    TenantId::from_uuid(row.tenant_id),
-                    DisplayNumber::new(row.display_number)
-                        .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    row.status
-                        .parse::<UserStatus>()
-                        .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    row.last_login_at,
-                    row.created_at,
-                    row.updated_at,
-                ))
-            })
-            .collect()
+        rows.into_iter().map(User::try_from).collect()
     }
 
     async fn find_all_active_by_tenant(
         &self,
         tenant_id: &TenantId,
     ) -> Result<Vec<User>, InfraError> {
-        let rows = sqlx::query!(
+        let rows = sqlx::query_as!(
+            UserRow,
             r#"
             SELECT
                 id,
@@ -369,24 +347,7 @@ impl UserRepository for PostgresUserRepository {
         .fetch_all(&self.pool)
         .await?;
 
-        rows.into_iter()
-            .map(|row| {
-                Ok(User::from_db(
-                    UserId::from_uuid(row.id),
-                    TenantId::from_uuid(row.tenant_id),
-                    DisplayNumber::new(row.display_number)
-                        .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    row.status
-                        .parse::<UserStatus>()
-                        .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                    row.last_login_at,
-                    row.created_at,
-                    row.updated_at,
-                ))
-            })
-            .collect()
+        rows.into_iter().map(User::try_from).collect()
     }
 
     async fn update_last_login(&self, id: &UserId) -> Result<(), InfraError> {
@@ -470,7 +431,8 @@ impl UserRepository for PostgresUserRepository {
         tenant_id: &TenantId,
         display_number: DisplayNumber,
     ) -> Result<Option<User>, InfraError> {
-        let row = sqlx::query!(
+        let row = sqlx::query_as!(
+            UserRow,
             r#"
             SELECT
                 id, tenant_id, display_number, email, name,
@@ -484,26 +446,7 @@ impl UserRepository for PostgresUserRepository {
         .fetch_optional(&self.pool)
         .await?;
 
-        let Some(row) = row else {
-            return Ok(None);
-        };
-
-        let user = User::from_db(
-            UserId::from_uuid(row.id),
-            TenantId::from_uuid(row.tenant_id),
-            DisplayNumber::new(row.display_number)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            row.status
-                .parse::<UserStatus>()
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            row.last_login_at,
-            row.created_at,
-            row.updated_at,
-        );
-
-        Ok(Some(user))
+        row.map(User::try_from).transpose()
     }
 
     async fn find_all_by_tenant(
@@ -511,12 +454,13 @@ impl UserRepository for PostgresUserRepository {
         tenant_id: &TenantId,
         status_filter: Option<UserStatus>,
     ) -> Result<Vec<User>, InfraError> {
-        // sqlx::query! は各呼び出しで異なる匿名 Record 型を生成するため、
-        // match で統一できない。各ブランチで完結させる。
-        match status_filter {
+        // sqlx::query_as! は各呼び出しで同じ UserRow 型にマッピングするが、
+        // SQL が異なるため match の各ブランチで完結させる。
+        let rows = match status_filter {
             Some(status) => {
                 let status_str: &str = status.into();
-                let rows = sqlx::query!(
+                sqlx::query_as!(
+                    UserRow,
                     r#"
                   SELECT
                       id, tenant_id, display_number, email, name,
@@ -529,31 +473,11 @@ impl UserRepository for PostgresUserRepository {
                     status_str
                 )
                 .fetch_all(&self.pool)
-                .await?;
-
-                rows.into_iter()
-                    .map(|row| {
-                        Ok(User::from_db(
-                            UserId::from_uuid(row.id),
-                            TenantId::from_uuid(row.tenant_id),
-                            DisplayNumber::new(row.display_number)
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            Email::new(&row.email)
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            UserName::new(&row.name)
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            row.status
-                                .parse::<UserStatus>()
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            row.last_login_at,
-                            row.created_at,
-                            row.updated_at,
-                        ))
-                    })
-                    .collect()
+                .await?
             }
             None => {
-                let rows = sqlx::query!(
+                sqlx::query_as!(
+                    UserRow,
                     r#"
                   SELECT
                       id, tenant_id, display_number, email, name,
@@ -565,30 +489,11 @@ impl UserRepository for PostgresUserRepository {
                     tenant_id.as_uuid()
                 )
                 .fetch_all(&self.pool)
-                .await?;
-
-                rows.into_iter()
-                    .map(|row| {
-                        Ok(User::from_db(
-                            UserId::from_uuid(row.id),
-                            TenantId::from_uuid(row.tenant_id),
-                            DisplayNumber::new(row.display_number)
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            Email::new(&row.email)
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            UserName::new(&row.name)
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            row.status
-                                .parse::<UserStatus>()
-                                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-                            row.last_login_at,
-                            row.created_at,
-                            row.updated_at,
-                        ))
-                    })
-                    .collect()
+                .await?
             }
-        }
+        };
+
+        rows.into_iter().map(User::try_from).collect()
     }
 
     async fn insert_user_role(
@@ -664,22 +569,12 @@ impl UserRepository for PostgresUserRepository {
             return Ok(None);
         };
 
-        let permissions: Vec<Permission> = row
-            .permissions
-            .as_array()
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(Permission::new))
-                    .collect()
-            })
-            .unwrap_or_default();
-
         Ok(Some(Role::from_db(
             RoleId::from_uuid(row.id),
             row.tenant_id.map(TenantId::from_uuid),
             row.name,
             row.description,
-            permissions,
+            parse_permissions(row.permissions),
             row.is_system,
             row.created_at,
             row.updated_at,
@@ -743,7 +638,7 @@ impl UserRepository for PostgresUserRepository {
             return Ok(HashMap::new());
         }
 
-        let uuid_ids: Vec<uuid::Uuid> = user_ids.iter().map(|id| *id.as_uuid()).collect();
+        let uuid_ids: Vec<Uuid> = user_ids.iter().map(|id| *id.as_uuid()).collect();
 
         let rows = sqlx::query!(
             r#"

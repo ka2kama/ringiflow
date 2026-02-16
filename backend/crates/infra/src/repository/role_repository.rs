@@ -66,7 +66,7 @@ impl PostgresRoleRepository {
 }
 
 /// JSONB から Permission の Vec に変換するヘルパー
-fn parse_permissions(permissions: serde_json::Value) -> Vec<Permission> {
+pub(crate) fn parse_permissions(permissions: serde_json::Value) -> Vec<Permission> {
     permissions
         .as_array()
         .map(|arr| {
@@ -75,6 +75,16 @@ fn parse_permissions(permissions: serde_json::Value) -> Vec<Permission> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// Permission の Vec を JSONB 用の serde_json::Value に変換するヘルパー
+pub(crate) fn permissions_to_json(permissions: &[Permission]) -> serde_json::Value {
+    serde_json::Value::Array(
+        permissions
+            .iter()
+            .map(|p| serde_json::Value::String(p.as_str().to_string()))
+            .collect(),
+    )
 }
 
 #[async_trait]
@@ -166,12 +176,7 @@ impl RoleRepository for PostgresRoleRepository {
     }
 
     async fn insert(&self, role: &Role) -> Result<(), InfraError> {
-        let permissions_json = serde_json::Value::Array(
-            role.permissions()
-                .iter()
-                .map(|p| serde_json::Value::String(p.as_str().to_string()))
-                .collect(),
-        );
+        let permissions_json = permissions_to_json(role.permissions());
 
         sqlx::query!(
          r#"
@@ -194,12 +199,7 @@ impl RoleRepository for PostgresRoleRepository {
     }
 
     async fn update(&self, role: &Role) -> Result<(), InfraError> {
-        let permissions_json = serde_json::Value::Array(
-            role.permissions()
-                .iter()
-                .map(|p| serde_json::Value::String(p.as_str().to_string()))
-                .collect(),
-        );
+        let permissions_json = permissions_to_json(role.permissions());
 
         sqlx::query!(
             r#"
