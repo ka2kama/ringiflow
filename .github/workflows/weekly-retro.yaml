@@ -12,22 +12,38 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   issues: write
 
 jobs:
   create-retro-issue:
     runs-on: ubuntu-latest
     steps:
-      - name: Calculate week range
-        id: week
+      - name: Checkout reports
+        uses: actions/checkout@v6
+        with:
+          sparse-checkout: prompts/reports
+          sparse-checkout-cone-mode: true
+
+      - name: Calculate period from last retro
+        id: period
         run: |
-          # 前週の月曜〜日曜を算出
-          LAST_MONDAY=$(date -d "last monday - 7 days" +%Y-%m-%d)
-          LAST_SUNDAY=$(date -d "last monday - 1 day" +%Y-%m-%d)
           TODAY=$(date +%Y-%m-%d)
+
+          # 前回のレトロスペクティブレポートを検索（最新順）
+          LAST_RETRO=$(ls prompts/reports/*_レトロスペクティブ.md 2>/dev/null | sort -r | head -1)
+
+          if [ -n "$LAST_RETRO" ]; then
+            # ファイル名から日付を抽出（YYYY-MM-DD_HHMM_レトロスペクティブ.md）
+            START=$(basename "$LAST_RETRO" | cut -d'_' -f1)
+          else
+            # フォールバック: 7日前
+            START=$(date -d "7 days ago" +%Y-%m-%d)
+          fi
+
           {
-            echo "start=${LAST_MONDAY}"
-            echo "end=${LAST_SUNDAY}"
+            echo "start=${START}"
+            echo "end=${TODAY}"
             echo "today=${TODAY}"
           } >> "$GITHUB_OUTPUT"
 
@@ -37,14 +53,14 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           gh issue create \
-            --title "週次レトロスペクティブ (${{ steps.week.outputs.today }})" \
+            --title "週次レトロスペクティブ (${{ steps.period.outputs.today }})" \
             --label "process" \
             --body "$(cat <<'BODY'
           ## 概要
 
           週次レトロスペクティブの実施 Issue。
 
-          対象期間: ${{ steps.week.outputs.start }} 〜 ${{ steps.week.outputs.end }}
+          対象期間: ${{ steps.period.outputs.start }} 〜 ${{ steps.period.outputs.end }}
 
           ## チェックリスト
 
