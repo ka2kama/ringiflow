@@ -11,9 +11,7 @@
 
 mod auth_credentials;
 mod dynamodb_audit_log;
-mod postgres_display_id;
-mod postgres_role;
-mod postgres_user;
+mod postgres_simple;
 mod postgres_workflow;
 mod redis_session;
 mod registry;
@@ -21,9 +19,11 @@ mod registry;
 use async_trait::async_trait;
 pub use auth_credentials::AuthCredentialsDeleter;
 pub use dynamodb_audit_log::DynamoDbAuditLogDeleter;
-pub use postgres_display_id::PostgresDisplayIdCounterDeleter;
-pub use postgres_role::PostgresRoleDeleter;
-pub use postgres_user::PostgresUserDeleter;
+pub use postgres_simple::{
+    PostgresDisplayIdCounterDeleter,
+    PostgresRoleDeleter,
+    PostgresUserDeleter,
+};
 pub use postgres_workflow::PostgresWorkflowDeleter;
 pub use redis_session::RedisSessionDeleter;
 pub use registry::DeletionRegistry;
