@@ -101,11 +101,14 @@ echo "  パス: $WORKTREE_PATH"
 echo "  ブランチ: ${BRANCH}"
 echo "  ポートオフセット: $port_offset（自動割り当て）"
 
-# worktree を追加（ブランチがなければ作成）
+# リモートの最新 main を取得
+git fetch origin main --quiet
+
+# worktree を追加（ブランチがなければ origin/main から作成）
 if git rev-parse --verify "${BRANCH}" >/dev/null 2>&1; then
     git worktree add "$WORKTREE_PATH" "${BRANCH}"
 else
-    git worktree add -b "${BRANCH}" "$WORKTREE_PATH"
+    git worktree add -b "${BRANCH}" "$WORKTREE_PATH" origin/main
 fi
 
 # .env を生成
