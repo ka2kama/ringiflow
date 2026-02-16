@@ -10,7 +10,10 @@ use ringiflow_infra::InfraError;
 
 use crate::{
     error::CoreError,
-    usecase::workflow::{ApproveRejectInput, WorkflowUseCaseImpl, WorkflowWithSteps},
+    usecase::{
+        helpers::{FindResultExt, check_step_assigned_to},
+        workflow::{ApproveRejectInput, WorkflowUseCaseImpl, WorkflowWithSteps},
+    },
 };
 
 impl WorkflowUseCaseImpl {
@@ -26,15 +29,10 @@ impl WorkflowUseCaseImpl {
             .step_repo
             .find_by_id(&step_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+            .or_not_found("ステップ")?;
 
         // 2. 権限チェック
-        if step.assigned_to() != Some(&user_id) {
-            return Err(CoreError::Forbidden(
-                "このステップを承認する権限がありません".to_string(),
-            ));
-        }
+        check_step_assigned_to(&step, &user_id, "承認")?;
 
         // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
         if step.version() != input.version {
@@ -56,8 +54,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_id(approved_step.instance_id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
+            .or_not_found("インスタンス")?;
 
         let instance_expected_version = instance.version();
 
@@ -186,15 +183,10 @@ impl WorkflowUseCaseImpl {
             .step_repo
             .find_by_id(&step_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+            .or_not_found("ステップ")?;
 
         // 2. 権限チェック
-        if step.assigned_to() != Some(&user_id) {
-            return Err(CoreError::Forbidden(
-                "このステップを却下する権限がありません".to_string(),
-            ));
-        }
+        check_step_assigned_to(&step, &user_id, "却下")?;
 
         // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
         if step.version() != input.version {
@@ -253,8 +245,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_id(rejected_step.instance_id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
+            .or_not_found("インスタンス")?;
 
         let instance_expected_version = instance.version();
         let completed_instance = instance
@@ -315,15 +306,10 @@ impl WorkflowUseCaseImpl {
             .step_repo
             .find_by_id(&step_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+            .or_not_found("ステップ")?;
 
         // 2. 権限チェック
-        if step.assigned_to() != Some(&user_id) {
-            return Err(CoreError::Forbidden(
-                "このステップを差し戻す権限がありません".to_string(),
-            ));
-        }
+        check_step_assigned_to(&step, &user_id, "差し戻し")?;
 
         // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
         if step.version() != input.version {
@@ -382,8 +368,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_id(request_changes_step.instance_id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("インスタンスが見つかりません".to_string()))?;
+            .or_not_found("インスタンス")?;
 
         let instance_expected_version = instance.version();
         let changes_requested_instance = instance
@@ -447,18 +432,14 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(workflow_display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // display_number → WorkflowStepId を解決
         let step = self
             .step_repo
             .find_by_display_number(step_display_number, instance.id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+            .or_not_found("ステップ")?;
 
         // 既存の approve_step を呼び出し
         self.approve_step(input, step.id().clone(), tenant_id, user_id)
@@ -496,18 +477,14 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(workflow_display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // display_number → WorkflowStepId を解決
         let step = self
             .step_repo
             .find_by_display_number(step_display_number, instance.id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+            .or_not_found("ステップ")?;
 
         // 既存の reject_step を呼び出し
         self.reject_step(input, step.id().clone(), tenant_id, user_id)
@@ -528,18 +505,14 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(workflow_display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // display_number → WorkflowStepId を解決
         let step = self
             .step_repo
             .find_by_display_number(step_display_number, instance.id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ステップが見つかりません".to_string()))?;
+            .or_not_found("ステップ")?;
 
         // 既存の request_changes_step を呼び出し
         self.request_changes_step(input, step.id().clone(), tenant_id, user_id)

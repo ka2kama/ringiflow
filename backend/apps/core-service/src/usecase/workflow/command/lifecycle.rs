@@ -18,12 +18,15 @@ use ringiflow_infra::InfraError;
 
 use crate::{
     error::CoreError,
-    usecase::workflow::{
-        CreateWorkflowInput,
-        ResubmitWorkflowInput,
-        SubmitWorkflowInput,
-        WorkflowUseCaseImpl,
-        WorkflowWithSteps,
+    usecase::{
+        helpers::FindResultExt,
+        workflow::{
+            CreateWorkflowInput,
+            ResubmitWorkflowInput,
+            SubmitWorkflowInput,
+            WorkflowUseCaseImpl,
+            WorkflowWithSteps,
+        },
     },
 };
 
@@ -53,8 +56,7 @@ impl WorkflowUseCaseImpl {
             .definition_repo
             .find_by_id(&input.definition_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("定義の取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
+            .or_not_found("ワークフロー定義")?;
 
         // 2. 公開済みであるか確認
         if definition.status() != ringiflow_domain::workflow::WorkflowDefinitionStatus::Published {
@@ -123,10 +125,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_id(&instance_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // 2. draft 状態であるか確認
         if instance.status() != WorkflowInstanceStatus::Draft {
@@ -140,8 +139,7 @@ impl WorkflowUseCaseImpl {
             .definition_repo
             .find_by_id(instance.definition_id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("定義の取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
+            .or_not_found("ワークフロー定義")?;
 
         // 4. 定義から承認ステップを抽出
         let approval_step_defs = definition
@@ -259,10 +257,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_id(&instance_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // 2. ChangesRequested 状態であるか確認
         if instance.status() != WorkflowInstanceStatus::ChangesRequested {
@@ -290,8 +285,7 @@ impl WorkflowUseCaseImpl {
             .definition_repo
             .find_by_id(instance.definition_id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("定義の取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))?;
+            .or_not_found("ワークフロー定義")?;
 
         // 定義から承認ステップを抽出
         let approval_step_defs = definition
@@ -405,10 +399,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // 既存の submit_workflow を呼び出し
         self.submit_workflow(input, instance.id().clone(), tenant_id)
@@ -428,10 +419,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // 既存の resubmit_workflow を呼び出し
         self.resubmit_workflow(input, instance.id().clone(), tenant_id, user_id)

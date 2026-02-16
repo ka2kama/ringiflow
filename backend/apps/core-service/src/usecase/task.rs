@@ -23,7 +23,7 @@ use ringiflow_infra::repository::{
     WorkflowStepRepository,
 };
 
-use crate::error::CoreError;
+use crate::{error::CoreError, usecase::helpers::FindResultExt};
 
 /// タスク一覧の要素: ステップ + ワークフロー概要
 #[derive(Debug, PartialEq, Eq)]
@@ -142,8 +142,7 @@ impl TaskUseCaseImpl {
             .step_repo
             .find_by_id(&step_id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップ取得エラー: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("タスクが見つかりません".to_string()))?;
+            .or_not_found("タスク")?;
 
         // 2. 権限チェック: 担当者のみアクセス可能
         if step.assigned_to() != Some(&user_id) {
@@ -192,16 +191,14 @@ impl TaskUseCaseImpl {
             .instance_repo
             .find_by_display_number(workflow_display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンス取得エラー: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ワークフローが見つかりません".to_string()))?;
+            .or_not_found("ワークフロー")?;
 
         // 2. ステップを display_number で取得
         let step = self
             .step_repo
             .find_by_display_number(step_display_number, workflow.id(), &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("ステップ取得エラー: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("タスクが見つかりません".to_string()))?;
+            .or_not_found("タスク")?;
 
         // 3. 権限チェック: 担当者のみアクセス可能
         if step.assigned_to() != Some(&user_id) {
