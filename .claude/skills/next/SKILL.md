@@ -1,86 +1,114 @@
 ---
 name: next
-description: 次の推奨作業を特定する。進行中の作業があればそれを優先、なければ GitHub Issues から優先度・依存関係を考慮して選定する。
+description: 次の推奨作業を特定する。worktree・PR から進行中の作業を把握し、GitHub Issues から優先度・依存関係・カテゴリを考慮して並行開発の候補も含めて選定する。
 user-invocable: true
 ---
 
 # 次の推奨作業を特定
 
-セッション開始時や作業の区切りで「次に何をすべきか」を特定する。
-
-## 判定の優先順位
-
-1. 進行中の作業: 未完了のブランチ/PR があればそれを継続推奨
-2. GitHub Issues: オープンな Issue から優先度・依存関係を考慮して選定
+セッション開始時や作業の区切りで「次に何をすべきか」を特定する。並行開発環境（worktree）を考慮し、進行中の作業と競合しない候補も提示する。
 
 ## 手順
 
-### Step 1: 進行中の作業を確認
+### Step 1: 進行中の作業を収集
 
-現在のブランチと未マージの PR を確認する:
+全 worktree と全 open PR から進行中の Issue 番号を収集する。
 
 ```bash
-# 現在のブランチ
-git branch --show-current
+# worktree のブランチ一覧
+git worktree list --porcelain
 
-# 自分の未マージ PR 一覧
+# 自分の open PR 一覧
 gh pr list --author @me --state open --json number,title,isDraft,headRefName,url
 ```
 
-| 状態 | 対応 |
-|------|------|
-| main 以外のブランチにいる | 継続推奨として提示、`/restore` を案内 |
-| Draft PR が存在する | その PR の完了を推奨 |
-| 両方なし | Step 2 へ |
+ブランチ名 `feature/{番号}-*` / `fix/{番号}-*` から Issue 番号を抽出する。main ブランチは除外。PR のブランチと worktree のブランチで重複する場合があるため、番号で重複排除する。
 
-進行中の作業がある場合の出力形式:
-
-```
-## 🔄 進行中の作業があります
-
-### 継続推奨: #<Issue番号> <タイトル>
-- **ブランチ**: <ブランチ名>
-- **PR**: <PR URL（あれば）>
-- **状態**: Draft PR / 作業中
-
----
-続きを再開する場合: `/restore` を実行してください
-```
-
-進行中の作業がなければ Step 2 へ進む。
+抽出結果 = `IN_PROGRESS_ISSUES`
 
 ### Step 2: オープンな Issue を取得
 
 ```bash
-gh issue list --state open --json number,title,labels,body --limit 30
+gh issue list --state open --json number,title,labels,body --limit 50
 ```
 
-### Step 3: 優先度でフィルタリング・ソート
+### Step 3: 候補をフィルタリング
 
-取得した Issue を以下の基準で評価する:
+取得した Issue から以下を除外する:
 
-**優先度ラベル（降順）:**
+| 除外条件 | 理由 |
+|---------|------|
+| `type:epic` ラベル | Epic はコンテナ、直接作業しない |
+| `idea` ラベル | 将来検討用 |
+| `IN_PROGRESS_ISSUES` に含まれる | 既に着手中 |
+| `Blocked by #N` で N がオープン | ブロックされている |
 
-| 優先度 | ラベル例 |
-|--------|---------|
-| 高 | `priority:high`, `priority:critical`, `urgent` |
+### Step 4: 候補を優先度ソート
+
+優先度ラベルで降順ソート:
+
+| 優先度 | ラベル |
+|--------|--------|
+| 高 | `priority:high`, `priority:critical` |
 | 中 | `priority:medium` |
 | 低 | `priority:low`, ラベルなし |
 
-**依存関係の確認:**
+同一優先度のタイブレイク:
+1. `Blocks` で他 Issue をブロック → 優先
+2. `type:story` ラベルあり → 優先（具体的な作業単位）
+3. Issue 番号が小さい（古い順）
 
-Issue 本文から依存関係を抽出する:
+### Step 5: 並行開発グルーピング
 
-- `Blocked by #123` → その Issue が完了するまで着手不可
-- `Blocks #456` → 他の Issue をブロックしている（優先度アップ）
+進行中の作業がある場合のみ実施する。進行中の作業がない場合はスキップし、Step 6 でフラット表示する。
 
-依存関係の判定:
-1. `Blocked by` で指定された Issue がオープンなら、その Issue は候補から除外
-2. `Blocks` で他の Issue をブロックしているなら、優先度を上げる
+進行中の作業のカテゴリラベルを収集する（Step 2 の結果を再利用）。
 
-### Step 4: 推奨を提示
+カテゴリラベル: `backend`, `frontend`, `infra`, `docs`, `process`
 
-以下の形式で出力する:
+候補 Issue を以下で分類:
+
+| 分類 | 条件 |
+|------|------|
+| 並行推奨 | カテゴリが進行中作業と重複しない AND 候補間で依存関係なし |
+| 着手可能 | 上記以外 |
+
+カテゴリ未分類の Issue: 並行可能として扱うが、未分類同士は 1 件のみ推奨（競合の可能性がある）。
+
+### Step 6: 結果を提示
+
+進行中の作業がある場合:
+
+```
+## 🎯 作業状況と次の推奨
+
+### 📌 進行中の作業 (N件)
+
+| Issue | ブランチ | PR | カテゴリ |
+|-------|---------|-----|---------|
+| #528 タイトル | feature/528-xxx | #580 | backend |
+
+---
+
+### 🟢 並行着手が可能な候補
+
+進行中の作業とカテゴリが異なり、並行して着手できます。
+
+1. **#566 タイトル** (priority:medium, process)
+   - 理由: 進行中の backend と競合なし
+
+### ⚪ 他の候補
+
+1. #537 タイトル (backend, priority:medium)
+2. #531 タイトル (backend, priority:medium)
+3. ...
+
+---
+着手する場合: `just worktree-issue <Issue番号>` で worktree を作成
+現在の作業を続ける場合: `/restore` を実行
+```
+
+進行中の作業がない場合は「📌 進行中の作業」セクションと「🟢 並行着手が可能な候補」セクションを省略し、フラット表示する:
 
 ```
 ## 🎯 次の推奨作業
@@ -96,35 +124,21 @@ Issue 本文から依存関係を抽出する:
 3. #<番号> <タイトル> (優先度: <high/medium/low>)
 
 ---
-着手する場合: `git checkout -b feature/<Issue番号>-<機能名>`
+着手する場合: `just worktree-issue <Issue番号>` で worktree を作成
 ```
 
-推奨理由の例:
-- 「優先度 high、他の Issue をブロックしていない」
-- 「#123 をブロックしているため、先に完了が必要」
-- 「優先度ラベルなしだが、最も古い Issue」
-
-### Step 5: ユーザーの選択を確認
+### Step 7: ユーザーの選択を確認
 
 ユーザーが Issue を選択したら:
 
-1. 対応するブランチが存在するか確認
-2. 存在すれば切り替え、なければ新規作成を提案
-3. Issue の内容を確認し、作業開始の準備をする
-
-```bash
-# 対応するブランチが存在するか確認
-git branch --list "feature/<Issue番号>-*" "fix/<Issue番号>-*"
-
-# ブランチが存在すれば切り替え
-git checkout <ブランチ名>
-
-# 存在しなければ新規作成
-git checkout -b feature/<Issue番号>-<機能名>
-```
+1. 対応する worktree が既にあるか確認（`git worktree list`）
+2. あれば `cd` パスを案内
+3. なければ `just worktree-issue {番号}` を提案
+4. main で作業する場合は `git checkout -b` を提案
 
 ## 補足
 
 - このスキルは「何をすべきか」を特定するまでが役割
-- 実際の作業開始は `/restore` または手動でブランチを作成して行う
+- 実際の作業開始は `/restore`、worktree 作成、または手動でブランチを作成して行う
 - 優先度ラベルがない場合は、Issue の作成日時（古い順）を参考にする
+- worktree での並行開発については ADR-021 を参照
