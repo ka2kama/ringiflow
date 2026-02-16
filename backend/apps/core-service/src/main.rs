@@ -146,6 +146,7 @@ use usecase::{
 /// BFF とは独立した設定（`CORE_HOST`, `CORE_PORT`）を使用する。
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // jscpd:ignore-start — サーバー起動ボイラープレート（意図的な重複、詳細は ADR-049）
     // .env ファイルを読み込む（存在する場合）
     dotenvy::dotenv().ok();
 
@@ -178,6 +179,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("マイグレーションの実行に失敗しました");
     tracing::info!("マイグレーションを適用しました");
+    // jscpd:ignore-end
 
     // 共有リポジトリインスタンスを初期化
     let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
@@ -340,7 +342,7 @@ async fn main() -> anyhow::Result<()> {
       .with_state(dashboard_state)
       .layer(TraceLayer::new_for_http());
 
-    // サーバー起動
+    // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
         .parse()
         .expect("アドレスのパースに失敗しました");
@@ -351,4 +353,5 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
+    // jscpd:ignore-end
 }

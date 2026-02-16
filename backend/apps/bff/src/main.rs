@@ -125,6 +125,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 /// 5. HTTP サーバーの起動
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // jscpd:ignore-start — サーバー起動ボイラープレート（意図的な重複、詳細は ADR-049）
     // .env ファイルを読み込む（存在する場合）
     // 本番環境では .env ファイルは使用せず、環境変数を直接設定する
     dotenvy::dotenv().ok();
@@ -139,6 +140,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+    // jscpd:ignore-end
 
     // 設定読み込み
     let config = BffConfig::from_env().expect("設定の読み込みに失敗しました");
@@ -378,7 +380,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(from_fn_with_state(csrf_state, csrf_middleware))
         .layer(TraceLayer::new_for_http());
 
-    // サーバー起動
+    // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
         .parse()
         .expect("アドレスのパースに失敗しました");
@@ -390,4 +392,5 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(listener, app).await?;
 
     Ok(())
+    // jscpd:ignore-end
 }

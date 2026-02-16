@@ -11,8 +11,10 @@
 
 pub mod api_response;
 pub mod error_response;
+pub mod health;
 pub mod paginated_response;
 
 pub use api_response::ApiResponse;
 pub use error_response::ErrorResponse;
+pub use health::HealthResponse;
 pub use paginated_response::PaginatedResponse;
