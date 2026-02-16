@@ -155,6 +155,14 @@ match state.core_service_client.create_user(&core_request).await {
     }
     Err(e) => Err(log_and_convert_core_error("ユーザー作成", e)),
 }
+
+// コンテキスト依存マッピング: StepNotFound をタスクコンテキストで task-not-found に変換
+.map_err(|e| match e {
+    CoreServiceError::StepNotFound => not_found_response(
+        "task-not-found", "Task Not Found", "タスクが見つかりません",
+    ),
+    e => log_and_convert_core_error("タスク詳細取得", e),
+})?;
 ```
 
 ## テスト
