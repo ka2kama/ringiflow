@@ -141,6 +141,50 @@ pub async fn setup_test_data(pool: &PgPool) -> (TenantId, UserId) {
     (tenant_id, user_id)
 }
 
+/// 別テナントを作成（テナント分離テスト用）
+pub async fn create_other_tenant(pool: &PgPool) -> TenantId {
+    let tenant_id = TenantId::from_uuid(Uuid::now_v7());
+    sqlx::query!(
+        r#"
+        INSERT INTO tenants (id, name, subdomain, plan, status)
+        VALUES ($1, 'Other Tenant', 'other', 'free', 'active')
+        "#,
+        tenant_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .expect("別テナント作成に失敗");
+    tenant_id
+}
+
+/// テスト用ユーザーを直接 SQL で挿入（リポジトリを経由せずにシードデータを作成する場合）
+pub async fn insert_user_raw(
+    pool: &PgPool,
+    tenant_id: &TenantId,
+    display_number: i64,
+    email: &str,
+    name: &str,
+    status: &str,
+) -> UserId {
+    let user_id = UserId::from_uuid(Uuid::now_v7());
+    sqlx::query!(
+        r#"
+        INSERT INTO users (id, tenant_id, display_number, email, name, status)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        "#,
+        user_id.as_uuid(),
+        tenant_id.as_uuid(),
+        display_number,
+        email,
+        name,
+        status,
+    )
+    .execute(pool)
+    .await
+    .expect("ユーザー挿入に失敗");
+    user_id
+}
+
 /// ロールをユーザーに割り当て
 pub async fn assign_role(pool: &PgPool, user_id: &UserId, tenant_id: &TenantId) {
     sqlx::query!(
