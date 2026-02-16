@@ -14,7 +14,7 @@ use axum::{
     Json,
     extract::State,
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_shared::{ApiResponse, ErrorResponse};
@@ -22,7 +22,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use super::workflow::{UserRefData, WorkflowData, WorkflowState, WorkflowStepData};
-use crate::error::{extract_tenant_id, get_session, internal_error_response};
+use crate::error::{authenticate, log_and_convert_core_error};
 
 // --- レスポンス型 ---
 
@@ -119,38 +119,24 @@ pub async fn list_my_tasks(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
     jar: CookieJar,
-) -> impl IntoResponse {
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
+) -> Result<Response, Response> {
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
-
-    match state
+    let core_response = state
         .core_service_client
         .list_my_tasks(
             *session_data.tenant_id().as_uuid(),
             *session_data.user_id().as_uuid(),
         )
         .await
-    {
-        Ok(core_response) => {
-            let response = ApiResponse::new(
-                core_response
-                    .data
-                    .into_iter()
-                    .map(TaskItemData::from)
-                    .collect::<Vec<_>>(),
-            );
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("タスク一覧取得で内部エラー: {}", e);
-            internal_error_response()
-        }
-    }
+        .map_err(|e| log_and_convert_core_error("タスク一覧取得", e))?;
+
+    let response = ApiResponse::new(
+        core_response
+            .data
+            .into_iter()
+            .map(TaskItemData::from)
+            .collect::<Vec<_>>(),
+    );
+    Ok((StatusCode::OK, Json(response)).into_response())
 }

@@ -13,7 +13,7 @@ use axum::{
     Json,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
 use chrono::DateTime;
@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::error::{extract_tenant_id, get_session, internal_error_response};
+use crate::error::{authenticate, internal_error_response};
 
 /// 監査ログ閲覧 API の共有状態
 pub struct AuditLogState {
@@ -93,16 +93,8 @@ pub async fn list_audit_logs(
     headers: HeaderMap,
     jar: CookieJar,
     Query(query): Query<ListAuditLogsQuery>,
-) -> impl IntoResponse {
-    let tenant_id = match extract_tenant_id(&headers) {
-        Ok(id) => id,
-        Err(e) => return e.into_response(),
-    };
-
-    let session_data = match get_session(state.session_manager.as_ref(), &jar, tenant_id).await {
-        Ok(data) => data,
-        Err(response) => return response,
-    };
+) -> Result<Response, Response> {
+    let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
     // limit のバリデーション（デフォルト 50、最大 100）
     let limit = query.limit.unwrap_or(50).clamp(1, 100);
@@ -169,11 +161,11 @@ pub async fn list_audit_logs(
                 data:        items,
                 next_cursor: page.next_cursor,
             };
-            (StatusCode::OK, Json(response)).into_response()
+            Ok((StatusCode::OK, Json(response)).into_response())
         }
         Err(e) => {
             tracing::error!("監査ログの検索に失敗: {}", e);
-            internal_error_response()
+            Err(internal_error_response())
         }
     }
 }
