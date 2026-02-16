@@ -58,7 +58,7 @@ permissions:
     TODAY=$(date +%Y-%m-%d)
 
     # 前回のレトロスペクティブレポートを検索（最新順）
-    LAST_RETRO=$(ls prompts/reports/*_レトロスペクティブ.md 2>/dev/null | sort -r | head -1)
+    LAST_RETRO=$(find prompts/reports -maxdepth 1 -name '*_レトロスペクティブ.md' 2>/dev/null | sort -r | head -1)
 
     if [ -n "$LAST_RETRO" ]; then
       # ファイル名から日付を抽出（YYYY-MM-DD_HHMM_レトロスペクティブ.md）
@@ -105,6 +105,7 @@ E2E テスト（該当なし）
 | 2回目 | step id `week` が意味と乖離 | シンプルさ | `period` にリネームし参照箇所も更新 |
 | 3回目 | `sparse-checkout-cone-mode` の適切な値 | 技術的前提 | cone mode（デフォルト）がディレクトリ指定に適切。明示的に `true` を指定 |
 | 4回目 | `ls` の glob が日本語ファイル名を扱えるか | 技術的前提 | Ubuntu ランナーはデフォルト UTF-8。`git config core.quotePath false` で対応可能だが sparse-checkout 済みなので `ls` は worktree 上のファイルを直接参照。問題なし |
+| 5回目 | `ls` が ShellCheck SC2012 に抵触（actionlint 経由で CI 失敗） | 既存手段の見落とし | `ls` → `find -maxdepth 1 -name` に変更。計画のコードスニペットも更新 |
 
 ## 収束確認（設計・計画）
 
