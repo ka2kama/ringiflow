@@ -46,32 +46,9 @@ use uuid::Uuid;
 
 use crate::{tenant::TenantId, user::UserId};
 
-/// ロール ID（一意識別子）
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
-#[display("{_0}")]
-pub struct RoleId(Uuid);
-
-impl RoleId {
-    /// 新しいロール ID を生成する
-    pub fn new() -> Self {
-        Self(Uuid::now_v7())
-    }
-
-    /// 既存の UUID からロール ID を作成する
-    pub fn from_uuid(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    /// 内部の UUID 参照を取得する
-    pub fn as_uuid(&self) -> &Uuid {
-        &self.0
-    }
-}
-
-impl Default for RoleId {
-    fn default() -> Self {
-        Self::new()
-    }
+define_uuid_id! {
+    /// ロール ID（一意識別子）
+    pub struct RoleId;
 }
 
 /// 権限（値オブジェクト）

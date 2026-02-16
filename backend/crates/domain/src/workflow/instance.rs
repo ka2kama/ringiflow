@@ -4,11 +4,9 @@
 //! フォームデータと進捗状態を保持し、申請・承認・却下のライフサイクルを持つ。
 
 use chrono::{DateTime, Utc};
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use strum::IntoStaticStr;
-use uuid::Uuid;
 
 use super::definition::WorkflowDefinitionId;
 use crate::{
@@ -18,29 +16,9 @@ use crate::{
     value_objects::{DisplayNumber, Version},
 };
 
-/// ワークフローインスタンス ID
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
-#[display("{_0}")]
-pub struct WorkflowInstanceId(Uuid);
-
-impl WorkflowInstanceId {
-    pub fn new() -> Self {
-        Self(Uuid::now_v7())
-    }
-
-    pub fn from_uuid(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    pub fn as_uuid(&self) -> &Uuid {
-        &self.0
-    }
-}
-
-impl Default for WorkflowInstanceId {
-    fn default() -> Self {
-        Self::new()
-    }
+define_uuid_id! {
+    /// ワークフローインスタンス ID
+    pub struct WorkflowInstanceId;
 }
 
 /// ワークフローインスタンスステータス
@@ -506,25 +484,32 @@ mod tests {
 
         use super::*;
 
+        /// WorkflowInstance の getter から WorkflowInstanceRecord を構築するヘルパー。
+        /// 構造体更新構文 `..record_from(&instance)` と組み合わせて、
+        /// テストで差異のあるフィールドだけを指定するために使用する。
+        fn record_from(instance: &WorkflowInstance) -> WorkflowInstanceRecord {
+            WorkflowInstanceRecord {
+                id: instance.id().clone(),
+                tenant_id: instance.tenant_id().clone(),
+                definition_id: instance.definition_id().clone(),
+                definition_version: instance.definition_version(),
+                display_number: instance.display_number(),
+                title: instance.title().to_string(),
+                form_data: instance.form_data().clone(),
+                status: instance.status(),
+                version: instance.version(),
+                current_step_id: instance.current_step_id().map(String::from),
+                initiated_by: instance.initiated_by().clone(),
+                submitted_at: instance.submitted_at(),
+                completed_at: instance.completed_at(),
+                created_at: instance.created_at(),
+                updated_at: instance.updated_at(),
+            }
+        }
+
         #[rstest]
-        fn test_新規作成の初期状態(test_instance: WorkflowInstance, now: DateTime<Utc>) {
-            let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: test_instance.id().clone(),
-                tenant_id: test_instance.tenant_id().clone(),
-                definition_id: test_instance.definition_id().clone(),
-                definition_version: test_instance.definition_version(),
-                display_number: test_instance.display_number(),
-                title: test_instance.title().to_string(),
-                form_data: test_instance.form_data().clone(),
-                status: WorkflowInstanceStatus::Draft,
-                version: Version::initial(),
-                current_step_id: None,
-                initiated_by: test_instance.initiated_by().clone(),
-                submitted_at: None,
-                completed_at: None,
-                created_at: now,
-                updated_at: now,
-            });
+        fn test_新規作成の初期状態(test_instance: WorkflowInstance) {
+            let expected = WorkflowInstance::from_db(record_from(&test_instance));
             assert_eq!(test_instance, expected);
         }
 
@@ -534,21 +519,10 @@ mod tests {
             let sut = test_instance.submitted(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Pending,
-                version: before.version(),
-                current_step_id: None,
-                initiated_by: before.initiated_by().clone(),
                 submitted_at: Some(now),
-                completed_at: None,
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -564,21 +538,11 @@ mod tests {
             let sut = instance.complete_with_approval(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Approved,
                 version: before.version().next(),
-                current_step_id: before.current_step_id().map(|s| s.to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -594,21 +558,11 @@ mod tests {
             let sut = instance.complete_with_rejection(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Rejected,
                 version: before.version().next(),
-                current_step_id: before.current_step_id().map(|s| s.to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -645,21 +599,10 @@ mod tests {
             let sut = test_instance.cancelled(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Cancelled,
-                version: before.version(),
-                current_step_id: None,
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: None,
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -675,21 +618,10 @@ mod tests {
             let sut = instance.cancelled(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Cancelled,
-                version: before.version(),
-                current_step_id: None,
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -708,21 +640,10 @@ mod tests {
             let sut = instance.cancelled(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Cancelled,
-                version: before.version(),
-                current_step_id: before.current_step_id().map(|s| s.to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -791,21 +712,10 @@ mod tests {
                 .unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
-                status: WorkflowInstanceStatus::InProgress,
                 version: before.version().next(),
                 current_step_id: Some("step_2".to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
-                completed_at: None,
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -884,21 +794,10 @@ mod tests {
             let sut = instance.complete_with_request_changes(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::ChangesRequested,
                 version: before.version().next(),
-                current_step_id: before.current_step_id().map(|s| s.to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
-                completed_at: None,
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -932,21 +831,13 @@ mod tests {
                 .unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
                 form_data: new_form_data,
                 status: WorkflowInstanceStatus::InProgress,
                 version: before.version().next(),
                 current_step_id: Some("new_step_1".to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
                 completed_at: None,
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -985,21 +876,10 @@ mod tests {
             let sut = instance.cancelled(now).unwrap();
 
             let expected = WorkflowInstance::from_db(WorkflowInstanceRecord {
-                id: before.id().clone(),
-                tenant_id: before.tenant_id().clone(),
-                definition_id: before.definition_id().clone(),
-                definition_version: before.definition_version(),
-                display_number: before.display_number(),
-                title: before.title().to_string(),
-                form_data: before.form_data().clone(),
                 status: WorkflowInstanceStatus::Cancelled,
-                version: before.version(),
-                current_step_id: before.current_step_id().map(|s| s.to_string()),
-                initiated_by: before.initiated_by().clone(),
-                submitted_at: before.submitted_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
