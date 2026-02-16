@@ -14,14 +14,14 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use ringiflow_domain::{
-    role::{Permission, Role, RoleId},
+    role::{Role, RoleId},
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
     value_objects::{DisplayNumber, UserName},
 };
 use sqlx::PgPool;
 
-use crate::error::InfraError;
+use crate::{error::InfraError, repository::role_repository::parse_permissions};
 
 /// ユーザーリポジトリトレイト
 ///
@@ -271,22 +271,12 @@ impl UserRepository for PostgresUserRepository {
         let roles = role_rows
             .into_iter()
             .map(|row| {
-                let permissions: Vec<Permission> = row
-                    .permissions
-                    .as_array()
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str().map(Permission::new))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
                 Role::from_db(
                     RoleId::from_uuid(row.id),
                     row.tenant_id.map(TenantId::from_uuid),
                     row.name,
                     row.description,
-                    permissions,
+                    parse_permissions(row.permissions),
                     row.is_system,
                     row.created_at,
                     row.updated_at,
@@ -664,22 +654,12 @@ impl UserRepository for PostgresUserRepository {
             return Ok(None);
         };
 
-        let permissions: Vec<Permission> = row
-            .permissions
-            .as_array()
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().map(Permission::new))
-                    .collect()
-            })
-            .unwrap_or_default();
-
         Ok(Some(Role::from_db(
             RoleId::from_uuid(row.id),
             row.tenant_id.map(TenantId::from_uuid),
             row.name,
             row.description,
-            permissions,
+            parse_permissions(row.permissions),
             row.is_system,
             row.created_at,
             row.updated_at,
