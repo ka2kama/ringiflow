@@ -18,7 +18,10 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use ringiflow_domain::{role::RoleId, tenant::TenantId};
+use ringiflow_domain::{
+    role::{Role, RoleId},
+    tenant::TenantId,
+};
 use ringiflow_infra::repository::RoleRepository;
 use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
@@ -64,6 +67,20 @@ pub struct RoleDetailDto {
     pub is_system:   bool,
     pub created_at:  String,
     pub updated_at:  String,
+}
+
+impl From<&Role> for RoleDetailDto {
+    fn from(role: &Role) -> Self {
+        Self {
+            id:          *role.id().as_uuid(),
+            name:        role.name().to_string(),
+            description: role.description().map(|s| s.to_string()),
+            permissions: role.permissions().iter().map(|p| p.to_string()).collect(),
+            is_system:   role.is_system(),
+            created_at:  role.created_at().to_rfc3339(),
+            updated_at:  role.updated_at().to_rfc3339(),
+        }
+    }
 }
 
 /// ロール作成リクエスト
@@ -140,15 +157,7 @@ pub async fn get_role(
         return Err(CoreError::NotFound("ロールが見つかりません".to_string()));
     }
 
-    let response = ApiResponse::new(RoleDetailDto {
-        id:          *role.id().as_uuid(),
-        name:        role.name().to_string(),
-        description: role.description().map(|s| s.to_string()),
-        permissions: role.permissions().iter().map(|p| p.to_string()).collect(),
-        is_system:   role.is_system(),
-        created_at:  role.created_at().to_rfc3339(),
-        updated_at:  role.updated_at().to_rfc3339(),
-    });
+    let response = ApiResponse::new(RoleDetailDto::from(&role));
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -175,15 +184,7 @@ pub async fn create_role(
 
     let role = state.usecase.create_role(input).await?;
 
-    let response = ApiResponse::new(RoleDetailDto {
-        id:          *role.id().as_uuid(),
-        name:        role.name().to_string(),
-        description: role.description().map(|s| s.to_string()),
-        permissions: role.permissions().iter().map(|p| p.to_string()).collect(),
-        is_system:   role.is_system(),
-        created_at:  role.created_at().to_rfc3339(),
-        updated_at:  role.updated_at().to_rfc3339(),
-    });
+    let response = ApiResponse::new(RoleDetailDto::from(&role));
 
     Ok((StatusCode::CREATED, Json(response)))
 }
@@ -211,15 +212,7 @@ pub async fn update_role(
 
     let role = state.usecase.update_role(input).await?;
 
-    let response = ApiResponse::new(RoleDetailDto {
-        id:          *role.id().as_uuid(),
-        name:        role.name().to_string(),
-        description: role.description().map(|s| s.to_string()),
-        permissions: role.permissions().iter().map(|p| p.to_string()).collect(),
-        is_system:   role.is_system(),
-        created_at:  role.created_at().to_rfc3339(),
-        updated_at:  role.updated_at().to_rfc3339(),
-    });
+    let response = ApiResponse::new(RoleDetailDto::from(&role));
 
     Ok((StatusCode::OK, Json(response)))
 }

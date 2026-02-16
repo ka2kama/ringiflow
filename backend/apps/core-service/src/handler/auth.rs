@@ -19,6 +19,7 @@ use axum::{
     response::IntoResponse,
 };
 use ringiflow_domain::{
+    role::Role,
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
     value_objects::{DisplayId, DisplayNumber, UserName, display_prefix},
@@ -78,6 +79,25 @@ pub struct UserWithPermissionsData {
     pub tenant_name: String,
     pub roles:       Vec<String>,
     pub permissions: Vec<String>,
+}
+
+/// User と Role リストから UserWithPermissionsData を構築する
+fn build_user_with_permissions(
+    user: &User,
+    roles: &[Role],
+    tenant_name: String,
+) -> UserWithPermissionsData {
+    let permissions: Vec<String> = roles
+        .iter()
+        .flat_map(|r| r.permissions().iter().map(|p| p.to_string()))
+        .collect();
+
+    UserWithPermissionsData {
+        user: UserResponse::from(user),
+        tenant_name,
+        roles: roles.iter().map(|r| r.name().to_string()).collect(),
+        permissions,
+    }
 }
 
 /// ユーザー一覧の要素 DTO
@@ -351,18 +371,7 @@ pub async fn get_user(
         }
     };
 
-    // 権限を集約
-    let permissions: Vec<String> = roles
-        .iter()
-        .flat_map(|r| r.permissions().iter().map(|p| p.to_string()))
-        .collect();
-
-    let response = ApiResponse::new(UserWithPermissionsData {
-        user: UserResponse::from(&user),
-        tenant_name,
-        roles: roles.iter().map(|r| r.name().to_string()).collect(),
-        permissions,
-    });
+    let response = ApiResponse::new(build_user_with_permissions(&user, &roles, tenant_name));
     (StatusCode::OK, Json(response)).into_response()
 }
 
@@ -456,17 +465,7 @@ pub async fn get_user_by_display_number(
         .map(|t| t.name().to_string())
         .unwrap_or_default();
 
-    let permissions: Vec<String> = roles
-        .iter()
-        .flat_map(|r| r.permissions().iter().map(|p| p.to_string()))
-        .collect();
-
-    let response = ApiResponse::new(UserWithPermissionsData {
-        user: UserResponse::from(&user),
-        tenant_name,
-        roles: roles.iter().map(|r| r.name().to_string()).collect(),
-        permissions,
-    });
+    let response = ApiResponse::new(build_user_with_permissions(&user, &roles, tenant_name));
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -961,5 +960,33 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    // --- build_user_with_permissions テスト ---
+
+    #[test]
+    fn build_user_with_permissions_ロールありで権限が集約される() {
+        let tenant_id = TenantId::new();
+        let user = create_active_user(&tenant_id);
+        let roles = vec![create_user_role()];
+
+        let result = build_user_with_permissions(&user, &roles, "Test Tenant".to_string());
+
+        assert_eq!(result.tenant_name, "Test Tenant");
+        assert_eq!(result.roles, vec!["user"]);
+        assert_eq!(result.permissions.len(), 2);
+        assert!(result.permissions.contains(&"workflow:read".to_string()));
+        assert!(result.permissions.contains(&"task:read".to_string()));
+    }
+
+    #[test]
+    fn build_user_with_permissions_ロール空で空リスト() {
+        let tenant_id = TenantId::new();
+        let user = create_active_user(&tenant_id);
+
+        let result = build_user_with_permissions(&user, &[], "Test Tenant".to_string());
+
+        assert!(result.roles.is_empty());
+        assert!(result.permissions.is_empty());
     }
 }
