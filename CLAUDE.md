@@ -54,61 +54,31 @@ just fmt                # 全体フォーマット
 
 ### 開発サーバー起動
 
-開発サーバーは必ず `just` コマンドで起動する。直接 `pnpm run dev` や `cargo run` を実行してはいけない。
+開発サーバーは必ず `just` コマンドで起動する。直接 `pnpm run dev` や `cargo run` を実行してはいけない（環境変数が設定されないため）。
 
-```bash
-just dev-all            # 全サーバー一括起動（推奨）
-just dev-down           # 依存サービス（PostgreSQL, Redis）を停止
-```
-
-`dev-all` は依存サービス（PostgreSQL, Redis）を起動した後、mprocs（TUI プロセスマネージャー）で BFF・Core Service・Auth Service・Web を一括起動する。
-
-#### 個別起動
-
-特定のサーバーだけ起動したい場合:
-
-```bash
-just dev-deps           # PostgreSQL, Redis を起動（先に実行）
-just dev-bff            # BFF
-just dev-core-service   # Core Service
-just dev-auth-service   # Auth Service
-just dev-web            # フロントエンド
-```
-
-理由: 環境変数はルートの `.env` ファイルで管理し、justfile の `set dotenv-load := true` で読み込む設計。`just` を経由しないと環境変数が設定されない。
+| コマンド | 用途 |
+|---------|------|
+| `just dev-all` | 全サーバー一括起動（推奨。PostgreSQL/Redis + BFF/Core/Auth/Web） |
+| `just dev-down` | 依存サービス停止 |
+| `just dev-deps` | PostgreSQL, Redis のみ起動 |
+| `just dev-bff` / `just dev-core-service` / `just dev-auth-service` / `just dev-web` | 個別起動 |
 
 → 詳細: [ナレッジベース: Vite](docs/06_ナレッジベース/frontend/Vite.md#環境変数管理)
 
-### 単一テスト実行
+### テスト・データストア操作
 
 ```bash
-# Rust
+# 単一テスト
 cd backend && cargo test テスト名
-cd backend && cargo test --package ringiflow-domain テスト名
-
-# Elm
 cd frontend && pnpm run test -- --watch tests/Example.elm
-```
 
-### データストア操作
+# 統合テスト（DB 接続が必要）
+just test-rust-integration
 
-PostgreSQL スキーマやデータの確認に使用する。MCP（PostgreSQL）も利用可能。
-
-```bash
-just db-tables              # テーブル一覧
-just db-schema テーブル名    # カラム定義
-just db-query "SELECT ..."  # SQL 実行
-just db-dump-schema         # スキーマスナップショットを更新
+# データストア操作（MCP も利用可能）
+just db-tables / just db-schema テーブル名 / just db-query "SELECT ..."
 just db-migrate             # マイグレーション + スナップショット更新
-just redis-keys             # Redis キー一覧
-just redis-keys "session:*" # パターン指定
-just redis-get キー名        # Redis 値取得
-```
-
-### 統合テスト
-
-```bash
-just test-rust-integration  # DB 接続が必要
+just redis-keys / just redis-get キー名
 ```
 
 ## コードアーキテクチャ
@@ -157,37 +127,9 @@ TEA（The Elm Architecture）パターンを採用。
 
 [ISO/IEC 25010](https://iso25000.com/en/iso-25000-standards/iso-25010) のプロダクト品質モデルに基づき、ソフトウェア品質を体系的に追求する。
 
-**重点品質特性（現在）:**
+重点品質特性: 保守性（モジュール性、修正性、試験性）、機能適合性（完全性、正確性、適切性）、セキュリティ（機密性、完全性、真正性）。段階的に信頼性（Phase 2〜）、操作性（Phase 2〜）、性能効率性（Phase 3〜）に取り組む。
 
-| 品質特性 | 副特性（代表例） | このプロジェクトでの意味 |
-|---------|----------------|----------------------|
-| 保守性 | モジュール性、修正性、試験性 | 長期的な進化と学習効果の最大化 |
-| 機能適合性 | 完全性、正確性、適切性 | ワークフローの正確な実行 |
-| セキュリティ | 機密性、完全性、真正性 | マルチテナントのデータ分離 |
-
-**段階的に取り組む品質特性:**
-
-| 品質特性 | 副特性（代表例） | 取り組み時期 |
-|---------|----------------|------------|
-| 信頼性 | 可用性、障害許容性、回復性 | Phase 2〜 |
-| 操作性 | 学習性、操作容易性、エラー防止 | Phase 2〜 |
-| 性能効率性 | 時間効率性、資源効率性、容量 | Phase 3〜 |
-
-残り（互換性、柔軟性、安全性）は現時点では低優先。必要に応じて取り組む。
-
-品質戦略は Validation（妥当性確認）と Verification（検証）の2層で構成する:
-
-| 層 | 問い | 活動 | 仕組み |
-|----|------|------|--------|
-| Validation | 正しい問題を解いているか？ | Issue 精査、前提検証 | [問題解決フレームワーク](.claude/rules/problem-solving.md)、[Issue 精査](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査) |
-| Verification | 正しく作っているか？ | 実装品質の確保 | 守りと攻め（下記） |
-
-Verification 層には**守り**と**攻め**の2方向がある:
-
-| 方向 | 内容 | 仕組み |
-|------|------|--------|
-| 守り（欠陥除去） | マイナス→ゼロ: 問題を検出し修正する | 設計レビュー、品質チェックリスト |
-| 攻め（設計改善） | ゼロ→プラス: より良い構造を発見し統合する | 設計レビュー、TDD Refactor の[設計原則レンズ](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ) |
+品質戦略は Validation（正しい問題を解いているか — [問題解決フレームワーク](.claude/rules/problem-solving.md)、[Issue 精査](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査)）と Verification（正しく作っているか）の2層構成。Verification には守り（欠陥除去: 設計レビュー、品質チェックリスト）と攻め（設計改善: TDD Refactor の[設計原則レンズ](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ)）がある。
 
 設計原則:
 
@@ -196,33 +138,14 @@ Verification 層には**守り**と**攻め**の2方向がある:
 - 依存関係の方向を意識する。詳細が抽象に依存する構造
 - 過度な抽象化・過度な DRY を避ける。3回繰り返すまでは重複を許容
 
-YAGNI/KISS と設計品質の判断基準:
+YAGNI/KISS/MVP は**機能スコープ**の原則であり、**設計品質**を妥協する根拠にならない。判定テスト: 「この判断を放置すると、後続の実装で同じパターンが使われるか？」→ Yes なら設計品質の問題（割れ窓理論）。
 
-YAGNI/KISS/MVP は**機能スコープ**の原則であり、**設計品質**を妥協する根拠にならない。
-
-| 区分 | 判断 | 例 |
-|------|------|-----|
-| 機能の先取り | YAGNI を適用して見送ってよい | 将来必要になるかもしれないキャッシュ層の追加、まだ要件にない多段階承認 |
-| 設計品質 | YAGNI/KISS を理由に妥協しない | レイヤー違反（ハンドラ→リポジトリ直接呼び出し）、型安全性の省略（String で済ませる）、エラーハンドリングの省略（unwrap で済ませる） |
-
-判定テスト: 「この判断を放置すると、後続の実装で同じパターンが使われるか？」→ Yes なら設計品質の問題（割れ窓理論）。YAGNI/KISS で正当化してはならない。
-
-型システムの活用（Rust / Elm の強みを活かす）:
-
-- 型で表現できるものは型で表現する（文字列や整数の濫用を避ける）
-- 不正な状態を表現不可能にする（Make Illegal States Unrepresentable）
-- 安易な unwrap / expect を避け、エラーを適切に型で扱う
-
-コードの明確さ:
-
-- 意図が伝わる命名を心がける
-- コメントは「なぜ」を書く。「何を」はコードで表現する
+型システムの活用: 型で表現できるものは型で表現する。不正な状態を表現不可能にする。安易な unwrap / expect を避ける。
+コードの明確さ: 意図が伝わる命名。コメントは「なぜ」を書く。
 
 これらの理念は「あれば良い」ではなく**必須**。速度や利便性のために犠牲にしない。
 
 ### 2つの理念が駆動するもの
-
-各理念がプロジェクトのどの側面を駆動しているかの対応表。
 
 | 理念 | 駆動するもの | 具体例 |
 |------|-------------|--------|
@@ -234,11 +157,9 @@ YAGNI/KISS/MVP は**機能スコープ**の原則であり、**設計品質**を
 
 ### 共通アプローチ: ベストプラクティス起点
 
-2つの理念を実現するための、全領域共通のアプローチ。
-
 **あらゆる判断において、その分野の業界ベストプラクティスを起点（デフォルト）とし、プロジェクトの現実に合わせて意識的に調整する。**
 
-- **起点を高く置く**: 「何もないところから足す」のではなく「ベストプラクティスから始めて調整する」。出発点が違えば到達点も違う
+- **起点を高く置く**: 「何もないところから足す」のではなく「ベストプラクティスから始めて調整する」
 - **全領域に適用**: コード設計、UI/UX、アクセシビリティ、セキュリティ、テスト、検証、プロジェクト運営——例外なし
 - **意識的な調整**: ベストプラクティスから外れるときは理由を記録する（ADR、Issue、コメント）。記録のない逸脱は許容しない
 - **知って判断する**: 「知らなかったから従わなかった」は許容しない。まず調べ、知った上で判断する
@@ -311,22 +232,13 @@ How（具体的な対策）にこだわりすぎず、常に Want を満たす�
 
 ## 運用サイクル
 
-プロジェクトの健全性を維持するため、3つのスキルが連携してフィードバックループを形成する。
+3つのスキルが連携してフィードバックループを形成する: `/assess`（月次診断）→ `/retro`（週次検証）→ Issue 化 → `/next`（セッション毎の作業選定）→ 実装 → `/assess` ...
 
-```mermaid
-flowchart LR
-    A["/assess（月次）<br/>健全性診断"] --> B["/retro（週次）<br/>改善サイクル検証"]
-    B --> C["Issue 化"]
-    C --> D["/next（セッション毎）<br/>次の一手"]
-    D --> E["実装"]
-    E -.-> A
-```
-
-| スキル | 頻度 | 役割 | 出力 |
-|-------|------|------|------|
-| `/assess` | 月次 | 3軸（Discovery / Delivery / Sustainability）で現状を診断 | 診断レポート + 推奨アクション |
-| `/retro` | 週次 | 改善記録の有効性検証、トレンド分析、SRE 的観点 | レトロレポート + アクションアイテム |
-| `/next` | セッション毎 | GitHub Issues から次の作業を選定 | 推奨タスク |
+| スキル | 頻度 | 役割 |
+|-------|------|------|
+| `/assess` | 月次 | Discovery / Delivery / Sustainability の3軸で現状診断 |
+| `/retro` | 週次 | 改善記録の有効性検証、トレンド分析 |
+| `/next` | セッション毎 | GitHub Issues から次の作業を選定 |
 
 `/next` は GitHub Issues のみをデータソースとする。`/assess` と `/retro` のアクションアイテムは Issue 化することで `/next` に接続される。
 
@@ -336,36 +248,22 @@ flowchart LR
 
 | 知りたいこと | 参照先 |
 |-------------|--------|
-| 何を作るか（WHAT） | [`docs/01_要件定義書/`](docs/01_要件定義書/) |
-| ユーザーから見た振る舞い（WHAT） | [`docs/01_要件定義書/機能仕様書/`](docs/01_要件定義書/機能仕様書/) |
+| 要件（WHAT） | [`docs/01_要件定義書/`](docs/01_要件定義書/) |
+| 機能仕様（WHAT） | [`docs/01_要件定義書/機能仕様書/`](docs/01_要件定義書/機能仕様書/) |
 | 全体設計（HOW） | [`docs/02_基本設計書/`](docs/02_基本設計書/) |
 | 実装設計（HOW） | [`docs/03_詳細設計書/`](docs/03_詳細設計書/) |
-| 操作手順（HOW TO） | [`docs/04_手順書/`](docs/04_手順書/) |
+| 操作手順 | [`docs/04_手順書/`](docs/04_手順書/) |
 | 意思決定（WHY） | [`docs/05_ADR/`](docs/05_ADR/) |
-| 技術知識 | [`docs/06_ナレッジベース/`](docs/06_ナレッジベース/) |
-| 実装解説 | [`docs/07_実装解説/`](docs/07_実装解説/) |
-| テスト | [`docs/08_テスト/`](docs/08_テスト/) |
-| 設計の思考過程 | [`prompts/plans/`](prompts/plans/) |
-| セッションログ | [`prompts/runs/`](prompts/runs/) |
-| 操作パターン | [`prompts/recipes/`](prompts/recipes/) |
-| 運用改善記録 | [`prompts/improvements/`](prompts/improvements/) |
-| 診断レポート | [`prompts/reports/`](prompts/reports/) |
+| 技術知識 / 実装解説 / テスト | [`docs/06_ナレッジベース/`](docs/06_ナレッジベース/) / [`docs/07_実装解説/`](docs/07_実装解説/) / [`docs/08_テスト/`](docs/08_テスト/) |
+| 設計思考過程 / セッションログ / 改善記録 | [`prompts/plans/`](prompts/plans/) / [`prompts/runs/`](prompts/runs/) / [`prompts/improvements/`](prompts/improvements/) |
 
 作業開始時は [`docs/01_要件定義書/00_はじめに.md`](docs/01_要件定義書/00_はじめに.md) から読み、全体像を把握すること。
 
 ### 情報管理の原則: ローカルファースト
 
-→ 詳細: [ADR-025: 情報管理とローカル知識集約の方針](docs/05_ADR/025_情報管理とローカル知識集約の方針.md)
+→ 詳細: [ADR-025](docs/05_ADR/025_情報管理とローカル知識集約の方針.md)
 
-GitHub と ローカルの役割を明確に分離する:
-
-| 場所 | 役割 | 記録するもの |
-|------|------|-------------|
-| GitHub Issues/PR | 一時的・ワークフロー用 | 作業追跡、進捗管理、CI 連携 |
-| ローカル docs | 永続的・知識用 | 要件、設計判断、学び、パターン |
-
-Issue/PR 内での長い議論は避け、判断・学びはローカルドキュメントに記録する。
-Issue クローズ時には振り返りコメントを残し、重要な学びはローカルに転記する。
+GitHub Issues/PR は一時的なワークフロー用、ローカル docs は永続的な知識用。Issue/PR 内での長い議論は避け、判断・学びはローカルドキュメントに記録する。
 
 ### AI エージェントが手順を案内する場合
 
@@ -375,77 +273,31 @@ Issue クローズ時には振り返りコメントを残し、重要な学び�
 
 ### ナレッジベースの活用
 
-コード内のコメントは簡潔に、詳細解説はナレッジベースに書いてコードからリンクする:
-
-```rust
-//! 詳細: [BFF パターン](../../../docs/06_ナレッジベース/architecture/BFFパターン.md)
-```
-
-```elm
-{-| 詳細: [TEA パターン](../../../docs/06_ナレッジベース/elm/Elmアーキテクチャ.md) -}
-```
+コード内のコメントは簡潔に、詳細解説はナレッジベースに書いてコードからリンクする。
 
 ### ドキュメント自動作成ルール
 
-**AI エージェントへの必須事項:**
-
-セッション中に以下に該当する活動があった場合、対応ドキュメントを自発的に作成する。セッション終了時（`/wrap-up` 実行時）にも該当がないか振り返る。
+セッション中に以下に該当する活動があった場合、対応ドキュメントを自発的に作成する。`/wrap-up` 実行時にも振り返る。
 
 **禁止:** 該当する活動があったにもかかわらず、ドキュメントを作成しないこと
 
 - **ADR** — 技術選定、実装方針の選択、見送りの判断
 - **ナレッジベース** — 新しいツール・パターン導入、技術解説
 - **セッションログ** — コード変更、設計判断（→ [`prompts/runs/`](prompts/runs/)）
-- **実装解説** — PR 単位の機能解説・コード解説。`/explain` で生成（→ [`docs/07_実装解説/`](docs/07_実装解説/)）
-- **操作レシピ** — 非自明な操作で問題解決、再利用可能なパターン発見（→ [`prompts/recipes/`](prompts/recipes/)）
+- **実装解説** — PR 単位の機能解説。`/explain` で生成（→ [`docs/07_実装解説/`](docs/07_実装解説/)）
+- **操作レシピ** — 非自明な操作で問題解決（→ [`prompts/recipes/`](prompts/recipes/)）
 - **改善記録** — AI エージェント運用上の問題と対策（→ [`prompts/improvements/`](prompts/improvements/)）
 
 ## 学習支援
 
-### 解説するタイミング
+設計判断を伴う箇所（アーキテクチャ決定、パターン選択、非自明なロジック、トレードオフのある選択）では、コードとともに解説を提供する。単純な CRUD や定型修正では不要。
 
-以下のような「設計判断を伴う箇所」では、コードとともに解説を提供する:
+解説の内容: 意図（なぜこの設計か）、代替案（なぜ不採用か）、トレードオフ、関連知識。
+想定レベル: 中級者（基礎は理解済み）。特に注力: アーキテクチャ設計（DDD, CQRS）、Elm/TEA パターン、ソフトウェア設計原則。
 
-- アーキテクチャ上の決定（なぜこの構造にしたか）
-- 複数の実装パターンから一つを選択した場面
-- 非自明なロジックやイディオム
-- トレードオフが存在する選択
+複数選択肢を提示する際は推奨オプションを明示し、判断材料と理由を提供する。Yes/No のクローズドクエスチョンには適用しない。
 
-単純な CRUD 実装や定型的な修正では解説は不要。
-
-### 解説の内容
-
-1. 意図: なぜこのコード/設計にしたか
-2. 代替案: 他にどんな選択肢があったか、なぜ採用しなかったか
-3. トレードオフ: この選択のメリット・デメリット
-4. 関連知識: 理解を深めるための概念や参考情報
-
-### 想定レベル
-
-オーナーは中級者（各技術の基礎は理解済み）。基本構文の説明は不要。応用パターンやベストプラクティスの観点から解説する。
-
-特に注力: アーキテクチャ設計（DDD, CQRS）、Elm/TEA パターン、ソフトウェア設計原則
-
-### 複数選択肢の提示
-
-ユーザーに複数の選択肢を提示する際は、推奨オプションを明示する。
-
-```
-どの方法で進めますか？
-1. 選択肢 A
-2. 選択肢 B
-3. 選択肢 C
-4. **A + C の組み合わせ（推奨）** ← 理由を簡潔に
-```
-
-- 選択肢だけ列挙して「どれにしますか？」と聞くのではなく、判断材料と推奨を提供する
-- 単一選択だけでなく、組み合わせが最適な場合はそれを推奨として明示する
-
-注: Yes/No で答えられるクローズドクエスチョンには適用しない。
-
-### 英語サマリー（Insight ブロック）
-
-Insight ブロックには、日本語の解説に加えて 1〜2 文の英語サマリーを必ず付ける:
+Insight ブロックには日本語の解説に加えて 1〜2 文の英語サマリーを必ず付ける:
 
 ```
 ★ Insight ─────────────────────────────────────
@@ -510,18 +362,6 @@ git commit -m "#34 Implement find_by_email for UserRepository"
 
 lefthook により、ブランチ名が `feature/34-xxx` 形式なら Issue 番号は自動付与される。
 
-英語コミットでよく使う動詞パターン:
-
-| 動詞 | 用途 | 例 |
-|------|------|-----|
-| Implement | 新規実装 | Implement user authentication |
-| Add | 追加 | Add validation to login form |
-| Fix | バグ修正 | Fix null pointer in session handler |
-| Update | 変更・改善 | Update error messages for clarity |
-| Refactor | リファクタリング | Refactor session management logic |
-| Remove | 削除 | Remove deprecated API endpoint |
-| Rename | リネーム | Rename Session to Shared |
-
 ### PR 作成（Draft）
 
 → 詳細: [手順書: Draft PR を作成](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#3-draft-pr-を作成)
@@ -532,19 +372,12 @@ git push -u origin HEAD
 gh pr create --draft --title "#34 Implement login feature" --body-file .github/pull_request_template.md
 ```
 
-**PR 本文の形式:**
-
-- 本文の先頭に `## Issue` セクションを配置:
-  - Story PR: `Closes #<Story番号>` で自動クローズ
-  - Issue を参照するだけの場合: `Related to #123`
-  - Issue がない場合: `なし`
+PR 本文の形式:
+- 先頭に `## Issue` セクション: Story PR は `Closes #<Story番号>`、参照のみは `Related to #123`、Issue なしは `なし`
 - Epic に対して `Closes` は使用しない（Epic は全サブ Issue 完了後に手動クローズ）
-- AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名を付与する: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+- AI エージェントは `--body` でテンプレート形式の本文を直接指定し、末尾に署名: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
-**Test plan の記載について:**
-
-- **単一 PR で完結する場合**: 実装したテストと手動テストの手順を記載
-- **Epic の Story PR の場合**: 各 Story PR に、その Story のテスト手順を記載
+Test plan: 単一 PR は実装テスト＋手動テスト手順を記載。Epic の Story PR は各 Story のテスト手順を記載。
 
 ### PR 完了フロー
 
@@ -554,22 +387,10 @@ gh pr create --draft --title "#34 Implement login feature" --body-file .github/p
 2. 収束確認完了（[zoom-rhythm.md](.claude/rules/zoom-rhythm.md)）
 3. Draft PR 作成（`gh pr create --draft`）
 4. `/wrap-up` でドキュメント整備
-5. wrap-up 完了の検証（構造的チェックポイント）
-6. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`）
+5. wrap-up 完了の検証（`git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"`）。なければ `/wrap-up` を実行
+6. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`、差分あれば rebase + `just check-all` で再確認）
 7. ユーザーに確認を求める（「Ready にしてよいですか？」）
 8. ユーザー承認後、`gh pr ready` で Ready にする
-
-Step 5 の検証方法:
-
-```bash
-git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"
-```
-
-- ドキュメントコミットが存在すれば Step 6 へ進む
-- 存在しない場合は `/wrap-up` を先に実行する
-- `/wrap-up` の結果「作成不要」と判断された場合は、その旨をユーザーに伝えてから Step 6 へ進む
-
-Step 6 の同期確認: 差分がある場合は `git rebase origin/main` を実行し、`just check-all` で再確認する。Ready for Review 後の rebase は CI + レビューの再実行を伴うため、プッシュ前に解消する
 
 **禁止:**
 
@@ -577,12 +398,7 @@ Step 6 の同期確認: 差分がある場合は `git rebase origin/main` を実
 - ユーザー確認なしに `gh pr ready` を実行すること
 - wrap-up 完了を検証せずに Ready を提案すること
 
-改善の経緯:
-- [PR を Draft で作成しなかった](prompts/improvements/2026-02/2026-02-05_2104_PRをDraftで作成しなかった.md)
-- [ユーザー確認なしに PR を Ready にした](prompts/improvements/2026-02/2026-02-05_2104_ユーザー確認なしにPRをReadyにした.md)
-- [wrap-up 前に Ready を提案する再発](prompts/improvements/2026-02/2026-02-09_2134_wrap-up前にReadyを提案する再発.md)
-
-### Ready for Review
+### Ready for Review・マージ
 
 ```bash
 just check-all  # lint + test + API test
@@ -591,8 +407,6 @@ gh pr ready     # Draft を解除
 
 → 詳細チェックリスト: [手順書: 品質ゲートと Ready for Review](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-品質ゲートと-ready-for-review)
 
-### マージ
-
 ```bash
 gh pr merge --squash --delete-branch
 just clean-branches  # マージ後のローカルブランチ削除
@@ -600,114 +414,13 @@ just clean-branches  # マージ後のローカルブランチ削除
 
 **禁止:** `--admin` で CI バイパス、CI 失敗状態での強制マージ
 
-## 構造品質の維持
-
-新モジュール追加時の責務重複チェック、ファイルサイズ閾値（500 行）、未使用依存の検出に関する指針。
-
-→ 詳細: [`.claude/rules/structural-review.md`](.claude/rules/structural-review.md)
-
-## データストア追加時の必須対応
-
-新しいデータストアを追加する場合、テナント退会時のデータ削除を考慮した設計が必須。
-
-→ 詳細: [`.claude/rules/data-store.md`](.claude/rules/data-store.md)
-
-1. `tenant_id` による削除が可能か確認
-2. 削除レジストリに登録
-3. 設計書を更新
-
-## エンティティ追加・更新パス追加時の必須対応
-
-新しいエンティティを追加する場合、または既存エンティティに新しい更新パス（ユースケース）を追加する場合、エンティティ影響マップを作成・更新する。
-
-→ 詳細: [`docs/03_詳細設計書/エンティティ影響マップ/`](docs/03_詳細設計書/エンティティ影響マップ/)
-
-1. [テンプレート](docs/03_詳細設計書/エンティティ影響マップ/TEMPLATE.md)を使って影響マップを作成
-2. 更新パスと競合リスクを洗い出す
-3. 必要に応じて競合対策（楽観的ロック等）を設計する
-
-## リポジトリ実装時の必須対応
-
-新しいリポジトリを実装する場合、以下の手順を厳守する。
-
-→ 詳細: [`.claude/rules/repository.md`](.claude/rules/repository.md)
-
-1. 既存のリポジトリテストを確認（配置、パターン）
-2. テストは `backend/crates/infra/tests/` に配置
-3. `#[sqlx::test(migrations = "../../migrations")]` を使用
-4. `just sqlx-prepare` でキャッシュを更新
-5. `just pre-commit` で全体チェック
-
-**禁止:** DB 接続が必要なテストを `src/` に配置、`sqlx-prepare` の省略
-
-## API 実装時の必須対応
-
-BFF の公開 API エンドポイントを追加・変更・削除した場合、以下を必ず実施する。
-
-→ 詳細: [`.claude/rules/api.md`](.claude/rules/api.md)
-
-1. OpenAPI 仕様書 ([`openapi/openapi.yaml`](openapi/openapi.yaml)) を更新
-2. API 設計書との整合性を確認
-
-**禁止:** 実装と OpenAPI 仕様書が乖離した状態でコミットすること
-
-## 開発ツール追加時の必須対応
-
-新しい開発ツールを追加する場合、以下を同時に更新:
-
-1. `justfile` の `check-tools` タスク
-2. [`docs/04_手順書/01_開発参画/01_開発環境構築.md`](docs/04_手順書/01_開発参画/01_開発環境構築.md)
-
-## アーキテクチャ構成変更時の必須対応
-
-以下のいずれかに該当する変更を行った場合、基本設計書を確認・更新する。
-
-該当する変更:
-- サービス（アプリケーション）の追加・削除
-- 共有クレートの追加・削除
-- 外部連携先の追加・削除
-- サービス間通信パターンの変更
-
-確認・更新する設計書:
-
-1. [`00_アーキテクチャ概要.md`](docs/02_基本設計書/00_アーキテクチャ概要.md) — 構成図、レイヤー表、通信表、セキュリティ境界図
-2. [`01_アーキテクチャ設計.md`](docs/02_基本設計書/01_アーキテクチャ設計.md) — 詳細構成図、コンポーネント図、レイヤー表
-3. [`02_プロジェクト構造設計.md`](docs/02_基本設計書/02_プロジェクト構造設計.md) — ディレクトリ構造、Cargo.toml、クレート構成図
-
-**禁止:** アーキテクチャ構成を変更しながら基本設計書を更新しないこと
-
-## CI ワークフロー変更時の必須対応
-
-GitHub Actions ワークフローに新しい Action を追加した場合、以下を実施する。
-
-→ 詳細: [ナレッジベース: GitHub Actions](docs/06_ナレッジベース/devtools/GitHubActions.md#アクション許可設定)
-
-1. [ナレッジベースの許可設定テーブル](docs/06_ナレッジベース/devtools/GitHubActions.md#プロジェクトでの許可設定)に Action のパターンを追記する
-2. 間接依存（Action が内部で呼び出す別の Action）がないか確認し、あれば同様に追記する
-3. GitHub Settings → Actions → General の許可パターンにも追加する（リポジトリ管理者が手動で実施）
-
-**禁止:** 許可設定を更新せずに CI ワークフローに新しい Action を追加すること
-
-## ドキュメント規約
-
-→ [`.claude/rules/docs.md`](.claude/rules/docs.md)
-
 ## PR レビュー
 
-Claude Code Action による自動 PR レビューが有効。
+Claude Code Action による自動 PR レビューが有効。→ [`.github/workflows/claude-auto-review.yaml`](.github/workflows/claude-auto-review.yaml)
 
-→ [`.github/workflows/claude-auto-review.yaml`](.github/workflows/claude-auto-review.yaml)
-
-承認基準:
-
-| 重大度 | 基準 | アクション |
-|--------|------|-----------|
-| Critical/High | マージ前に修正必須 | request-changes |
-| Medium/Low | 改善推奨だがマージ可能 | approve + コメント |
+承認基準: Critical/High は修正必須（request-changes）、Medium/Low は改善推奨だがマージ可能（approve + コメント）。
 
 ```bash
-# 指摘対応フロー
-gh pr checks && gh pr view --comments
-# 対応後、理由を返信してから resolve
-gh pr merge --squash --delete-branch
+gh pr checks && gh pr view --comments  # 指摘対応フロー
+gh pr merge --squash --delete-branch   # 対応後マージ
 ```
