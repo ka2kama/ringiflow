@@ -139,17 +139,10 @@ pub async fn get_workflow(
 
     let workflow_with_steps = state.usecase.get_workflow(instance_id, tenant_id).await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -178,17 +171,10 @@ pub async fn get_workflow_by_display_number(
         .get_workflow_by_display_number(display_number, tenant_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }

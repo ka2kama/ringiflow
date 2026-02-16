@@ -299,6 +299,27 @@ impl WorkflowInstanceDto {
             updated_at: instance.updated_at().to_rfc3339(),
         }
     }
+
+    /// ユーザー名を解決して WorkflowInstance から DTO を構築する（ステップなし）
+    async fn resolve_from_instance(
+        instance: &WorkflowInstance,
+        usecase: &WorkflowUseCaseImpl,
+    ) -> Result<Self, CoreError> {
+        let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(instance, &[]);
+        let user_names = usecase.resolve_user_names(&user_ids).await?;
+        Ok(Self::from_instance(instance, &user_names))
+    }
+
+    /// ユーザー名を解決して WorkflowWithSteps から DTO を構築する
+    pub(crate) async fn resolve_from_workflow_with_steps(
+        data: &WorkflowWithSteps,
+        usecase: &WorkflowUseCaseImpl,
+    ) -> Result<Self, CoreError> {
+        let user_ids =
+            crate::usecase::workflow::collect_user_ids_from_workflow(&data.instance, &data.steps);
+        let user_names = usecase.resolve_user_names(&user_ids).await?;
+        Ok(Self::from_workflow_with_steps(data, &user_names))
+    }
 }
 
 /// コメント投稿リクエスト

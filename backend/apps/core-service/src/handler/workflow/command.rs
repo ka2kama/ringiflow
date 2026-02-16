@@ -72,12 +72,9 @@ pub async fn create_workflow(
         .create_workflow(input, tenant_id, user_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(&instance, &[]);
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    // レスポンスを返す
-    let response = ApiResponse::new(WorkflowInstanceDto::from_instance(&instance, &user_names));
+    // ユーザー名を解決してレスポンスを返す
+    let dto = WorkflowInstanceDto::resolve_from_instance(&instance, &state.usecase).await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
@@ -111,12 +108,9 @@ pub async fn submit_workflow(
         .submit_workflow(input, instance_id, tenant_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(&instance, &[]);
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    // レスポンスを返す
-    let response = ApiResponse::new(WorkflowInstanceDto::from_instance(&instance, &user_names));
+    // ユーザー名を解決してレスポンスを返す
+    let dto = WorkflowInstanceDto::resolve_from_instance(&instance, &state.usecase).await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -151,17 +145,10 @@ pub async fn approve_step(
         .approve_step(input, step_id, tenant_id, user_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -196,17 +183,10 @@ pub async fn reject_step(
         .reject_step(input, step_id, tenant_id, user_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -240,11 +220,8 @@ pub async fn submit_workflow_by_display_number(
         .submit_workflow_by_display_number(input, display_number, tenant_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(&instance, &[]);
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_instance(&instance, &user_names));
+    let dto = WorkflowInstanceDto::resolve_from_instance(&instance, &state.usecase).await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -288,17 +265,10 @@ pub async fn approve_step_by_display_number(
         )
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -327,17 +297,10 @@ pub async fn request_changes_step(
         .request_changes_step(input, step_id, tenant_id, user_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -367,17 +330,10 @@ pub async fn resubmit_workflow(
         .resubmit_workflow(input, instance_id, tenant_id, user_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -421,17 +377,10 @@ pub async fn reject_step_by_display_number(
         )
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -469,17 +418,10 @@ pub async fn request_changes_step_by_display_number(
         )
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -509,17 +451,10 @@ pub async fn resubmit_workflow_by_display_number(
         .resubmit_workflow_by_display_number(input, display_number, tenant_id, user_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
