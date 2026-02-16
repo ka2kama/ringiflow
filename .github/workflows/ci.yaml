@@ -462,7 +462,18 @@ jobs:
       - name: Reset database
         run: just api-test-reset-db
 
+      - name: Cache backend binaries
+        id: backend-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            backend/target/release/ringiflow-bff
+            backend/target/release/ringiflow-core-service
+            backend/target/release/ringiflow-auth-service
+          key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock') }}
+
       - name: Build services (production config, no dev features)
+        if: steps.backend-cache.outputs.cache-hit != 'true'
         run: cargo build --release --no-default-features
         working-directory: backend
 
@@ -571,7 +582,18 @@ jobs:
       - name: Reset database
         run: just api-test-reset-db
 
+      - name: Cache backend binaries
+        id: backend-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            backend/target/release/ringiflow-bff
+            backend/target/release/ringiflow-core-service
+            backend/target/release/ringiflow-auth-service
+          key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock') }}
+
       - name: Build backend services (production config, no dev features)
+        if: steps.backend-cache.outputs.cache-hit != 'true'
         run: cargo build --release --no-default-features
         working-directory: backend
 
