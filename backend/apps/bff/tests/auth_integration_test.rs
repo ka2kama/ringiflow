@@ -394,6 +394,46 @@ fn extract_session_id(set_cookie: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+// --- テスト共通ヘルパー ---
+
+/// ログインしてセッション ID を返す
+async fn login_and_get_session(sut: &Router) -> String {
+    let login_response = sut
+        .clone()
+        .oneshot(login_request("user@example.com", "password123"))
+        .await
+        .unwrap();
+    assert_eq!(login_response.status(), StatusCode::OK);
+    let set_cookie = login_response
+        .headers()
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    extract_session_id(set_cookie).expect("セッション ID が設定されていない")
+}
+
+/// GET /api/v1/auth/csrf 経由で CSRF トークンを取得
+async fn get_csrf_token_via_api(sut: &Router, session_id: &str) -> String {
+    let csrf_response = sut.clone().oneshot(csrf_request(session_id)).await.unwrap();
+    assert_eq!(csrf_response.status(), StatusCode::OK);
+    let body = axum::body::to_bytes(csrf_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    json["data"]["token"].as_str().unwrap().to_string()
+}
+
+/// セッションと CSRF トークンの Redis クリーンアップ
+async fn cleanup_auth_session(state: &Arc<AuthState>, session_id: &str) {
+    let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
+    let _ = state.session_manager.delete(&tenant_id, session_id).await;
+    let _ = state
+        .session_manager
+        .delete_csrf_token(&tenant_id, session_id)
+        .await;
+}
+
 // --- テストケース ---
 
 #[tokio::test]
@@ -484,28 +524,8 @@ async fn test_ログアウト後にauthmeで401() {
     )
     .await;
 
-    // ログイン
-    let login_response = sut
-        .clone()
-        .oneshot(login_request("user@example.com", "password123"))
-        .await
-        .unwrap();
-    let set_cookie = login_response
-        .headers()
-        .get("set-cookie")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let session_id = extract_session_id(set_cookie).unwrap();
-
-    // CSRF トークンを取得
-    let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
-    let csrf_token = state
-        .session_manager
-        .get_csrf_token(&tenant_id, &session_id)
-        .await
-        .unwrap()
-        .expect("CSRF トークンが存在しない");
+    let session_id = login_and_get_session(&sut).await;
+    let csrf_token = get_csrf_token_via_api(&sut, &session_id).await;
 
     // ログアウト（CSRF トークン付き）
     sut.clone()
@@ -520,7 +540,7 @@ async fn test_ログアウト後にauthmeで401() {
     assert_eq!(me_response.status(), StatusCode::UNAUTHORIZED);
 
     // クリーンアップ
-    let _ = state.session_manager.delete(&tenant_id, &session_id).await;
+    cleanup_auth_session(&state, &session_id).await;
 }
 
 #[tokio::test]
@@ -663,11 +683,7 @@ async fn test_csrfトークン_ログイン成功時に生成される() {
     assert_eq!(csrf_token.unwrap().len(), 64);
 
     // クリーンアップ
-    let _ = state.session_manager.delete(&tenant_id, &session_id).await;
-    let _ = state
-        .session_manager
-        .delete_csrf_token(&tenant_id, &session_id)
-        .await;
+    cleanup_auth_session(&state, &session_id).await;
 }
 
 #[tokio::test]
@@ -679,45 +695,16 @@ async fn test_csrfトークン_get_auth_csrfで取得できる() {
     )
     .await;
 
-    // ログイン
-    let login_response = sut
-        .clone()
-        .oneshot(login_request("user@example.com", "password123"))
-        .await
-        .unwrap();
-    let set_cookie = login_response
-        .headers()
-        .get("set-cookie")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let session_id = extract_session_id(set_cookie).unwrap();
+    let session_id = login_and_get_session(&sut).await;
 
     // When: GET /api/v1/auth/csrf でトークンを取得
-    let csrf_response = sut
-        .clone()
-        .oneshot(csrf_request(&session_id))
-        .await
-        .unwrap();
+    let token = get_csrf_token_via_api(&sut, &session_id).await;
 
     // Then: トークンが返される
-    assert_eq!(csrf_response.status(), StatusCode::OK);
-
-    let body = axum::body::to_bytes(csrf_response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-
-    let token = json["data"]["token"].as_str().unwrap();
     assert_eq!(token.len(), 64);
 
     // クリーンアップ
-    let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
-    let _ = state.session_manager.delete(&tenant_id, &session_id).await;
-    let _ = state
-        .session_manager
-        .delete_csrf_token(&tenant_id, &session_id)
-        .await;
+    cleanup_auth_session(&state, &session_id).await;
 }
 
 #[tokio::test]
@@ -729,36 +716,13 @@ async fn test_csrfトークン_正しいトークンでpostリクエストが成
     )
     .await;
 
-    // ログイン
-    let login_response = sut
-        .clone()
-        .oneshot(login_request("user@example.com", "password123"))
-        .await
-        .unwrap();
-    let set_cookie = login_response
-        .headers()
-        .get("set-cookie")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let session_id = extract_session_id(set_cookie).unwrap();
-
-    // CSRF トークンを取得
-    let csrf_response = sut
-        .clone()
-        .oneshot(csrf_request(&session_id))
-        .await
-        .unwrap();
-    let body = axum::body::to_bytes(csrf_response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let csrf_token = json["data"]["token"].as_str().unwrap();
+    let session_id = login_and_get_session(&sut).await;
+    let csrf_token = get_csrf_token_via_api(&sut, &session_id).await;
 
     // When: 正しい CSRF トークンでログアウト
     let logout_response = sut
         .clone()
-        .oneshot(logout_request_with_csrf(&session_id, csrf_token))
+        .oneshot(logout_request_with_csrf(&session_id, &csrf_token))
         .await
         .unwrap();
 
@@ -766,12 +730,7 @@ async fn test_csrfトークン_正しいトークンでpostリクエストが成
     assert_eq!(logout_response.status(), StatusCode::NO_CONTENT);
 
     // クリーンアップ
-    let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
-    let _ = state.session_manager.delete(&tenant_id, &session_id).await;
-    let _ = state
-        .session_manager
-        .delete_csrf_token(&tenant_id, &session_id)
-        .await;
+    cleanup_auth_session(&state, &session_id).await;
 }
 
 #[tokio::test]
@@ -783,19 +742,7 @@ async fn test_csrfトークン_トークンなしでpostリクエストが403に
     )
     .await;
 
-    // ログイン
-    let login_response = sut
-        .clone()
-        .oneshot(login_request("user@example.com", "password123"))
-        .await
-        .unwrap();
-    let set_cookie = login_response
-        .headers()
-        .get("set-cookie")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let session_id = extract_session_id(set_cookie).unwrap();
+    let session_id = login_and_get_session(&sut).await;
 
     // When: CSRF トークンなしでログアウト
     let logout_response = sut
@@ -815,12 +762,7 @@ async fn test_csrfトークン_トークンなしでpostリクエストが403に
     assert!(json["detail"].as_str().unwrap().contains("CSRF"));
 
     // クリーンアップ
-    let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
-    let _ = state.session_manager.delete(&tenant_id, &session_id).await;
-    let _ = state
-        .session_manager
-        .delete_csrf_token(&tenant_id, &session_id)
-        .await;
+    cleanup_auth_session(&state, &session_id).await;
 }
 
 #[tokio::test]
@@ -832,19 +774,7 @@ async fn test_csrfトークン_不正なトークンでpostリクエストが403
     )
     .await;
 
-    // ログイン
-    let login_response = sut
-        .clone()
-        .oneshot(login_request("user@example.com", "password123"))
-        .await
-        .unwrap();
-    let set_cookie = login_response
-        .headers()
-        .get("set-cookie")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let session_id = extract_session_id(set_cookie).unwrap();
+    let session_id = login_and_get_session(&sut).await;
 
     // When: 不正な CSRF トークンでログアウト
     let logout_response = sut
@@ -864,12 +794,7 @@ async fn test_csrfトークン_不正なトークンでpostリクエストが403
     assert!(json["detail"].as_str().unwrap().contains("CSRF"));
 
     // クリーンアップ
-    let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
-    let _ = state.session_manager.delete(&tenant_id, &session_id).await;
-    let _ = state
-        .session_manager
-        .delete_csrf_token(&tenant_id, &session_id)
-        .await;
+    cleanup_auth_session(&state, &session_id).await;
 }
 
 #[tokio::test]
@@ -881,31 +806,8 @@ async fn test_csrfトークン_ログアウト時に削除される() {
     )
     .await;
 
-    // ログイン
-    let login_response = sut
-        .clone()
-        .oneshot(login_request("user@example.com", "password123"))
-        .await
-        .unwrap();
-    let set_cookie = login_response
-        .headers()
-        .get("set-cookie")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let session_id = extract_session_id(set_cookie).unwrap();
-
-    // CSRF トークンを取得
-    let csrf_response = sut
-        .clone()
-        .oneshot(csrf_request(&session_id))
-        .await
-        .unwrap();
-    let body = axum::body::to_bytes(csrf_response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    let csrf_token = json["data"]["token"].as_str().unwrap();
+    let session_id = login_and_get_session(&sut).await;
+    let csrf_token = get_csrf_token_via_api(&sut, &session_id).await;
 
     // CSRF トークンが存在することを確認
     let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());
@@ -919,7 +821,7 @@ async fn test_csrfトークン_ログアウト時に削除される() {
     // When: ログアウト
     let logout_response = sut
         .clone()
-        .oneshot(logout_request_with_csrf(&session_id, csrf_token))
+        .oneshot(logout_request_with_csrf(&session_id, &csrf_token))
         .await
         .unwrap();
     assert_eq!(logout_response.status(), StatusCode::NO_CONTENT);
