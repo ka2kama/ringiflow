@@ -11,7 +11,6 @@ use axum::{
 use ringiflow_domain::{
     tenant::TenantId,
     user::UserId,
-    value_objects::DisplayNumber,
     workflow::{WorkflowDefinitionId, WorkflowInstanceId},
 };
 use ringiflow_shared::ApiResponse;
@@ -24,6 +23,7 @@ use super::{
     WorkflowDefinitionDto,
     WorkflowInstanceDto,
     WorkflowState,
+    parse_display_number,
 };
 use crate::error::CoreError;
 
@@ -139,17 +139,10 @@ pub async fn get_workflow(
 
     let workflow_with_steps = state.usecase.get_workflow(instance_id, tenant_id).await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -170,8 +163,7 @@ pub async fn get_workflow_by_display_number(
     Path(display_number): Path<i64>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(query.tenant_id);
 
     let workflow_with_steps = state
@@ -179,17 +171,10 @@ pub async fn get_workflow_by_display_number(
         .get_workflow_by_display_number(display_number, tenant_id)
         .await?;
 
-    // ユーザー名を解決
-    let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(
-        &workflow_with_steps.instance,
-        &workflow_with_steps.steps,
-    );
-    let user_names = state.usecase.resolve_user_names(&user_ids).await?;
-
-    let response = ApiResponse::new(WorkflowInstanceDto::from_workflow_with_steps(
-        &workflow_with_steps,
-        &user_names,
-    ));
+    let dto =
+        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
+            .await?;
+    let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -210,8 +195,7 @@ pub async fn list_comments(
     Path(display_number): Path<i64>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(query.tenant_id);
 
     let comments = state

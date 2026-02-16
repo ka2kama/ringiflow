@@ -15,13 +15,16 @@ pub use command::*;
 pub use query::*;
 use ringiflow_domain::{
     user::UserId,
-    value_objects::{DisplayId, display_prefix},
+    value_objects::{DisplayId, DisplayNumber, Version, display_prefix},
     workflow::{WorkflowComment, WorkflowDefinition, WorkflowInstance, WorkflowStep},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::usecase::{WorkflowUseCaseImpl, WorkflowWithSteps};
+use crate::{
+    error::CoreError,
+    usecase::{StepApprover, WorkflowUseCaseImpl, WorkflowWithSteps},
+};
 
 /// ワークフロー作成リクエスト
 #[derive(Debug, Deserialize)]
@@ -296,6 +299,27 @@ impl WorkflowInstanceDto {
             updated_at: instance.updated_at().to_rfc3339(),
         }
     }
+
+    /// ユーザー名を解決して WorkflowInstance から DTO を構築する（ステップなし）
+    async fn resolve_from_instance(
+        instance: &WorkflowInstance,
+        usecase: &WorkflowUseCaseImpl,
+    ) -> Result<Self, CoreError> {
+        let user_ids = crate::usecase::workflow::collect_user_ids_from_workflow(instance, &[]);
+        let user_names = usecase.resolve_user_names(&user_ids).await?;
+        Ok(Self::from_instance(instance, &user_names))
+    }
+
+    /// ユーザー名を解決して WorkflowWithSteps から DTO を構築する
+    pub(crate) async fn resolve_from_workflow_with_steps(
+        data: &WorkflowWithSteps,
+        usecase: &WorkflowUseCaseImpl,
+    ) -> Result<Self, CoreError> {
+        let user_ids =
+            crate::usecase::workflow::collect_user_ids_from_workflow(&data.instance, &data.steps);
+        let user_names = usecase.resolve_user_names(&user_ids).await?;
+        Ok(Self::from_workflow_with_steps(data, &user_names))
+    }
 }
 
 /// コメント投稿リクエスト
@@ -335,4 +359,100 @@ impl WorkflowCommentDto {
 /// ワークフローハンドラーの State
 pub struct WorkflowState {
     pub usecase: WorkflowUseCaseImpl,
+}
+
+/// i64 を DisplayNumber に変換する。
+/// 不正な値の場合は CoreError::BadRequest を返す。
+pub(crate) fn parse_display_number(value: i64, field: &str) -> Result<DisplayNumber, CoreError> {
+    DisplayNumber::try_from(value)
+        .map_err(|e| CoreError::BadRequest(format!("不正な {field}: {e}")))
+}
+
+/// i32 を Version に変換する。
+pub(crate) fn parse_version(value: i32) -> Result<Version, CoreError> {
+    Version::try_from(value).map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {e}")))
+}
+
+/// StepApproverRequest のリストを StepApprover のリストに変換する。
+pub(crate) fn convert_approvers(approvers: Vec<StepApproverRequest>) -> Vec<StepApprover> {
+    approvers
+        .into_iter()
+        .map(|a| StepApprover {
+            step_id:     a.step_id,
+            assigned_to: UserId::from_uuid(a.assigned_to),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::*;
+
+    #[test]
+    fn test_parse_display_numberは正の整数で成功する() {
+        let result = parse_display_number(1, "display_number");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().as_i64(), 1);
+    }
+
+    #[test]
+    fn test_parse_display_numberはゼロで不正リクエストエラーを返す() {
+        let result = parse_display_number(0, "display_number");
+        assert!(
+            matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("display_number"))
+        );
+    }
+
+    #[test]
+    fn test_parse_display_numberは負数で不正リクエストエラーを返す() {
+        let result = parse_display_number(-1, "step_display_number");
+        assert!(
+            matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("step_display_number"))
+        );
+    }
+
+    #[test]
+    fn test_parse_versionは正の整数で成功する() {
+        let result = parse_version(1);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().as_i32(), 1);
+    }
+
+    #[test]
+    fn test_parse_versionはゼロで不正リクエストエラーを返す() {
+        let result = parse_version(0);
+        assert!(matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("バージョン")));
+    }
+
+    #[test]
+    fn test_convert_approversは空入力で空を返す() {
+        let result = convert_approvers(vec![]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_convert_approversは複数要素を変換する() {
+        let uuid1 = Uuid::new_v4();
+        let uuid2 = Uuid::new_v4();
+        let input = vec![
+            StepApproverRequest {
+                step_id:     "step-1".to_string(),
+                assigned_to: uuid1,
+            },
+            StepApproverRequest {
+                step_id:     "step-2".to_string(),
+                assigned_to: uuid2,
+            },
+        ];
+
+        let result = convert_approvers(input);
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].step_id, "step-1");
+        assert_eq!(*result[0].assigned_to.as_uuid(), uuid1);
+        assert_eq!(result[1].step_id, "step-2");
+        assert_eq!(*result[1].assigned_to.as_uuid(), uuid2);
+    }
 }
