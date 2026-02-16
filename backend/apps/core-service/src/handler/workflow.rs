@@ -391,14 +391,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_display_number_returns_ok_for_positive_integer() {
+    fn test_parse_display_numberは正の整数で成功する() {
         let result = parse_display_number(1, "display_number");
         assert!(result.is_ok());
         assert_eq!(result.unwrap().as_i64(), 1);
     }
 
     #[test]
-    fn parse_display_number_returns_bad_request_for_zero() {
+    fn test_parse_display_numberはゼロで不正リクエストエラーを返す() {
         let result = parse_display_number(0, "display_number");
         assert!(
             matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("display_number"))
@@ -406,7 +406,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_display_number_returns_bad_request_for_negative() {
+    fn test_parse_display_numberは負数で不正リクエストエラーを返す() {
         let result = parse_display_number(-1, "step_display_number");
         assert!(
             matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("step_display_number"))
@@ -414,26 +414,26 @@ mod tests {
     }
 
     #[test]
-    fn parse_version_returns_ok_for_positive_integer() {
+    fn test_parse_versionは正の整数で成功する() {
         let result = parse_version(1);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().as_i32(), 1);
     }
 
     #[test]
-    fn parse_version_returns_bad_request_for_zero() {
+    fn test_parse_versionはゼロで不正リクエストエラーを返す() {
         let result = parse_version(0);
         assert!(matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("バージョン")));
     }
 
     #[test]
-    fn convert_approvers_returns_empty_for_empty_input() {
+    fn test_convert_approversは空入力で空を返す() {
         let result = convert_approvers(vec![]);
         assert!(result.is_empty());
     }
 
     #[test]
-    fn convert_approvers_converts_multiple_elements() {
+    fn test_convert_approversは複数要素を変換する() {
         let uuid1 = Uuid::new_v4();
         let uuid2 = Uuid::new_v4();
         let input = vec![

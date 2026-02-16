@@ -405,7 +405,7 @@ async fn test_get_user_テナントが見つからない場合に500() {
 // --- build_user_with_permissions テスト ---
 
 #[test]
-fn build_user_with_permissions_ロールありで権限が集約される() {
+fn test_build_user_with_permissions_ロールありで権限が集約される() {
     let tenant_id = TenantId::new();
     let user = create_active_user(&tenant_id);
     let roles = vec![create_user_role()];
@@ -420,7 +420,7 @@ fn build_user_with_permissions_ロールありで権限が集約される() {
 }
 
 #[test]
-fn build_user_with_permissions_ロール空で空リスト() {
+fn test_build_user_with_permissions_ロール空で空リスト() {
     let tenant_id = TenantId::new();
     let user = create_active_user(&tenant_id);
 
