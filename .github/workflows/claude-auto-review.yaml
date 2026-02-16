@@ -162,6 +162,8 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # workflow_run イベントでは track_progress はサポートされていない
           track_progress: false
+          # デバッグ: SDK エラーの詳細を確認するため一時的に有効化
+          show_full_output: true
           # Dependabot などの Bot からの PR を許可
           allowed_bots: "dependabot[bot]"
           prompt: |
