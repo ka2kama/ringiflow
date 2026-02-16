@@ -385,12 +385,13 @@ Test plan: 単一 PR は実装テスト＋手動テスト手順を記載。Epic 
 
 1. 実装完了、`just check-all` 通過
 2. 収束確認完了（[zoom-rhythm.md](.claude/rules/zoom-rhythm.md)）
-3. Draft PR 作成（`gh pr create --draft`）
-4. `/wrap-up` でドキュメント整備
-5. wrap-up 完了の検証（`git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"`）。なければ `/wrap-up` を実行
-6. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`、差分あれば rebase + `just check-all` で再確認）
-7. ユーザーに確認を求める（「Ready にしてよいですか？」）
-8. ユーザー承認後、`gh pr ready` で Ready にする
+3. 計画ファイル確認（`git status` で `prompts/plans/` に未コミットファイルがあれば、現在の作業との関連を確認してコミットする）
+4. Draft PR 作成（`gh pr create --draft`）
+5. `/wrap-up` でドキュメント整備
+6. wrap-up 完了の検証（`git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"`）。なければ `/wrap-up` を実行
+7. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`、差分あれば rebase + `just check-all` で再確認）
+8. ユーザーに確認を求める（「Ready にしてよいですか？」）
+9. ユーザー承認後、`gh pr ready` で Ready にする
 
 **禁止:**
 
