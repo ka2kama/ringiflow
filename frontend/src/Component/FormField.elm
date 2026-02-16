@@ -1,0 +1,151 @@
+module Component.FormField exposing
+    ( inputClass
+    , viewReadOnlyField
+    , viewSelectField
+    , viewTextArea
+    , viewTextField
+    )
+
+{-| フォームフィールドコンポーネント
+
+ラベル + 入力 + エラー表示を統一したフォームフィールド群。
+User/Role の Edit/New ページで共通利用する。
+
+
+## 使用例
+
+    import Component.FormField as FormField
+
+    FormField.viewTextField
+        { label = "名前"
+        , value = model.name
+        , onInput = UpdateName
+        , error = Dict.get "name" model.validationErrors
+        , inputType = "text"
+        , placeholder = "山田 太郎"
+        }
+
+-}
+
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onInput)
+
+
+{-| 入力フィールドの CSS クラス（テスト用に公開）
+
+エラーの有無に応じてボーダー色・フォーカス色を切り替える。
+
+-}
+inputClass : Maybe String -> String
+inputClass error =
+    "w-full rounded-lg border px-3 py-2 text-sm "
+        ++ (case error of
+                Just _ ->
+                    "border-error-300 focus:border-error-500 focus:ring-error-500"
+
+                Nothing ->
+                    "border-secondary-300 focus:border-primary-500 focus:ring-primary-500"
+           )
+
+
+{-| テキスト入力フィールド
+-}
+viewTextField :
+    { label : String
+    , value : String
+    , onInput : String -> msg
+    , error : Maybe String
+    , inputType : String
+    , placeholder : String
+    }
+    -> Html msg
+viewTextField config =
+    div []
+        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
+        , input
+            [ type_ config.inputType
+            , value config.value
+            , onInput config.onInput
+            , placeholder config.placeholder
+            , class (inputClass config.error)
+            ]
+            []
+        , viewError config.error
+        ]
+
+
+{-| テキストエリアフィールド
+-}
+viewTextArea :
+    { label : String
+    , value : String
+    , onInput : String -> msg
+    , placeholder : String
+    }
+    -> Html msg
+viewTextArea config =
+    div []
+        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
+        , textarea
+            [ value config.value
+            , onInput config.onInput
+            , placeholder config.placeholder
+            , rows 3
+            , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+            ]
+            []
+        ]
+
+
+{-| セレクトフィールド
+-}
+viewSelectField :
+    { label : String
+    , value : String
+    , onInput : String -> msg
+    , error : Maybe String
+    , options : List { value : String, label : String }
+    , placeholder : String
+    }
+    -> Html msg
+viewSelectField config =
+    div []
+        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
+        , select
+            [ class (inputClass config.error)
+            , onInput config.onInput
+            , value config.value
+            ]
+            (option [ Html.Attributes.value "" ] [ text config.placeholder ]
+                :: List.map
+                    (\opt ->
+                        option [ Html.Attributes.value opt.value ] [ text opt.label ]
+                    )
+                    config.options
+            )
+        , viewError config.error
+        ]
+
+
+{-| 読み取り専用フィールド
+-}
+viewReadOnlyField : String -> String -> Html msg
+viewReadOnlyField labelText fieldValue =
+    div []
+        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text labelText ]
+        , div [ class "w-full rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2 text-sm text-secondary-500" ]
+            [ text fieldValue ]
+        ]
+
+
+{-| エラーメッセージ表示（内部ヘルパー）
+-}
+viewError : Maybe String -> Html msg
+viewError error =
+    case error of
+        Just errorMsg ->
+            p [ class "mt-1 text-sm text-error-600" ] [ text errorMsg ]
+
+        Nothing ->
+            text ""

@@ -13,7 +13,7 @@ import Api.ErrorMessage as ErrorMessage
 import Component.Badge as Badge
 import Component.Button as Button
 import Component.LoadingSpinner as LoadingSpinner
-import Data.AdminUser exposing (AdminUserItem)
+import Data.AdminUser as AdminUser exposing (AdminUserItem)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
@@ -221,20 +221,5 @@ viewUserRow user =
         , td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text user.email ]
         , td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text (String.join ", " user.roles) ]
         , td [ class "px-4 py-3 text-sm" ]
-            [ Badge.view (statusToBadge user.status) ]
+            [ Badge.view (AdminUser.statusToBadge user.status) ]
         ]
-
-
-{-| ステータスに応じた Badge 設定
--}
-statusToBadge : String -> { colorClass : String, label : String }
-statusToBadge status =
-    case status of
-        "active" ->
-            { colorClass = "bg-success-100 text-success-800", label = "アクティブ" }
-
-        "inactive" ->
-            { colorClass = "bg-secondary-100 text-secondary-800", label = "非アクティブ" }
-
-        _ ->
-            { colorClass = "bg-secondary-100 text-secondary-800", label = status }
