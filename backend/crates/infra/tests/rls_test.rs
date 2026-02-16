@@ -252,6 +252,15 @@ async fn reset_role(conn: &mut PgConnection) {
     sqlx::query("RESET ROLE").execute(&mut *conn).await.unwrap();
 }
 
+/// テナントコンテキストで単一 UUID カラムを取得するヘルパー
+async fn query_uuids_as_tenant(pool: &PgPool, tenant_id: &Uuid, query: &str) -> Vec<Uuid> {
+    let mut conn = pool.acquire().await.unwrap();
+    set_tenant_context(&mut conn, tenant_id).await;
+    let rows: Vec<(Uuid,)> = sqlx::query_as(query).fetch_all(&mut *conn).await.unwrap();
+    reset_role(&mut conn).await;
+    rows.into_iter().map(|r| r.0).collect()
+}
+
 // =============================================================================
 // tenants テーブル
 // =============================================================================
@@ -262,18 +271,10 @@ async fn test_tenants_テナントaのコンテキストで自テナントのみ
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids = query_uuids_as_tenant(&pool, &fixture.tenant_a, "SELECT id FROM tenants").await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT id FROM tenants")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.tenant_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.tenant_a);
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -303,18 +304,10 @@ async fn test_users_テナントaのコンテキストで自テナントのユ�
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids = query_uuids_as_tenant(&pool, &fixture.tenant_a, "SELECT id FROM users").await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT id FROM users")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.user_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.user_a);
 }
 
 // =============================================================================
@@ -391,18 +384,11 @@ async fn test_user_roles_テナントaのコンテキストで自テナントの
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids =
+        query_uuids_as_tenant(&pool, &fixture.tenant_a, "SELECT user_id FROM user_roles").await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT user_id FROM user_roles")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.user_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.user_a);
 }
 
 // =============================================================================
@@ -415,18 +401,15 @@ async fn test_workflow_definitions_テナントaのコンテキストで自テ�
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids = query_uuids_as_tenant(
+        &pool,
+        &fixture.tenant_a,
+        "SELECT id FROM workflow_definitions",
+    )
+    .await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT id FROM workflow_definitions")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.definition_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.definition_a);
 }
 
 // =============================================================================
@@ -439,18 +422,15 @@ async fn test_workflow_instances_テナントaのコンテキストで自テナ�
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids = query_uuids_as_tenant(
+        &pool,
+        &fixture.tenant_a,
+        "SELECT id FROM workflow_instances",
+    )
+    .await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT id FROM workflow_instances")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.instance_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.instance_a);
 }
 
 // =============================================================================
@@ -487,18 +467,15 @@ async fn test_display_id_counters_テナントaのコンテキストで自テナ
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids = query_uuids_as_tenant(
+        &pool,
+        &fixture.tenant_a,
+        "SELECT tenant_id FROM display_id_counters",
+    )
+    .await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT tenant_id FROM display_id_counters")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.tenant_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.tenant_a);
 }
 
 // =============================================================================
@@ -511,18 +488,15 @@ async fn test_auth_credentials_テナントaのコンテキストで自テナン
 ) {
     let fixture = setup_two_tenants(&pool).await;
 
-    let mut conn = pool.acquire().await.unwrap();
-    set_tenant_context(&mut conn, &fixture.tenant_a).await;
+    let ids = query_uuids_as_tenant(
+        &pool,
+        &fixture.tenant_a,
+        "SELECT user_id FROM auth.credentials",
+    )
+    .await;
 
-    let rows: Vec<(Uuid,)> = sqlx::query_as("SELECT user_id FROM auth.credentials")
-        .fetch_all(&mut *conn)
-        .await
-        .unwrap();
-
-    assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].0, fixture.user_a);
-
-    reset_role(&mut conn).await;
+    assert_eq!(ids.len(), 1);
+    assert_eq!(ids[0], fixture.user_a);
 }
 
 // =============================================================================
