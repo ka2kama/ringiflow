@@ -4,11 +4,9 @@
 //! 再利用可能な定義を作成し、公開・アーカイブのライフサイクルを持つ。
 
 use chrono::{DateTime, Utc};
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use strum::IntoStaticStr;
-use uuid::Uuid;
 
 use crate::{
     DomainError,
@@ -17,29 +15,9 @@ use crate::{
     value_objects::{Version, WorkflowName},
 };
 
-/// ワークフロー定義 ID
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
-#[display("{_0}")]
-pub struct WorkflowDefinitionId(Uuid);
-
-impl WorkflowDefinitionId {
-    pub fn new() -> Self {
-        Self(Uuid::now_v7())
-    }
-
-    pub fn from_uuid(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    pub fn as_uuid(&self) -> &Uuid {
-        &self.0
-    }
-}
-
-impl Default for WorkflowDefinitionId {
-    fn default() -> Self {
-        Self::new()
-    }
+define_uuid_id! {
+    /// ワークフロー定義 ID
+    pub struct WorkflowDefinitionId;
 }
 
 /// ワークフロー定義ステータス

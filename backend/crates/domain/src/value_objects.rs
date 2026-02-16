@@ -320,55 +320,18 @@ impl Serialize for DisplayId {
 // UserName（ユーザー表示名）
 // =========================================================================
 
-/// ユーザー表示名（値オブジェクト）
-///
-/// ユーザーの表示名を表現する。
-///
-/// # バリデーション
-///
-/// - 空文字列ではない
-/// - 最大 100 文字
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct UserName(String);
-
-impl UserName {
-    /// ユーザー名を作成する
+define_validated_string! {
+    /// ユーザー表示名（値オブジェクト）
+    ///
+    /// ユーザーの表示名を表現する。
     ///
     /// # バリデーション
     ///
     /// - 空文字列ではない
-    /// - 前後の空白はトリミング
     /// - 最大 100 文字
-    pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
-        let value = value.into().trim().to_string();
-
-        if value.is_empty() {
-            return Err(DomainError::Validation("ユーザー名は必須です".to_string()));
-        }
-
-        if value.chars().count() > 100 {
-            return Err(DomainError::Validation(
-                "ユーザー名は 100 文字以内である必要があります".to_string(),
-            ));
-        }
-
-        Ok(Self(value))
-    }
-
-    /// 文字列参照を取得する
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    /// 所有権を持つ文字列に変換する
-    pub fn into_string(self) -> String {
-        self.0
-    }
-}
-
-impl std::fmt::Display for UserName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+    pub struct UserName {
+        label: "ユーザー名",
+        max_length: 100,
     }
 }
 
@@ -376,57 +339,18 @@ impl std::fmt::Display for UserName {
 // WorkflowName（ワークフロー名）
 // =========================================================================
 
-/// ワークフロー名（値オブジェクト）
-///
-/// ワークフロー定義の名前を表現する。
-///
-/// # バリデーション
-///
-/// - 空文字列ではない
-/// - 最大 200 文字
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WorkflowName(String);
-
-impl WorkflowName {
-    /// ワークフロー名を作成する
+define_validated_string! {
+    /// ワークフロー名（値オブジェクト）
+    ///
+    /// ワークフロー定義の名前を表現する。
     ///
     /// # バリデーション
     ///
     /// - 空文字列ではない
-    /// - 前後の空白はトリミング
     /// - 最大 200 文字
-    pub fn new(value: impl Into<String>) -> Result<Self, DomainError> {
-        let value = value.into().trim().to_string();
-
-        if value.is_empty() {
-            return Err(DomainError::Validation(
-                "ワークフロー名は必須です".to_string(),
-            ));
-        }
-
-        if value.chars().count() > 200 {
-            return Err(DomainError::Validation(
-                "ワークフロー名は 200 文字以内である必要があります".to_string(),
-            ));
-        }
-
-        Ok(Self(value))
-    }
-
-    /// 文字列参照を取得する
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    /// 所有権を持つ文字列に変換する
-    pub fn into_string(self) -> String {
-        self.0
-    }
-}
-
-impl std::fmt::Display for WorkflowName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+    pub struct WorkflowName {
+        label: "ワークフロー名",
+        max_length: 200,
     }
 }
 

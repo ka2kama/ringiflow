@@ -41,6 +41,9 @@
 //! };
 //! ```
 
+#[macro_use]
+mod macros;
+
 pub mod audit_log;
 pub mod clock;
 pub mod error;

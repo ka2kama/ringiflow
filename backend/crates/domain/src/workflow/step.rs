@@ -4,10 +4,8 @@
 //! 担当者への割り当てと判断結果を保持し、承認・却下の状態遷移を持つ。
 
 use chrono::{DateTime, Utc};
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
-use uuid::Uuid;
 
 use super::instance::WorkflowInstanceId;
 use crate::{
@@ -16,29 +14,9 @@ use crate::{
     value_objects::{DisplayNumber, Version},
 };
 
-/// ワークフローステップ ID
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
-#[display("{_0}")]
-pub struct WorkflowStepId(Uuid);
-
-impl WorkflowStepId {
-    pub fn new() -> Self {
-        Self(Uuid::now_v7())
-    }
-
-    pub fn from_uuid(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    pub fn as_uuid(&self) -> &Uuid {
-        &self.0
-    }
-}
-
-impl Default for WorkflowStepId {
-    fn default() -> Self {
-        Self::new()
-    }
+define_uuid_id! {
+    /// ワークフローステップ ID
+    pub struct WorkflowStepId;
 }
 
 /// ワークフローステップステータス
@@ -456,26 +434,33 @@ mod tests {
 
         use super::*;
 
+        /// WorkflowStep の getter から WorkflowStepRecord を構築するヘルパー。
+        /// 構造体更新構文 `..record_from(&step)` と組み合わせて、
+        /// テストで差異のあるフィールドだけを指定するために使用する。
+        fn record_from(step: &WorkflowStep) -> WorkflowStepRecord {
+            WorkflowStepRecord {
+                id: step.id().clone(),
+                instance_id: step.instance_id().clone(),
+                display_number: step.display_number(),
+                step_id: step.step_id().to_string(),
+                step_name: step.step_name().to_string(),
+                step_type: step.step_type().to_string(),
+                status: step.status(),
+                version: step.version(),
+                assigned_to: step.assigned_to().cloned(),
+                decision: step.decision(),
+                comment: step.comment().map(String::from),
+                due_date: step.due_date(),
+                started_at: step.started_at(),
+                completed_at: step.completed_at(),
+                created_at: step.created_at(),
+                updated_at: step.updated_at(),
+            }
+        }
+
         #[rstest]
-        fn test_新規作成の初期状態(test_step: WorkflowStep, now: DateTime<Utc>) {
-            let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: test_step.id().clone(),
-                instance_id: test_step.instance_id().clone(),
-                display_number: test_step.display_number(),
-                step_id: test_step.step_id().to_string(),
-                step_name: test_step.step_name().to_string(),
-                step_type: test_step.step_type().to_string(),
-                status: WorkflowStepStatus::Pending,
-                version: Version::initial(),
-                assigned_to: test_step.assigned_to().cloned(),
-                decision: None,
-                comment: None,
-                due_date: None,
-                started_at: None,
-                completed_at: None,
-                created_at: now,
-                updated_at: now,
-            });
+        fn test_新規作成の初期状態(test_step: WorkflowStep) {
+            let expected = WorkflowStep::from_db(record_from(&test_step));
             assert_eq!(test_step, expected);
         }
 
@@ -485,22 +470,10 @@ mod tests {
             let sut = test_step.activated(now);
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Active,
-                version: before.version(),
-                assigned_to: before.assigned_to().cloned(),
-                decision: None,
-                comment: None,
-                due_date: None,
                 started_at: Some(now),
-                completed_at: None,
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -513,22 +486,12 @@ mod tests {
             let sut = step.approve(None, now).unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Completed,
                 version: before.version().next(),
-                assigned_to: before.assigned_to().cloned(),
                 decision: Some(StepDecision::Approved),
-                comment: None,
-                due_date: None,
-                started_at: before.started_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -541,22 +504,13 @@ mod tests {
             let sut = step.approve(Some("承認します".to_string()), now).unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Completed,
                 version: before.version().next(),
-                assigned_to: before.assigned_to().cloned(),
                 decision: Some(StepDecision::Approved),
                 comment: Some("承認します".to_string()),
-                due_date: None,
-                started_at: before.started_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -569,70 +523,44 @@ mod tests {
             let sut = step.reject(None, now).unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Completed,
                 version: before.version().next(),
-                assigned_to: before.assigned_to().cloned(),
                 decision: Some(StepDecision::Rejected),
-                comment: None,
-                due_date: None,
-                started_at: before.started_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
 
         #[rstest]
-        fn test_is_overdue_期限切れの場合trueを返す(now: DateTime<Utc>) {
+        fn test_is_overdue_期限切れの場合trueを返す(
+            test_step: WorkflowStep,
+            now: DateTime<Utc>,
+        ) {
             let past = DateTime::from_timestamp(1_699_999_000, 0).unwrap();
             let step = WorkflowStep::from_db(WorkflowStepRecord {
-                id: WorkflowStepId::new(),
-                instance_id: WorkflowInstanceId::new(),
-                display_number: DisplayNumber::new(1).unwrap(),
-                step_id: "step_1".to_string(),
-                step_name: "承認".to_string(),
-                step_type: "approval".to_string(),
                 status: WorkflowStepStatus::Active,
-                version: Version::initial(),
-                assigned_to: Some(UserId::new()),
-                decision: None,
-                comment: None,
                 due_date: Some(past),
                 started_at: Some(past),
-                completed_at: None,
                 created_at: past,
                 updated_at: past,
+                ..record_from(&test_step)
             });
             assert!(step.is_overdue(now));
         }
 
         #[rstest]
-        fn test_is_overdue_期限内の場合falseを返す(now: DateTime<Utc>) {
+        fn test_is_overdue_期限内の場合falseを返す(
+            test_step: WorkflowStep,
+            now: DateTime<Utc>,
+        ) {
             let future = DateTime::from_timestamp(1_700_100_000, 0).unwrap();
             let step = WorkflowStep::from_db(WorkflowStepRecord {
-                id: WorkflowStepId::new(),
-                instance_id: WorkflowInstanceId::new(),
-                display_number: DisplayNumber::new(1).unwrap(),
-                step_id: "step_1".to_string(),
-                step_name: "承認".to_string(),
-                step_type: "approval".to_string(),
                 status: WorkflowStepStatus::Active,
-                version: Version::initial(),
-                assigned_to: Some(UserId::new()),
-                decision: None,
-                comment: None,
                 due_date: Some(future),
                 started_at: Some(now),
-                completed_at: None,
-                created_at: now,
-                updated_at: now,
+                ..record_from(&test_step)
             });
             assert!(!step.is_overdue(now));
         }
@@ -666,22 +594,9 @@ mod tests {
             let sut = test_step.skipped(now).unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Skipped,
-                version: before.version(),
-                assigned_to: before.assigned_to().cloned(),
-                decision: None,
-                comment: None,
-                due_date: None,
-                started_at: None,
-                completed_at: None,
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -712,22 +627,12 @@ mod tests {
                 .unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Completed,
-                version: before.version(),
-                assigned_to: before.assigned_to().cloned(),
                 decision: Some(StepDecision::RequestChanges),
                 comment: Some("修正してください".to_string()),
-                due_date: None,
-                started_at: before.started_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -742,22 +647,12 @@ mod tests {
             let sut = step.request_changes(None, now).unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Completed,
                 version: before.version().next(),
-                assigned_to: before.assigned_to().cloned(),
                 decision: Some(StepDecision::RequestChanges),
-                comment: None,
-                due_date: None,
-                started_at: before.started_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }
@@ -775,22 +670,13 @@ mod tests {
                 .unwrap();
 
             let expected = WorkflowStep::from_db(WorkflowStepRecord {
-                id: before.id().clone(),
-                instance_id: before.instance_id().clone(),
-                display_number: before.display_number(),
-                step_id: before.step_id().to_string(),
-                step_name: before.step_name().to_string(),
-                step_type: before.step_type().to_string(),
                 status: WorkflowStepStatus::Completed,
                 version: before.version().next(),
-                assigned_to: before.assigned_to().cloned(),
                 decision: Some(StepDecision::RequestChanges),
                 comment: Some("金額を修正してください".to_string()),
-                due_date: None,
-                started_at: before.started_at(),
                 completed_at: Some(now),
-                created_at: before.created_at(),
                 updated_at: now,
+                ..record_from(&before)
             });
             assert_eq!(sut, expected);
         }

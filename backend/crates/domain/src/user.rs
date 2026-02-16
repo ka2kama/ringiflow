@@ -42,10 +42,8 @@
 //! ```
 
 use chrono::{DateTime, Utc};
-use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
-use uuid::Uuid;
 
 use crate::{
     DomainError,
@@ -53,35 +51,12 @@ use crate::{
     value_objects::{DisplayNumber, UserName},
 };
 
-/// ユーザー ID（一意識別子）
-///
-/// UUID v7 を使用し、生成順にソート可能。
-/// Newtype パターンで型安全性を確保。
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Display)]
-#[display("{_0}")]
-pub struct UserId(Uuid);
-
-impl UserId {
-    /// 新しいユーザー ID を生成する
-    pub fn new() -> Self {
-        Self(Uuid::now_v7())
-    }
-
-    /// 既存の UUID からユーザー ID を作成する
-    pub fn from_uuid(uuid: Uuid) -> Self {
-        Self(uuid)
-    }
-
-    /// 内部の UUID 参照を取得する
-    pub fn as_uuid(&self) -> &Uuid {
-        &self.0
-    }
-}
-
-impl Default for UserId {
-    fn default() -> Self {
-        Self::new()
-    }
+define_uuid_id! {
+    /// ユーザー ID（一意識別子）
+    ///
+    /// UUID v7 を使用し、生成順にソート可能。
+    /// Newtype パターンで型安全性を確保。
+    pub struct UserId;
 }
 
 /// メールアドレス（値オブジェクト）
