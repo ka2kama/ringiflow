@@ -305,6 +305,7 @@ YAGNI/KISS/MVP は**機能スコープ**の原則であり、**設計品質**を
 How（具体的な対策）にこだわりすぎず、常に Want を満たすかを検証する。
 
 → 詳細: [`.claude/rules/problem-solving.md`](.claude/rules/problem-solving.md)
+→ 技術的問題の調査: [`.claude/rules/troubleshooting.md`](.claude/rules/troubleshooting.md)
 
 **禁止:** このフレームワークを経ずに対策を提示すること
 
