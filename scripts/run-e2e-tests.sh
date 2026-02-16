@@ -27,14 +27,18 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # shellcheck disable=SC2046
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 
-echo "バックエンドサービスを起動中..."
-
 # API テスト環境変数でバックエンドサービスを起動（バックグラウンド）
 cd "$PROJECT_ROOT/backend"
 
 # .env.api-test から環境変数を読み込み（空行とコメント行を除外）
 env_vars=$(grep -Ev '^\s*$|^\s*#' .env.api-test | xargs)
 
+# ビルドフェーズ: コンパイルを事前に完了させ、起動タイムアウトを防ぐ
+echo "バックエンドサービスをビルド中..."
+cargo build -p ringiflow-bff -p ringiflow-core-service -p ringiflow-auth-service
+
+# 起動フェーズ: ビルド済みバイナリを使うため即座に起動する
+echo "バックエンドサービスを起動中..."
 # FIXME: SC2086 - env_vars はスペース区切りで複数の KEY=VALUE を含むため、意図的に分割展開する
 # shellcheck disable=SC2086
 env $env_vars cargo run -p ringiflow-bff &
