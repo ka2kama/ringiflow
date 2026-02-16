@@ -11,7 +11,6 @@ use axum::{
 use ringiflow_domain::{
     tenant::TenantId,
     user::UserId,
-    value_objects::DisplayNumber,
     workflow::{WorkflowDefinitionId, WorkflowInstanceId},
 };
 use ringiflow_shared::ApiResponse;
@@ -24,6 +23,7 @@ use super::{
     WorkflowDefinitionDto,
     WorkflowInstanceDto,
     WorkflowState,
+    parse_display_number,
 };
 use crate::error::CoreError;
 
@@ -170,8 +170,7 @@ pub async fn get_workflow_by_display_number(
     Path(display_number): Path<i64>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(query.tenant_id);
 
     let workflow_with_steps = state
@@ -210,8 +209,7 @@ pub async fn list_comments(
     Path(display_number): Path<i64>,
     Query(query): Query<TenantQuery>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(query.tenant_id);
 
     let comments = state

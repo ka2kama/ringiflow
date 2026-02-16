@@ -15,13 +15,16 @@ pub use command::*;
 pub use query::*;
 use ringiflow_domain::{
     user::UserId,
-    value_objects::{DisplayId, display_prefix},
+    value_objects::{DisplayId, DisplayNumber, Version, display_prefix},
     workflow::{WorkflowComment, WorkflowDefinition, WorkflowInstance, WorkflowStep},
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::usecase::{WorkflowUseCaseImpl, WorkflowWithSteps};
+use crate::{
+    error::CoreError,
+    usecase::{StepApprover, WorkflowUseCaseImpl, WorkflowWithSteps},
+};
 
 /// ワークフロー作成リクエスト
 #[derive(Debug, Deserialize)]
@@ -335,4 +338,100 @@ impl WorkflowCommentDto {
 /// ワークフローハンドラーの State
 pub struct WorkflowState {
     pub usecase: WorkflowUseCaseImpl,
+}
+
+/// i64 を DisplayNumber に変換する。
+/// 不正な値の場合は CoreError::BadRequest を返す。
+pub(crate) fn parse_display_number(value: i64, field: &str) -> Result<DisplayNumber, CoreError> {
+    DisplayNumber::try_from(value)
+        .map_err(|e| CoreError::BadRequest(format!("不正な {field}: {e}")))
+}
+
+/// i32 を Version に変換する。
+pub(crate) fn parse_version(value: i32) -> Result<Version, CoreError> {
+    Version::try_from(value).map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {e}")))
+}
+
+/// StepApproverRequest のリストを StepApprover のリストに変換する。
+pub(crate) fn convert_approvers(approvers: Vec<StepApproverRequest>) -> Vec<StepApprover> {
+    approvers
+        .into_iter()
+        .map(|a| StepApprover {
+            step_id:     a.step_id,
+            assigned_to: UserId::from_uuid(a.assigned_to),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::*;
+
+    #[test]
+    fn parse_display_number_returns_ok_for_positive_integer() {
+        let result = parse_display_number(1, "display_number");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().as_i64(), 1);
+    }
+
+    #[test]
+    fn parse_display_number_returns_bad_request_for_zero() {
+        let result = parse_display_number(0, "display_number");
+        assert!(
+            matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("display_number"))
+        );
+    }
+
+    #[test]
+    fn parse_display_number_returns_bad_request_for_negative() {
+        let result = parse_display_number(-1, "step_display_number");
+        assert!(
+            matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("step_display_number"))
+        );
+    }
+
+    #[test]
+    fn parse_version_returns_ok_for_positive_integer() {
+        let result = parse_version(1);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().as_i32(), 1);
+    }
+
+    #[test]
+    fn parse_version_returns_bad_request_for_zero() {
+        let result = parse_version(0);
+        assert!(matches!(result, Err(CoreError::BadRequest(msg)) if msg.contains("バージョン")));
+    }
+
+    #[test]
+    fn convert_approvers_returns_empty_for_empty_input() {
+        let result = convert_approvers(vec![]);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn convert_approvers_converts_multiple_elements() {
+        let uuid1 = Uuid::new_v4();
+        let uuid2 = Uuid::new_v4();
+        let input = vec![
+            StepApproverRequest {
+                step_id:     "step-1".to_string(),
+                assigned_to: uuid1,
+            },
+            StepApproverRequest {
+                step_id:     "step-2".to_string(),
+                assigned_to: uuid2,
+            },
+        ];
+
+        let result = convert_approvers(input);
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].step_id, "step-1");
+        assert_eq!(*result[0].assigned_to.as_uuid(), uuid1);
+        assert_eq!(result[1].step_id, "step-2");
+        assert_eq!(*result[1].assigned_to.as_uuid(), uuid2);
+    }
 }

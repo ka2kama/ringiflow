@@ -11,7 +11,6 @@ use axum::{
 use ringiflow_domain::{
     tenant::TenantId,
     user::UserId,
-    value_objects::{DisplayNumber, Version},
     workflow::{WorkflowDefinitionId, WorkflowInstanceId, WorkflowStepId},
 };
 use ringiflow_shared::ApiResponse;
@@ -28,6 +27,9 @@ use super::{
     WorkflowCommentDto,
     WorkflowInstanceDto,
     WorkflowState,
+    convert_approvers,
+    parse_display_number,
+    parse_version,
 };
 use crate::{
     error::CoreError,
@@ -36,7 +38,6 @@ use crate::{
         CreateWorkflowInput,
         PostCommentInput,
         ResubmitWorkflowInput,
-        StepApprover,
         SubmitWorkflowInput,
     },
 };
@@ -102,14 +103,7 @@ pub async fn submit_workflow(
 
     // ユースケースを呼び出し
     let input = SubmitWorkflowInput {
-        approvers: req
-            .approvers
-            .into_iter()
-            .map(|a| StepApprover {
-                step_id:     a.step_id,
-                assigned_to: UserId::from_uuid(a.assigned_to),
-            })
-            .collect(),
+        approvers: convert_approvers(req.approvers),
     };
 
     let instance = state
@@ -145,8 +139,7 @@ pub async fn approve_step(
     let step_id = WorkflowStepId::from_uuid(params.step_id);
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ApproveRejectInput {
         version,
@@ -191,8 +184,7 @@ pub async fn reject_step(
     let step_id = WorkflowStepId::from_uuid(params.step_id);
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ApproveRejectInput {
         version,
@@ -236,19 +228,11 @@ pub async fn submit_workflow_by_display_number(
     Path(display_number): Path<i64>,
     Json(req): Json<SubmitWorkflowRequest>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(req.tenant_id);
 
     let input = SubmitWorkflowInput {
-        approvers: req
-            .approvers
-            .into_iter()
-            .map(|a| StepApprover {
-                step_id:     a.step_id,
-                assigned_to: UserId::from_uuid(a.assigned_to),
-            })
-            .collect(),
+        approvers: convert_approvers(req.approvers),
     };
 
     let instance = state
@@ -281,14 +265,12 @@ pub async fn approve_step_by_display_number(
     Path(params): Path<StepByDisplayNumberPathParams>,
     Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError> {
-    let workflow_display_number = DisplayNumber::try_from(params.display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
-    let step_display_number = DisplayNumber::try_from(params.step_display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な step_display_number: {}", e)))?;
+    let workflow_display_number = parse_display_number(params.display_number, "display_number")?;
+    let step_display_number =
+        parse_display_number(params.step_display_number, "step_display_number")?;
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ApproveRejectInput {
         version,
@@ -333,8 +315,7 @@ pub async fn request_changes_step(
     let step_id = WorkflowStepId::from_uuid(params.step_id);
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ApproveRejectInput {
         version,
@@ -373,19 +354,11 @@ pub async fn resubmit_workflow(
     let instance_id = WorkflowInstanceId::from_uuid(id);
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ResubmitWorkflowInput {
         form_data: req.form_data,
-        approvers: req
-            .approvers
-            .into_iter()
-            .map(|a| StepApprover {
-                step_id:     a.step_id,
-                assigned_to: UserId::from_uuid(a.assigned_to),
-            })
-            .collect(),
+        approvers: convert_approvers(req.approvers),
         version,
     };
 
@@ -425,14 +398,12 @@ pub async fn reject_step_by_display_number(
     Path(params): Path<StepByDisplayNumberPathParams>,
     Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError> {
-    let workflow_display_number = DisplayNumber::try_from(params.display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
-    let step_display_number = DisplayNumber::try_from(params.step_display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な step_display_number: {}", e)))?;
+    let workflow_display_number = parse_display_number(params.display_number, "display_number")?;
+    let step_display_number =
+        parse_display_number(params.step_display_number, "step_display_number")?;
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ApproveRejectInput {
         version,
@@ -475,14 +446,12 @@ pub async fn request_changes_step_by_display_number(
     Path(params): Path<StepByDisplayNumberPathParams>,
     Json(req): Json<ApproveRejectRequest>,
 ) -> Result<Response, CoreError> {
-    let workflow_display_number = DisplayNumber::try_from(params.display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
-    let step_display_number = DisplayNumber::try_from(params.step_display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な step_display_number: {}", e)))?;
+    let workflow_display_number = parse_display_number(params.display_number, "display_number")?;
+    let step_display_number =
+        parse_display_number(params.step_display_number, "step_display_number")?;
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ApproveRejectInput {
         version,
@@ -524,23 +493,14 @@ pub async fn resubmit_workflow_by_display_number(
     Path(display_number): Path<i64>,
     Json(req): Json<ResubmitWorkflowRequest>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
-    let version = Version::try_from(req.version)
-        .map_err(|e| CoreError::BadRequest(format!("不正なバージョン: {}", e)))?;
+    let version = parse_version(req.version)?;
 
     let input = ResubmitWorkflowInput {
         form_data: req.form_data,
-        approvers: req
-            .approvers
-            .into_iter()
-            .map(|a| StepApprover {
-                step_id:     a.step_id,
-                assigned_to: UserId::from_uuid(a.assigned_to),
-            })
-            .collect(),
+        approvers: convert_approvers(req.approvers),
         version,
     };
 
@@ -581,8 +541,7 @@ pub async fn post_comment(
     Path(display_number): Path<i64>,
     Json(req): Json<PostCommentRequest>,
 ) -> Result<Response, CoreError> {
-    let display_number = DisplayNumber::try_from(display_number)
-        .map_err(|e| CoreError::BadRequest(format!("不正な display_number: {}", e)))?;
+    let display_number = parse_display_number(display_number, "display_number")?;
     let tenant_id = TenantId::from_uuid(req.tenant_id);
     let user_id = UserId::from_uuid(req.user_id);
 
