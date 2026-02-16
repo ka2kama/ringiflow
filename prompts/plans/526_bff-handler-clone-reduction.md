@@ -42,10 +42,10 @@ axum の `Result<T, E>` は `T: IntoResponse, E: IntoResponse` で `IntoResponse
 ## Phase 1: 共通インフラ（`error.rs` 拡張）
 
 ### 確認事項
-- [ ] 型: `CoreServiceError` 全バリアント → `client/core_service/error.rs`
-- [ ] 型: `TenantIdError` の `IntoResponse` 実装パターン → `error.rs` L32-44
-- [ ] パターン: core-service の `IntoResponse for CoreError` → `core-service/src/error.rs` L41-71
-- [ ] パターン: 既存レスポンスヘルパーの引数 → `error.rs` L84-158
+- [x] 型: `CoreServiceError` 全バリアント → `client/core_service/error.rs` L7-25, 11バリアント確認
+- [x] 型: `TenantIdError` の `IntoResponse` 実装パターン → `error.rs` L32-44, `map_err(IntoResponse::into_response)` で変換
+- [x] パターン: core-service の `IntoResponse for CoreError` → `core-service/src/error.rs` L41-71, match + レスポンスヘルパーのパターン
+- [x] パターン: 既存レスポンスヘルパーの引数 → `error.rs` L84-158, `not_found_response(suffix, title, detail)` 等
 
 ### 実装
 
@@ -73,24 +73,24 @@ axum の `Result<T, E>` は `T: IntoResponse, E: IntoResponse` で `IntoResponse
 ### テストリスト
 
 ユニットテスト:
-- [ ] `authenticate` 正常系で `SessionData` を返す
-- [ ] `authenticate` テナント ID ヘッダーなしで 400
-- [ ] `authenticate` テナント ID 不正形式で 400
-- [ ] `authenticate` セッション Cookie なしで 401
-- [ ] `authenticate` セッション存在しない場合に 401
-- [ ] `CoreServiceError::UserNotFound` → 404, error_type `user-not-found`
-- [ ] `CoreServiceError::WorkflowDefinitionNotFound` → 404
-- [ ] `CoreServiceError::WorkflowInstanceNotFound` → 404
-- [ ] `CoreServiceError::StepNotFound` → 404
-- [ ] `CoreServiceError::RoleNotFound` → 404
-- [ ] `CoreServiceError::ValidationError` → 400
-- [ ] `CoreServiceError::Forbidden` → 403
-- [ ] `CoreServiceError::EmailAlreadyExists` → 409
-- [ ] `CoreServiceError::Conflict` → 409
-- [ ] `CoreServiceError::Network` → 500
-- [ ] `CoreServiceError::Unexpected` → 500
-- [ ] `log_and_convert_core_error` Network → 500
-- [ ] `log_and_convert_core_error` UserNotFound → 404（ログなし）
+- [x] `authenticate` 正常系で `SessionData` を返す
+- [x] `authenticate` テナント ID ヘッダーなしで 400
+- [x] `authenticate` テナント ID 不正形式で 400
+- [x] `authenticate` セッション Cookie なしで 401
+- [x] `authenticate` セッション存在しない場合に 401
+- [x] `CoreServiceError::UserNotFound` → 404, error_type `user-not-found`
+- [x] `CoreServiceError::WorkflowDefinitionNotFound` → 404
+- [x] `CoreServiceError::WorkflowInstanceNotFound` → 404
+- [x] `CoreServiceError::StepNotFound` → 404
+- [x] `CoreServiceError::RoleNotFound` → 404
+- [x] `CoreServiceError::ValidationError` → 400
+- [x] `CoreServiceError::Forbidden` → 403
+- [x] `CoreServiceError::EmailAlreadyExists` → 409
+- [x] `CoreServiceError::Conflict` → 409
+- [x] `CoreServiceError::Network` → 500
+- [x] `CoreServiceError::Unexpected` → 500
+- [x] `log_and_convert_core_error` Network → 500
+- [x] `log_and_convert_core_error` UserNotFound → 404（ログなし）
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
@@ -99,7 +99,7 @@ E2E テスト（該当なし）
 ## Phase 2: workflow ハンドラ（command.rs + query.rs）
 
 ### 確認事項
-- [ ] パターン: Phase 1 完了後の `authenticate`, `log_and_convert_core_error` シグネチャ → `error.rs`
+- [x] パターン: Phase 1 完了後の `authenticate`, `log_and_convert_core_error` シグネチャ → `error.rs` L89-96, L143-151
 
 ### 実装
 
@@ -143,9 +143,9 @@ E2E テスト（該当なし）
 ## Phase 3: user.rs / role.rs
 
 ### 確認事項
-- [ ] パターン: Phase 2 完了後の workflow ハンドラ最終形 → `command.rs`, `query.rs`
-- [ ] 型: `AuditLog::new_success` シグネチャ → Grep で確認
-- [ ] 型: `AuditLogRepository::record` シグネチャ → Grep で確認
+- [x] パターン: Phase 2 完了後の workflow ハンドラ最終形 → `command.rs`, `query.rs` — `Result<Response, Response>` + `authenticate` + `map_err(log_and_convert_core_error)`
+- [x] 型: `AuditLog::new_success` シグネチャ → Grep で確認、`new_success(tenant_id, user_id, action, resource_type, resource_id, detail)`
+- [x] 型: `AuditLogRepository::record` シグネチャ → Grep で確認、`record(&self, audit_log: &AuditLog) -> Result<()>`
 
 ### 実装
 
