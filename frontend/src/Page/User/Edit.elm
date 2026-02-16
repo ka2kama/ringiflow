@@ -14,16 +14,18 @@ import Api.ErrorMessage as ErrorMessage
 import Api.Role as RoleApi
 import Browser.Navigation as Nav
 import Component.Button as Button
+import Component.FormField as FormField
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.AdminUser exposing (UserDetail, UserResponse)
 import Data.Role exposing (RoleItem)
 import Dict exposing (Dict)
+import Form.DirtyState as DirtyState
+import Form.Validation as Validation
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput, onSubmit)
+import Html.Events exposing (onSubmit)
 import Json.Encode as Encode
-import Ports
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
@@ -77,8 +79,8 @@ init shared key displayNumber =
 
 
 isDirty : Model -> Bool
-isDirty model =
-    model.isDirty_
+isDirty =
+    DirtyState.isDirty
 
 
 updateShared : Shared -> Model -> Model
@@ -150,14 +152,14 @@ update msg model =
         UpdateName value ->
             let
                 ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+                    DirtyState.markDirty model
             in
             ( { dirtyModel | name = value }, dirtyCmd )
 
         UpdateRole value ->
             let
                 ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+                    DirtyState.markDirty model
             in
             ( { dirtyModel | selectedRoleId = value }, dirtyCmd )
 
@@ -189,9 +191,13 @@ update msg model =
         GotUpdateResult result ->
             case result of
                 Ok _ ->
-                    ( { model | submitting = False, isDirty_ = False }
+                    let
+                        ( cleanModel, cleanCmd ) =
+                            DirtyState.clearDirty model
+                    in
+                    ( { cleanModel | submitting = False }
                     , Cmd.batch
-                        [ Ports.setBeforeUnloadEnabled False
+                        [ cleanCmd
                         , Nav.pushUrl model.key
                             (Route.toString (Route.UserDetail model.displayNumber))
                         ]
@@ -224,19 +230,6 @@ findRoleIdByName roleName rolesData =
             Nothing
 
 
-{-| Dirty フラグを立てる（最初の変更時のみ Port を呼び出す）
--}
-markDirty : Model -> ( Model, Cmd Msg )
-markDirty model =
-    if model.isDirty_ then
-        ( model, Cmd.none )
-
-    else
-        ( { model | isDirty_ = True }
-        , Ports.setBeforeUnloadEnabled True
-        )
-
-
 
 -- VALIDATION
 
@@ -244,24 +237,10 @@ markDirty model =
 validateForm : Model -> Dict String String
 validateForm model =
     Dict.empty
-        |> validateName model.name
+        |> Validation.validateRequiredString
+            { fieldKey = "name", fieldLabel = "名前", maxLength = 100 }
+            model.name
         |> validateRole model.selectedRoleId
-
-
-validateName : String -> Dict String String -> Dict String String
-validateName name errors =
-    let
-        trimmed =
-            String.trim name
-    in
-    if String.isEmpty trimmed then
-        Dict.insert "name" "名前を入力してください。" errors
-
-    else if String.length trimmed > 100 then
-        Dict.insert "name" "名前は100文字以内で入力してください。" errors
-
-    else
-        errors
 
 
 validateRole : String -> Dict String String -> Dict String String
@@ -330,8 +309,8 @@ viewFormContent : Model -> UserDetail -> List RoleItem -> Html Msg
 viewFormContent model userDetail roles =
     Html.form [ onSubmit SubmitForm, class "mx-auto max-w-lg space-y-6" ]
         [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "ユーザーを編集" ]
-        , viewReadOnlyField "メールアドレス" userDetail.email
-        , viewTextField
+        , FormField.viewReadOnlyField "メールアドレス" userDetail.email
+        , FormField.viewTextField
             { label = "名前"
             , value = model.name
             , onInput = UpdateName
@@ -339,7 +318,14 @@ viewFormContent model userDetail roles =
             , inputType = "text"
             , placeholder = "山田 太郎"
             }
-        , viewRoleSelect roles model.selectedRoleId (Dict.get "role" model.validationErrors)
+        , FormField.viewSelectField
+            { label = "ロール"
+            , value = model.selectedRoleId
+            , onInput = UpdateRole
+            , error = Dict.get "role" model.validationErrors
+            , options = List.map (\role -> { value = role.id, label = role.name }) roles
+            , placeholder = "-- ロールを選択 --"
+            }
         , div [ class "flex gap-3" ]
             [ Button.view
                 { variant = Button.Primary
@@ -360,87 +346,4 @@ viewFormContent model userDetail roles =
                 }
                 [ text "キャンセル" ]
             ]
-        ]
-
-
-{-| 読み取り専用フィールド
--}
-viewReadOnlyField : String -> String -> Html msg
-viewReadOnlyField labelText fieldValue =
-    div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text labelText ]
-        , div [ class "w-full rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2 text-sm text-secondary-500" ]
-            [ text fieldValue ]
-        ]
-
-
-viewTextField :
-    { label : String
-    , value : String
-    , onInput : String -> Msg
-    , error : Maybe String
-    , inputType : String
-    , placeholder : String
-    }
-    -> Html Msg
-viewTextField config =
-    div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
-        , input
-            [ type_ config.inputType
-            , value config.value
-            , onInput config.onInput
-            , placeholder config.placeholder
-            , class
-                ("w-full rounded-lg border px-3 py-2 text-sm "
-                    ++ (case config.error of
-                            Just _ ->
-                                "border-error-300 focus:border-error-500 focus:ring-error-500"
-
-                            Nothing ->
-                                "border-secondary-300 focus:border-primary-500 focus:ring-primary-500"
-                       )
-                )
-            ]
-            []
-        , case config.error of
-            Just errorMsg ->
-                p [ class "mt-1 text-sm text-error-600" ] [ text errorMsg ]
-
-            Nothing ->
-                text ""
-        ]
-
-
-viewRoleSelect : List RoleItem -> String -> Maybe String -> Html Msg
-viewRoleSelect roles selectedRoleId error =
-    div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text "ロール" ]
-        , select
-            [ class
-                ("w-full rounded-lg border px-3 py-2 text-sm "
-                    ++ (case error of
-                            Just _ ->
-                                "border-error-300 focus:border-error-500 focus:ring-error-500"
-
-                            Nothing ->
-                                "border-secondary-300 focus:border-primary-500 focus:ring-primary-500"
-                       )
-                )
-            , onInput UpdateRole
-            , value selectedRoleId
-            ]
-            (option [ Html.Attributes.value "" ] [ text "-- ロールを選択 --" ]
-                :: List.map
-                    (\role ->
-                        option [ Html.Attributes.value role.id ] [ text role.name ]
-                    )
-                    roles
-            )
-        , case error of
-            Just errorMsg ->
-                p [ class "mt-1 text-sm text-error-600" ] [ text errorMsg ]
-
-            Nothing ->
-                text ""
         ]

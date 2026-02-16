@@ -14,6 +14,7 @@ import Api.Auth as AuthApi
 import Browser
 import Browser.Navigation as Nav
 import Component.ConfirmDialog as ConfirmDialog
+import Component.Icons as Icons
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -35,8 +36,6 @@ import Page.Workflow.New as WorkflowNew
 import Ports
 import Route exposing (Route)
 import Shared exposing (Shared)
-import Svg exposing (svg)
-import Svg.Attributes as SvgAttr
 import Url exposing (Url)
 
 
@@ -806,9 +805,9 @@ viewSidebar currentRoute isOpen shared =
 
         -- ナビゲーションリンク
         , nav [ class "flex-1 space-y-1 px-3 py-4" ]
-            ([ viewNavItem currentRoute Route.Home "ダッシュボード" iconDashboard
-             , viewNavItem currentRoute (Route.Workflows Route.emptyWorkflowFilter) "申請一覧" iconWorkflows
-             , viewNavItem currentRoute Route.Tasks "タスク一覧" iconTasks
+            ([ viewNavItem currentRoute Route.Home "ダッシュボード" Icons.dashboard
+             , viewNavItem currentRoute (Route.Workflows Route.emptyWorkflowFilter) "申請一覧" Icons.workflows
+             , viewNavItem currentRoute Route.Tasks "タスク一覧" Icons.tasks
              ]
                 ++ viewAdminSection currentRoute shared
             )
@@ -860,9 +859,9 @@ viewAdminSection currentRoute shared =
     if Shared.isAdmin shared then
         [ div [ class "mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-secondary-500" ]
             [ text "管理" ]
-        , viewNavItem currentRoute Route.Users "ユーザー管理" iconUsers
-        , viewNavItem currentRoute Route.Roles "ロール管理" iconRoles
-        , viewNavItem currentRoute Route.AuditLogs "監査ログ" iconAuditLog
+        , viewNavItem currentRoute Route.Users "ユーザー管理" Icons.users
+        , viewNavItem currentRoute Route.Roles "ロール管理" Icons.roles
+        , viewNavItem currentRoute Route.AuditLogs "監査ログ" Icons.auditLog
         ]
 
     else
@@ -900,7 +899,7 @@ viewTopBar =
             , attribute "aria-label" "メニューを開く"
             , onClick ToggleSidebar
             ]
-            [ iconMenu ]
+            [ Icons.menu ]
 
         -- ページヘッダー領域（将来の検索バー等に使用）
         , div [ class "flex-1" ] []
@@ -1012,128 +1011,3 @@ viewNavigationConfirmDialog maybePendingUrl =
 
         Nothing ->
             text ""
-
-
-
--- ICONS
-
-
-{-| SVG アイコン: ダッシュボード（グリッド）
--}
-iconDashboard : Html msg
-iconDashboard =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-5 w-5"
-        ]
-        [ Svg.rect [ SvgAttr.x "3", SvgAttr.y "3", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
-        , Svg.rect [ SvgAttr.x "14", SvgAttr.y "3", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
-        , Svg.rect [ SvgAttr.x "3", SvgAttr.y "14", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
-        , Svg.rect [ SvgAttr.x "14", SvgAttr.y "14", SvgAttr.width "7", SvgAttr.height "7", SvgAttr.rx "1" ] []
-        ]
-
-
-{-| SVG アイコン: 申請一覧（ドキュメント）
--}
-iconWorkflows : Html msg
-iconWorkflows =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-5 w-5"
-        ]
-        [ Svg.path [ SvgAttr.d "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" ] []
-        , Svg.path [ SvgAttr.d "M14 2v6h6" ] []
-        , Svg.line [ SvgAttr.x1 "16", SvgAttr.y1 "13", SvgAttr.x2 "8", SvgAttr.y2 "13" ] []
-        , Svg.line [ SvgAttr.x1 "16", SvgAttr.y1 "17", SvgAttr.x2 "8", SvgAttr.y2 "17" ] []
-        ]
-
-
-{-| SVG アイコン: タスク一覧（チェックリスト）
--}
-iconTasks : Html msg
-iconTasks =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-5 w-5"
-        ]
-        [ Svg.path [ SvgAttr.d "M9 11l3 3L22 4" ] []
-        , Svg.path [ SvgAttr.d "M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" ] []
-        ]
-
-
-{-| SVG アイコン: ユーザー管理（People）
--}
-iconUsers : Html msg
-iconUsers =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-5 w-5"
-        ]
-        [ Svg.path [ SvgAttr.d "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" ] []
-        , Svg.circle [ SvgAttr.cx "9", SvgAttr.cy "7", SvgAttr.r "4" ] []
-        , Svg.path [ SvgAttr.d "M23 21v-2a4 4 0 0 0-3-3.87" ] []
-        , Svg.path [ SvgAttr.d "M16 3.13a4 4 0 0 1 0 7.75" ] []
-        ]
-
-
-{-| SVG アイコン: ロール管理（Shield）
--}
-iconRoles : Html msg
-iconRoles =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-5 w-5"
-        ]
-        [ Svg.path [ SvgAttr.d "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" ] []
-        ]
-
-
-{-| SVG アイコン: 監査ログ（ClipboardList）
--}
-iconAuditLog : Html msg
-iconAuditLog =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-5 w-5"
-        ]
-        [ Svg.path [ SvgAttr.d "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" ] []
-        , Svg.rect [ SvgAttr.x "8", SvgAttr.y "2", SvgAttr.width "8", SvgAttr.height "4", SvgAttr.rx "1" ] []
-        , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "10", SvgAttr.x2 "16", SvgAttr.y2 "10" ] []
-        , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "14", SvgAttr.x2 "16", SvgAttr.y2 "14" ] []
-        , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "18", SvgAttr.x2 "12", SvgAttr.y2 "18" ] []
-        ]
-
-
-{-| SVG アイコン: ハンバーガーメニュー
--}
-iconMenu : Html msg
-iconMenu =
-    svg
-        [ SvgAttr.viewBox "0 0 24 24"
-        , SvgAttr.fill "none"
-        , SvgAttr.stroke "currentColor"
-        , SvgAttr.strokeWidth "2"
-        , SvgAttr.class "h-6 w-6"
-        ]
-        [ Svg.line [ SvgAttr.x1 "3", SvgAttr.y1 "6", SvgAttr.x2 "21", SvgAttr.y2 "6" ] []
-        , Svg.line [ SvgAttr.x1 "3", SvgAttr.y1 "12", SvgAttr.x2 "21", SvgAttr.y2 "12" ] []
-        , Svg.line [ SvgAttr.x1 "3", SvgAttr.y1 "18", SvgAttr.x2 "21", SvgAttr.y2 "18" ] []
-        ]

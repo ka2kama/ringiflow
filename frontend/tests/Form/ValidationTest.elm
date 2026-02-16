@@ -15,6 +15,7 @@ suite =
     describe "Form.Validation"
         [ validateTitleTests
         , validateAllFieldsTests
+        , validateRequiredStringTests
         ]
 
 
@@ -203,6 +204,62 @@ validateAllFieldsTests =
                         |> Dict.size
                         |> Expect.equal 2
             ]
+        ]
+
+
+
+-- validateRequiredString
+
+
+validateRequiredStringTests : Test
+validateRequiredStringTests =
+    let
+        config =
+            { fieldKey = "name", fieldLabel = "名前", maxLength = 100 }
+    in
+    describe "validateRequiredString"
+        [ test "空文字列でエラーを挿入する" <|
+            \_ ->
+                Validation.validateRequiredString config "" Dict.empty
+                    |> Dict.get "name"
+                    |> Expect.equal (Just "名前を入力してください。")
+        , test "空白のみの文字列でエラーを挿入する" <|
+            \_ ->
+                Validation.validateRequiredString config "   " Dict.empty
+                    |> Dict.get "name"
+                    |> Expect.equal (Just "名前を入力してください。")
+        , test "maxLength 超過でエラーを挿入する" <|
+            \_ ->
+                Validation.validateRequiredString config (String.repeat 101 "a") Dict.empty
+                    |> Dict.get "name"
+                    |> Expect.equal (Just "名前は100文字以内で入力してください。")
+        , test "正常値で errors をそのまま返す" <|
+            \_ ->
+                Validation.validateRequiredString config "山田太郎" Dict.empty
+                    |> Dict.isEmpty
+                    |> Expect.equal True
+        , test "maxLength ちょうどは OK" <|
+            \_ ->
+                Validation.validateRequiredString config (String.repeat 100 "a") Dict.empty
+                    |> Dict.isEmpty
+                    |> Expect.equal True
+        , test "既存の errors を保持する" <|
+            \_ ->
+                let
+                    existingErrors =
+                        Dict.singleton "email" "メールが必要です"
+                in
+                Validation.validateRequiredString config "山田太郎" existingErrors
+                    |> Dict.size
+                    |> Expect.equal 1
+        , test "フィールドラベルが動的にメッセージに反映される" <|
+            \_ ->
+                Validation.validateRequiredString
+                    { fieldKey = "role_name", fieldLabel = "ロール名", maxLength = 50 }
+                    ""
+                    Dict.empty
+                    |> Dict.get "role_name"
+                    |> Expect.equal (Just "ロール名を入力してください。")
         ]
 
 

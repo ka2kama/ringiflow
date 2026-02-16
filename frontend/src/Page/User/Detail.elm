@@ -16,7 +16,7 @@ import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
-import Data.AdminUser exposing (UserDetail, UserResponse)
+import Data.AdminUser as AdminUser exposing (UserDetail, UserResponse)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Json.Encode as Encode
@@ -265,7 +265,7 @@ viewBasicInfo model userDetail =
             [ viewField "表示番号" (String.fromInt userDetail.displayNumber)
             , viewField "名前" userDetail.name
             , viewField "メール" userDetail.email
-            , viewFieldWithBadge "ステータス" (statusToBadge userDetail.status)
+            , viewFieldWithBadge "ステータス" (AdminUser.statusToBadge userDetail.status)
             , viewField "テナント" userDetail.tenantName
             ]
         ]
@@ -421,18 +421,3 @@ viewConfirmDialog maybeAction =
 
         Nothing ->
             text ""
-
-
-{-| ステータスに応じた Badge 設定
--}
-statusToBadge : String -> { colorClass : String, label : String }
-statusToBadge status =
-    case status of
-        "active" ->
-            { colorClass = "bg-success-100 text-success-800", label = "アクティブ" }
-
-        "inactive" ->
-            { colorClass = "bg-secondary-100 text-secondary-800", label = "非アクティブ" }
-
-        _ ->
-            { colorClass = "bg-secondary-100 text-secondary-800", label = status }

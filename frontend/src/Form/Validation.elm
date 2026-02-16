@@ -1,6 +1,7 @@
 module Form.Validation exposing
     ( ValidationResult
     , validateAllFields
+    , validateRequiredString
     , validateTitle
     )
 
@@ -50,6 +51,45 @@ type alias ValidationResult =
 
 
 -- SINGLE FIELD VALIDATION
+
+
+{-| 必須文字列フィールドのバリデーション
+
+Dict パイプライン型。フォームの validateForm で `|>` で繋いで使う。
+空文字列・空白のみ・最大文字数超過を検証する。
+
+    validateForm model =
+        Dict.empty
+            |> Validation.validateRequiredString
+                { fieldKey = "name", fieldLabel = "名前", maxLength = 100 }
+                model.name
+
+-}
+validateRequiredString :
+    { fieldKey : String
+    , fieldLabel : String
+    , maxLength : Int
+    }
+    -> String
+    -> Dict String String
+    -> Dict String String
+validateRequiredString config value errors =
+    let
+        trimmed =
+            String.trim value
+    in
+    if String.isEmpty trimmed then
+        Dict.insert config.fieldKey
+            (config.fieldLabel ++ "を入力してください。")
+            errors
+
+    else if String.length trimmed > config.maxLength then
+        Dict.insert config.fieldKey
+            (config.fieldLabel ++ "は" ++ String.fromInt config.maxLength ++ "文字以内で入力してください。")
+            errors
+
+    else
+        errors
 
 
 {-| タイトルのバリデーション

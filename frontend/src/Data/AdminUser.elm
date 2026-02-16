@@ -1,11 +1,13 @@
 module Data.AdminUser exposing
     ( AdminUserItem
+    , BadgeConfig
     , CreateUserResponse
     , UserDetail
     , UserResponse
     , adminUserItemDecoder
     , adminUserItemListDecoder
     , createUserResponseDecoder
+    , statusToBadge
     , userDetailDecoder
     , userResponseDecoder
     )
@@ -19,6 +21,31 @@ module Data.AdminUser exposing
 
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (required)
+
+
+
+-- BADGE
+
+
+{-| Badge コンポーネントの設定
+-}
+type alias BadgeConfig =
+    { colorClass : String, label : String }
+
+
+{-| ステータスに応じた Badge 設定
+-}
+statusToBadge : String -> BadgeConfig
+statusToBadge status =
+    case status of
+        "active" ->
+            { colorClass = "bg-success-100 text-success-800", label = "アクティブ" }
+
+        "inactive" ->
+            { colorClass = "bg-secondary-100 text-secondary-800", label = "非アクティブ" }
+
+        _ ->
+            { colorClass = "bg-secondary-100 text-secondary-800", label = status }
 
 
 

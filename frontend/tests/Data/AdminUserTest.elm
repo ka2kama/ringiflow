@@ -16,6 +16,7 @@ suite =
         , adminUserItemListDecoderTests
         , userDetailDecoderTests
         , createUserResponseDecoderTests
+        , statusToBadgeTests
         ]
 
 
@@ -200,4 +201,26 @@ createUserResponseDecoderTests =
                             , initialPassword = "Abc123!@#$%^&*XY"
                             }
                         )
+        ]
+
+
+
+-- statusToBadge
+
+
+statusToBadgeTests : Test
+statusToBadgeTests =
+    describe "statusToBadge"
+        [ test "active → 成功色とアクティブラベル" <|
+            \_ ->
+                AdminUser.statusToBadge "active"
+                    |> Expect.equal { colorClass = "bg-success-100 text-success-800", label = "アクティブ" }
+        , test "inactive → セカンダリ色と非アクティブラベル" <|
+            \_ ->
+                AdminUser.statusToBadge "inactive"
+                    |> Expect.equal { colorClass = "bg-secondary-100 text-secondary-800", label = "非アクティブ" }
+        , test "未知の値 → セカンダリ色でステータス値をラベルに" <|
+            \_ ->
+                AdminUser.statusToBadge "suspended"
+                    |> Expect.equal { colorClass = "bg-secondary-100 text-secondary-800", label = "suspended" }
         ]
