@@ -90,19 +90,19 @@ role.rs の 2 クローンは rstest `#[case]` の肯定テスト/否定テス�
 - `backend/crates/domain/src/workflow/comment.rs`（WorkflowCommentId）
 
 #### 確認事項
-- [ ] 型: 各 ID 型の derive 属性が全て同一か → 7 箇所を確認（UserId のみ Default なし、マクロで追加）
-- [ ] パターン: `derive_more::Display` が `#[derive(derive_more::Display)]` 形式でマクロ内で使えるか → Grep 既存使用
-- [ ] ライブラリ: `macro_rules!` 内で `$crate` パスは使えないが外部クレートパスは使える → Rust Reference 確認
+- [x] 型: 各 ID 型の derive 属性が全て同一か → 7 箇所確認、UserId のみ Default なし。マクロで Default を統一的に生成
+- [x] パターン: `derive_more::Display` が `#[derive(derive_more::Display)]` 形式でマクロ内で使えるか → Grep で既存使用 7 箇所確認、問題なし
+- [x] ライブラリ: `macro_rules!` 内で `$crate` パスは使えないが外部クレートパスは使える → `$crate::DomainError` で解決、`#[macro_use] mod macros;` で配置
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] マクロで定義した型の `new()` が UUID v7 を返す
-- [ ] `from_uuid()` / `as_uuid()` が往復する
-- [ ] `Default::default()` が動作する
-- [ ] `Display` が UUID 文字列を返す
-- [ ] `Serialize`/`Deserialize` が動作する
-- [ ] 既存テストが全てパスする（リグレッション確認）
+- [x] マクロで定義した型の `new()` が UUID v7 を返す
+- [x] `from_uuid()` / `as_uuid()` が往復する
+- [x] `Default::default()` が動作する
+- [x] `Display` が UUID 文字列を返す
+- [x] `Serialize`/`Deserialize` が動作する
+- [x] 既存テストが全てパスする（リグレッション確認）
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
@@ -118,21 +118,21 @@ E2E テスト（該当なし）
 - `backend/crates/domain/src/tenant.rs`（TenantName）
 
 #### 確認事項
-- [ ] 型: TenantName は `derive_more::Display` 使用、UserName/WorkflowName は手動 Display impl → マクロでは手動 Display を生成して統一
-- [ ] パターン: `$crate::DomainError` がマクロ展開先で正しく解決されるか → macros.rs は `lib.rs` で `#[macro_use] mod macros;` として宣言する必要がある
-- [ ] ライブラリ: `format!` マクロのエラーメッセージが既存テストの期待値と一致するか → テスト内のアサーションを確認
+- [x] 型: TenantName は `derive_more::Display` 使用、UserName/WorkflowName は手動 Display impl → マクロでは手動 Display 生成で統一。機能的に等価
+- [x] パターン: `$crate::DomainError` がマクロ展開先で正しく解決されるか → `#[macro_use] mod macros;` で宣言し、`$crate::DomainError` で正しく解決
+- [x] ライブラリ: `format!` マクロのエラーメッセージが既存テストの期待値と一致するか → 既存テスト全件パスで確認
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] マクロで定義した型の `new()` が正常値を受け入れる
-- [ ] 空文字列を拒否する
-- [ ] 空白のみを拒否する（trim 後に空）
-- [ ] 最大長を受け入れる
-- [ ] 最大長+1 を拒否する
-- [ ] `as_str()` / `into_string()` が正しい値を返す
-- [ ] `Display` が内部文字列を表示する
-- [ ] 既存テストが全てパスする（リグレッション確認）
+- [x] マクロで定義した型の `new()` が正常値を受け入れる
+- [x] 空文字列を拒否する
+- [x] 空白のみを拒否する（trim 後に空）
+- [x] 最大長を受け入れる
+- [x] 最大長+1 を拒否する
+- [x] `as_str()` / `into_string()` が正しい値を返す
+- [x] `Display` が内部文字列を表示する
+- [x] 既存テストが全てパスする（リグレッション確認）
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
@@ -146,13 +146,13 @@ step.rs テスト内に `record_from` ヘルパー関数を導入し、9 クロ�
 - `backend/crates/domain/src/workflow/step.rs`（テストモジュール内）
 
 #### 確認事項
-- [ ] パターン: WorkflowStepRecord の全フィールドと対応する getter を確認 → step.rs L144-161（Record 定義）と L210-272（getter）
-- [ ] 型: 構造体更新構文 `..record_from(&before)` が WorkflowStepRecord で動作するか → Record に `Default` は不要、全フィールドが指定される
+- [x] パターン: WorkflowStepRecord の全フィールドと対応する getter を確認 → 全 13 フィールドに対応する getter あり
+- [x] 型: 構造体更新構文 `..record_from(&before)` が WorkflowStepRecord で動作するか → 全フィールドが指定され問題なし
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] 既存テスト 18 件が全てパスする（リファクタリングのみ、新規テストなし）
+- [x] 既存テスト 18 件が全てパスする（リファクタリングのみ、新規テストなし）
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
@@ -166,13 +166,13 @@ instance.rs テスト内に `record_from` ヘルパー関数を導入し、Recor
 - `backend/crates/domain/src/workflow/instance.rs`（テストモジュール内）
 
 #### 確認事項
-- [ ] パターン: WorkflowInstanceRecord の全フィールドと対応する getter → instance.rs L131-148（Record 定義）と L193-253（getter）
-- [ ] 型: step.rs の record_from と同じパターンを踏襲できるか確認
+- [x] パターン: WorkflowInstanceRecord の全フィールドと対応する getter → 全 11 フィールドに対応する getter あり
+- [x] 型: step.rs の record_from と同じパターンを踏襲できるか → 同一パターンで実装
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] 既存テスト全てがパスする（リファクタリングのみ）
+- [x] 既存テスト全てがパスする（リファクタリングのみ）
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
@@ -186,14 +186,14 @@ jscpd をドメイン層に実行し、残存クローンを確認。role.rs の
 - `backend/crates/domain/src/role.rs`（必要に応じて）
 
 #### 確認事項
-- [ ] ツール: `npx jscpd backend/crates/domain/src --min-lines 10 --min-tokens 50` で検出されるクローンを確認
-- [ ] パターン: role.rs の Permission::satisfies テストの共通構造（L437-493）
+- [x] ツール: `npx jscpd` 実行 → 15 → 10 クローンに削減。残存 10 はビジネスロジックの構造的類似性で許容
+- [x] パターン: role.rs の Permission::satisfies テスト → rstest の肯定/否定テスト構造重複、可読性を損なうため対応見送り
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] jscpd でドメイン層のクローン数が目標以下であることを確認
-- [ ] 変更した場合、既存テストが全てパスする
+- [x] jscpd でドメイン層のクローン数が目標以下であることを確認
+- [x] 変更した場合、既存テストが全てパスする
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
