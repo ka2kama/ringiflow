@@ -116,8 +116,13 @@ jobs:
         run: cargo machete
         working-directory: backend
 
-      - name: Lint
-        run: just lint-rust
+      - name: Format check
+        run: cargo +nightly fmt --all -- --check
+        working-directory: backend
+
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        working-directory: backend
 
   # Rust テスト: ユニットテスト、OpenAPI 同期チェック、本番ビルド検証
   rust-test:
@@ -155,6 +160,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Build test binaries
+        run: cargo test --release --all-features --lib --bins --no-run
+        working-directory: backend
 
       - name: Test (unit tests)
         # 統合テスト（tests/）は rust-integration ジョブで実行
@@ -278,6 +287,10 @@ jobs:
             exit 1
           fi
           echo "✓ Schema snapshot is in sync"
+
+      - name: Build test binaries
+        run: cargo test --release --all-features --test '*' --no-run
+        working-directory: backend
 
       - name: Test (integration tests)
         run: cargo test --release --all-features --test '*' -- --test-threads=1
