@@ -18,7 +18,15 @@ use super::{
     WorkflowDefinitionData,
     WorkflowState,
 };
-use crate::error::{authenticate, log_and_convert_core_error, validation_error_response};
+use crate::{
+    client::CoreServiceError,
+    error::{
+        authenticate,
+        log_and_convert_core_error,
+        not_found_response,
+        validation_error_response,
+    },
+};
 
 /// GET /api/v1/workflow-definitions
 ///
@@ -233,7 +241,13 @@ pub async fn get_task_by_display_numbers(
             *session_data.user_id().as_uuid(),
         )
         .await
-        .map_err(|e| log_and_convert_core_error("タスク詳細取得", e))?;
+        .map_err(|e| match e {
+            // タスクコンテキストでは StepNotFound を task-not-found として返す
+            CoreServiceError::StepNotFound => {
+                not_found_response("task-not-found", "Task Not Found", "タスクが見つかりません")
+            }
+            e => log_and_convert_core_error("タスク詳細取得", e),
+        })?;
 
     let response = ApiResponse::new(crate::handler::task::TaskDetailData::from(
         core_response.data,
