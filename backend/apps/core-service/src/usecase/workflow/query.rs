@@ -8,7 +8,7 @@ use ringiflow_domain::{
 };
 
 use super::{WorkflowUseCaseImpl, WorkflowWithSteps};
-use crate::error::CoreError;
+use crate::{error::CoreError, usecase::helpers::FindResultExt};
 
 impl WorkflowUseCaseImpl {
     // ===== GET 系メソッド =====
@@ -60,8 +60,7 @@ impl WorkflowUseCaseImpl {
         self.definition_repo
             .find_by_id(&id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("定義の取得に失敗: {}", e)))?
-            .ok_or_else(|| CoreError::NotFound("ワークフロー定義が見つかりません".to_string()))
+            .or_not_found("ワークフロー定義")
     }
 
     /// 自分の申請一覧を取得する
@@ -111,10 +110,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_id(&id, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         let steps = self
             .step_repo
@@ -151,10 +147,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         let steps = self
             .step_repo
@@ -192,10 +185,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // 2. コメント一覧を取得
         self.comment_repo

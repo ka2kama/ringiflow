@@ -15,6 +15,7 @@
 | Elm | `elm/` | TEA アーキテクチャ、ポート、ルーティング |
 | フロントエンド | `frontend/` | ビルドツール、パッケージマネージャ |
 | インフラ | `infra/` | Docker、PostgreSQL、Redis |
+| バックエンド | `backend/` | ユースケース層パターン、エラーハンドリング |
 | アーキテクチャ | `architecture/` | 設計パターン、API 設計 |
 | セキュリティ | `security/` | 認証、CSRF、暗号化 |
 | 開発ツール | `devtools/` | CI/CD、Git、Claude Code、リンター |

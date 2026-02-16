@@ -15,7 +15,10 @@ use ringiflow_domain::{
 
 use crate::{
     error::CoreError,
-    usecase::workflow::{PostCommentInput, WorkflowUseCaseImpl},
+    usecase::{
+        helpers::FindResultExt,
+        workflow::{PostCommentInput, WorkflowUseCaseImpl},
+    },
 };
 
 impl WorkflowUseCaseImpl {
@@ -46,10 +49,7 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
-            .map_err(|e| CoreError::Internal(format!("インスタンスの取得に失敗: {}", e)))?
-            .ok_or_else(|| {
-                CoreError::NotFound("ワークフローインスタンスが見つかりません".to_string())
-            })?;
+            .or_not_found("ワークフローインスタンス")?;
 
         // 2. 権限チェック
         if !self.is_participant(&instance, &user_id, &tenant_id).await? {
