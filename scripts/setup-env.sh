@@ -18,13 +18,26 @@ cd "$PROJECT_ROOT"
 
 echo "環境変数ファイルを確認中..."
 
-# .env が既に存在する場合はスキップ
-if [[ -f .env ]]; then
+# 全ファイルが揃っている場合はスキップ
+if [[ -f .env && -f backend/.env && -f backend/.env.api-test ]]; then
     echo "  確認: .env"
     echo "  確認: backend/.env"
     echo "  確認: backend/.env.api-test"
     echo "✓ 環境変数ファイル準備完了"
     exit 0
+fi
+
+# .env が既に存在する場合（一部ファイルが欠けている）
+# 既存のオフセットを維持して不足分を再生成する
+if [[ -f .env ]]; then
+    port=$(grep -E '^POSTGRES_PORT=' .env 2>/dev/null | cut -d= -f2)
+    if [[ -n "$port" ]]; then
+        offset=$(( (port - 15432) / 100 ))
+        echo "  既存のオフセット $offset を検出。不足ファイルを再生成します..."
+        ./scripts/generate-env.sh "$offset"
+        echo "✓ 環境変数ファイル準備完了"
+        exit 0
+    fi
 fi
 
 # worktree かどうかを判定（.git がファイルなら worktree）
