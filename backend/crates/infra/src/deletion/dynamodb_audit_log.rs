@@ -7,6 +7,8 @@
 //! DynamoDB には `DELETE WHERE` 相当の機能がないため、
 //! Query で PK/SK を取得してから BatchWriteItem で 25 件ずつ削除する。
 
+use std::time::Duration;
+
 use async_trait::async_trait;
 use aws_sdk_dynamodb::{
     Client,
@@ -16,6 +18,17 @@ use ringiflow_domain::tenant::TenantId;
 
 use super::{DeletionResult, TenantDeleter};
 use crate::error::InfraError;
+
+/// リトライ設定
+const MAX_RETRIES: u32 = 5;
+const INITIAL_BACKOFF_MS: u64 = 100;
+const MAX_BACKOFF_MS: u64 = 5_000;
+
+/// exponential backoff の待機時間を計算する
+fn compute_backoff_ms(retry: u32) -> u64 {
+    let backoff = INITIAL_BACKOFF_MS.saturating_mul(2u64.pow(retry));
+    backoff.min(MAX_BACKOFF_MS)
+}
 
 /// DynamoDB 監査ログ Deleter
 pub struct DynamoDbAuditLogDeleter {
@@ -66,7 +79,7 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
                 break;
             }
 
-            // BatchWriteItem で 25 件ずつ削除
+            // BatchWriteItem で 25 件ずつ削除（unprocessed_items リトライ付き）
             for chunk in items.chunks(25) {
                 let delete_requests: Vec<WriteRequest> = chunk
                     .iter()
@@ -89,16 +102,54 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
                     })
                     .collect();
 
-                deleted_count += delete_requests.len() as u64;
+                let requested_count = delete_requests.len() as u64;
+                let mut remaining_requests = delete_requests;
 
-                // TODO(#471): unprocessed_items のリトライ処理を実装する（信頼性向上）
-                // DynamoDB はスループット超過時に一部アイテムを未処理で返す可能性がある
-                self.client
-                    .batch_write_item()
-                    .request_items(&self.table_name, delete_requests)
-                    .send()
-                    .await
-                    .map_err(|e| InfraError::DynamoDb(format!("監査ログの削除に失敗: {e}")))?;
+                for retry in 0..=MAX_RETRIES {
+                    if retry > 0 {
+                        let backoff = compute_backoff_ms(retry - 1);
+                        tracing::warn!(
+                            retry = retry,
+                            unprocessed = remaining_requests.len(),
+                            backoff_ms = backoff,
+                            "DynamoDB BatchWriteItem: 未処理アイテムをリトライ"
+                        );
+                        tokio::time::sleep(Duration::from_millis(backoff)).await;
+                    }
+
+                    let output = self
+                        .client
+                        .batch_write_item()
+                        .request_items(&self.table_name, remaining_requests)
+                        .send()
+                        .await
+                        .map_err(|e| InfraError::DynamoDb(format!("監査ログの削除に失敗: {e}")))?;
+
+                    let unprocessed = output
+                        .unprocessed_items()
+                        .and_then(|items| items.get(&self.table_name))
+                        .cloned()
+                        .unwrap_or_default();
+
+                    if unprocessed.is_empty() {
+                        deleted_count += requested_count;
+                        break;
+                    }
+
+                    if retry == MAX_RETRIES {
+                        let unprocessed_count = unprocessed.len();
+                        tracing::error!(
+                            unprocessed = unprocessed_count,
+                            "DynamoDB BatchWriteItem: リトライ上限超過、未処理アイテムが残存"
+                        );
+                        return Err(InfraError::DynamoDb(format!(
+                            "監査ログの削除でリトライ上限超過: {}件が未処理",
+                            unprocessed_count
+                        )));
+                    }
+
+                    remaining_requests = unprocessed;
+                }
             }
 
             // ページネーション
@@ -167,5 +218,25 @@ mod tests {
     fn test_send_syncを満たす() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<DynamoDbAuditLogDeleter>();
+    }
+
+    #[test]
+    fn test_compute_backoff_msがリトライ0回目で100msを返す() {
+        assert_eq!(compute_backoff_ms(0), 100);
+    }
+
+    #[test]
+    fn test_compute_backoff_msがリトライ1回目で200msを返す() {
+        assert_eq!(compute_backoff_ms(1), 200);
+    }
+
+    #[test]
+    fn test_compute_backoff_msがリトライ4回目で1600msを返す() {
+        assert_eq!(compute_backoff_ms(4), 1600);
+    }
+
+    #[test]
+    fn test_compute_backoff_msが上限5000msを超えない() {
+        assert_eq!(compute_backoff_ms(10), 5_000);
     }
 }

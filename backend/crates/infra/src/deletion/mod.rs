@@ -16,6 +16,8 @@ mod postgres_workflow;
 mod redis_session;
 mod registry;
 
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 pub use auth_credentials::AuthCredentialsDeleter;
 pub use dynamodb_audit_log::DynamoDbAuditLogDeleter;
@@ -36,6 +38,25 @@ use crate::error::InfraError;
 pub struct DeletionResult {
     /// 削除された件数
     pub deleted_count: u64,
+}
+
+/// テナントデータ一括削除の結果レポート
+///
+/// 全 Deleter の実行結果を集約する。部分失敗時も全 Deleter を実行し、
+/// 成功/失敗を分けて報告する。
+#[derive(Debug)]
+pub struct DeletionReport {
+    /// 削除に成功した Deleter の結果
+    pub succeeded: HashMap<&'static str, DeletionResult>,
+    /// 削除に失敗した Deleter の名前とエラー
+    pub failed:    Vec<(&'static str, InfraError)>,
+}
+
+impl DeletionReport {
+    /// いずれかの Deleter が失敗したかどうか
+    pub fn has_failures(&self) -> bool {
+        !self.failed.is_empty()
+    }
 }
 
 /// テナントデータ削除トレイト

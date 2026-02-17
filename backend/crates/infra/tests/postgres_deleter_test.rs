@@ -345,13 +345,21 @@ async fn test_delete_allがfk制約に違反せず全テーブルを削除でき
     registry.register(Box::new(PostgresUserDeleter::new(pool.clone())));
 
     // delete_all が FK 制約に違反せず完了すること
-    let results = registry.delete_all(&tenant_id).await.unwrap();
+    let report = registry.delete_all(&tenant_id).await;
+    assert!(
+        !report.has_failures(),
+        "削除に失敗した Deleter: {:?}",
+        report.failed
+    );
 
-    assert_eq!(results["postgres:workflows"].deleted_count, 3); // step + instance + definition
-    assert_eq!(results["auth:credentials"].deleted_count, 1);
-    assert_eq!(results["postgres:display_id_counters"].deleted_count, 1);
-    assert_eq!(results["postgres:roles"].deleted_count, 1);
-    assert_eq!(results["postgres:users"].deleted_count, 1);
+    assert_eq!(report.succeeded["postgres:workflows"].deleted_count, 3); // step + instance + definition
+    assert_eq!(report.succeeded["auth:credentials"].deleted_count, 1);
+    assert_eq!(
+        report.succeeded["postgres:display_id_counters"].deleted_count,
+        1
+    );
+    assert_eq!(report.succeeded["postgres:roles"].deleted_count, 1);
+    assert_eq!(report.succeeded["postgres:users"].deleted_count, 1);
 
     // 全テーブルが 0 件
     let counts = registry.count_all(&tenant_id).await.unwrap();
