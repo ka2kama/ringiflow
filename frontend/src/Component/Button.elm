@@ -56,7 +56,7 @@ variantClass : Variant -> String
 variantClass variant =
     case variant of
         Primary ->
-            "bg-primary-600 hover:bg-primary-700 text-white"
+            "bg-primary-500 hover:bg-primary-600 text-white"
 
         Success ->
             "bg-success-600 hover:bg-success-700 text-white"

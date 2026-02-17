@@ -793,7 +793,7 @@ viewSidebar currentRoute isOpen shared =
     in
     aside
         [ class
-            ("fixed inset-y-0 left-0 z-30 flex w-sidebar flex-col bg-secondary-900 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 "
+            ("fixed inset-y-0 left-0 z-30 flex w-sidebar flex-col bg-secondary-800 text-white transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 "
                 ++ mobileVisibility
             )
         ]
@@ -834,7 +834,7 @@ viewNavItem currentRoute targetRoute label icon =
 
         activeClass =
             if isActive then
-                "bg-primary-600 text-white"
+                "bg-primary-500 text-white"
 
             else
                 "text-secondary-100 hover:bg-secondary-700"
@@ -875,7 +875,7 @@ viewUserInfo shared =
     case shared.user of
         Just user ->
             div [ class "flex items-center gap-3" ]
-                [ div [ class "flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-sm font-medium" ]
+                [ div [ class "flex h-8 w-8 items-center justify-center rounded-full bg-primary-500 text-sm font-medium" ]
                     [ text (String.left 1 user.name) ]
                 , div [ class "min-w-0 flex-1" ]
                     [ div [ class "truncate text-sm font-medium" ] [ text user.name ]
