@@ -786,10 +786,12 @@ gh issue create \
 flowchart TB
     A["ADR で方針決定"] --> B["Epic Issue 作成"]
     B --> C["設計フェーズで Story に分解"]
-    C --> D["Story ブランチ作成"]
+    C --> C2["Epic タスクリストに<br/>Story リンク追記"]
+    C2 --> D["Story ブランチ作成"]
     D --> E["Story 実装（TDD）"]
     E --> F["Story PR 作成・マージ"]
-    F --> G["Story Issue 自動クローズ"]
+    F --> F2["Epic タスクリスト<br/>チェックボックス更新"]
+    F2 --> G["Story Issue 自動クローズ"]
     G --> H{"全 Story 完了?"}
     H -->|No| D
     H -->|Yes| I["Epic クローズ（手動）"]
@@ -815,6 +817,50 @@ git checkout -b feature/427-user-management-api
 | Epic | 全サブ Issue 完了後に手動クローズ | GitHub UI で確認・クローズ |
 
 Epic に対して `Closes` を使用しない。Epic のクローズは全サブ Issue の完了を確認してから手動で行う。
+
+### Epic タスクリストの管理
+
+Epic 本文のタスクリストを手動で管理し、進捗を正確に反映する。
+
+#### Story Issue 作成時
+
+Story Issue を作成したら、Epic 本文のタスクリストに Story の Issue リンクを追記する。
+
+```bash
+# Epic の現在の本文を確認
+gh issue view <Epic番号>
+
+# Epic 本文を更新（タスクリストに Story リンクを追記）
+gh issue edit <Epic番号> --body "$(cat <<'EOF'
+## タスク
+
+- [ ] Story 1: 〇〇を実装する #<Story番号>
+- [ ] Story 2: △△を実装する #<Story番号>
+EOF
+)"
+```
+
+#### Story PR マージ時
+
+Story PR をマージしたら、Epic 本文のタスクリストで該当 Story のチェックボックスを `[x]` に更新する。
+
+```bash
+# Epic の現在の本文を確認
+gh issue view <Epic番号>
+
+# Epic 本文を更新（チェックボックスを更新）
+gh issue edit <Epic番号> --body "$(cat <<'EOF'
+## タスク
+
+- [x] Story 1: 〇〇を実装する #<Story番号>
+- [ ] Story 2: △△を実装する #<Story番号>
+EOF
+)"
+```
+
+全 Story のチェックボックスが `[x]` になったら、Epic をクローズする。
+
+改善の経緯: [Epic の Story 進捗が未記録](../../../prompts/improvements/2026-02/2026-02-14_2230_EpicのStory進捗が未記録.md)
 
 ### 進捗の可視化
 
@@ -878,6 +924,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-17 | Epic / Story 運用に「Epic タスクリストの管理」セクションを追加（#524） |
 | 2026-02-14 | Step 2 にブランチ作成前の main 最新化ステップを追加（#516） |
 | 2026-02-11 | 6.2 にコンテキスト依存の必須ドキュメント確認項目を追加 |
 | 2026-02-10 | Step 9 に改善記録の検証ステップを追加（#375） |
