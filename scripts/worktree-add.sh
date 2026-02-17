@@ -122,7 +122,7 @@ if [[ "$NO_SETUP" == false ]]; then
     # 親プロセス（メインリポジトリの just）から継承されたポート環境変数をクリアする。
     # just の dotenv-load は既存の環境変数を上書きしないため、
     # クリアしないと worktree の .env ではなくメインの .env の値が使われてしまう。
-    env -u POSTGRES_PORT -u REDIS_PORT -u BFF_PORT -u VITE_PORT just setup-worktree
+    env -u POSTGRES_PORT -u REDIS_PORT -u DYNAMODB_PORT -u BFF_PORT -u VITE_PORT just setup-worktree
 else
     echo ""
     echo "（--no-setup: セットアップをスキップしました）"
