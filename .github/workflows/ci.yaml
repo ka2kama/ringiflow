@@ -456,6 +456,9 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
+      - name: Setup environment
+        run: just setup-env
+
       - name: Start dependencies
         run: just api-test-deps
 
@@ -492,9 +495,9 @@ jobs:
 
           # ヘルスチェック待機
           for i in {1..30}; do
-            if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
-               curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
-               curl -sf http://localhost:14002/health > /dev/null 2>&1; then
+            if curl -sf "http://localhost:$BFF_PORT/health" > /dev/null 2>&1 && \
+               curl -sf "http://localhost:$CORE_PORT/health" > /dev/null 2>&1 && \
+               curl -sf "http://localhost:$AUTH_PORT/health" > /dev/null 2>&1; then
               echo "All services are healthy"
               break
             fi
@@ -509,7 +512,10 @@ jobs:
           done
 
           # テスト実行
-          hurl --test --jobs 1 --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
+          hurl --test --jobs 1 \
+            --variable "bff_url=http://localhost:$BFF_PORT" \
+            --variables-file tests/api/hurl/vars.env \
+            tests/api/hurl/**/*.hurl
 
       - name: Cleanup
         if: always()
@@ -576,6 +582,9 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@v3
 
+      - name: Setup environment
+        run: just setup-env
+
       - name: Start dependencies
         run: just api-test-deps
 
@@ -622,9 +631,9 @@ jobs:
 
           # バックエンドヘルスチェック待機
           for i in {1..30}; do
-            if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
-               curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
-               curl -sf http://localhost:14002/health > /dev/null 2>&1; then
+            if curl -sf "http://localhost:$BFF_PORT/health" > /dev/null 2>&1 && \
+               curl -sf "http://localhost:$CORE_PORT/health" > /dev/null 2>&1 && \
+               curl -sf "http://localhost:$AUTH_PORT/health" > /dev/null 2>&1; then
               echo "All backend services are healthy"
               break
             fi
@@ -640,12 +649,12 @@ jobs:
 
           # Vite 開発サーバーを起動
           cd frontend
-          VITE_PORT=15173 BFF_PORT=14000 pnpm run dev > /tmp/e2e-test-logs/vite.log 2>&1 &
+          VITE_PORT=$E2E_VITE_PORT pnpm run dev > /tmp/e2e-test-logs/vite.log 2>&1 &
           cd ..
 
           # Vite ヘルスチェック待機
           for i in {1..30}; do
-            if curl -sf http://localhost:15173 > /dev/null 2>&1; then
+            if curl -sf "http://localhost:$E2E_VITE_PORT" > /dev/null 2>&1; then
               echo "Vite dev server is ready"
               break
             fi
@@ -659,7 +668,7 @@ jobs:
 
           # E2E テスト実行
           cd tests/e2e
-          E2E_BASE_URL=http://localhost:15173 npx playwright test
+          E2E_BASE_URL="http://localhost:$E2E_VITE_PORT" npx playwright test
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v6
