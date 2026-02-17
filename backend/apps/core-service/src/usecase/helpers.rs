@@ -66,7 +66,7 @@ mod tests {
     // === FindResultExt ===
 
     #[test]
-    fn or_not_found_ok_some_は値を返す() {
+    fn test_or_not_found_ok_some_は値を返す() {
         let result: Result<Option<i32>, InfraError> = Ok(Some(42));
 
         let value = result.or_not_found("テスト").unwrap();
@@ -75,7 +75,7 @@ mod tests {
     }
 
     #[test]
-    fn or_not_found_ok_none_はnotfoundエラーを返す() {
+    fn test_or_not_found_ok_none_はnotfoundエラーを返す() {
         let result: Result<Option<i32>, InfraError> = Ok(None);
 
         let err = result.or_not_found("ステップ").unwrap_err();
@@ -89,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn or_not_found_errはinternalエラーを返す() {
+    fn test_or_not_found_errはinternalエラーを返す() {
         let result: Result<Option<i32>, InfraError> =
             Err(InfraError::Unexpected("接続失敗".to_string()));
 
@@ -121,7 +121,7 @@ mod tests {
     }
 
     #[test]
-    fn check_step_assigned_to_担当者一致はokを返す() {
+    fn test_check_step_assigned_to_担当者一致はokを返す() {
         let user_id = UserId::new();
         let step = create_test_step(Some(user_id.clone()));
 
@@ -131,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn check_step_assigned_to_担当者不一致はforbiddenを返す() {
+    fn test_check_step_assigned_to_担当者不一致はforbiddenを返す() {
         let assigned_user = UserId::new();
         let other_user = UserId::new();
         let step = create_test_step(Some(assigned_user));
@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn check_step_assigned_to_担当者なしはforbiddenを返す() {
+    fn test_check_step_assigned_to_担当者なしはforbiddenを返す() {
         let user_id = UserId::new();
         let step = create_test_step(None);
 
