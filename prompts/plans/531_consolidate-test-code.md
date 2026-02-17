@@ -54,9 +54,9 @@ Epic #467 のサブ Issue。テストコード間の重複（26クローン）�
 `backend/crates/infra/tests/common/mod.rs` にヘルパーを追加。
 
 #### 確認事項
-- [ ] 型: `TenantId::from_uuid(Uuid::now_v7())` のパターン → `common/mod.rs` L39-41
-- [ ] パターン: `setup_test_data()` の SQL → `common/mod.rs` L112-142
-- [ ] パターン: user_repository_test.rs の手書き INSERT → L79-88, L198-209, L274-285, L304-315
+- [x] 型: `TenantId::from_uuid(Uuid::now_v7())` のパターン → `common/mod.rs` L39-41、確認済み
+- [x] パターン: `setup_test_data()` の SQL → `common/mod.rs` L112-142、確認済み
+- [x] パターン: user_repository_test.rs の手書き INSERT → L79-88, L198-209, L274-285, L304-315、確認済み
 
 #### 変更内容
 
@@ -127,9 +127,9 @@ E2E テスト（該当なし）
 ### Phase 2: auth_integration_test.rs の共通化（10クローン）
 
 #### 確認事項
-- [ ] 型: `AuthState` の構造 → `auth_integration_test.rs` create_test_app の戻り値
-- [ ] パターン: `SessionManager` の API → `get_csrf_token`, `delete`, `delete_csrf_token`
-- [ ] パターン: `extract_session_id` の戻り値 → `Option<String>`
+- [x] 型: `AuthState` の構造 → `auth_integration_test.rs` create_test_app の戻り値、`Arc<AuthState>` 確認済み
+- [x] パターン: `SessionManager` の API → `get_csrf_token`, `delete`, `delete_csrf_token`、確認済み
+- [x] パターン: `extract_session_id` の戻り値 → `Option<String>`、確認済み
 
 #### 変更内容
 
@@ -220,9 +220,9 @@ E2E テスト（該当なし）
 ### Phase 3: user_repository_test.rs の共通化（6クローン）
 
 #### 確認事項
-- [ ] パターン: `create_other_tenant()` → Phase 1 で common/mod.rs に追加済み
-- [ ] パターン: `insert_user_raw()` → Phase 1 で common/mod.rs に追加済み
-- [ ] パターン: 手書き INSERT のパラメータ差異 → 各テストの email, name, status, display_number を確認
+- [x] パターン: `create_other_tenant()` → Phase 1 で common/mod.rs に追加済み、確認済み
+- [x] パターン: `insert_user_raw()` → Phase 1 で common/mod.rs に追加済み、確認済み
+- [x] パターン: 手書き INSERT のパラメータ差異 → 各テストの email, name, status, display_number を確認済み
 
 #### 変更内容
 
@@ -259,8 +259,8 @@ E2E テスト（該当なし）
 ### Phase 4: workflow_step_repository_test.rs の共通化（3クローン）
 
 #### 確認事項
-- [ ] パターン: リポジトリ初期化 + インスタンス INSERT → L29-35, L46-51 で繰り返し確認
-- [ ] 型: `PostgresWorkflowInstanceRepository::new()`, `PostgresWorkflowStepRepository::new()` のシグネチャ
+- [x] パターン: リポジトリ初期化 + インスタンス INSERT → L29-35, L46-51 で繰り返し確認済み
+- [x] 型: `PostgresWorkflowInstanceRepository::new()`, `PostgresWorkflowStepRepository::new()` のシグネチャ、`PgPool` 引数確認済み
 
 #### 変更内容
 
@@ -302,8 +302,8 @@ E2E テスト（該当なし）
 ### Phase 5: rls_test.rs の共通化（3クローン）
 
 #### 確認事項
-- [ ] パターン: `set_tenant_context` + `reset_role` のライフサイクル → `rls_test.rs` L230-253
-- [ ] パターン: `SELECT id FROM {table}` の結果取得 → 大半のテストで `Vec<(Uuid,)>` を使用
+- [x] パターン: `set_tenant_context` + `reset_role` のライフサイクル → `rls_test.rs` L230-253、確認済み
+- [x] パターン: `SELECT id FROM {table}` の結果取得 → `Vec<(Uuid,)>` 確認済み、クエリ文字列引数に変更
 
 #### 変更内容
 
@@ -342,8 +342,8 @@ E2E テスト（該当なし）
 ### Phase 6: postgres_deleter_test.rs の共通化（2クローン）
 
 #### 確認事項
-- [ ] 型: `TenantDeleter` trait → `deletion/mod.rs` L45-54, `count() -> Result<u64>`, `delete() -> Result<DeletionResult>`
-- [ ] パターン: `setup_two_tenants()` → L26-51
+- [x] 型: `TenantDeleter` trait → `deletion/mod.rs` L45-54, `count() -> Result<u64>`, `delete() -> Result<DeletionResult>`、確認済み
+- [x] パターン: `setup_two_tenants()` → L26-51、Phase 1 ヘルパーで簡潔化確認済み
 
 #### 変更内容
 
