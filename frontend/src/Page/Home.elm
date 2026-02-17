@@ -165,7 +165,7 @@ viewStatCardLink :
 viewStatCardLink config =
     a
         [ href (Route.toString config.route)
-        , class ("block rounded-lg p-6 text-center no-underline transition-shadow hover:shadow-md " ++ config.bgColorClass)
+        , class ("block rounded-lg border border-secondary-200 p-6 text-center no-underline shadow-sm transition-shadow hover:shadow-md " ++ config.bgColorClass)
         ]
         [ div [ class ("text-3xl font-bold " ++ config.textColorClass) ]
             [ text (String.fromInt config.value) ]

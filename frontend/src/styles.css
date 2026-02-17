@@ -23,6 +23,7 @@
  *     - space-y-6 コンテナ内のタイトルにはマージン不要（gap で間隔を確保）
  *
  * シャドウ:
+ *   shadow-sm       : セクションカード（詳細ページの情報カード）
  *   hover:shadow-md : インタラクティブカード（KPI カード）
  *   shadow-lg       : ドロップダウン、ポップオーバー
  *   shadow-xl       : モーダル、ダイアログ
@@ -30,6 +31,27 @@
  * 角丸:
  *   rounded-lg   : 標準（ボタン、カード、入力、アラート、パネル）
  *   rounded-full : 丸型（バッジ、アバター、スピナー）
+ *
+ * テーブル:
+ *   ラッパー     : overflow-x-auto rounded-lg border border-secondary-200
+ *   thead        : bg-secondary-50
+ *   th           : px-4 py-3 + テーブルヘッダー（上記タイポグラフィ参照）
+ *   tbody        : divide-y divide-secondary-200 bg-white
+ *   tr(データ行) : hover:bg-secondary-50 transition-colors
+ *
+ * バッジ:
+ *   構造   : inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium
+ *   色指定 : bg-{color}-{shade} text-{color}-{shade} border-{color}-{shade}
+ *
+ * フォーム入力:
+ *   構造         : w-full rounded-lg border px-3 py-2 text-sm outline-none
+ *   フォーカス   : focus-visible:ring-2 focus-visible:ring-{color}-500 focus-visible:border-{color}-500
+ *   ボーダー(通常)  : border-secondary-300
+ *   ボーダー(エラー) : border-error-300
+ *
+ * セクションカード:
+ *   セクション : rounded-lg border border-secondary-200 bg-white shadow-sm + p-4 or p-6
+ *   入れ子     : rounded-lg border border-secondary-200 bg-white + p-3 or p-4（shadow なし）
  *
  * テキストカラー（セマンティクス）:
  *   text-secondary-900 : プライマリテキスト（見出し、重要情報）

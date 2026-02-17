@@ -426,10 +426,10 @@ resultToBadge : String -> { colorClass : String, label : String }
 resultToBadge result =
     case result of
         "success" ->
-            { colorClass = "bg-success-100 text-success-800", label = "成功" }
+            { colorClass = "bg-success-100 text-success-800 border-success-200", label = "成功" }
 
         "failure" ->
-            { colorClass = "bg-error-100 text-error-800", label = "失敗" }
+            { colorClass = "bg-error-100 text-error-800 border-error-200", label = "失敗" }
 
         _ ->
-            { colorClass = "bg-secondary-100 text-secondary-800", label = result }
+            { colorClass = "bg-secondary-100 text-secondary-800 border-secondary-200", label = result }

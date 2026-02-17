@@ -24,11 +24,11 @@ import Html.Attributes exposing (..)
 
 {-| バッジを表示
 
-`colorClass` で背景色とテキスト色を指定し、`label` でテキストを設定する。
-外観構造（rounded-full、パディング、フォントサイズ等）はコンポーネントが管理する。
+`colorClass` で背景色・テキスト色・ボーダー色を指定し、`label` でテキストを設定する。
+外観構造（rounded-full、border、パディング、フォントサイズ等）はコンポーネントが管理する。
 
 -}
 view : { colorClass : String, label : String } -> Html msg
 view config =
-    span [ class ("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium " ++ config.colorClass) ]
+    span [ class ("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium " ++ config.colorClass) ]
         [ text config.label ]

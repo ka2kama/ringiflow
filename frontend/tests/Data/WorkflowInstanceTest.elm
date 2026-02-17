@@ -156,34 +156,34 @@ statusToJapaneseTests =
 statusToCssClassTests : Test
 statusToCssClassTests =
     describe "statusToCssClass"
-        [ test "Draft → Tailwind gray classes" <|
+        [ test "Draft → Tailwind secondary classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Draft
-                    |> Expect.equal "bg-gray-100 text-gray-600"
-        , test "Pending → Tailwind warning classes" <|
+                    |> Expect.equal "bg-secondary-100 text-secondary-600 border-secondary-200"
+        , test "Pending → Tailwind warning classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Pending
-                    |> Expect.equal "bg-warning-50 text-warning-600"
-        , test "InProgress → Tailwind info classes" <|
+                    |> Expect.equal "bg-warning-50 text-warning-600 border-warning-200"
+        , test "InProgress → Tailwind info classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass InProgress
-                    |> Expect.equal "bg-info-50 text-info-600"
-        , test "Approved → Tailwind success classes" <|
+                    |> Expect.equal "bg-info-50 text-info-600 border-info-300"
+        , test "Approved → Tailwind success classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Approved
-                    |> Expect.equal "bg-success-50 text-success-600"
-        , test "Rejected → Tailwind error classes" <|
+                    |> Expect.equal "bg-success-50 text-success-600 border-success-200"
+        , test "Rejected → Tailwind error classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Rejected
-                    |> Expect.equal "bg-error-50 text-error-600"
-        , test "Cancelled → Tailwind secondary classes" <|
+                    |> Expect.equal "bg-error-50 text-error-600 border-error-200"
+        , test "Cancelled → Tailwind secondary classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass Cancelled
-                    |> Expect.equal "bg-secondary-100 text-secondary-500"
-        , test "ChangesRequested → Tailwind warning classes" <|
+                    |> Expect.equal "bg-secondary-100 text-secondary-500 border-secondary-200"
+        , test "ChangesRequested → Tailwind warning classes with border" <|
             \_ ->
                 WorkflowInstance.statusToCssClass ChangesRequested
-                    |> Expect.equal "bg-warning-50 text-warning-600"
+                    |> Expect.equal "bg-warning-50 text-warning-600 border-warning-200"
         ]
 
 
@@ -194,22 +194,22 @@ statusToCssClassTests =
 stepStatusToCssClassTests : Test
 stepStatusToCssClassTests =
     describe "stepStatusToCssClass"
-        [ test "StepPending → Tailwind gray classes" <|
+        [ test "StepPending → Tailwind secondary classes with border" <|
             \_ ->
                 WorkflowInstance.stepStatusToCssClass StepPending
-                    |> Expect.equal "bg-gray-100 text-gray-600"
-        , test "StepActive → Tailwind warning classes" <|
+                    |> Expect.equal "bg-secondary-100 text-secondary-600 border-secondary-200"
+        , test "StepActive → Tailwind warning classes with border" <|
             \_ ->
                 WorkflowInstance.stepStatusToCssClass StepActive
-                    |> Expect.equal "bg-warning-50 text-warning-600"
-        , test "StepCompleted → Tailwind success classes" <|
+                    |> Expect.equal "bg-warning-50 text-warning-600 border-warning-200"
+        , test "StepCompleted → Tailwind success classes with border" <|
             \_ ->
                 WorkflowInstance.stepStatusToCssClass StepCompleted
-                    |> Expect.equal "bg-success-50 text-success-600"
-        , test "StepSkipped → Tailwind secondary classes" <|
+                    |> Expect.equal "bg-success-50 text-success-600 border-success-200"
+        , test "StepSkipped → Tailwind secondary classes with border" <|
             \_ ->
                 WorkflowInstance.stepStatusToCssClass StepSkipped
-                    |> Expect.equal "bg-secondary-100 text-secondary-500"
+                    |> Expect.equal "bg-secondary-100 text-secondary-500 border-secondary-200"
         ]
 
 

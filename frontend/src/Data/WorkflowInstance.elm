@@ -220,25 +220,25 @@ statusToCssClass : Status -> String
 statusToCssClass status =
     case status of
         Draft ->
-            "bg-gray-100 text-gray-600"
+            "bg-secondary-100 text-secondary-600 border-secondary-200"
 
         Pending ->
-            "bg-warning-50 text-warning-600"
+            "bg-warning-50 text-warning-600 border-warning-200"
 
         InProgress ->
-            "bg-info-50 text-info-600"
+            "bg-info-50 text-info-600 border-info-300"
 
         Approved ->
-            "bg-success-50 text-success-600"
+            "bg-success-50 text-success-600 border-success-200"
 
         Rejected ->
-            "bg-error-50 text-error-600"
+            "bg-error-50 text-error-600 border-error-200"
 
         Cancelled ->
-            "bg-secondary-100 text-secondary-500"
+            "bg-secondary-100 text-secondary-500 border-secondary-200"
 
         ChangesRequested ->
-            "bg-warning-50 text-warning-600"
+            "bg-warning-50 text-warning-600 border-warning-200"
 
 
 {-| ステップステータスを Tailwind CSS クラスに変換（バッジスタイリング用）
@@ -247,16 +247,16 @@ stepStatusToCssClass : StepStatus -> String
 stepStatusToCssClass status =
     case status of
         StepPending ->
-            "bg-gray-100 text-gray-600"
+            "bg-secondary-100 text-secondary-600 border-secondary-200"
 
         StepActive ->
-            "bg-warning-50 text-warning-600"
+            "bg-warning-50 text-warning-600 border-warning-200"
 
         StepCompleted ->
-            "bg-success-50 text-success-600"
+            "bg-success-50 text-success-600 border-success-200"
 
         StepSkipped ->
-            "bg-secondary-100 text-secondary-500"
+            "bg-secondary-100 text-secondary-500 border-secondary-200"
 
 
 {-| ステップステータスを日本語に変換

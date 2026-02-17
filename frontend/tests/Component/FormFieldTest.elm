@@ -31,20 +31,20 @@ inputClassTests =
                 FormField.inputClass Nothing
                     |> String.contains "border-secondary-300"
                     |> Expect.equal True
-        , test "エラーなし → focus:border-primary-500 を含む" <|
+        , test "エラーなし → focus-visible:border-primary-500 を含む" <|
             \_ ->
                 FormField.inputClass Nothing
-                    |> String.contains "focus:border-primary-500"
+                    |> String.contains "focus-visible:border-primary-500"
                     |> Expect.equal True
         , test "エラーあり → エラースタイル（border-error-300）を含む" <|
             \_ ->
                 FormField.inputClass (Just "エラーメッセージ")
                     |> String.contains "border-error-300"
                     |> Expect.equal True
-        , test "エラーあり → focus:border-error-500 を含む" <|
+        , test "エラーあり → focus-visible:border-error-500 を含む" <|
             \_ ->
                 FormField.inputClass (Just "エラーメッセージ")
-                    |> String.contains "focus:border-error-500"
+                    |> String.contains "focus-visible:border-error-500"
                     |> Expect.equal True
         , test "エラーなし → エラースタイルを含まない" <|
             \_ ->
@@ -54,7 +54,7 @@ inputClassTests =
         , test "エラーあり → 通常のフォーカススタイルを含まない" <|
             \_ ->
                 FormField.inputClass (Just "エラー")
-                    |> String.contains "focus:border-primary-500"
+                    |> String.contains "focus-visible:border-primary-500"
                     |> Expect.equal False
         , test "共通の基本クラス（rounded-lg）を含む" <|
             \_ ->
