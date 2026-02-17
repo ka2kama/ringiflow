@@ -23,8 +23,12 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # shellcheck disable=SC2046
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 
-# API テスト環境変数でサービスを起動（バックグラウンド）
+# API テスト環境変数を読み込み
 cd "$PROJECT_ROOT/backend"
+set -a
+# shellcheck disable=SC1091
+source .env.api-test
+set +a
 
 # cargo-watch 検知: 同一 workspace で実行中だとパッケージキャッシュのロック競合が発生するため
 for pid in $(pgrep -x cargo-watch 2>/dev/null); do
@@ -36,30 +40,24 @@ for pid in $(pgrep -x cargo-watch 2>/dev/null); do
     fi
 done
 
-# .env.api-test から環境変数を読み込み（空行とコメント行を除外）
-env_vars=$(grep -Ev '^\s*$|^\s*#' .env.api-test | xargs)
-
 # ビルドフェーズ: コンパイルを事前に完了させ、起動タイムアウトを防ぐ
 echo "サービスをビルド中..."
 cargo build -p ringiflow-bff -p ringiflow-core-service -p ringiflow-auth-service
 
 # 起動フェーズ: ビルド済みバイナリを使うため即座に起動する
 echo "サービスを起動中..."
-# shellcheck disable=SC2086
-env $env_vars cargo run -p ringiflow-bff &
-# shellcheck disable=SC2086
-env $env_vars cargo run -p ringiflow-core-service &
-# shellcheck disable=SC2086
-env $env_vars cargo run -p ringiflow-auth-service &
+cargo run -p ringiflow-bff &
+cargo run -p ringiflow-core-service &
+cargo run -p ringiflow-auth-service &
 
-# ヘルスチェックを待機（API テスト用ポート: 14000-14002）
+# ヘルスチェックを待機
 echo "サービス起動を待機中..."
 cd "$PROJECT_ROOT"
 
 for i in {1..30}; do
-    if curl -sf http://localhost:14000/health > /dev/null 2>&1 && \
-       curl -sf http://localhost:14001/health > /dev/null 2>&1 && \
-       curl -sf http://localhost:14002/health > /dev/null 2>&1; then
+    if curl -sf "http://localhost:$BFF_PORT/health" > /dev/null 2>&1 && \
+       curl -sf "http://localhost:$CORE_PORT/health" > /dev/null 2>&1 && \
+       curl -sf "http://localhost:$AUTH_PORT/health" > /dev/null 2>&1; then
         echo "✓ 全サービス起動完了"
         break
     fi
@@ -72,4 +70,7 @@ done
 
 # API テスト実行
 echo "API テストを実行中..."
-hurl --test --jobs 1 --variables-file tests/api/hurl/vars.env tests/api/hurl/**/*.hurl
+hurl --test --jobs 1 \
+    --variable "bff_url=http://localhost:$BFF_PORT" \
+    --variables-file tests/api/hurl/vars.env \
+    tests/api/hurl/**/*.hurl
