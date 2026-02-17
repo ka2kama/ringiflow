@@ -28,7 +28,8 @@ cd "$PROJECT_ROOT/backend"
 
 # cargo-watch 検知: 同一 workspace で実行中だとパッケージキャッシュのロック競合が発生するため
 for pid in $(pgrep -x cargo-watch 2>/dev/null); do
-    if [[ "$(readlink /proc/"$pid"/cwd 2>/dev/null)" == "$PROJECT_ROOT"* ]]; then
+    cwd="$(readlink /proc/"$pid"/cwd 2>/dev/null)"
+    if [[ "$cwd" == "$PROJECT_ROOT" || "$cwd" == "$PROJECT_ROOT"/* ]]; then
         echo "エラー: cargo-watch が実行中のため、Cargo パッケージキャッシュのロック競合が発生します。" >&2
         echo "開発サーバーを停止してから再実行してください（just dev-down または mprocs を終了）。" >&2
         exit 1
