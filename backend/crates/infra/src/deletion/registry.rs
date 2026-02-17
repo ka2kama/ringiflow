@@ -11,7 +11,7 @@ use sqlx::PgPool;
 
 use super::{
     AuthCredentialsDeleter,
-    DeletionResult,
+    DeletionReport,
     DynamoDbAuditLogDeleter,
     PostgresDisplayIdCounterDeleter,
     PostgresRoleDeleter,
@@ -95,18 +95,29 @@ impl DeletionRegistry {
 
     /// 全 Deleter でテナントデータを削除する
     ///
-    /// 各 Deleter の結果を名前をキーとした HashMap で返す。
-    /// いずれかの Deleter がエラーを返した場合、そのエラーを即座に返す。
-    pub async fn delete_all(
-        &self,
-        tenant_id: &TenantId,
-    ) -> Result<HashMap<&'static str, DeletionResult>, InfraError> {
-        let mut results = HashMap::new();
+    /// 全 Deleter を実行し、成功/失敗を分けて [`DeletionReport`] で返す。
+    /// 個別の Deleter がエラーを返しても、残りの Deleter は実行を継続する。
+    pub async fn delete_all(&self, tenant_id: &TenantId) -> DeletionReport {
+        let mut succeeded = HashMap::new();
+        let mut failed = Vec::new();
+
         for deleter in &self.deleters {
-            let result = deleter.delete(tenant_id).await?;
-            results.insert(deleter.name(), result);
+            match deleter.delete(tenant_id).await {
+                Ok(result) => {
+                    succeeded.insert(deleter.name(), result);
+                }
+                Err(error) => {
+                    tracing::error!(
+                        deleter = deleter.name(),
+                        error = %error,
+                        "テナントデータ削除に失敗"
+                    );
+                    failed.push((deleter.name(), error));
+                }
+            }
         }
-        Ok(results)
+
+        DeletionReport { succeeded, failed }
     }
 
     /// 全 Deleter でテナントデータの件数を取得する
@@ -133,8 +144,9 @@ mod tests {
 
     /// テスト用のモック Deleter
     struct MockDeleter {
-        name:  &'static str,
-        count: AtomicU64,
+        name:        &'static str,
+        count:       AtomicU64,
+        should_fail: bool,
     }
 
     impl MockDeleter {
@@ -142,6 +154,15 @@ mod tests {
             Self {
                 name,
                 count: AtomicU64::new(initial_count),
+                should_fail: false,
+            }
+        }
+
+        fn failing(name: &'static str) -> Self {
+            Self {
+                name,
+                count: AtomicU64::new(0),
+                should_fail: true,
             }
         }
     }
@@ -153,6 +174,12 @@ mod tests {
         }
 
         async fn delete(&self, _tenant_id: &TenantId) -> Result<DeletionResult, InfraError> {
+            if self.should_fail {
+                return Err(InfraError::Unexpected(format!(
+                    "{}: テスト用エラー",
+                    self.name
+                )));
+            }
             let deleted = self.count.swap(0, Ordering::SeqCst);
             Ok(DeletionResult {
                 deleted_count: deleted,
@@ -181,17 +208,78 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_delete_allが全deleterのdeleteを呼び結果を返す() {
+    async fn test_delete_allが全成功時succeededに全結果を返しfailedが空() {
         let mut registry = DeletionRegistry::new();
         registry.register(Box::new(MockDeleter::new("test:a", 3)));
         registry.register(Box::new(MockDeleter::new("test:b", 5)));
 
         let tenant_id = TenantId::new();
-        let results = registry.delete_all(&tenant_id).await.unwrap();
+        let report = registry.delete_all(&tenant_id).await;
 
-        assert_eq!(results.len(), 2);
-        assert_eq!(results["test:a"].deleted_count, 3);
-        assert_eq!(results["test:b"].deleted_count, 5);
+        assert!(!report.has_failures());
+        assert_eq!(report.succeeded.len(), 2);
+        assert_eq!(report.succeeded["test:a"].deleted_count, 3);
+        assert_eq!(report.succeeded["test:b"].deleted_count, 5);
+        assert!(report.failed.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_delete_allで1つ目が失敗しても残りのdeleterが実行される() {
+        let mut registry = DeletionRegistry::new();
+        registry.register(Box::new(MockDeleter::failing("test:a")));
+        registry.register(Box::new(MockDeleter::new("test:b", 5)));
+
+        let tenant_id = TenantId::new();
+        let report = registry.delete_all(&tenant_id).await;
+
+        assert!(report.has_failures());
+        assert_eq!(report.succeeded.len(), 1);
+        assert_eq!(report.succeeded["test:b"].deleted_count, 5);
+        assert_eq!(report.failed.len(), 1);
+        assert_eq!(report.failed[0].0, "test:a");
+    }
+
+    #[tokio::test]
+    async fn test_delete_allで最後のdeleterが失敗しても先行の成功結果が残る() {
+        let mut registry = DeletionRegistry::new();
+        registry.register(Box::new(MockDeleter::new("test:a", 3)));
+        registry.register(Box::new(MockDeleter::failing("test:b")));
+
+        let tenant_id = TenantId::new();
+        let report = registry.delete_all(&tenant_id).await;
+
+        assert!(report.has_failures());
+        assert_eq!(report.succeeded.len(), 1);
+        assert_eq!(report.succeeded["test:a"].deleted_count, 3);
+        assert_eq!(report.failed.len(), 1);
+        assert_eq!(report.failed[0].0, "test:b");
+    }
+
+    #[tokio::test]
+    async fn test_delete_allで全deleterが失敗した場合succeededが空でfailedに全エラー() {
+        let mut registry = DeletionRegistry::new();
+        registry.register(Box::new(MockDeleter::failing("test:a")));
+        registry.register(Box::new(MockDeleter::failing("test:b")));
+
+        let tenant_id = TenantId::new();
+        let report = registry.delete_all(&tenant_id).await;
+
+        assert!(report.has_failures());
+        assert!(report.succeeded.is_empty());
+        assert_eq!(report.failed.len(), 2);
+        assert_eq!(report.failed[0].0, "test:a");
+        assert_eq!(report.failed[1].0, "test:b");
+    }
+
+    #[tokio::test]
+    async fn test_has_failuresが失敗なしでfalseを返す() {
+        let mut registry = DeletionRegistry::new();
+        registry.register(Box::new(MockDeleter::new("test:a", 1)));
+
+        let tenant_id = TenantId::new();
+        let report = registry.delete_all(&tenant_id).await;
+
+        assert!(!report.has_failures());
     }
 
     #[tokio::test]
