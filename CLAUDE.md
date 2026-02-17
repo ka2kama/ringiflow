@@ -255,7 +255,8 @@ How（具体的な対策）にこだわりすぎず、常に Want を満たす�
 | 操作手順 | [`docs/04_手順書/`](docs/04_手順書/) |
 | 意思決定（WHY） | [`docs/05_ADR/`](docs/05_ADR/) |
 | 技術知識 / 実装解説 / テスト | [`docs/06_ナレッジベース/`](docs/06_ナレッジベース/) / [`docs/07_実装解説/`](docs/07_実装解説/) / [`docs/08_テスト/`](docs/08_テスト/) |
-| 設計思考過程 / セッションログ / 改善記録 | [`prompts/plans/`](prompts/plans/) / [`prompts/runs/`](prompts/runs/) / [`prompts/improvements/`](prompts/improvements/) |
+| 設計思考過程 / セッションログ | [`prompts/plans/`](prompts/plans/) / [`prompts/runs/`](prompts/runs/) |
+| 改善記録 / 診断レポート | [`process/improvements/`](process/improvements/) / [`process/reports/`](process/reports/) |
 
 作業開始時は [`docs/01_要件定義書/00_はじめに.md`](docs/01_要件定義書/00_はじめに.md) から読み、全体像を把握すること。
 
@@ -286,7 +287,7 @@ GitHub Issues/PR は一時的なワークフロー用、ローカル docs は永
 - **セッションログ** — コード変更、設計判断（→ [`prompts/runs/`](prompts/runs/)）
 - **実装解説** — PR 単位の機能解説。`/explain` で生成（→ [`docs/07_実装解説/`](docs/07_実装解説/)）
 - **操作レシピ** — 非自明な操作で問題解決（→ [`prompts/recipes/`](prompts/recipes/)）
-- **改善記録** — AI エージェント運用上の問題と対策（→ [`prompts/improvements/`](prompts/improvements/)）
+- **改善記録** — 開発プロセスの問題と対策（→ [`process/improvements/`](process/improvements/)）
 
 ## 学習支援
 
@@ -338,7 +339,7 @@ Insight ブロックには日本語の解説に加えて 1〜2 文の英語サ�
 
 ## 破壊的操作の判定
 
-→ 経緯: [改善記録: ユーザー確認なしに破壊的操作を実行した](prompts/improvements/2026-02/2026-02-15_1600_ユーザー確認なしに破壊的操作を実行した.md)
+→ 経緯: [改善記録: ユーザー確認なしに破壊的操作を実行した](process/improvements/2026-02/2026-02-15_1600_ユーザー確認なしに破壊的操作を実行した.md)
 
 Claude Code のシステムプロンプト（「Executing actions with care」）を補完する、プロジェクト固有の判定基準。
 
@@ -406,7 +407,7 @@ Test plan: 単一 PR は実装テスト＋手動テスト手順を記載。Epic 
 3. 計画ファイル確認（`git status` で `prompts/plans/` に未コミットファイルがあれば、現在の作業との関連を確認してコミットする）
 4. Draft PR 作成（`gh pr create --draft`）
 5. `/wrap-up` でドキュメント整備
-6. wrap-up 完了の検証（`git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|prompts/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"`）。なければ `/wrap-up` を実行
+6. wrap-up 完了の検証（`git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|process/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"`）。なければ `/wrap-up` を実行
 7. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`、差分あれば rebase + `just check-all` で再確認）
 8. ユーザーに確認を求める（「Ready にしてよいですか？」）
 9. ユーザー承認後、`gh pr ready` で Ready にする

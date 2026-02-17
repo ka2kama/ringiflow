@@ -58,7 +58,7 @@ git diff --stat main...HEAD
 | ナレッジベース | 新しいツール・パターン導入、技術解説が必要 | `docs/06_ナレッジベース/` |
 | 実装解説 | 設計判断を伴う実装があった。`/explain` の実行を推奨 | `docs/07_実装解説/` |
 | 操作レシピ | 非自明な操作で問題解決、再利用可能なパターンを発見した | `prompts/recipes/` |
-| 改善記録 | AI 運用上の問題と対策があった | `prompts/improvements/YYYY-MM/` |
+| 改善記録 | AI 運用上の問題と対策があった | `process/improvements/YYYY-MM/` |
 
 注意: Git 管理外の情報源（auto memory `~/.claude/projects/.../memory/`、会話コンテキスト等）は永続的なドキュメントではない。これらに設計解説や技術知識が含まれていても、ドキュメント作成を省略する理由にならない。判定基準は「リポジトリ（Git 管理下）に形式知として残っているか」である。
 
@@ -113,7 +113,7 @@ git diff --stat main...HEAD
 
 #### 改善記録
 
-規約: `prompts/improvements/README.md`
+規約: `process/improvements/README.md`
 
 1. README を Read で参照し、記載内容・分類定義・対策形式・問題の性質分類を確認する
 2. 初回コミット時刻を取得してファイル名を組み立てる（命名規則照合を実施）

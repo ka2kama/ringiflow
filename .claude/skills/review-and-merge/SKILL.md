@@ -41,8 +41,8 @@ git fetch origin main && git log HEAD..origin/main --oneline
 | 差分あり | rebase + push してから Step 2 へ（CI + Review が再実行される） |
 
 改善の経緯:
-- [review-and-merge で rebase 確認が遅い](../../../prompts/improvements/2026-02/2026-02-09_2106_review-and-mergeでrebase確認が遅い.md)
-- [review-and-merge で base branch 同期確認をスキップ](../../../prompts/improvements/2026-02/2026-02-14_2120_review-and-mergeでbase-branch同期確認をスキップ.md)
+- [review-and-merge で rebase 確認が遅い](../../../process/improvements/2026-02/2026-02-09_2106_review-and-mergeでrebase確認が遅い.md)
+- [review-and-merge で base branch 同期確認をスキップ](../../../process/improvements/2026-02/2026-02-14_2120_review-and-mergeでbase-branch同期確認をスキップ.md)
 
 ### Step 2: Claude Auto Review 完了確認
 
@@ -237,7 +237,7 @@ gh api "repos/{owner}/{repo}/issues/{pr_number}/comments" \
 注意: PR コメントには resolve の仕組みがない。返信の有無が Step 5 の未対応検証で使用される。
 
 改善の経緯:
-- [レビュー返信の検討事項に Issue 追跡が欠如](../../../prompts/improvements/2026-02/2026-02-11_2234_レビュー返信の検討事項にIssue追跡が欠如.md)
+- [レビュー返信の検討事項に Issue 追跡が欠如](../../../process/improvements/2026-02/2026-02-11_2234_レビュー返信の検討事項にIssue追跡が欠如.md)
 - Issue [#451](https://github.com/ka2kama/ringiflow/issues/451): review-and-merge でレビュースレッドの resolve 漏れ
 
 ### Step 5: マージ
@@ -322,7 +322,7 @@ for comment in claude_bot_comments:
 | 全て合格 | 全チェックの pass 確認へ |
 | 未対応あり | ユーザーに未対応の指摘を提示し、Step 4 に戻る |
 
-改善の経緯: [セッション復元時のレビューコメント検証省略](../../../prompts/improvements/2026-02/2026-02-13_1148_セッション復元時のレビューコメント検証省略.md)
+改善の経緯: [セッション復元時のレビューコメント検証省略](../../../process/improvements/2026-02/2026-02-13_1148_セッション復元時のレビューコメント検証省略.md)
 
 #### 全チェックの pass 確認
 
@@ -337,8 +337,8 @@ gh pr checks
 | failure あり | 原因を特定し修正する。原因が特定できたら修正可能か判断する（「自分の変更とは無関係」は修正しない理由にならない） |
 
 改善の経緯:
-- [force-push後の自動レビュー待機漏れ](../../../prompts/improvements/2026-02/2026-02-04_1650_force-push後の自動レビュー待機漏れ.md)
-- [CI失敗を無視してマージを強行しようとした](../../../prompts/improvements/2026-02/2026-02-09_2122_CI失敗を無視してマージを強行しようとした.md)
+- [force-push後の自動レビュー待機漏れ](../../../process/improvements/2026-02/2026-02-04_1650_force-push後の自動レビュー待機漏れ.md)
+- [CI失敗を無視してマージを強行しようとした](../../../process/improvements/2026-02/2026-02-09_2122_CI失敗を無視してマージを強行しようとした.md)
 
 #### マージ実行
 
@@ -370,4 +370,4 @@ just clean-branches
 | base branch と差分あり | rebase + push → CI + Review 完了を待ってから再試行 |
 | その他 | 原因をユーザーに報告し、対応を相談する |
 
-改善の経緯: [auto-merge による後続コミット漏れ](../../../prompts/improvements/2026-02/2026-02-11_2234_auto-mergeによる後続コミット漏れ.md)
+改善の経緯: [auto-merge による後続コミット漏れ](../../../process/improvements/2026-02/2026-02-11_2234_auto-mergeによる後続コミット漏れ.md)

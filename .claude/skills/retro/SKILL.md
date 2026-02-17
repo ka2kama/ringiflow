@@ -45,7 +45,7 @@ $ARGUMENTS
 
 前回のレトロスペクティブレポートを探す:
 
-→ Glob: `prompts/reports/*レトロスペクティブ*`
+→ Glob: `process/reports/*レトロスペクティブ*`
 
 | 状態 | 分析期間 |
 |------|---------|
@@ -56,9 +56,9 @@ $ARGUMENTS
 
 分析対象期間の改善記録から「分類」セクションのカテゴリを抽出・集計する:
 
-→ Grep: `カテゴリ:` in `prompts/improvements/`
+→ Grep: `カテゴリ:` in `process/improvements/`
 
-カテゴリ一覧（[改善記録 README](../../../prompts/improvements/README.md#カテゴリai-構造的特性) 参照）:
+カテゴリ一覧（[改善記録 README](../../../process/improvements/README.md#カテゴリai-構造的特性) 参照）:
 
 | カテゴリ | 説明 |
 |---------|------|
@@ -86,7 +86,7 @@ $ARGUMENTS
 
 分析対象期間の改善記録から「失敗タイプ」を抽出・集計する:
 
-→ Grep: `失敗タイプ:` in `prompts/improvements/`
+→ Grep: `失敗タイプ:` in `process/improvements/`
 
 出力:
 
@@ -108,7 +108,7 @@ $ARGUMENTS
 
 改善記録の「検証」セクションを集約し、対策形式別の有効性を評価する:
 
-→ Grep: `## 検証` in `prompts/improvements/`（検証セクションの有無を確認）
+→ Grep: `## 検証` in `process/improvements/`（検証セクションの有無を確認）
 
 対策の形式を分類（改善記録の対策セクションから判定）:
 
@@ -158,7 +158,7 @@ $ARGUMENTS
 
 最新と前回の `/assess` レポートを取得する:
 
-→ Glob: `prompts/reports/*健全性診断*`
+→ Glob: `process/reports/*健全性診断*`
 
 | 状態 | 対応 |
 |------|------|
@@ -243,7 +243,7 @@ $ARGUMENTS
 1. セッションログの実施内容から、繰り返し出現するパターンを抽出:
    → Grep: `##` in `prompts/runs/` の直近月（セクション見出しでパターンを把握）
 2. 改善記録で「プロセスギャップ」に分類された項目の対策を確認:
-   → Grep: `プロセスギャップ` in `prompts/improvements/`
+   → Grep: `プロセスギャップ` in `process/improvements/`
 
 自動化可能性の判定基準:
 
@@ -419,9 +419,9 @@ Step 1-3 の分析結果に対し、以下の観点でセルフレビューを�
 
 ## レポートの保存
 
-レトロスペクティブレポートは [`prompts/reports/`](../../../prompts/reports/) に保存する。分析完了後に保存を提案する。
+レトロスペクティブレポートは [`process/reports/`](../../../process/reports/) に保存する。分析完了後に保存を提案する。
 
-→ 命名規則: [`prompts/reports/README.md`](../../../prompts/reports/README.md)
+→ 命名規則: [`process/reports/README.md`](../../../process/reports/README.md)
 
 ファイル名: `YYYY-MM-DD_HHMM_レトロスペクティブ.md`
 

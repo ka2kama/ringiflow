@@ -86,7 +86,7 @@ develop ブランチで Story を統合し、リリース時に main にマー�
 - 設計書: [運用設計書 10.2 ブランチ戦略](../02_基本設計書/04_運用設計.md#102-ブランチ戦略)
 - 手順書: [Issue 駆動開発 > Epic / Story 運用](../04_手順書/04_開発フロー/01_Issue駆動開発.md#epic--story-運用)
 - 関連 ADR: [ADR-012 Issue 駆動開発の採用](012_Issue駆動開発の採用.md)、[ADR-013 Draft PR 運用の導入](013_Draft_PR運用の導入.md)
-- 改善記録: [Epic 単位 PR によるサブ Issue クローズ漏れ](../../prompts/improvements/2026-02/2026-02-11_2200_Epic単位PRによるサブIssueクローズ漏れ.md)
+- 改善記録: [Epic 単位 PR によるサブ Issue クローズ漏れ](../../process/improvements/2026-02/2026-02-11_2200_Epic単位PRによるサブIssueクローズ漏れ.md)
 
 ---
 

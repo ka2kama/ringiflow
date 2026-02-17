@@ -76,7 +76,7 @@ E2E 基準がないと、各レイヤーが個別に正しくてもレイヤー�
 - [ ] POST /reject で却下できる
 ```
 
-改善の経緯: [E2E 視点の完了基準欠如](../../../prompts/improvements/2026-01/2026-01-29_1304_E2E視点の完了基準欠如.md)
+改善の経緯: [E2E 視点の完了基準欠如](../../../process/improvements/2026-01/2026-01-29_1304_E2E視点の完了基準欠如.md)
 
 #### 既存 Issue の精査
 
@@ -137,8 +137,8 @@ EOF
 ```
 
 改善の経緯:
-- [Issue を正として扱う暗黙の前提](../../../prompts/improvements/2026-02/2026-02-06_1946_Issueを正として扱う暗黙の前提.md)
-- [Issue 精査フローに破棄パスが未定義](../../../prompts/improvements/2026-02/2026-02-11_2036_Issue精査フローに破棄パスが未定義.md)
+- [Issue を正として扱う暗黙の前提](../../../process/improvements/2026-02/2026-02-06_1946_Issueを正として扱う暗黙の前提.md)
+- [Issue 精査フローに破棄パスが未定義](../../../process/improvements/2026-02/2026-02-11_2036_Issue精査フローに破棄パスが未定義.md)
 
 ### 2. ブランチを作成
 
@@ -158,7 +158,7 @@ git checkout -b feature/34-user-auth
 - `feature/{issue番号}-{機能名}` — 新機能
 - `fix/{issue番号}-{バグ名}` — バグ修正
 
-改善の経緯: [新規作業開始時の main 同期漏れ](../../../prompts/improvements/2026-02/2026-02-14_2120_新規作業開始時のmain同期漏れ.md)
+改善の経緯: [新規作業開始時の main 同期漏れ](../../../process/improvements/2026-02/2026-02-14_2120_新規作業開始時のmain同期漏れ.md)
 
 ### 3. Draft PR を作成
 
@@ -333,7 +333,7 @@ git commit -m "#34 Add detailed design for login feature"
 
 判定テスト: 「この変更には選択肢があるか？」→ Yes なら設計判断が必要。スキップ不可。
 
-改善の経緯: [設計フェーズにおける理想駆動の省略](../../../prompts/improvements/2026-02/2026-02-05_2335_設計フェーズにおける理想駆動の省略.md)
+改善の経緯: [設計フェーズにおける理想駆動の省略](../../../process/improvements/2026-02/2026-02-05_2335_設計フェーズにおける理想駆動の省略.md)
 
 ### 5. 実装（TDD）
 
@@ -484,7 +484,7 @@ Issue との整合:
 - 「OK」だけでなく、具体的に何を確認したかを記載する
 - 収束確認結果が記載されていない PR は Ready for Review にしない
 
-改善の経緯: [実装フェーズにおける収束確認の自動実行欠如](../../../prompts/improvements/2026-02/2026-02-06_0010_実装フェーズにおける自己検証の自動実行欠如.md)
+改善の経緯: [実装フェーズにおける収束確認の自動実行欠如](../../../process/improvements/2026-02/2026-02-06_0010_実装フェーズにおける自己検証の自動実行欠如.md)
 
 #### 6.4 base branch との同期確認
 
@@ -629,7 +629,7 @@ Issue クローズ時に、この Issue に関連する改善記録がないか�
 
 ```bash
 # この Issue に関連する改善記録を検索
-grep -rl "#<Issue番号>" prompts/improvements/ --include="*.md"
+grep -rl "#<Issue番号>" process/improvements/ --include="*.md"
 ```
 
 | 状態 | 対応 |
@@ -638,9 +638,9 @@ grep -rl "#<Issue番号>" prompts/improvements/ --include="*.md"
 | 関連する改善記録があり、検証セクションが未追記 | 検証セクションを追記する |
 | 関連する改善記録があり、検証セクションが追記済み | 追加アクション不要 |
 
-検証セクションのフォーマット: [改善記録 README > 検証](../../../prompts/improvements/README.md#検証)
+検証セクションのフォーマット: [改善記録 README > 検証](../../../process/improvements/README.md#検証)
 
-改善の経緯: [改善記録の効果追跡が機能していない](../../../prompts/improvements/2026-02/2026-02-10_0337_改善記録の効果追跡が機能していない.md)
+改善の経緯: [改善記録の効果追跡が機能していない](../../../process/improvements/2026-02/2026-02-10_0337_改善記録の効果追跡が機能していない.md)
 
 #### 振り返りのスキップ
 
@@ -860,7 +860,7 @@ EOF
 
 全 Story のチェックボックスが `[x]` になったら、Epic をクローズする。
 
-改善の経緯: [Epic の Story 進捗が未記録](../../../prompts/improvements/2026-02/2026-02-14_2230_EpicのStory進捗が未記録.md)
+改善の経緯: [Epic の Story 進捗が未記録](../../../process/improvements/2026-02/2026-02-14_2230_EpicのStory進捗が未記録.md)
 
 ### 進捗の可視化
 

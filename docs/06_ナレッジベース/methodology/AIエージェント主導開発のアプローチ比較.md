@@ -118,4 +118,4 @@ flowchart LR
 - [Unlocking the Codex harness: how we built the App Server | OpenAI](https://openai.com/index/unlocking-the-codex-harness/)
 - [Custom instructions with AGENTS.md | OpenAI Developers](https://developers.openai.com/codex/guides/agents-md/)
 - [CLAUDE.md](../../../CLAUDE.md) — ringiflow の AI エージェント指針
-- [改善記録](../../../prompts/improvements/) — AI の失敗パターンと対策
+- [改善記録](../../../process/improvements/) — AI の失敗パターンと対策
