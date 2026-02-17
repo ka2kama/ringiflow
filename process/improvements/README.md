@@ -37,14 +37,14 @@ AI エージェント運用に限らず、開発プロセス全般の問題が�
 月ごとのサブディレクトリに整理する。
 
 ```
-prompts/improvements/
+process/improvements/
 ├── YYYY-MM/
 │   ├── YYYY-MM-DD_HHMM_<トピック>.md
 │   └── ...
 └── README.md
 ```
 
-例: `prompts/improvements/2026-01/2026-01-27_2303_Issue駆動開発フロー未遵守.md`
+例: `process/improvements/2026-01/2026-01-27_2303_Issue駆動開発フロー未遵守.md`
 
 ## ファイル命名規則
 

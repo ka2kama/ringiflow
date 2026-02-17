@@ -13,7 +13,7 @@
 ファイルを直接配置する（月別サブディレクトリは件数が増えた時点で検討）。
 
 ```
-prompts/reports/
+process/reports/
 ├── YYYY-MM-DD_HHMM_<トピック>.md
 └── README.md
 ```
