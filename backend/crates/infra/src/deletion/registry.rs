@@ -141,6 +141,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::*;
+    use crate::deletion::DeletionResult;
 
     /// テスト用のモック Deleter
     struct MockDeleter {
