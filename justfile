@@ -386,6 +386,20 @@ check-duplicates:
 lint-improvements:
     ./scripts/check-improvement-records.sh
 
+# .claude/rules/ 内のルールファイルが CLAUDE.md または paths: で参照されているかチェック
+lint-rules:
+    ./scripts/check-rule-files.sh
+
+# ドキュメント内の相対パスリンク切れをチェック
+# 警告のみ（exit 0）: 既存のリンク切れが多数あるため、ブロックしない
+check-doc-links:
+    ./scripts/check-doc-links.sh
+
+# 実装解説のファイル命名規則をチェック
+# 警告のみ（exit 0）: 既存の違反がある場合にブロックしない
+check-impl-docs:
+    ./scripts/check-impl-docs.sh
+
 # =============================================================================
 # 未使用依存チェック
 # =============================================================================
@@ -414,6 +428,11 @@ coverage-summary:
 # =============================================================================
 # 全チェック
 # =============================================================================
+
+# pre-push フックで使用するチェック（DB 不要のサブセット）
+# lint + unit test + ビルド + 構造品質チェック。統合テスト・SQLx・スキーマチェックを除外。
+check-pre-push:
+    ./scripts/check-parallel.sh --skip-db
 
 # 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、OpenAPI 同期、構造品質）
 # Rust レーンと Non-Rust レーンを並列実行して高速化
