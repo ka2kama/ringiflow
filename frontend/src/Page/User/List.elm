@@ -115,7 +115,7 @@ view model =
 viewHeader : Html Msg
 viewHeader =
     div [ class "flex items-center justify-between mb-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ]
             [ text "ユーザー管理" ]
         , Button.link
             { variant = Button.Primary

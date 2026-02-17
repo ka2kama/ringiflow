@@ -741,7 +741,7 @@ saveAndSubmit shared definitionId title formValues approvers =
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "新規申請" ]
+        [ h1 [ class "mb-6 text-2xl font-bold text-secondary-900" ] [ text "新規申請" ]
         , viewSaveMessage model.saveMessage
         , viewContent model
         ]
