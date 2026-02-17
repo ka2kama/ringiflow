@@ -570,12 +570,11 @@ validateFormWithApprover model =
                 |> Dict.toList
                 |> List.filterMap
                     (\( stepId, state ) ->
-                        case state.selection of
-                            NotSelected ->
-                                Just ( "approver_" ++ stepId, "承認者を選択してください" )
+                        if ApproverSelector.selectedUserId state.selection == Nothing then
+                            Just ( "approver_" ++ stepId, "承認者を選択してください" )
 
-                            Selected _ ->
-                                Nothing
+                        else
+                            Nothing
                     )
                 |> Dict.fromList
     in
@@ -667,12 +666,8 @@ buildApprovers model =
         |> Dict.toList
         |> List.filterMap
             (\( stepId, state ) ->
-                case state.selection of
-                    Selected user ->
-                        Just { stepId = stepId, assignedTo = user.id }
-
-                    NotSelected ->
-                        Nothing
+                ApproverSelector.selectedUserId state.selection
+                    |> Maybe.map (\userId -> { stepId = stepId, assignedTo = userId })
             )
 
 

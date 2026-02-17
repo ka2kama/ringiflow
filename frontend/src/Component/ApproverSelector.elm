@@ -4,6 +4,7 @@ module Component.ApproverSelector exposing
     , State
     , handleKeyDown
     , init
+    , selectedUserId
     , view
     )
 
@@ -41,6 +42,7 @@ module Component.ApproverSelector exposing
 
 import Api exposing (ApiError)
 import Data.UserItem as UserItem exposing (UserItem)
+import Data.UserRef exposing (UserRef)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
@@ -54,9 +56,14 @@ import RemoteData exposing (RemoteData(..))
 
 
 {-| 承認者の選択状態
+
+`Preselected` はワークフローの既存データから事前設定された状態（id + name のみ）。
+`Selected` はドロップダウンから明示的に選択された状態（全ユーザー情報あり）。
+
 -}
 type ApproverSelection
     = NotSelected
+    | Preselected UserRef
     | Selected UserItem
 
 
@@ -82,6 +89,25 @@ init =
     , dropdownOpen = False
     , highlightIndex = 0
     }
+
+
+{-| 選択状態からユーザー ID を取得
+
+NotSelected の場合は Nothing を返す。
+Preselected / Selected のいずれでも ID を返す。
+
+-}
+selectedUserId : ApproverSelection -> Maybe String
+selectedUserId selection =
+    case selection of
+        NotSelected ->
+            Nothing
+
+        Preselected ref ->
+            Just ref.id
+
+        Selected user ->
+            Just user.id
 
 
 {-| キーボード操作の結果
@@ -173,7 +199,10 @@ view config =
     div []
         [ case config.state.selection of
             Selected user ->
-                viewSelectedApprover user config.onClear
+                viewSelectedApprover user.name (Just user.displayId) config.onClear
+
+            Preselected ref ->
+                viewSelectedApprover ref.name Nothing config.onClear
 
             NotSelected ->
                 viewSearchInput config
@@ -182,14 +211,23 @@ view config =
 
 
 {-| 選択済みの承認者を表示
+
+name は常に表示。displayId は Preselected 状態では Nothing になるため、
+値がある場合のみ表示する。
+
 -}
-viewSelectedApprover : UserItem -> msg -> Html msg
-viewSelectedApprover user onClear =
+viewSelectedApprover : String -> Maybe String -> msg -> Html msg
+viewSelectedApprover name maybeDisplayId onClear =
     div
         [ class "flex items-center justify-between rounded-lg border border-primary-200 bg-primary-50 p-3" ]
         [ div []
-            [ span [ class "font-medium" ] [ text user.name ]
-            , span [ class "ml-2 text-sm text-secondary-500" ] [ text user.displayId ]
+            [ span [ class "font-medium" ] [ text name ]
+            , case maybeDisplayId of
+                Just displayId ->
+                    span [ class "ml-2 text-sm text-secondary-500" ] [ text displayId ]
+
+                Nothing ->
+                    text ""
             ]
         , button
             [ Html.Events.onClick onClear

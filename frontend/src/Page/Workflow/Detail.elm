@@ -400,7 +400,7 @@ update msg model =
                                                     state =
                                                         case existingApprover of
                                                             Just ref ->
-                                                                { selection = Selected { id = ref.id, name = ref.name, displayNumber = 0, displayId = "", email = "" }
+                                                                { selection = Preselected ref
                                                                 , search = ""
                                                                 , dropdownOpen = False
                                                                 , highlightIndex = -1
@@ -626,12 +626,11 @@ validateResubmit model =
                 |> Dict.toList
                 |> List.filterMap
                     (\( stepId, state ) ->
-                        case state.selection of
-                            NotSelected ->
-                                Just ( "approver_" ++ stepId, "承認者を選択してください" )
+                        if ApproverSelector.selectedUserId state.selection == Nothing then
+                            Just ( "approver_" ++ stepId, "承認者を選択してください" )
 
-                            Selected _ ->
-                                Nothing
+                        else
+                            Nothing
                     )
     in
     Dict.fromList approverErrors
@@ -645,12 +644,8 @@ buildResubmitApprovers model =
         |> Dict.toList
         |> List.filterMap
             (\( stepId, state ) ->
-                case state.selection of
-                    Selected user ->
-                        Just { stepId = stepId, assignedTo = user.id }
-
-                    NotSelected ->
-                        Nothing
+                ApproverSelector.selectedUserId state.selection
+                    |> Maybe.map (\userId -> { stepId = stepId, assignedTo = userId })
             )
 
 
