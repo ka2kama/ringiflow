@@ -439,8 +439,10 @@ check-pre-push:
 check:
     ./scripts/check-parallel.sh
 
-# プッシュ前の全チェック（軽量チェック + セキュリティ + API テスト + E2E テスト）
-check-all: check audit test-api test-e2e
+# プッシュ前の全チェック（軽量チェック + API テスト + E2E テスト + セキュリティ）
+# audit を最後に配置: cargo deny が取得するパッケージキャッシュのロックが
+# 後続の cargo build に影響し、サービス起動タイムアウトを引き起こすため (#596)
+check-all: check test-api test-e2e audit
 
 # OpenAPI 仕様書を utoipa から生成して openapi/openapi.yaml に出力
 openapi-generate:
