@@ -1,8 +1,9 @@
 # lefthook 設定
 # インストール: https://github.com/evilmartians/lefthook
 
-# コミット前のチェック
+# コミット前のチェック（フォーマット + 拡張子）
 pre-commit:
+  parallel: true
   commands:
     no-yml-extension:
       # .yml ファイルの追加を禁止（.yaml を使用すること）
@@ -15,6 +16,12 @@ pre-commit:
           echo "$files"
           exit 1
         fi
+    rustfmt-check:
+      glob: "*.rs"
+      run: rustfmt +nightly --edition 2024 --check {staged_files}
+    elm-format-check:
+      glob: "*.elm"
+      run: elm-format --validate {staged_files}
 
 # コミットメッセージ作成時に Issue 番号を自動付与
 prepare-commit-msg:
