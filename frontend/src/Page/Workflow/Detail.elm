@@ -778,7 +778,7 @@ viewStepProgress workflow =
 
     else
         div [ class "rounded-lg border border-secondary-100 p-4" ]
-            [ h2 [ class "mb-3 text-sm font-semibold text-secondary-700" ] [ text "進行状況" ]
+            [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "進行状況" ]
             , let
                 totalSteps =
                     List.length workflow.steps
@@ -862,7 +862,7 @@ stepProgressStyle step =
 viewBasicInfo : Time.Zone -> WorkflowInstance -> Html Msg
 viewBasicInfo zone workflow =
     div []
-        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
         , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
             , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy.name ]
@@ -913,7 +913,7 @@ viewResubmitSection model workflow =
 viewEditableFormData : Model -> Html Msg
 viewEditableFormData model =
     div []
-        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ（編集中）" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ（編集中）" ]
         , case model.definition of
             Success definition ->
                 case DynamicForm.extractFormFields definition.definition of
@@ -1010,7 +1010,7 @@ viewEditActions model =
 viewFormData : WorkflowInstance -> RemoteData ApiError WorkflowDefinition -> Html Msg
 viewFormData workflow maybeDefinition =
     div []
-        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
         , case maybeDefinition of
             NotAsked ->
                 text ""
@@ -1083,7 +1083,7 @@ viewRawFormData formData =
 viewCommentSection : Model -> Html Msg
 viewCommentSection model =
     div []
-        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "コメント" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "コメント" ]
         , case model.comments of
             NotAsked ->
                 text ""
@@ -1323,7 +1323,7 @@ viewSteps workflow =
 
     else
         div []
-            [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "承認ステップ" ]
+            [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "承認ステップ" ]
             , ul [ class "space-y-3 list-none pl-0" ]
                 (List.map viewStep workflow.steps)
             ]

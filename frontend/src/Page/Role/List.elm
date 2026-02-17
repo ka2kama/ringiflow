@@ -223,7 +223,7 @@ viewRoleSections roles =
 viewRoleSection : String -> List RoleItem -> Bool -> Html Msg
 viewRoleSection sectionTitle roles showActions =
     div []
-        [ h3 [ class "text-lg font-semibold text-secondary-900 mb-3" ] [ text sectionTitle ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text sectionTitle ]
         , viewRoleTable roles showActions
         ]
 

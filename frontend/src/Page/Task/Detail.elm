@@ -527,7 +527,7 @@ viewConfirmDialog maybePending =
 viewBasicInfo : Time.Zone -> WorkflowInstance -> Html Msg
 viewBasicInfo zone workflow =
     div []
-        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
         , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
             , dd [ class "text-secondary-900" ] [ text workflow.initiatedBy.name ]
@@ -544,7 +544,7 @@ viewBasicInfo zone workflow =
 viewFormData : WorkflowInstance -> Html Msg
 viewFormData workflow =
     div []
-        [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
         , viewRawFormData workflow.formData
         ]
 
@@ -573,7 +573,7 @@ viewSteps workflow =
 
     else
         div []
-            [ h2 [ class "mb-3 text-lg font-semibold text-secondary-900" ] [ text "承認ステップ" ]
+            [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "承認ステップ" ]
             , ul [ class "space-y-3 list-none pl-0" ]
                 (List.map viewStep workflow.steps)
             ]

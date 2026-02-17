@@ -9,13 +9,18 @@
  * 以下は Tailwind v4 デフォルトスケールを使用（@theme での再宣言は不要）。
  * プロジェクトのデザイン語彙として、使用するトークンとその役割を定義する。
  *
- * タイポグラフィ:
- *   ページタイトル   : text-2xl font-bold text-secondary-900
- *   セクション見出し : text-lg font-semibold text-secondary-900
+ * タイポグラフィ（スタイル — マージン）:
+ *   ページタイトル   : text-2xl font-bold text-secondary-900 — mb-6
+ *   セクション見出し : text-lg font-semibold text-secondary-900 — mb-4
  *   サブセクション   : text-sm font-semibold text-secondary-700
  *   テーブルヘッダー : text-xs font-medium uppercase tracking-wider text-secondary-500
  *   UI 要素          : text-sm font-medium
  *   KPI 数値         : text-3xl font-bold
+ *
+ *   マージン注記:
+ *     - ページタイトルの mb-6 は、親 div またはタイトル自身のいずれかで適用
+ *     - ヘッダー + ボタン構成の場合は親 div（flex container）に mb-6 を配置
+ *     - space-y-6 コンテナ内のタイトルにはマージン不要（gap で間隔を確保）
  *
  * シャドウ:
  *   hover:shadow-md : インタラクティブカード（KPI カード）
