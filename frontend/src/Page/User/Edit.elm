@@ -308,7 +308,7 @@ viewContent model =
 viewFormContent : Model -> UserDetail -> List RoleItem -> Html Msg
 viewFormContent model userDetail roles =
     Html.form [ onSubmit SubmitForm, class "mx-auto max-w-lg space-y-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "ユーザーを編集" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ユーザーを編集" ]
         , FormField.viewReadOnlyField "メールアドレス" userDetail.email
         , FormField.viewTextField
             { label = "名前"

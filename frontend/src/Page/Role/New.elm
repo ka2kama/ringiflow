@@ -247,7 +247,7 @@ viewBreadcrumb =
 viewFormContent : Model -> Html Msg
 viewFormContent model =
     Html.form [ onSubmit SubmitForm, class "mx-auto max-w-2xl space-y-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロールを作成" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロールを作成" ]
         , FormField.viewTextField
             { label = "ロール名"
             , value = model.name

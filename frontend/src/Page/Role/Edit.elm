@@ -309,7 +309,7 @@ viewContent model =
 viewReadOnly : Model -> Html Msg
 viewReadOnly model =
     div [ class "mx-auto max-w-2xl space-y-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロール詳細" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロール詳細" ]
         , FormField.viewReadOnlyField "ロール名" model.name
         , FormField.viewReadOnlyField "説明"
             (if String.isEmpty model.description then
@@ -342,7 +342,7 @@ viewReadOnly model =
 viewEditForm : Model -> Html Msg
 viewEditForm model =
     Html.form [ onSubmit SubmitForm, class "mx-auto max-w-2xl space-y-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロールを編集" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロールを編集" ]
         , FormField.viewTextField
             { label = "ロール名"
             , value = model.name

@@ -337,7 +337,7 @@ viewStatusToggleButton isSubmitting status =
 viewRolesAndPermissions : UserDetail -> Html Msg
 viewRolesAndPermissions userDetail =
     div [ class "rounded-lg border border-secondary-200 bg-white p-6" ]
-        [ h3 [ class "text-lg font-semibold text-secondary-900 mb-4" ] [ text "ロール・権限" ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "ロール・権限" ]
         , div [ class "space-y-3" ]
             [ div []
                 [ dt [ class "text-sm font-medium text-secondary-500" ] [ text "ロール" ]

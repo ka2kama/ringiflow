@@ -162,7 +162,7 @@ view model =
 viewHeader : Html Msg
 viewHeader =
     div [ class "flex items-center justify-between mb-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ]
             [ text "ロール管理" ]
         , Button.link
             { variant = Button.Primary
@@ -223,7 +223,7 @@ viewRoleSections roles =
 viewRoleSection : String -> List RoleItem -> Bool -> Html Msg
 viewRoleSection sectionTitle roles showActions =
     div []
-        [ h3 [ class "text-lg font-semibold text-secondary-900 mb-3" ] [ text sectionTitle ]
+        [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text sectionTitle ]
         , viewRoleTable roles showActions
         ]
 

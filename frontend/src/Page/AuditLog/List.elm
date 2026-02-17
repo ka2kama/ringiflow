@@ -203,7 +203,7 @@ view model =
 viewHeader : Html Msg
 viewHeader =
     div [ class "mb-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ]
             [ text "監査ログ" ]
         ]
 

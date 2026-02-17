@@ -307,7 +307,7 @@ viewFormContent model =
             RemoteData.withDefault [] model.roles
     in
     Html.form [ onSubmit SubmitForm, class "mx-auto max-w-lg space-y-6" ]
-        [ h2 [ class "text-2xl font-bold text-secondary-900" ] [ text "ユーザーを作成" ]
+        [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ユーザーを作成" ]
         , FormField.viewTextField
             { label = "メールアドレス"
             , value = model.email

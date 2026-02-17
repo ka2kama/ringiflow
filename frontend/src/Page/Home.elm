@@ -85,7 +85,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 [ class "mb-6 text-2xl font-bold text-secondary-900" ]
+        [ h1 [ class "mb-6 text-2xl font-bold text-secondary-900" ]
             [ text "ダッシュボード" ]
         , viewStats model.stats
         , viewQuickActions
