@@ -38,11 +38,23 @@ git fetch origin main && git log HEAD..origin/main --oneline
 | base branch 同期 | 対応 |
 |------------------|------|
 | 差分なし | Step 2 へ |
-| 差分あり | rebase + push してから Step 2 へ（CI + Review が再実行される） |
+| 差分あり | rebase + push → 既存レビューコメントの先行確認（後述）→ Step 2 へ |
+
+#### CI 再実行時の既存レビューコメント先行確認
+
+rebase + push 後は CI + Review が再実行される。前回のレビューサイクルで既にコメントが存在する場合、CI 完了を待たずに先行して確認・対応する:
+
+1. rebase + push 後、Step 3 の API で既存のレビューコメントを取得する
+2. コメントがあれば Step 4 の手順で対応する
+3. 対応完了後、Step 2 に進んで新しい CI + Review の完了を待つ
+4. 新しいレビューで追加コメントがあれば、通常フロー（Step 3 → Step 4）で対応する
+
+コメントがない場合はそのまま Step 2 へ進む。
 
 改善の経緯:
 - [review-and-merge で rebase 確認が遅い](../../../process/improvements/2026-02/2026-02-09_2106_review-and-mergeでrebase確認が遅い.md)
 - [review-and-merge で base branch 同期確認をスキップ](../../../process/improvements/2026-02/2026-02-14_2120_review-and-mergeでbase-branch同期確認をスキップ.md)
+- [CI 再実行時にレビューコメント確認を後回しにする](../../../process/improvements/2026-02/2026-02-17_1748_CI再実行時にレビューコメント確認を後回しにする.md)
 
 ### Step 2: Claude Auto Review 完了確認
 
