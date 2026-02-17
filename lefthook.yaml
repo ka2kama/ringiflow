@@ -1,10 +1,18 @@
 # lefthook 設定
 # インストール: https://github.com/evilmartians/lefthook
 
-# コミット前のチェック（フォーマット + 拡張子）
+# コミット前のチェック（ブランチ保護 + フォーマット + 拡張子）
 pre-commit:
   parallel: true
   commands:
+    no-main-commit:
+      # main ブランチへの直接コミットを禁止
+      run: |
+        BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+        if [ "$BRANCH" = "main" ]; then
+          echo "Error: main ブランチへの直接コミットは禁止されています。ブランチを作成してください。"
+          exit 1
+        fi
     no-yml-extension:
       # .yml ファイルの追加を禁止（.yaml を使用すること）
       # .gitignore 内の参照は許可
