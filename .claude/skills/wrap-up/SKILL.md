@@ -140,11 +140,10 @@ ls prompts/plans/ | grep -v '^[0-9]' | grep -v README
 git mv prompts/plans/clever-napping-panda.md prompts/plans/288_dev-auth-feature-flag.md
 ```
 
-### Step 5: 確認と仕上げ
+### Step 5: コミットと仕上げ
 
-1. 作成したドキュメントの一覧を提示
-2. コミットするかユーザーに確認
-3. コミットメッセージの例:
+1. 作成したドキュメントの一覧を提示し、コミットする
+2. コミットメッセージの例:
    - `Add session log for <トピック>`
    - `Add ADR-NNN: <タイトル>`
    - `Add knowledge base entry for <技術名>`
