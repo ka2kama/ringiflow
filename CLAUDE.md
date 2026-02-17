@@ -417,6 +417,18 @@ Test plan: 単一 PR は実装テスト＋手動テスト手順を記載。Epic 
 - ユーザー確認なしに `gh pr ready` を実行すること
 - wrap-up 完了を検証せずに Ready を提案すること
 
+### Draft に戻した後、再度 Ready にする場合
+
+Draft に戻した = 品質保証がリセットされた状態。コミットの作成者（AI / ユーザー）に関わらず、品質ゲートは必須。
+
+1. 修正・追加コミットを実施
+2. `just check-all` で品質ゲート通過
+3. base branch 同期確認（差分があれば rebase + `just check-all` で再確認）
+4. ユーザーに確認を求める（「Ready にしてよいですか？」）
+5. ユーザー承認後、`gh pr ready` で Ready にする
+
+**禁止:** 品質ゲートを通過せずに Ready for Review に戻すこと
+
 ### Ready for Review・マージ
 
 ```bash
