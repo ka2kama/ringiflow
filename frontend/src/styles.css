@@ -29,7 +29,7 @@
  * テキストカラー（セマンティクス）:
  *   text-secondary-900 : プライマリテキスト（見出し、重要情報）
  *   text-secondary-700 : セカンダリテキスト（フォームラベル、説明文）
- *   text-secondary-500 : テシャリテキスト（ヘルパー、ヘッダー）
+ *   text-secondary-500 : ターシャリテキスト（ヘルパー、ヘッダー）
  */
 
 @import "tailwindcss";
