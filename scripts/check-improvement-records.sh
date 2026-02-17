@@ -71,7 +71,7 @@ for file in prompts/improvements/????-??/*.md; do
     fi
 
     # カテゴリのチェック
-    category_line=$(grep "^- カテゴリ: " "$file" || true)
+    category_line=$(grep -m 1 "^- カテゴリ: " "$file" || true)
     if [[ -z "$category_line" ]]; then
         ERRORS+=("$file: '- カテゴリ: ' が標準フォーマットで記載されていません")
     else
@@ -82,7 +82,7 @@ for file in prompts/improvements/????-??/*.md; do
     fi
 
     # 失敗タイプのチェック
-    failure_line=$(grep "^- 失敗タイプ: " "$file" || true)
+    failure_line=$(grep -m 1 "^- 失敗タイプ: " "$file" || true)
     if [[ -z "$failure_line" ]]; then
         ERRORS+=("$file: '- 失敗タイプ: ' が標準フォーマットで記載されていません")
     else
@@ -93,7 +93,7 @@ for file in prompts/improvements/????-??/*.md; do
     fi
 
     # 問題の性質のチェック（警告のみ）
-    nature_line=$(grep "^- 問題の性質: " "$file" || true)
+    nature_line=$(grep -m 1 "^- 問題の性質: " "$file" || true)
     if [[ -z "$nature_line" ]]; then
         WARNINGS+=("$file: '- 問題の性質: ' が未記載です")
     else
