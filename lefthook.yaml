@@ -23,6 +23,12 @@ pre-commit:
       glob: "*.elm"
       run: elm-format --validate {staged_files}
 
+# プッシュ前のチェック（lint + unit test、DB 不要）
+pre-push:
+  commands:
+    check-pre-push:
+      run: just check-pre-push
+
 # コミットメッセージ作成時に Issue 番号を自動付与
 prepare-commit-msg:
   scripts:

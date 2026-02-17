@@ -429,6 +429,11 @@ coverage-summary:
 # 全チェック
 # =============================================================================
 
+# pre-push フックで使用するチェック（DB 不要のサブセット）
+# lint + unit test + ビルド + 構造品質チェック。統合テスト・SQLx・スキーマチェックを除外。
+check-pre-push:
+    ./scripts/check-parallel.sh --skip-db
+
 # 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、OpenAPI 同期、構造品質）
 # Rust レーンと Non-Rust レーンを並列実行して高速化
 check:
