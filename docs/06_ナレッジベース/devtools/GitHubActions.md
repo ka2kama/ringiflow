@@ -265,6 +265,64 @@ concurrency:
 
 ---
 
+## バイナリキャッシュ戦略
+
+### 背景
+
+`e2e-test` / `api-test` ジョブは `dorny/paths-filter` でフロントエンドや API テストファイルの変更でもトリガーされる。バックエンドソースに変更がない場合でも `cargo build --release` が実行され、sccache があってもキャッシュダウンロード + リンクで数分のコストが発生する。
+
+### アプローチ
+
+`actions/cache` でリリースバイナリを直接キャッシュし、バックエンドソースのハッシュをキーにする。キャッシュヒット時は `cargo build` を完全にスキップする。
+
+```yaml
+- name: Cache backend binaries
+  id: backend-cache
+  uses: actions/cache@v5
+  with:
+    path: |
+      backend/target/release/ringiflow-bff
+      backend/target/release/ringiflow-core-service
+      backend/target/release/ringiflow-auth-service
+    key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock') }}
+
+- name: Build backend services
+  if: steps.backend-cache.outputs.cache-hit != 'true'
+  run: cargo build --release --no-default-features
+  working-directory: backend
+```
+
+### CI キャッシュの3層構造
+
+| 層 | ツール | 対象 | キー | restore-keys |
+|----|--------|------|------|-------------|
+| 依存ソース | `actions/cache` | `~/.cargo/registry/`, `~/.cargo/git/` | `Cargo.lock` | あり（部分ヒット有用） |
+| 中間生成物 | sccache | `.rlib`, `.rmeta` 等 | sccache 内部管理 | — |
+| 最終バイナリ | `actions/cache` | `target/release/` のバイナリ | Rust ソース全体のハッシュ | なし（完全一致必須） |
+
+### キャッシュキーの設計
+
+| 要素 | 含む理由 |
+|------|---------|
+| `runner.os` | OS ごとのバイナリ互換性 |
+| `backend/**/*.rs` | Rust ソースコード。`target/` は `.gitignore` で除外されチェックアウト後には存在しない |
+| `backend/**/Cargo.toml` | 依存関係、フィーチャー定義、release プロファイル設定 |
+| `backend/Cargo.lock` | ロックされた依存バージョン |
+
+Rust toolchain バージョンは含めない。ci.yaml にピン留め（1.93.0）されており、変更時は通常 Cargo.toml/Cargo.lock も変わるため。
+
+### restore-keys を使わない理由
+
+Cargo registry キャッシュは古いバージョンでも再利用可能なため `restore-keys` で部分ヒットが有用。一方、バイナリキャッシュは異なるソースから生成されたバイナリを実行すると不整合が起きるため、完全一致のみ許容する。
+
+### キャッシュの共有
+
+`actions/cache` はデフォルトブランチ（main）のキャッシュを他ブランチから参照可能。main への push で CI が走るため、フロントエンド専用ブランチでも main のキャッシュにヒットする。キャッシュ保持期間は最終アクセスから 7 日間（LRU、リポジトリ上限 10 GB）。
+
+参照: #592、[ADR-004](../../05_ADR/004_CI並列化と変更検出.md)
+
+---
+
 ## PR レビューシステムの制約
 
 ### 同一著者のレビューは最新のみ有効
@@ -307,6 +365,7 @@ Bot アカウント（例: `claude[bot]`）で複数のワークフローから�
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-17 | バイナリキャッシュ戦略セクションを追加（#592） |
 | 2026-02-13 | sccache-action を許可設定テーブルに追加（#447） |
 | 2026-02-10 | PR レビューシステムの制約セクションを追加（#390） |
 | 2026-01-18 | workflow_run イベントセクションを追加 |
