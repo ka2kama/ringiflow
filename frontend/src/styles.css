@@ -40,39 +40,59 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary - ブランドカラー */
-  --color-primary-50: #e8f0fe;
-  --color-primary-100: #d2e3fc;
-  --color-primary-500: #4285f4;
-  --color-primary-600: #1a73e8;
-  --color-primary-700: #1967d2;
+  /* Primary - ブランドカラー（Indigo） */
+  --color-primary-50: #eef2ff;
+  --color-primary-100: #e0e7ff;
+  --color-primary-200: #c7d2fe;
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-primary-700: #4338ca;
+  --color-primary-800: #3730a3;
 
-  /* Secondary - テキスト・ボーダー */
-  --color-secondary-50: #f1f3f4;
-  --color-secondary-100: #e8eaed;
-  --color-secondary-300: #dadce0;
-  --color-secondary-500: #5f6368;
-  --color-secondary-700: #3c4043;
-  --color-secondary-900: #202124;
+  /* Secondary - テキスト・ボーダー（Slate） */
+  --color-secondary-50: #f8fafc;
+  --color-secondary-100: #f1f5f9;
+  --color-secondary-200: #e2e8f0;
+  --color-secondary-300: #cbd5e1;
+  --color-secondary-400: #94a3b8;
+  --color-secondary-500: #64748b;
+  --color-secondary-600: #475569;
+  --color-secondary-700: #334155;
+  --color-secondary-800: #1e293b;
+  --color-secondary-900: #0f172a;
 
-  /* Success */
-  --color-success-50: #e6f4ea;
-  --color-success-600: #34a853;
-  --color-success-700: #137333;
+  /* Success（Emerald） */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-400: #34d399;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
 
-  /* Error */
-  --color-error-50: #fce8e6;
-  --color-error-600: #d93025;
-  --color-error-700: #c5221f;
+  /* Error（Red） */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-300: #fca5a5;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
 
-  /* Warning */
-  --color-warning-50: #fef7e0;
-  --color-warning-600: #ea8600;
-  --color-warning-700: #e37400;
+  /* Warning（Amber） */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
 
-  /* Info */
-  --color-info-50: #e8f0fe;
-  --color-info-600: #1a73e8;
+  /* Info（Blue） */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-300: #93c5fd;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
 
   /* ─── Layout ─── */
   --spacing-sidebar: 16rem;
