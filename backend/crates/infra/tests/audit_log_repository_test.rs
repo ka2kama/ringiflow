@@ -23,6 +23,7 @@ use ringiflow_infra::{
         DynamoDbAuditLogRepository,
     },
 };
+use tokio::sync::OnceCell;
 
 /// テスト用の DynamoDB エンドポイント
 fn dynamodb_endpoint() -> String {
@@ -35,12 +36,25 @@ fn dynamodb_endpoint() -> String {
 /// テスト用テーブル名（全テスト共有、テナント ID で分離）
 const TEST_TABLE_NAME: &str = "test_audit_logs";
 
+/// テーブルセットアップの一度だけ実行を保証する
+///
+/// DynamoDB クライアントは各テストで独立に作成する。
+/// 単一クライアントの共有は内部コネクションプールがボトルネックになるため避ける。
+static TABLE_INITIALIZED: OnceCell<()> = OnceCell::const_new();
+
 /// テスト用のリポジトリをセットアップする
 async fn setup() -> DynamoDbAuditLogRepository {
     let client = dynamodb::create_client(&dynamodb_endpoint()).await;
-    dynamodb::ensure_audit_log_table(&client, TEST_TABLE_NAME)
-        .await
-        .expect("テーブルのセットアップに失敗");
+    TABLE_INITIALIZED
+        .get_or_init(|| {
+            let client = &client;
+            async move {
+                dynamodb::ensure_audit_log_table(client, TEST_TABLE_NAME)
+                    .await
+                    .expect("テーブルのセットアップに失敗");
+            }
+        })
+        .await;
     DynamoDbAuditLogRepository::new(client, TEST_TABLE_NAME.to_string())
 }
 
