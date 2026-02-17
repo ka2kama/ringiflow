@@ -27,7 +27,7 @@ if ! [[ "$PORT_OFFSET" =~ ^[0-9]$ ]]; then
     exit 1
 fi
 
-# 基準ポート（メインworktree用）
+# 基準ポート（メインworktree用）— 開発環境
 BASE_POSTGRES_PORT=15432
 BASE_REDIS_PORT=16379
 BASE_DYNAMODB_PORT=18000
@@ -36,9 +36,19 @@ BASE_CORE_PORT=13001
 BASE_AUTH_PORT=13002
 BASE_VITE_PORT=15173
 
+# 基準ポート（メインworktree用）— API テスト環境
+BASE_API_TEST_POSTGRES_PORT=15433
+BASE_API_TEST_REDIS_PORT=16380
+BASE_API_TEST_DYNAMODB_PORT=18001
+BASE_API_TEST_BFF_PORT=14000
+BASE_API_TEST_CORE_PORT=14001
+BASE_API_TEST_AUTH_PORT=14002
+BASE_API_TEST_VITE_PORT=15174
+
 # オフセット計算（100 単位）
 OFFSET=$((PORT_OFFSET * 100))
 
+# 開発環境ポート
 POSTGRES_PORT=$((BASE_POSTGRES_PORT + OFFSET))
 REDIS_PORT=$((BASE_REDIS_PORT + OFFSET))
 DYNAMODB_PORT=$((BASE_DYNAMODB_PORT + OFFSET))
@@ -46,6 +56,15 @@ BFF_PORT=$((BASE_BFF_PORT + OFFSET))
 CORE_PORT=$((BASE_CORE_PORT + OFFSET))
 AUTH_PORT=$((BASE_AUTH_PORT + OFFSET))
 VITE_PORT=$((BASE_VITE_PORT + OFFSET))
+
+# API テスト環境ポート
+API_TEST_POSTGRES_PORT=$((BASE_API_TEST_POSTGRES_PORT + OFFSET))
+API_TEST_REDIS_PORT=$((BASE_API_TEST_REDIS_PORT + OFFSET))
+API_TEST_DYNAMODB_PORT=$((BASE_API_TEST_DYNAMODB_PORT + OFFSET))
+API_TEST_BFF_PORT=$((BASE_API_TEST_BFF_PORT + OFFSET))
+API_TEST_CORE_PORT=$((BASE_API_TEST_CORE_PORT + OFFSET))
+API_TEST_AUTH_PORT=$((BASE_API_TEST_AUTH_PORT + OFFSET))
+API_TEST_VITE_PORT=$((BASE_API_TEST_VITE_PORT + OFFSET))
 
 # ルート .env を生成
 cat > "$PROJECT_ROOT/.env" << EOF
@@ -61,6 +80,13 @@ cat > "$PROJECT_ROOT/.env" << EOF
 POSTGRES_PORT=$POSTGRES_PORT
 REDIS_PORT=$REDIS_PORT
 DYNAMODB_PORT=$DYNAMODB_PORT
+
+# -----------------------------------------------------------------------------
+# Docker Compose ポート設定（API テスト用）
+# -----------------------------------------------------------------------------
+API_TEST_POSTGRES_PORT=$API_TEST_POSTGRES_PORT
+API_TEST_REDIS_PORT=$API_TEST_REDIS_PORT
+API_TEST_DYNAMODB_PORT=$API_TEST_DYNAMODB_PORT
 
 # -----------------------------------------------------------------------------
 # 開発サーバーポート設定
@@ -133,11 +159,85 @@ ENVIRONMENT=development
 DEV_AUTH_ENABLED=true
 EOF
 
+# backend/.env.api-test を生成
+cat > "$PROJECT_ROOT/backend/.env.api-test" << EOF
+# =============================================================================
+# RingiFlow API テスト環境設定
+# =============================================================================
+# このファイルは scripts/generate-env.sh により自動生成されました
+# ポートオフセット: $PORT_OFFSET（+${OFFSET}）
+# 開発環境とは独立した DB/Redis/ポートを使用する。
+# just test-api / just test-e2e で自動的にこの設定が読み込まれる。
+
+# -----------------------------------------------------------------------------
+# データベース接続（API テスト専用）
+# -----------------------------------------------------------------------------
+DATABASE_URL=postgres://ringiflow:ringiflow@localhost:$API_TEST_POSTGRES_PORT/ringiflow
+
+# -----------------------------------------------------------------------------
+# Redis 接続（API テスト専用）
+# -----------------------------------------------------------------------------
+REDIS_URL=redis://localhost:$API_TEST_REDIS_PORT
+
+# -----------------------------------------------------------------------------
+# BFF サーバー設定
+# -----------------------------------------------------------------------------
+BFF_HOST=0.0.0.0
+BFF_PORT=$API_TEST_BFF_PORT
+
+# -----------------------------------------------------------------------------
+# Core Service サーバー設定
+# -----------------------------------------------------------------------------
+CORE_HOST=0.0.0.0
+CORE_PORT=$API_TEST_CORE_PORT
+
+# -----------------------------------------------------------------------------
+# Auth Service サーバー設定
+# -----------------------------------------------------------------------------
+AUTH_HOST=0.0.0.0
+AUTH_PORT=$API_TEST_AUTH_PORT
+
+# -----------------------------------------------------------------------------
+# BFF から Core Service への接続
+# -----------------------------------------------------------------------------
+CORE_URL=http://localhost:$API_TEST_CORE_PORT
+
+# -----------------------------------------------------------------------------
+# BFF から Auth Service への接続
+# -----------------------------------------------------------------------------
+AUTH_URL=http://localhost:$API_TEST_AUTH_PORT
+
+# -----------------------------------------------------------------------------
+# DynamoDB 接続（監査ログ、API テスト専用）
+# -----------------------------------------------------------------------------
+DYNAMODB_ENDPOINT=http://localhost:$API_TEST_DYNAMODB_PORT
+
+# -----------------------------------------------------------------------------
+# E2E テスト用 Vite ポート
+# -----------------------------------------------------------------------------
+E2E_VITE_PORT=$API_TEST_VITE_PORT
+
+# -----------------------------------------------------------------------------
+# ログ・環境設定
+# -----------------------------------------------------------------------------
+RUST_LOG=warn,ringiflow=info
+ENVIRONMENT=test
+EOF
+
 echo "✓ .env ファイルを生成しました（ポートオフセット: $PORT_OFFSET）"
-echo "  PostgreSQL:     $POSTGRES_PORT"
-echo "  Redis:          $REDIS_PORT"
-echo "  DynamoDB:       $DYNAMODB_PORT"
-echo "  BFF:            $BFF_PORT"
-echo "  Core Service:   $CORE_PORT"
-echo "  Auth Service:   $AUTH_PORT"
-echo "  Vite:           $VITE_PORT"
+echo "  [開発環境]"
+echo "    PostgreSQL:     $POSTGRES_PORT"
+echo "    Redis:          $REDIS_PORT"
+echo "    DynamoDB:       $DYNAMODB_PORT"
+echo "    BFF:            $BFF_PORT"
+echo "    Core Service:   $CORE_PORT"
+echo "    Auth Service:   $AUTH_PORT"
+echo "    Vite:           $VITE_PORT"
+echo "  [API テスト環境]"
+echo "    PostgreSQL:     $API_TEST_POSTGRES_PORT"
+echo "    Redis:          $API_TEST_REDIS_PORT"
+echo "    DynamoDB:       $API_TEST_DYNAMODB_PORT"
+echo "    BFF:            $API_TEST_BFF_PORT"
+echo "    Core Service:   $API_TEST_CORE_PORT"
+echo "    Auth Service:   $API_TEST_AUTH_PORT"
+echo "    E2E Vite:       $API_TEST_VITE_PORT"

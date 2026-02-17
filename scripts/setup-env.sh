@@ -22,6 +22,7 @@ echo "環境変数ファイルを確認中..."
 if [[ -f .env ]]; then
     echo "  確認: .env"
     echo "  確認: backend/.env"
+    echo "  確認: backend/.env.api-test"
     echo "✓ 環境変数ファイル準備完了"
     exit 0
 fi
@@ -74,6 +75,8 @@ else
     echo "  作成: .env"
     cp backend/.env.template backend/.env
     echo "  作成: backend/.env"
+    cp backend/.env.api-test.template backend/.env.api-test
+    echo "  作成: backend/.env.api-test"
 fi
 
 echo "✓ 環境変数ファイル準備完了"
