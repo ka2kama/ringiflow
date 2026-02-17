@@ -310,26 +310,34 @@ build-elm:
 # =============================================================================
 
 # API テスト用の DB/Redis/DynamoDB を起動（開発環境とは独立）
+# プロジェクト名はディレクトリ名から自動取得（worktree 対応）
 api-test-deps:
-    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml up -d --wait
-    @echo "API テスト環境:"
-    @echo "  PostgreSQL: localhost:15433"
-    @echo "  Redis: localhost:16380"
-    @echo "  DynamoDB: localhost:18001"
+    #!/usr/bin/env bash
+    PROJECT_NAME="$(basename "$(pwd)")-api-test"
+    docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.api-test.yaml up -d --wait
+    echo "API テスト環境:"
+    echo "  PostgreSQL: localhost:${API_TEST_POSTGRES_PORT}"
+    echo "  Redis: localhost:${API_TEST_REDIS_PORT}"
+    echo "  DynamoDB: localhost:${API_TEST_DYNAMODB_PORT}"
+    echo "  プロジェクト名: $PROJECT_NAME"
 
 # API テスト用の DB をリセット
 api-test-reset-db:
     @echo "API テスト用データベースをリセット中..."
-    cd backend && DATABASE_URL=postgres://ringiflow:ringiflow@localhost:15433/ringiflow sqlx database reset -y
+    cd backend && DATABASE_URL=postgres://ringiflow:ringiflow@localhost:${API_TEST_POSTGRES_PORT}/ringiflow sqlx database reset -y
     @echo "✓ API テスト用データベースリセット完了"
 
 # API テスト用の DB/Redis を停止
 api-test-stop:
-    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml down
+    #!/usr/bin/env bash
+    PROJECT_NAME="$(basename "$(pwd)")-api-test"
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.api-test.yaml down
 
 # API テスト用の DB/Redis を削除（データ含む）
 api-test-clean:
-    docker compose -p ringiflow-api-test -f infra/docker/docker-compose.api-test.yaml down -v
+    #!/usr/bin/env bash
+    PROJECT_NAME="$(basename "$(pwd)")-api-test"
+    docker compose -p "$PROJECT_NAME" -f infra/docker/docker-compose.api-test.yaml down -v
 
 # API テスト実行（hurl）
 # サービスを起動してテストを実行し、終了後にサービスを停止する

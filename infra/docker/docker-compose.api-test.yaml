@@ -3,13 +3,14 @@
 # 開発環境とは独立した DB/Redis を提供する。
 # 開発中のデータに影響を与えずに API テストを実行可能。
 #
-# 起動: docker compose -f docker-compose.api-test.yaml -p ringiflow-api-test up -d
-# 停止: docker compose -f docker-compose.api-test.yaml -p ringiflow-api-test down
-# 削除（データ含む）: docker compose -f docker-compose.api-test.yaml -p ringiflow-api-test down -v
+# ポート番号は .env ファイルで設定（worktree 対応）
+# 起動前に just setup-env で .env ファイルを作成すること
 #
-# ポート番号:
-#   PostgreSQL: 15433（開発環境: 15432）
-#   Redis: 16380（開発環境: 16379）
+# worktree 対応:
+#   プロジェクト名を変えることで、複数のインスタンスを並行起動可能
+#   docker compose --env-file .env -p ringiflow-api-test up -d
+#   → コンテナ名: ringiflow-api-test-postgres-1 等
+#   詳細: docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md
 
 services:
   # PostgreSQL データベース（API テスト用）
@@ -22,7 +23,7 @@ services:
       TZ: Asia/Tokyo
       PGTZ: Asia/Tokyo
     ports:
-      - "15433:5432"
+      - "${API_TEST_POSTGRES_PORT}:5432"
     volumes:
       - postgres_api_test_data:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d:ro
@@ -39,7 +40,7 @@ services:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     ports:
-      - "16380:6379"
+      - "${API_TEST_REDIS_PORT}:6379"
     volumes:
       - redis_api_test_data:/data
     healthcheck:
@@ -50,11 +51,11 @@ services:
       start_period: 5s
     restart: unless-stopped
 
-  # DynamoDB Local（API テスト用: ポート 18001）
+  # DynamoDB Local（API テスト用）
   dynamodb:
     image: amazon/dynamodb-local:latest
     ports:
-      - "18001:8000"
+      - "${API_TEST_DYNAMODB_PORT}:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
     healthcheck:
       test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:8000 || exit 1"]
@@ -64,6 +65,9 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+# 名前付きボリューム
+# name を指定しない → プロジェクト名がプレフィックスとして付与される
+# 例: ringiflow-api-test_postgres_api_test_data
 volumes:
   postgres_api_test_data:
   redis_api_test_data:
