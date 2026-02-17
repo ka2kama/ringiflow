@@ -3,6 +3,33 @@
  *
  * @theme ディレクティブで CSS カスタムプロパティとしてデザイントークンを定義する。
  * 詳細: [ADR-027](../../docs/05_ADR/027_Tailwind_CSS導入.md)
+ *
+ * === デザインガイドライン ===
+ *
+ * 以下は Tailwind v4 デフォルトスケールを使用（@theme での再宣言は不要）。
+ * プロジェクトのデザイン語彙として、使用するトークンとその役割を定義する。
+ *
+ * タイポグラフィ:
+ *   ページタイトル   : text-2xl font-bold text-secondary-900
+ *   セクション見出し : text-lg font-semibold text-secondary-900
+ *   サブセクション   : text-sm font-semibold text-secondary-700
+ *   テーブルヘッダー : text-xs font-medium uppercase tracking-wider text-secondary-500
+ *   UI 要素          : text-sm font-medium
+ *   KPI 数値         : text-3xl font-bold
+ *
+ * シャドウ:
+ *   hover:shadow-md : インタラクティブカード（KPI カード）
+ *   shadow-lg       : ドロップダウン、ポップオーバー
+ *   shadow-xl       : モーダル、ダイアログ
+ *
+ * 角丸:
+ *   rounded-lg   : 標準（ボタン、カード、入力、アラート、パネル）
+ *   rounded-full : 丸型（バッジ、アバター、スピナー）
+ *
+ * テキストカラー（セマンティクス）:
+ *   text-secondary-900 : プライマリテキスト（見出し、重要情報）
+ *   text-secondary-700 : セカンダリテキスト（フォームラベル、説明文）
+ *   text-secondary-500 : テシャリテキスト（ヘルパー、ヘッダー）
  */
 
 @import "tailwindcss";
@@ -42,7 +69,7 @@
   --color-info-50: #e8f0fe;
   --color-info-600: #1a73e8;
 
-  /* Sidebar width */
+  /* ─── Layout ─── */
   --spacing-sidebar: 16rem;
 }
 
