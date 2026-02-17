@@ -12,6 +12,17 @@ if [ "${1:-}" = "--skip-db" ]; then
     skip_db=true
 fi
 
+# cargo-watch 検知: 同一 workspace で実行中だとパッケージキャッシュのロック競合が発生するため
+_project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+for pid in $(pgrep -x cargo-watch 2>/dev/null); do
+    cwd="$(readlink /proc/"$pid"/cwd 2>/dev/null)"
+    if [[ "$cwd" == "$_project_root" || "$cwd" == "$_project_root"/* ]]; then
+        echo "エラー: cargo-watch が実行中のため、Cargo パッケージキャッシュのロック競合が発生します。" >&2
+        echo "開発サーバーを停止してから再実行してください（just dev-down または mprocs を終了）。" >&2
+        exit 1
+    fi
+done
+
 non_rust_log=$(mktemp)
 trap 'rm -f "$non_rust_log"' EXIT
 
