@@ -386,6 +386,20 @@ check-duplicates:
 lint-improvements:
     ./scripts/check-improvement-records.sh
 
+# .claude/rules/ 内のルールファイルが CLAUDE.md または paths: で参照されているかチェック
+lint-rules:
+    ./scripts/check-rule-files.sh
+
+# ドキュメント内の相対パスリンク切れをチェック
+# 警告のみ（exit 0）: 既存のリンク切れが多数あるため、ブロックしない
+check-doc-links:
+    ./scripts/check-doc-links.sh
+
+# 実装解説のファイル命名規則をチェック
+# 警告のみ（exit 0）: 既存の違反がある場合にブロックしない
+check-impl-docs:
+    ./scripts/check-impl-docs.sh
+
 # =============================================================================
 # 未使用依存チェック
 # =============================================================================
