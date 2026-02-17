@@ -110,7 +110,7 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 |---------|------|------|
 | 未実装マーカー | Grep `実装状態` in `docs/` | 未実装マーカーの一覧（Discovery の 1-2 と共有可） |
 | ADR 記録状況 | Glob `docs/05_ADR/*.md` の件数 | 情報提供 |
-| 改善記録の状況 | Glob `prompts/improvements/` 直近月の件数 | 情報提供 |
+| 改善記録の状況 | Glob `process/improvements/` 直近月の件数 | 情報提供 |
 
 #### 3c. 依存関係の鮮度
 
@@ -133,10 +133,10 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 
 | チェック | 手法 | 基準 |
 |---------|------|------|
-| 改善記録 | Glob `prompts/improvements/YYYY-MM/` のファイル数 | 前回診断時点との差分 |
+| 改善記録 | Glob `process/improvements/YYYY-MM/` のファイル数 | 前回診断時点との差分 |
 | セッションログ | Glob `prompts/runs/YYYY-MM/` のファイル数 | 前回診断時点との差分 |
 
-比較基準: 前回の診断レポート（`prompts/reports/` の直近ファイル）の値と比較する。初回実行時は月次累計のみ報告する。
+比較基準: 前回の診断レポート（`process/reports/` の直近ファイル）の値と比較する。初回実行時は月次累計のみ報告する。
 
 ---
 
@@ -260,9 +260,9 @@ Step 1-3 の診断結果に対し、以下の観点でセルフレビューを�
 
 ## レポートの保存
 
-診断レポートは [`prompts/reports/`](../../../prompts/reports/) に保存する。ユーザーからスナップショットの保存を求められた場合、または診断完了後に保存を提案する。
+診断レポートは [`process/reports/`](../../../process/reports/) に保存する。ユーザーからスナップショットの保存を求められた場合、または診断完了後に保存を提案する。
 
-→ 命名規則・ディレクトリ構造: [`prompts/reports/README.md`](../../../prompts/reports/README.md)
+→ 命名規則・ディレクトリ構造: [`process/reports/README.md`](../../../process/reports/README.md)
 
 過去の診断レポートが存在する場合は、前回との差分（トレンド）にも言及する。
 

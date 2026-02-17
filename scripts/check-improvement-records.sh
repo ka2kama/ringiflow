@@ -8,7 +8,7 @@
 # - 「- 失敗タイプ: <有効値>」が存在する（エラー）
 # - 「- 問題の性質: <有効値>」が存在する（警告のみ — 2026-02-15 導入のため遡及は別 Issue）
 #
-# 有効値の定義: prompts/improvements/README.md
+# 有効値の定義: process/improvements/README.md
 #
 # Usage: ./scripts/check-improvement-records.sh
 
@@ -63,7 +63,7 @@ extract_value() {
     echo "$line" | sed "s/^${prefix}//" | sed 's/[（(].*//' | sed 's/[[:space:]]*$//'
 }
 
-for file in prompts/improvements/????-??/*.md; do
+for file in process/improvements/????-??/*.md; do
     # 「## 分類」セクションの存在チェック
     if ! grep -q "^## 分類" "$file"; then
         ERRORS+=("$file: '## 分類' セクションがありません")
@@ -125,7 +125,7 @@ if [[ ${#ERRORS[@]} -gt 0 ]]; then
     echo "  - 失敗タイプ: <知識ギャップ|実行ギャップ|プロセスギャップ>"
     echo "  - 問題の性質: <技術的|プロセス的|思考的>"
     echo ""
-    echo "詳細: prompts/improvements/README.md"
+    echo "詳細: process/improvements/README.md"
     exit 1
 fi
 

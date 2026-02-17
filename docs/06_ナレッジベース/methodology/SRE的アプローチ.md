@@ -142,7 +142,7 @@ ITIL の概念。個別のインシデント対応（Incident Management）と�
 
 - [AI 思考特性の分析ガイド](AI思考特性の分析ガイド.md) — 改善記録の分析手法
 - [独自フレームワークと既知手法の対応](独自フレームワークと既知手法の対応.md) — プロジェクト全体の方法論マッピング
-- [改善記録の分類体系](../../../prompts/improvements/README.md#分類)
+- [改善記録の分類体系](../../../process/improvements/README.md#分類)
 - `/retro` スキル — SRE 概念の実行エンジン
 
 ---
