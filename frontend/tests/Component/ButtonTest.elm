@@ -25,15 +25,15 @@ suite =
 variantClassTests : Test
 variantClassTests =
     describe "variantClass"
-        [ test "Primary → bg-primary-600 を含む" <|
+        [ test "Primary → bg-primary-500 を含む" <|
             \_ ->
                 Button.variantClass Primary
-                    |> String.contains "bg-primary-600"
+                    |> String.contains "bg-primary-500"
                     |> Expect.equal True
-        , test "Primary → hover:bg-primary-700 を含む" <|
+        , test "Primary → hover:bg-primary-600 を含む" <|
             \_ ->
                 Button.variantClass Primary
-                    |> String.contains "hover:bg-primary-700"
+                    |> String.contains "hover:bg-primary-600"
                     |> Expect.equal True
         , test "Success → bg-success-600 を含む" <|
             \_ ->
