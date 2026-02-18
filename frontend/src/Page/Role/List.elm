@@ -230,12 +230,12 @@ viewRoleTable roles showActions =
         [ table [ class "w-full" ]
             [ thead [ class "bg-secondary-50" ]
                 [ tr []
-                    [ th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "ロール名" ]
-                    , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "説明" ]
-                    , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "種別" ]
-                    , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "ユーザー数" ]
+                    [ th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "ロール名" ]
+                    , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "説明" ]
+                    , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "種別" ]
+                    , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "ユーザー数" ]
                     , if showActions then
-                        th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "操作" ]
+                        th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "操作" ]
 
                       else
                         text ""

@@ -65,4 +65,10 @@ viewTests =
                 MessageAlert.view { defaultConfig | errorMessage = Nothing }
                     |> Query.fromHtml
                     |> Query.hasNot [ Selector.attribute (Html.Attributes.attribute "role" "alert") ]
+        , test "閉じボタンに focus-visible:ring-2 クラスが適用される" <|
+            \_ ->
+                MessageAlert.view { defaultConfig | successMessage = Just "成功" }
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.attribute (Html.Attributes.attribute "aria-label" "閉じる") ]
+                    |> Query.has [ Selector.class "focus-visible:ring-2" ]
         ]

@@ -65,13 +65,13 @@ view config =
         [ table [ class "w-full" ]
             [ thead [ class "bg-secondary-50" ]
                 [ tr []
-                    (th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ]
+                    (th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ]
                         [ text "リソース" ]
-                        :: th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-500" ]
+                        :: th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-600" ]
                             [ text "すべて" ]
                         :: List.map
                             (\( _, actionLabel ) ->
-                                th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-500" ]
+                                th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-600" ]
                                     [ text actionLabel ]
                             )
                             actions
@@ -101,12 +101,13 @@ viewResourceRow config ( resourceKey, resourceLabel ) =
                     , checked allSelected
                     , onCheck (\_ -> config.onToggleAll resourceKey)
                     , disabled config.disabled
+                    , attribute "aria-label" (resourceLabel ++ " すべて")
                     , class "h-4 w-4 rounded border-secondary-300 text-primary-600 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                     ]
                     []
                 ]
             :: List.map
-                (\( actionKey, _ ) ->
+                (\( actionKey, actionLabel ) ->
                     let
                         permission =
                             resourceKey ++ ":" ++ actionKey
@@ -120,6 +121,7 @@ viewResourceRow config ( resourceKey, resourceLabel ) =
                             , checked isSelected
                             , onCheck (\_ -> config.onToggle permission)
                             , disabled config.disabled
+                            , attribute "aria-label" (resourceLabel ++ " " ++ actionLabel)
                             , class "h-4 w-4 rounded border-secondary-300 text-primary-600 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                             ]
                             []

@@ -53,7 +53,7 @@ viewSuccessMessage onDismiss maybeMessage =
         Just message ->
             div [ class "flex items-center justify-between rounded-lg bg-success-50 p-4 text-success-700 animate-alert-in", attribute "role" "alert" ]
                 [ text message
-                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", attribute "aria-label" "閉じる", onClick onDismiss ] [ text "×" ]
+                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg rounded outline-none focus-visible:ring-2 focus-visible:ring-primary-500", attribute "aria-label" "閉じる", onClick onDismiss ] [ text "×" ]
                 ]
 
         Nothing ->
@@ -66,7 +66,7 @@ viewErrorMessage onDismiss maybeMessage =
         Just message ->
             div [ class "flex items-center justify-between rounded-lg bg-error-50 p-4 text-error-700 animate-alert-in", attribute "role" "alert" ]
                 [ text message
-                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg", attribute "aria-label" "閉じる", onClick onDismiss ] [ text "×" ]
+                , button [ class "ml-4 cursor-pointer bg-transparent border-0 text-lg rounded outline-none focus-visible:ring-2 focus-visible:ring-primary-500", attribute "aria-label" "閉じる", onClick onDismiss ] [ text "×" ]
                 ]
 
         Nothing ->
