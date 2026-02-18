@@ -107,7 +107,12 @@ else
             fi
         fi
 
-        echo "  🗑  ${branch} (${path})${dirty}"
+        slot_marker=""
+        if [[ -f "$path/.worktree-slot" ]]; then
+            slot_marker=" [永続スロット → リセット]"
+        fi
+
+        echo "  🗑  ${branch} (${path})${dirty}${slot_marker}"
         echo "      理由: ${reason}"
 
         if [[ -n "$dirty" && "$DRY_RUN" == false ]]; then
@@ -116,21 +121,30 @@ else
         fi
 
         if [[ "$DRY_RUN" == false ]]; then
-            # Docker コンテナ・ボリュームを停止・削除
-            # コンテナが停止済みでもボリュームが残っている場合があるため、常に実行する
-            project_name="ringiflow-${name}"
-            echo "      Docker リソースを削除中..."
-            docker compose -p "$project_name" -f infra/docker/docker-compose.yaml down -v 2>/dev/null || true
+            if [[ -f "$path/.worktree-slot" ]]; then
+                # 永続スロット: 削除ではなく detached HEAD にリセット
+                echo "      永続スロットをリセット中..."
+                git -C "$path" switch --detach origin/main 2>/dev/null || true
 
-            # ワークツリーを削除
-            git worktree remove "$path" --force 2>/dev/null || true
+                if [[ "$branch" != "main" ]]; then
+                    git branch -D "$branch" 2>/dev/null || true
+                fi
 
-            # ローカルブランチを削除（main ブランチは削除しない）
-            if [[ "$branch" != "main" ]]; then
-                git branch -D "$branch" 2>/dev/null || true
+                echo "      ✓ スロットをリセットしました（detached HEAD）"
+            else
+                # 従来の worktree: Docker コンテナ・ボリュームごと削除
+                project_name="ringiflow-${name}"
+                echo "      Docker リソースを削除中..."
+                docker compose -p "$project_name" -f infra/docker/docker-compose.yaml down -v 2>/dev/null || true
+
+                git worktree remove "$path" --force 2>/dev/null || true
+
+                if [[ "$branch" != "main" ]]; then
+                    git branch -D "$branch" 2>/dev/null || true
+                fi
+
+                echo "      ✓ 削除完了"
             fi
-
-            echo "      ✓ 削除完了"
         fi
     done
 fi

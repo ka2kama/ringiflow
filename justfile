@@ -533,22 +533,29 @@ clean-branches:
     just cleanup
 
 # =============================================================================
-# Worktree 管理（並行開発用）
+# Worktree 管理（永続スロット方式）
 # =============================================================================
 
-# Issue 番号から worktree を作成
-# 使い方: just worktree-issue NUMBER
-# 例: just worktree-issue 321
-# Issue タイトルからブランチ名を自動生成する
-worktree-issue number:
-    ./scripts/worktree-issue.sh {{number}}
+# 永続 worktree スロットを作成（初回のみ）
+# 使い方: just worktree-create N
+# 例: just worktree-create 1
+# スロット番号がポートオフセットとして使用される
+worktree-create n:
+    ./scripts/worktree-create.sh {{n}}
 
-# worktree を追加（並行開発用の独立した作業ディレクトリを作成）
-# 使い方: just worktree-add NAME BRANCH [--no-setup]
-# 例: just worktree-add auth feature/auth
-# ポートオフセットは自動で空き番号が割り当てられる
-worktree-add name branch *flags:
-    ./scripts/worktree-add.sh {{flags}} {{name}} {{branch}}
+# worktree スロット内のブランチを切り替え
+# 使い方: just worktree-switch N BRANCH
+# 例: just worktree-switch 1 feature/625-persistent-slots
+# DB マイグレーションと依存関係の差分更新を自動で行う
+worktree-switch n branch:
+    ./scripts/worktree-switch.sh {{n}} {{branch}}
+
+# Issue 番号からブランチを作成してスロットに切り替え
+# 使い方: just worktree-issue NUMBER [SLOT]
+# 例: just worktree-issue 321 1
+# SLOT を省略した場合、現在のスロットを自動検出
+worktree-issue number *slot:
+    ./scripts/worktree-issue.sh {{number}} {{slot}}
 
 # worktree を削除
 # 使い方: just worktree-remove NAME
