@@ -165,6 +165,10 @@ dev-web:
 dev-all: dev-deps
     mprocs
 
+# Ghostty + Wayland でキー入力がフリーズする場合の回避策（X11 で別ウィンドウ起動）
+dev-all-x11: dev-deps
+    GDK_BACKEND=x11 ghostty -e just dev-all
+
 # 依存サービス（PostgreSQL, Redis）を停止
 dev-down:
     #!/usr/bin/env bash
