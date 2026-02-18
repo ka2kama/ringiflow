@@ -10,6 +10,7 @@ use super::{
     response::handle_response,
     types::{DashboardStatsDto, TaskDetailDto, TaskItemDto},
 };
+use crate::middleware::request_id::inject_request_id;
 
 /// タスク・ダッシュボード関連の Core Service クライアントトレイト
 #[async_trait]
@@ -68,7 +69,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
             self.base_url, tenant_id, user_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, None).await
     }
 
@@ -83,7 +84,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
             self.base_url, task_id, tenant_id, user_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
@@ -97,7 +98,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
             self.base_url, tenant_id, user_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, None).await
     }
 
@@ -113,7 +114,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
             self.base_url, workflow_display_number, step_display_number, tenant_id, user_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 }

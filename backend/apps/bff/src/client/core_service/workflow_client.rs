@@ -19,6 +19,7 @@ use super::{
         WorkflowInstanceDto,
     },
 };
+use crate::middleware::request_id::inject_request_id;
 
 /// ワークフロー関連の Core Service クライアントトレイト
 #[async_trait]
@@ -195,7 +196,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
     ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
         let url = format!("{}/internal/workflows", self.base_url);
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
     }
 
@@ -209,7 +213,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_id
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
@@ -222,7 +229,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, tenant_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, None).await
     }
 
@@ -236,7 +243,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, definition_id, tenant_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
     }
 
@@ -250,7 +257,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, tenant_id, user_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, None).await
     }
 
@@ -264,7 +271,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_id, tenant_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
@@ -279,7 +286,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_id, step_id
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
@@ -294,7 +304,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_id, step_id
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
@@ -308,7 +321,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, display_number, tenant_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
@@ -322,7 +335,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, display_number
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
@@ -337,7 +353,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_display_number, step_display_number
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
@@ -352,7 +371,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_display_number, step_display_number
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
@@ -367,7 +389,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, workflow_display_number, step_display_number
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
@@ -381,7 +406,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, display_number
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
@@ -395,7 +423,10 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, display_number
         );
 
-        let response = self.client.post(&url).json(&req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
@@ -409,7 +440,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
             self.base_url, display_number, tenant_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 }

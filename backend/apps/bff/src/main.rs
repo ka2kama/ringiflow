@@ -57,7 +57,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     Router,
-    middleware::from_fn_with_state,
+    middleware::{from_fn, from_fn_with_state},
     routing::{get, patch, post},
 };
 use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
@@ -100,7 +100,13 @@ use handler::{
     update_user,
     update_user_status,
 };
-use middleware::{AuthzState, CsrfState, csrf_middleware, require_permission};
+use middleware::{
+    AuthzState,
+    CsrfState,
+    csrf_middleware,
+    request_id::store_request_id,
+    require_permission,
+};
 #[cfg(feature = "dev-auth")]
 use ringiflow_bff::dev_auth;
 use ringiflow_bff::{client, handler, middleware};
@@ -377,6 +383,8 @@ async fn main() -> anyhow::Result<()> {
         // 1. SetRequestIdLayer（最外）: リクエスト受信時に UUID v7 を生成（またはクライアント提供値を使用）
         // 2. TraceLayer: カスタムスパンに request_id を含め、全ログに自動注入
         // 3. PropagateRequestIdLayer: レスポンスヘッダーに X-Request-Id をコピー
+        // 4. store_request_id: task-local に保存し、BFF → 内部サービスのヘッダー伝播に使用
+        .layer(from_fn(store_request_id))
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(TraceLayer::new_for_http().make_span_with(make_request_span))
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuidV7));
