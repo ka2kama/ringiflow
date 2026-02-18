@@ -61,7 +61,6 @@ while IFS= read -r line; do
             reason=""
 
             # secondary worktree が main をチェックアウトしている場合
-            # （gh pr merge --delete-branch 等でフォールバックした結果）
             if [[ "$wt_branch" == "main" ]]; then
                 reason="main ブランチをチェックアウト中（不要な worktree）"
             fi

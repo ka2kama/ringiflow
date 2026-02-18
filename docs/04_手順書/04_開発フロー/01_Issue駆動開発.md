@@ -563,7 +563,8 @@ Claude Code Action による自動レビューが実行される。
 レビュー確認後、手動でマージする。
 
 ```bash
-gh pr merge --squash --delete-branch
+gh pr merge --squash
+just clean-branches
 ```
 
 **Squash マージの効果:**
@@ -573,13 +574,7 @@ gh pr merge --squash --delete-branch
 
 → 設定詳細: [GitHub 設定 > Pull Requests](../02_プロジェクト構築/03_GitHub設定.md#13-pull-requests)
 
-注意: `--auto` は使用しない。レビュー結果を確認してからマージすること。
-
-**マージ後のローカルブランチ削除:**
-
-```bash
-just clean-branches
-```
+注意: `--auto` は使用しない。レビュー結果を確認してからマージすること。リモートブランチは GitHub の auto-delete 設定で自動削除される。
 
 ### 9. 振り返り
 

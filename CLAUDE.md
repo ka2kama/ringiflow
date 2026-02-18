@@ -440,8 +440,8 @@ gh pr ready     # Draft を解除
 → 詳細チェックリスト: [手順書: 品質ゲートと Ready for Review](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-品質ゲートと-ready-for-review)
 
 ```bash
-gh pr merge --squash --delete-branch
-just clean-branches  # マージ後のローカルブランチ削除
+gh pr merge --squash
+just clean-branches  # マージ後のブランチ削除（worktree のリセット含む）
 ```
 
 **禁止:** `--admin` で CI バイパス、CI 失敗状態での強制マージ
@@ -454,5 +454,5 @@ Claude Code Action による自動 PR レビューが有効。→ [`.github/work
 
 ```bash
 gh pr checks && gh pr view --comments  # 指摘対応フロー
-gh pr merge --squash --delete-branch   # 対応後マージ
+gh pr merge --squash                   # 対応後マージ
 ```
