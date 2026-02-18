@@ -110,9 +110,12 @@ use ringiflow_infra::{
     dynamodb,
     repository::DynamoDbAuditLogRepository,
 };
-use ringiflow_shared::observability::TracingConfig;
+use ringiflow_shared::observability::{MakeRequestUuidV7, TracingConfig, make_request_span};
 use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    request_id::{PropagateRequestIdLayer, SetRequestIdLayer},
+    trace::TraceLayer,
+};
 
 /// BFF サーバーのエントリーポイント
 ///
@@ -257,7 +260,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // ルーター構築
-    // TraceLayer により、すべての HTTP リクエストがトレーシングされる
+    // Request ID + TraceLayer により、すべての HTTP リクエストに request_id が付与されログに自動注入される
     // CSRF ミドルウェアは POST/PUT/PATCH/DELETE リクエストを検証する
     let app = Router::new()
         .route("/health", get(health_check))
@@ -370,7 +373,13 @@ async fn main() -> anyhow::Result<()> {
                 .with_state(audit_log_state),
         )
         .layer(from_fn_with_state(csrf_state, csrf_middleware))
-        .layer(TraceLayer::new_for_http());
+        // Request ID レイヤー（レイヤー順序が重要: 下に書いたものが外側）
+        // 1. SetRequestIdLayer（最外）: リクエスト受信時に UUID v7 を生成（またはクライアント提供値を使用）
+        // 2. TraceLayer: カスタムスパンに request_id を含め、全ログに自動注入
+        // 3. PropagateRequestIdLayer: レスポンスヘッダーに X-Request-Id をコピー
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(TraceLayer::new_for_http().make_span_with(make_request_span))
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuidV7));
 
     // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
