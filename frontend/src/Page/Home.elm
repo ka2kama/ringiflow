@@ -10,6 +10,7 @@ KPI 統計情報（承認待ち、申請中、本日完了）とクイックア�
 import Api exposing (ApiError)
 import Api.Dashboard as DashboardApi
 import Component.Button as Button
+import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Data.Dashboard exposing (DashboardStats)
 import Data.WorkflowInstance exposing (Status(..))
@@ -107,8 +108,7 @@ viewStats remoteStats =
             LoadingSpinner.view
 
         Failure _ ->
-            div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-                [ text "統計情報の取得に失敗しました" ]
+            ErrorState.viewSimple "統計情報の取得に失敗しました"
 
         Success stats ->
             -- TODO(human): KPI カードのデザインを実装してください

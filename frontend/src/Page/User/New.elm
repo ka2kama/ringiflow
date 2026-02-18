@@ -12,6 +12,7 @@ import Api.AdminUser as AdminUserApi
 import Api.ErrorMessage as ErrorMessage
 import Api.Role as RoleApi
 import Component.Button as Button
+import Component.ErrorState as ErrorState
 import Component.FormField as FormField
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
@@ -283,8 +284,7 @@ viewForm model =
                 LoadingSpinner.view
 
             Failure _ ->
-                div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-                    [ text "ロール情報の取得に失敗しました。" ]
+                ErrorState.viewSimple "ロール情報の取得に失敗しました。"
 
             _ ->
                 viewFormContent model

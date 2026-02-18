@@ -14,6 +14,7 @@ import Api.ErrorMessage as ErrorMessage
 import Api.Role as RoleApi
 import Browser.Navigation as Nav
 import Component.Button as Button
+import Component.ErrorState as ErrorState
 import Component.FormField as FormField
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
@@ -291,12 +292,10 @@ viewContent model =
             LoadingSpinner.view
 
         ( Failure err, _ ) ->
-            div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-                [ text (ErrorMessage.toUserMessage { entityName = "ユーザー" } err) ]
+            ErrorState.viewSimple (ErrorMessage.toUserMessage { entityName = "ユーザー" } err)
 
         ( _, Failure _ ) ->
-            div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-                [ text "ロール情報の取得に失敗しました。" ]
+            ErrorState.viewSimple "ロール情報の取得に失敗しました。"
 
         ( Success userDetail, Success roles ) ->
             viewFormContent model userDetail roles
