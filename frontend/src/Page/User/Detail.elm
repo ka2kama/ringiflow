@@ -345,7 +345,7 @@ viewRolesAndPermissions userDetail =
                         List.map
                             (\role ->
                                 Badge.view
-                                    { colorClass = "bg-primary-100 text-primary-800 border-primary-200"
+                                    { colorClass = "bg-primary-50 text-primary-600 border-primary-200"
                                     , label = role
                                     }
                             )
