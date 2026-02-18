@@ -895,7 +895,7 @@ viewTopBar =
     header [ class "flex h-16 items-center border-b border-secondary-100 bg-white px-4 lg:px-6" ]
         [ -- ハンバーガーボタン（モバイルのみ）
           button
-            [ class "mr-4 rounded-lg p-2 text-secondary-500 hover:bg-secondary-50 lg:hidden"
+            [ class "mr-4 rounded-lg p-2 text-secondary-500 hover:bg-secondary-50 transition-colors lg:hidden"
             , attribute "aria-label" "メニューを開く"
             , onClick ToggleSidebar
             ]

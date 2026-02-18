@@ -278,7 +278,7 @@ viewBreadcrumb model =
                 "編集"
     in
     nav [ class "mb-4 text-sm text-secondary-500" ]
-        [ a [ href (Route.toString Route.Roles), class "hover:text-primary-600" ] [ text "ロール管理" ]
+        [ a [ href (Route.toString Route.Roles), class "hover:text-primary-600 transition-colors" ] [ text "ロール管理" ]
         , span [ class "mx-2" ] [ text ">" ]
         , span [] [ text lastSegment ]
         ]

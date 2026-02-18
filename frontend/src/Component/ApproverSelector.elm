@@ -231,7 +231,7 @@ viewSelectedApprover name maybeDisplayId onClear =
             ]
         , button
             [ Html.Events.onClick onClear
-            , class "border-0 bg-transparent cursor-pointer text-secondary-400 hover:text-secondary-600 text-xl"
+            , class "border-0 bg-transparent cursor-pointer text-secondary-400 hover:text-secondary-600 transition-colors text-xl"
             , type_ "button"
             ]
             [ text "×" ]
@@ -323,7 +323,7 @@ viewCandidate highlightIndex onSelect index user =
                         " bg-primary-50"
 
                     else
-                        " hover:bg-primary-50"
+                        " hover:bg-primary-50 transition-colors"
                    )
             )
         ]
