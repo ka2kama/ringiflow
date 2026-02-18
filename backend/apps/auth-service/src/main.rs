@@ -68,7 +68,7 @@ use ringiflow_infra::{
     db,
     repository::{CredentialsRepository, PostgresCredentialsRepository},
 };
-use ringiflow_shared::observability::TracingConfig;
+use ringiflow_shared::observability::{TracingConfig, make_request_span};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use usecase::AuthUseCaseImpl;
@@ -124,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
             delete(delete_credentials),
         )
         .with_state(auth_state)
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http().make_span_with(make_request_span));
 
     // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
