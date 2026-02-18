@@ -56,7 +56,7 @@ backend/crates/shared/src/
 ## 公開 API
 
 ```rust
-// observability/mod.rs
+// observability.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LogFormat {
@@ -158,7 +158,7 @@ tracing-subscriber = { workspace = true, optional = true }
 | ファイル | 変更内容 |
 |---------|---------|
 | `backend/crates/shared/src/lib.rs` | `pub mod observability` 追加（feature gate） |
-| `backend/crates/shared/src/observability/mod.rs` | 新規作成: LogFormat, TracingConfig, init_tracing |
+| `backend/crates/shared/src/observability.rs` | 新規作成: LogFormat, TracingConfig, init_tracing |
 | `backend/crates/shared/Cargo.toml` | observability feature + tracing 依存追加 |
 | `backend/apps/bff/src/main.rs` | init_tracing 呼び出しに置換、jscpd:ignore 削除 |
 | `backend/apps/core-service/src/main.rs` | 同上 |
@@ -174,7 +174,7 @@ tracing-subscriber = { workspace = true, optional = true }
 
 ### Phase 1: LogFormat enum + TracingConfig（TDD）
 
-対象: `observability/mod.rs`（型とロジック）, `shared/Cargo.toml`, `shared/src/lib.rs`
+対象: `observability.rs`（型とロジック）, `shared/Cargo.toml`, `shared/src/lib.rs`
 
 #### 確認事項
 - [x] 型: shared クレートの既存モジュール構造 → `lib.rs`（pub mod + pub use の re-export）、`health.rs`（//! doc comment + #[cfg(test)] mod tests）
@@ -198,7 +198,7 @@ E2E テスト（該当なし）
 
 ### Phase 2: init_tracing() の実装
 
-対象: `observability/mod.rs`
+対象: `observability.rs`
 
 #### 確認事項
 - [x] ライブラリ: `fmt::layer().json()` の API → docs.rs で確認、`Layer<S, JsonFields, Format<Json, T>, W>` を返す
