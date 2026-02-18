@@ -101,7 +101,7 @@ viewResourceRow config ( resourceKey, resourceLabel ) =
                     , checked allSelected
                     , onCheck (\_ -> config.onToggleAll resourceKey)
                     , disabled config.disabled
-                    , class "h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                    , class "h-4 w-4 rounded border-secondary-300 text-primary-600 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                     ]
                     []
                 ]
@@ -120,7 +120,7 @@ viewResourceRow config ( resourceKey, resourceLabel ) =
                             , checked isSelected
                             , onCheck (\_ -> config.onToggle permission)
                             , disabled config.disabled
-                            , class "h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                            , class "h-4 w-4 rounded border-secondary-300 text-primary-600 outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                             ]
                             []
                         ]
