@@ -2,17 +2,17 @@
 
 `just check-all` 等の長時間コマンドを Bash ツールで実行する際のルール。
 
-## 1. バックグラウンド実行時はパイプを使わない
+## 1. 長時間コマンドにパイプを使わない
 
-`command | tail` や `command | grep` をバックグラウンドで実行してはならない。`tail` や `grep` はパイプの全入力を受け取るまで出力を保留するため、出力ファイルが空のままハングする。
+`command | tail` や `command | grep` を長時間コマンドで使用してはならない。`tail` や `grep` はパイプの全入力を受け取るまで出力を保留するため、フォアグラウンドでは Bash ツールがタイムアウトするまでハングし、バックグラウンドでは出力ファイルが空のままになる。
 
 ```bash
-# 禁止: バックグラウンド + パイプ
-just check-all 2>&1 | tail -30     # tail が全入力を待ち、出力が空のまま
+# 禁止: 長時間コマンド + パイプ（フォアグラウンド・バックグラウンド共通）
+just check-all 2>&1 | tail -30     # tail が全入力を待ち、ハングする
 
-# 正しい: バックグラウンドで直接実行し、後から Read/tail で確認
-just check-all                      # run_in_background: true で実行
-# → 完了後に Read ツールで出力ファイルを確認
+# 正しい: 直接実行し、後から結果を確認
+just check-all                      # フォアグラウンドまたは run_in_background: true
+# → 完了後に Read ツールで出力を確認
 ```
 
 ## 2. TaskOutput の timeout は短く設定する
