@@ -98,7 +98,7 @@ view config =
             (backdropClickDecoder config.onCancel)
         ]
         [ div [ class "flex h-full w-full items-center justify-center pointer-events-none" ]
-            [ div [ class "pointer-events-auto w-full max-w-md rounded-lg bg-white p-6 shadow-xl" ]
+            [ div [ class "dialog-content pointer-events-auto w-full max-w-md rounded-lg bg-white p-6 shadow-xl" ]
                 [ h2 [ id titleId, class "text-lg font-semibold text-secondary-900" ] [ text config.title ]
                 , p [ id messageId, class "mt-2 text-sm text-secondary-600" ] [ text config.message ]
                 , div [ class "mt-6 flex justify-end gap-3" ]
