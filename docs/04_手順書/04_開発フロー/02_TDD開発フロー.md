@@ -222,6 +222,40 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 既知手法との対応: 「毎 Refactor」は Kent Beck の Simple Design rules、「モジュール完成時」は SOLID 原則の SRP・DIP に対応。
 
+#### UI/UX レンズ（フロントエンド変更時）
+
+フロントエンド（Elm ビュー関数、Tailwind クラス）を変更する場合、コード設計レンズに加えて以下を適用する。
+
+→ 参照: デザイントークンとガイドライン — [`frontend/src/styles.css`](../../../frontend/src/styles.css)
+
+毎 Refactor:
+
+| レンズ | 問い |
+|--------|------|
+| デザイントークン準拠 | styles.css のトークンとガイドラインを使用しているか？生の色値・未定義シェードはないか？ |
+| 共有コンポーネント活用 | 既存の共有コンポーネント（Button, Badge, FormField, ErrorState, EmptyState 等）で実現できないか？ |
+| 状態の網羅性 | RemoteData の全状態（NotAsked/Loading/Failure/Success）と空データにフィードバックがあるか？ |
+
+ページ/コンポーネントの完成時:
+
+| レンズ | 問い |
+|--------|------|
+| アクセシビリティ | セマンティック HTML、ARIA 属性、キーボード操作（focus-visible）、フォームの label 関連付けが適切か？ |
+| エラーのユーザビリティ | エラー表示がユーザーの言語で表現され、回復手段（再読み込み等）を提供しているか？ |
+| 視覚的階層 | styles.css のタイポグラフィ階層に沿い、関連要素が近接でグルーピングされているか？ |
+| 破壊的操作の防御 | 削除・却下等の破壊的操作に ConfirmDialog があり、ボタン色が操作の意味と一致しているか？ |
+
+コード設計レンズとの対応:
+
+| コード設計レンズ | 対応する UI/UX レンズ |
+|----------------|---------------------|
+| 意図の明確さ | 視覚的階層 |
+| 重複の排除 | 共有コンポーネント活用 |
+| 要素の最小性 | （H8 ミニマルデザインとして視覚的階層に包含） |
+| 型の活用 | 状態の網羅性（RemoteData + Button.Variant） |
+
+既知手法との対応: UI/UX レンズは Nielsen の 10 Usability Heuristics（H1: 状態の網羅性、H4: デザイントークン準拠、H5/H3: 破壊的操作の防御、H8: 視覚的階層、H9: エラーのユーザビリティ）と WCAG 2.1 POUR 原則（アクセシビリティ）に対応。
+
 ---
 
 ## テストリスト
@@ -564,6 +598,8 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 | nano-cycle（Red 内の小サイクル） | Robert C. Martin, *Clean Craftsmanship* (2021) | 二層の Red モデル |
 | Compiler-Driven Development | 静的型付き言語 TDD の一般的な考え方 | コンパイルエラー解消の原則 |
 | "Write the test you wish you had" | Freeman & Pryce, *GOOS* (2009) | Red フェーズの「テストを1つだけ書く」 |
+| Usability Heuristics | Jakob Nielsen, *10 Usability Heuristics for User Interface Design* (1994, 2024 更新) | UI/UX レンズ（H1, H3, H4, H5, H8, H9） |
+| POUR 原則 | W3C, *WCAG 2.1* (2018) | アクセシビリティレンズ（Perceivable + Operable） |
 
 → 詳細: [独自フレームワークと既知手法の対応](../../06_ナレッジベース/methodology/独自フレームワークと既知手法の対応.md)
 
@@ -573,6 +609,7 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-18 | 設計原則レンズに UI/UX レンズ（フロントエンド変更時）を追加。Nielsen's Heuristics・WCAG 2.1 POUR を既知手法に記載（#445） |
 | 2026-02-18 | Red フェーズに二層の Red モデル（compile → test failure）、コンパイルエラー解消の原則、既知手法との対応を追加（#637） |
 | 2026-02-11 | 確認事項の実施に結果記録（チェックボックス + 1行結果）の手順を追加 |
 | 2026-02-11 | E2E テスト（Playwright）の実行タイミングセクションを追加、チェックリストに E2E 項目を追加（#435） |
