@@ -777,7 +777,7 @@ viewStepProgress workflow =
         text ""
 
     else
-        div [ class "rounded-lg border border-secondary-100 p-4" ]
+        div [ class "rounded-lg border border-secondary-200 bg-white p-4 shadow-sm" ]
             [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "進行状況" ]
             , let
                 totalSteps =
@@ -1118,7 +1118,7 @@ viewCommentList comments =
 
 viewCommentItem : WorkflowComment -> Html Msg
 viewCommentItem commentData =
-    div [ class "rounded-lg border border-secondary-100 p-3" ]
+    div [ class "rounded-lg border border-secondary-200 bg-white p-3" ]
         [ div [ class "flex items-center justify-between text-xs text-secondary-500" ]
             [ span [ class "font-medium text-secondary-700" ] [ text commentData.postedBy.name ]
             , span [] [ text commentData.createdAt ]
@@ -1223,7 +1223,7 @@ viewApprovalSection workflow comment isSubmitting shared =
     in
     case findActiveStepForUser workflow.steps currentUserId of
         Just step ->
-            div [ class "space-y-4 rounded-lg border border-secondary-100 p-4" ]
+            div [ class "space-y-4 rounded-lg border border-secondary-200 bg-white p-4 shadow-sm" ]
                 [ viewCommentInput comment
                 , viewApprovalButtons step isSubmitting
                 ]
@@ -1331,7 +1331,7 @@ viewSteps workflow =
 
 viewStep : WorkflowStep -> Html Msg
 viewStep step =
-    li [ class "rounded-lg border border-secondary-100 p-4" ]
+    li [ class "rounded-lg border border-secondary-200 bg-white p-4" ]
         [ div [ class "flex items-center justify-between" ]
             [ span [ class "font-medium text-secondary-900" ]
                 [ span [ class "text-secondary-400 mr-2" ] [ text step.displayId ]

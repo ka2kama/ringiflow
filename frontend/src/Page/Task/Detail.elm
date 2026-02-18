@@ -407,7 +407,7 @@ viewWorkflowStatus workflow =
 viewApprovalSection : WorkflowStep -> Model -> Html Msg
 viewApprovalSection step model =
     if step.status == StepActive then
-        div [ class "space-y-4 rounded-lg border border-secondary-100 p-4" ]
+        div [ class "space-y-4 rounded-lg border border-secondary-200 bg-white p-4 shadow-sm" ]
             [ viewCommentInput model.comment
             , viewApprovalButtons step model.isSubmitting
             ]
@@ -581,7 +581,7 @@ viewSteps workflow =
 
 viewStep : WorkflowStep -> Html Msg
 viewStep step =
-    li [ class "rounded-lg border border-secondary-100 p-4" ]
+    li [ class "rounded-lg border border-secondary-200 bg-white p-4" ]
         [ div [ class "flex items-center justify-between" ]
             [ span [ class "font-medium text-secondary-900" ] [ text step.stepName ]
             , span [ class "text-sm text-secondary-500" ] [ text (WorkflowInstance.stepStatusToJapanese step.status) ]

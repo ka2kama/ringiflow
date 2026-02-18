@@ -256,7 +256,7 @@ viewUserDetail model userDetail =
 -}
 viewBasicInfo : Model -> UserDetail -> Html Msg
 viewBasicInfo model userDetail =
-    div [ class "rounded-lg border border-secondary-200 bg-white p-6" ]
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ div [ class "flex items-center justify-between mb-4" ]
             [ h3 [ class "text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
             , viewActions model userDetail
@@ -336,7 +336,7 @@ viewStatusToggleButton isSubmitting status =
 -}
 viewRolesAndPermissions : UserDetail -> Html Msg
 viewRolesAndPermissions userDetail =
-    div [ class "rounded-lg border border-secondary-200 bg-white p-6" ]
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "ロール・権限" ]
         , div [ class "space-y-3" ]
             [ div []
