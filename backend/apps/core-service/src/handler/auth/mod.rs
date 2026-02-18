@@ -66,7 +66,7 @@ impl From<&User> for UserResponse {
             id:        *user.id().as_uuid(),
             tenant_id: *user.tenant_id().as_uuid(),
             email:     user.email().as_str().to_string(),
-            name:      user.name().to_string(),
+            name:      user.name().as_str().to_string(),
             status:    user.status().to_string(),
         }
     }
@@ -118,7 +118,7 @@ impl UserItemDto {
             id: *user.id().as_uuid(),
             display_id: DisplayId::new(display_prefix::USER, user.display_number()).to_string(),
             display_number: user.display_number().as_i64(),
-            name: user.name().to_string(),
+            name: user.name().as_str().to_string(),
             email: user.email().as_str().to_string(),
             status: user.status().to_string(),
             roles: Vec::new(),
@@ -411,7 +411,7 @@ pub async fn create_user(
         id: *user.id().as_uuid(),
         display_id: DisplayId::new(display_prefix::USER, user.display_number()).to_string(),
         display_number: user.display_number().as_i64(),
-        name: user.name().to_string(),
+        name: user.name().as_str().to_string(),
         email: user.email().as_str().to_string(),
         role: req.role_name,
     });

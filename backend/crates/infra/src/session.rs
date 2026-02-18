@@ -37,7 +37,7 @@ const SESSION_TTL_SECONDS: u64 = 28800;
 ///
 /// Redis に JSON 形式で保存されるセッション情報。
 /// ログイン成功時に作成され、ログアウトまたは TTL 経過で削除される。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SessionData {
     user_id: UserId,
     tenant_id: TenantId,
@@ -48,6 +48,21 @@ pub struct SessionData {
     permissions: Vec<String>,
     created_at: DateTime<Utc>,
     last_accessed_at: DateTime<Utc>,
+}
+
+impl std::fmt::Debug for SessionData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SessionData")
+            .field("user_id", &self.user_id)
+            .field("tenant_id", &self.tenant_id)
+            .field("email", &"[REDACTED]")
+            .field("name", &"[REDACTED]")
+            .field("roles", &self.roles)
+            .field("permissions", &self.permissions)
+            .field("created_at", &self.created_at)
+            .field("last_accessed_at", &self.last_accessed_at)
+            .finish()
+    }
 }
 
 impl SessionData {
@@ -440,6 +455,39 @@ mod tests {
             session.permissions(),
             &["workflow:read".to_string(), "task:read".to_string()]
         );
+    }
+
+    #[test]
+    fn test_セッションデータのdebug出力はメールアドレスをマスクする() {
+        let session = SessionData::new(
+            UserId::from_uuid(uuid::Uuid::nil()),
+            TenantId::from_uuid(uuid::Uuid::nil()),
+            "secret@example.com".to_string(),
+            "Secret User".to_string(),
+            vec!["user".to_string()],
+            vec![],
+        );
+        let debug = format!("{:?}", session);
+        assert!(!debug.contains("secret@example.com"));
+        assert!(!debug.contains("Secret User"));
+        assert!(debug.contains("[REDACTED]"));
+    }
+
+    #[test]
+    fn test_セッションデータのdebug出力は非piiフィールドを通常表示する() {
+        let session = SessionData::new(
+            UserId::from_uuid(uuid::Uuid::nil()),
+            TenantId::from_uuid(uuid::Uuid::nil()),
+            "secret@example.com".to_string(),
+            "Secret User".to_string(),
+            vec!["admin".to_string()],
+            vec![],
+        );
+        let debug = format!("{:?}", session);
+        // user_id（UUID nil）は表示される
+        assert!(debug.contains("00000000-0000-0000-0000-000000000000"));
+        // roles は表示される
+        assert!(debug.contains("admin"));
     }
 
     #[test]
