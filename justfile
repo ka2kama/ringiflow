@@ -315,7 +315,7 @@ build-elm:
 
 # API テスト用の DB/Redis/DynamoDB を起動（開発環境とは独立）
 # プロジェクト名はディレクトリ名から自動取得（worktree 対応）
-api-test-deps:
+api-test-deps: setup-env
     #!/usr/bin/env bash
     PROJECT_NAME="$(basename "$(pwd)")-api-test"
     docker compose --env-file .env -p "$PROJECT_NAME" -f infra/docker/docker-compose.api-test.yaml up -d --wait
@@ -327,9 +327,7 @@ api-test-deps:
 
 # API テスト用の DB をリセット
 api-test-reset-db:
-    @echo "API テスト用データベースをリセット中..."
-    cd backend && DATABASE_URL=postgres://ringiflow:ringiflow@localhost:${API_TEST_POSTGRES_PORT}/ringiflow sqlx database reset -y
-    @echo "✓ API テスト用データベースリセット完了"
+    ./scripts/api-test-reset-db.sh
 
 # API テスト用の DB/Redis を停止
 api-test-stop:
