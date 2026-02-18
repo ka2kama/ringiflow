@@ -73,6 +73,130 @@
  * アクセシビリティ:
  *   prefers-reduced-motion : グローバルメディアクエリで一括無効化
  *                            アニメーション/トランジション/スクロールすべてに適用
+ *
+ * === デザイン原則 ===
+ *
+ * エンタープライズ SaaS として、以下の原則でビジュアルデザインを統制する。
+ *
+ *   1. 透明性       : UI はコンテンツを際立たせる背景であり、主役ではない
+ *   2. 一貫性       : 同じ役割の要素は同じ見た目。パターンの反復で認知負荷を下げる
+ *   3. 意図的な余白 : 余白は「空き」ではなく、情報のグルーピングと優先度を伝える手段
+ *   4. 最小の強調   : 重要な情報だけを際立たせる。装飾的な強調は避ける
+ *
+ * === スペーシング（Tailwind 4px グリッド準拠） ===
+ *
+ * ページ:
+ *   タイトル〜コンテンツ : mb-6（ヘッダー要素に付与、または flex 親に mb-6）
+ *   セクション間         : space-y-6（標準）、space-y-8（大セクション区切り）
+ *
+ * カード:
+ *   内部パディング       : p-6（標準）、p-4（コンパクト / 入れ子カード）
+ *
+ * テーブル（セル間隔は上記テーブルセクション参照）:
+ *   テーブル下の件数表示 : mt-4
+ *
+ * フォーム:
+ *   フィールド間         : space-y-6（親コンテナ）
+ *   ラベル〜入力         : mb-1（ラベル側）
+ *   入力〜エラー文       : mt-1（エラー側）
+ *   ボタングループ       : flex gap-3
+ *   フォーム幅           : mx-auto max-w-lg（標準）
+ *                          mx-auto max-w-2xl（権限マトリックス等の複雑フォーム）
+ *
+ * フィルタ:
+ *   フィルタ〜コンテンツ : mb-4
+ *
+ * パンくず:
+ *   セパレータ           : mx-2
+ *   コンテナ下           : mb-4
+ *
+ * 4px グリッドの例外:
+ *   Badge の py-0.5（2px）— 行内要素として視覚的に適切なため許容
+ *
+ * === レイアウト構成 ===
+ *
+ * ページ骨格:
+ *   ヘッダー   : div > flex items-center justify-between mb-6
+ *                 左: text-2xl font-bold text-secondary-900（タイポグラフィ参照）
+ *                 右: Button（CTA）
+ *   フィルタ   : div > mb-4（検索バー、フィルタセレクト等）
+ *   コンテンツ : RemoteData パターンで分岐
+ *                 NotAsked  → 空
+ *                 Loading   → LoadingSpinner
+ *                 Failure   → ErrorState
+ *                 Success   → viewContent
+ *
+ * コンテンツ構造:
+ *   一覧ページ : テーブル + 件数表示（mt-4 text-sm text-secondary-500）
+ *   詳細ページ : space-y-6 で複数セクションカードを配置
+ *   新規/編集  : mx-auto max-w-lg（or max-w-2xl）+ space-y-6
+ *
+ * グリッド:
+ *   KPI カード : grid gap-4 sm:grid-cols-3
+ *   フィルタ群 : grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3
+ *   定義リスト : dl > grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm
+ *
+ * インライン要素:
+ *   ラベル + 値     : flex items-center gap-2
+ *   ボタングループ : flex gap-3
+ *   区切り付き     : flex gap-3 pt-4 border-t border-secondary-100
+ *
+ * === 色の使い分け ===
+ *
+ * Primary（Indigo）— ブランド・インタラクション:
+ *   CTA ボタン       : bg-primary-500 → hover:bg-primary-600
+ *   リンクテキスト   : text-primary-600 → hover:text-primary-700
+ *   フォーカスリング : focus-visible:ring-primary-500
+ *   選択状態の背景   : bg-primary-50
+ *   使わない場面     : ステータス表示（success/error/warning/info を使う）
+ *
+ * Secondary（Slate）— 構造・テキスト:
+ *   テキスト階層     : 900（見出し）、700（ラベル）、500（ヘルパー）、400（無効）
+ *   ボーダー         : 200（カード区切り）、300（入力フィールド）
+ *   背景             : 50（ページ背景、テーブルヘッダー、ホバー、読み取り専用）
+ *   中性ステータス   : 100/200（下書き、キャンセル済み）
+ *
+ * Success（Emerald）— 肯定・完了:
+ *   ボタン           : bg-success-600（承認、完了アクション）
+ *   バッジ           : bg-success-50 text-success-600 border-success-200
+ *   アラート         : bg-success-50 text-success-700
+ *
+ * Error（Red）— 否定・危険:
+ *   ボタン           : bg-error-600（却下、削除アクション）
+ *   バッジ           : bg-error-50 text-error-600 border-error-200
+ *   フォーム検証     : border-error-300 + text-error-600
+ *   アラート         : bg-error-50 text-error-700
+ *
+ * Warning（Amber）— 注意・保留:
+ *   ボタン           : bg-warning-600（注意を要するアクション）
+ *   バッジ           : bg-warning-50 text-warning-600 border-warning-200
+ *   アラート         : bg-warning-50（注意喚起ボックス）
+ *
+ * Info（Blue）— 情報・中立:
+ *   バッジ           : bg-info-50 text-info-600 border-info-300
+ *   情報ボックス     : bg-info-100 text-info-700
+ *
+ * バッジの色パターン（共通構造）:
+ *   bg-{color}-50 text-{color}-600 border-{color}-200
+ *   （薄い背景 + 濃いテキスト + 中間ボーダー）
+ *   例外: Info は border-info-300（Blue 200 のコントラストが不足するため）
+ *
+ * === レスポンシブ（モバイルファースト） ===
+ *
+ * ブレークポイント:
+ *   sm (640px)   : グリッドカラム展開（1列 → 2-3列）
+ *   lg (1024px)  : サイドバー表示、3列グリッド
+ *   md/xl/2xl    : 現在未使用（必要に応じて追加）
+ *
+ * パターン:
+ *   テーブル     : overflow-x-auto で横スクロール（全ブレークポイント共通）
+ *   グリッド     : grid-cols-1 → sm:grid-cols-2 → lg:grid-cols-3
+ *   サイドバー   : lg 以上で表示（--spacing-sidebar: 16rem）
+ *   フォーム     : max-w-lg で中央配置（レスポンシブ不要）
+ *
+ * 原則:
+ *   小画面をデフォルトとし、大画面でオプトインする（sm:/lg: プレフィックス）
+ *   エンタープライズ SaaS のため、デスクトップ（lg+）での完全対応を優先
  */
 
 @import "tailwindcss";
