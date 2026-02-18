@@ -250,7 +250,7 @@ viewDateFilter labelText filterValue onInputMsg =
             [ type_ "date"
             , value filterValue
             , onInput onInputMsg
-            , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+            , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
             ]
             []
         ]
@@ -261,7 +261,7 @@ viewSelectFilter labelText filterValue onInputMsg options =
     div []
         [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text labelText ]
         , select
-            [ class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+            [ class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
             , onInput onInputMsg
             , value filterValue
             ]
