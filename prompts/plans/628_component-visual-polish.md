@@ -106,8 +106,8 @@ User/Detail.elm ロールバッジ (L352):
 ボーダー色ルール: 背景色と同系統の 200 番台。info のみ `info-200` が @theme に未定義のため `info-300`（styles.css L93 で定義確認済み）。
 
 ### 確認事項
-- [ ] Badge.view の全呼び出し箇所を Grep で確認 → 上記のリストが網羅的か
-- [ ] info-300 が @theme に存在するか → styles.css L93 `--color-info-300: #93c5fd` 確認済み
+- [x] Badge.view の全呼び出し箇所を Grep で確認 → 上記のリストが網羅的か
+- [x] info-300 が @theme に存在するか → styles.css L93 `--color-info-300: #93c5fd` 確認済み
 
 ### テストリスト
 
@@ -182,7 +182,7 @@ viewWorkflowTable (L377-390):
 viewWorkflowRow (L393): `"border-b border-secondary-100"` → `"hover:bg-secondary-50 transition-colors"`
 
 ### 確認事項
-- [ ] viewTaskList と viewWorkflowList のテーブル外側の DOM 構造を確認 → ラッパー追加位置の特定
+- [x] viewTaskList と viewWorkflowList のテーブル外側の DOM 構造を確認 → ラッパー追加位置の特定
 
 ### テストリスト
 
@@ -246,8 +246,8 @@ E2E テスト: `just check-all` で確認
 | Task/Detail.elm | L584 | 入れ子 | `secondary-100→200` + `bg-white` 追加 |
 
 ### 確認事項
-- [ ] `shadow-sm` が Tailwind v4 デフォルトスケールに含まれるか → 含まれる（@theme 再宣言不要）
-- [ ] Workflow/Detail.elm の全カードパターンの網羅性 → viewStepProgress, viewApprovalSection, viewStep, viewCommentItem, viewResubmitSection の 5 箇所
+- [x] `shadow-sm` が Tailwind v4 デフォルトスケールに含まれるか → 含まれる（@theme 再宣言不要）
+- [x] Workflow/Detail.elm の全カードパターンの網羅性 → viewStepProgress, viewApprovalSection, viewStep, viewCommentItem, viewResubmitSection の 5 箇所
 
 ### テストリスト
 
@@ -310,8 +310,8 @@ E2E テスト: `just check-all` で確認
 変更点: `rounded` → `rounded-lg`（ガイドライン統一）、`border-secondary-100` → `border-secondary-300`（FormField と統一）、`py-1.5`（6px）→ `py-2`（8px）
 
 ### 確認事項
-- [ ] FormField.elm の全フォーカスパターン → inputClass（viewTextField/viewSelectField 共用）と viewTextArea の計 2 箇所。viewReadOnlyField はフォーカス不要
-- [ ] Main.elm のサイドバーナビの親要素の余白 → `py-2` 変更後のレイアウト確認
+- [x] FormField.elm の全フォーカスパターン → inputClass（viewTextField/viewSelectField 共用）と viewTextArea の計 2 箇所。viewReadOnlyField はフォーカス不要
+- [x] Main.elm のサイドバーナビの親要素の余白 → `py-2` 変更後のレイアウト確認
 
 ### テストリスト
 
@@ -365,7 +365,7 @@ E2E テスト: `just check-all` で確認
 ```
 
 ### 確認事項
-- [ ] 既存のデザインガイドラインコメントとの整合性
+- [x] 既存のデザインガイドラインコメントとの整合性
 
 ### テストリスト
 
