@@ -70,6 +70,40 @@ impl TracingConfig {
     }
 }
 
+/// トレーシングを初期化する
+///
+/// `RUST_LOG` 環境変数でログレベルを制御可能。
+/// 未設定の場合は `"info,ringiflow=debug"` をデフォルトとする。
+///
+/// JSON モードでは以下のフィールドがトップレベルに出力される:
+/// - `timestamp`, `level`, `target`, `message`
+///
+/// サービス名は呼び出し元で `tracing::info_span!("app", service = "...")` を設定することで
+/// `span.service` として JSON に含まれる。
+#[cfg(feature = "observability")]
+pub fn init_tracing(config: TracingConfig) {
+    use tracing_subscriber::{Layer as _, layer::SubscriberExt, util::SubscriberInitExt};
+
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "info,ringiflow=debug".into());
+
+    let fmt_layer = match config.log_format {
+        LogFormat::Json => tracing_subscriber::fmt::layer()
+            .json()
+            .flatten_event(true)
+            .with_target(true)
+            .with_current_span(true)
+            .with_span_list(false)
+            .boxed(),
+        LogFormat::Pretty => tracing_subscriber::fmt::layer().boxed(),
+    };
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer)
+        .init();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
