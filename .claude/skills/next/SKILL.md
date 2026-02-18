@@ -104,7 +104,7 @@ gh issue list --state open --json number,title,labels,body --limit 50
 3. ...
 
 ---
-着手する場合: `just worktree-issue <Issue番号>` で worktree を作成
+着手する場合: `just worktree-issue <Issue番号> <スロット番号>` でスロットのブランチを切り替え
 現在の作業を続ける場合: `/restore` を実行
 ```
 
@@ -124,21 +124,22 @@ gh issue list --state open --json number,title,labels,body --limit 50
 3. #<番号> <タイトル> (優先度: <high/medium/low>)
 
 ---
-着手する場合: `just worktree-issue <Issue番号>` で worktree を作成
+着手する場合: `just worktree-issue <Issue番号> <スロット番号>` でスロットのブランチを切り替え
 ```
 
 ### Step 7: ユーザーの選択を確認
 
 ユーザーが Issue を選択したら:
 
-1. 対応する worktree が既にあるか確認（`git worktree list`）
-2. あれば `cd` パスを案内
-3. なければ `just worktree-issue {番号}` を提案
-4. main で作業する場合は `git checkout -b` を提案
+1. 利用可能なスロットを確認（`git worktree list` + `.worktree-slot` マーカー）
+2. 対応するブランチが既にスロット内にあれば `cd` パスを案内
+3. 空きスロット（detached HEAD）があれば `just worktree-issue {番号} {スロット番号}` を提案
+4. スロットがない場合は `just worktree-create N` でスロット作成を提案
+5. main で作業する場合は `git checkout -b` を提案
 
 ## 補足
 
 - このスキルは「何をすべきか」を特定するまでが役割
-- 実際の作業開始は `/restore`、worktree 作成、または手動でブランチを作成して行う
+- 実際の作業開始は `/restore`、worktree のブランチ切り替え、または手動でブランチを作成して行う
 - 優先度ラベルがない場合は、Issue の作成日時（古い順）を参考にする
 - worktree での並行開発については ADR-021 を参照
