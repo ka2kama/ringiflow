@@ -7,7 +7,7 @@
 # - ファイル名: NN_<トピック>_機能解説.md / NN_<トピック>_コード解説.md
 # - 機能解説とコード解説は必ずペアで作成する
 #
-# Usage: ./scripts/check-impl-docs.sh
+# Usage: ./scripts/check/impl-docs.sh
 
 set -euo pipefail
 

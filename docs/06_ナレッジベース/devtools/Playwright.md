@@ -61,7 +61,7 @@ npx playwright test -g "ダッシュボード"
 | CI / test-e2e | ポート 14000-14002 | ポート 15173 | `http://localhost:15173` |
 
 ローカルでは `just dev-all` で起動した開発サーバーに対してテストを実行する。
-CI では `scripts/run-e2e-tests.sh` がバックエンド・フロントエンドを自動起動する。
+CI では `scripts/test/run-e2e.sh` がバックエンド・フロントエンドを自動起動する。
 
 ## 認証パターン: storageState
 

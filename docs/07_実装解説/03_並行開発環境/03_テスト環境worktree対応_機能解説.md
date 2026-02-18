@@ -43,7 +43,7 @@ PR #96 で開発環境（`dev-deps`）の worktree 対応が完了していた�
 
 | 用語 | 説明 | 関連コード |
 |------|------|-----------:|
-| ポートオフセット | 各 worktree に割り当てられるポート加算値（100 単位）。同一オフセット内で開発環境とテスト環境のポートは衝突しない | `scripts/generate-env.sh` |
+| ポートオフセット | 各 worktree に割り当てられるポート加算値（100 単位）。同一オフセット内で開発環境とテスト環境のポートは衝突しない | `scripts/env/generate.sh` |
 | `api-test-deps` | API テスト・E2E テスト専用の Docker コンテナ群（PostgreSQL, Redis, DynamoDB） | `justfile` |
 | テンプレート方式 | `.env.api-test` を git 追跡せず、テンプレート（`.env.api-test.template`）+ 動的生成で管理する方式 | `backend/.env.api-test.template` |
 
@@ -169,7 +169,7 @@ sequenceDiagram
     User->>Just: just test-api
     Just->>Docker: api-test-deps（プロジェクト名分離）
     Just->>Just: api-test-reset-db（マイグレーション）
-    Just->>Script: ./scripts/run-api-tests.sh
+    Just->>Script: ./scripts/test/run-api.sh
     Script->>Script: source backend/.env.api-test
     Script->>Script: cargo build + cargo run（BFF/Core/Auth）
     Script->>Script: ヘルスチェック（$BFF_PORT, $CORE_PORT, $AUTH_PORT）
@@ -188,7 +188,7 @@ sequenceDiagram
     participant PW as Playwright
 
     User->>Just: just test-e2e
-    Just->>Script: ./scripts/run-e2e-tests.sh
+    Just->>Script: ./scripts/test/run-e2e.sh
     Script->>Script: source backend/.env.api-test
     Script->>Script: cargo build + cargo run（BFF/Core/Auth）
     Script->>Script: バックエンドヘルスチェック

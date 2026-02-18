@@ -6,13 +6,13 @@
 # worktree の場合は空きポートオフセットを自動で割り当てる。
 #
 # 使い方:
-#   ./scripts/setup-env.sh
+#   ./scripts/env/setup.sh
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 cd "$PROJECT_ROOT"
 
@@ -38,7 +38,7 @@ if [[ -f .env ]]; then
     if [[ -n "$port" ]]; then
         offset=$(( (port - 15432) / 100 ))
         echo "  既存のオフセット $offset を検出。不足ファイルを再生成します..."
-        ./scripts/generate-env.sh "$offset"
+        "$SCRIPT_DIR/generate.sh" "$offset"
         echo "✓ 環境変数ファイル準備完了"
         exit 0
     fi
@@ -85,7 +85,7 @@ if [[ -f .git ]]; then
         exit 1
     fi
 
-    ./scripts/generate-env.sh "$port_offset"
+    "$SCRIPT_DIR/generate.sh" "$port_offset"
 else
     # メイン worktree: テンプレートからコピー
     cp .env.template .env

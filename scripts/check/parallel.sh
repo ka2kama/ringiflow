@@ -3,8 +3,8 @@
 # Rust レーンと Non-Rust レーンを並列実行して高速化
 #
 # Usage:
-#   ./scripts/check-parallel.sh           # 全チェック（just check）
-#   ./scripts/check-parallel.sh --skip-db  # DB 不要のチェックのみ（just check-pre-push）
+#   ./scripts/check/parallel.sh           # 全チェック（just check）
+#   ./scripts/check/parallel.sh --skip-db  # DB 不要のチェックのみ（just check-pre-push）
 set -uo pipefail
 
 skip_db=false

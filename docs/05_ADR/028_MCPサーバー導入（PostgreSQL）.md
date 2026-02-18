@@ -109,7 +109,7 @@ Redis MCP サーバーは導入しない。理由:
 
 原因: Node.js の ESM モジュール解決は `NODE_PATH` を無視し、`cwd`（カレントディレクトリ）からの `node_modules` 探索に依存する。`npx --package` はパッケージを一時キャッシュにインストールするが、`node` コマンドの `cwd` は変更しないため、ESM の import 文がパッケージを見つけられない。
 
-回避策として、起動スクリプト（`scripts/mcp-postgres.sh`）を使用する:
+回避策として、起動スクリプト（`scripts/tools/mcp-postgres.sh`）を使用する:
 
 1. 決定論的なディレクトリ（`$XDG_CACHE_HOME/ringiflow-mcp-postgres`）にパッケージをインストール
 2. そのディレクトリに `cd` してから `node` を実行
@@ -117,7 +117,7 @@ Redis MCP サーバーは導入しない。理由:
 ```json
 {
   "command": "bash",
-  "args": ["scripts/mcp-postgres.sh"]
+  "args": ["scripts/tools/mcp-postgres.sh"]
 }
 ```
 

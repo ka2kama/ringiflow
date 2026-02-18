@@ -7,10 +7,10 @@
 
 | 型/関数 | ファイル | 責務 |
 |--------|---------|------|
-| `generate-env.sh` | [`scripts/generate-env.sh`](../../../scripts/generate-env.sh) | 開発環境 + テスト環境のポート計算・`.env` 一括生成 |
-| `setup-env.sh` | [`scripts/setup-env.sh`](../../../scripts/setup-env.sh) | テンプレートからのフォールバックコピーを含む環境セットアップ |
-| `run-api-tests.sh` | [`scripts/run-api-tests.sh`](../../../scripts/run-api-tests.sh) | API テスト実行（環境変数 source → ビルド → 起動 → hurl） |
-| `run-e2e-tests.sh` | [`scripts/run-e2e-tests.sh`](../../../scripts/run-e2e-tests.sh) | E2E テスト実行（環境変数 source → ビルド → 起動 → Vite → Playwright） |
+| `generate.sh` | [`scripts/env/generate.sh`](../../../scripts/env/generate.sh) | 開発環境 + テスト環境のポート計算・`.env` 一括生成 |
+| `setup.sh` | [`scripts/env/setup.sh`](../../../scripts/env/setup.sh) | テンプレートからのフォールバックコピーを含む環境セットアップ |
+| `run-api.sh` | [`scripts/test/run-api.sh`](../../../scripts/test/run-api.sh) | API テスト実行（環境変数 source → ビルド → 起動 → hurl） |
+| `run-e2e.sh` | [`scripts/test/run-e2e.sh`](../../../scripts/test/run-e2e.sh) | E2E テスト実行（環境変数 source → ビルド → 起動 → Vite → Playwright） |
 | `docker-compose.api-test.yaml` | [`infra/docker/docker-compose.api-test.yaml`](../../../infra/docker/docker-compose.api-test.yaml) | テスト用 Docker コンテナ定義（環境変数でポート参照） |
 | `api-test-deps` | [`justfile`](../../../justfile) | テスト用 Docker コンテナ起動（プロジェクト名分離） |
 
@@ -42,7 +42,7 @@ flowchart TB
 ```
 
 ```bash
-# scripts/generate-env.sh:39-67
+# scripts/env/generate.sh:39-67
 # 基準ポート（メインworktree用）— API テスト環境
 BASE_API_TEST_POSTGRES_PORT=15433                                # ①
 BASE_API_TEST_REDIS_PORT=16380
@@ -74,7 +74,7 @@ API_TEST_VITE_PORT=$((BASE_API_TEST_VITE_PORT + OFFSET))
 生成される `backend/.env.api-test` は、Rust サービスが読み込む全設定（`DATABASE_URL`, `REDIS_URL`, ポート等）を含む:
 
 ```bash
-# scripts/generate-env.sh:162-225（backend/.env.api-test 生成部分、抜粋）
+# scripts/env/generate.sh:162-225（backend/.env.api-test 生成部分、抜粋）
 cat > "$PROJECT_ROOT/backend/.env.api-test" << EOF
 DATABASE_URL=postgres://ringiflow:ringiflow@localhost:$API_TEST_POSTGRES_PORT/ringiflow  # ①
 REDIS_URL=redis://localhost:$API_TEST_REDIS_PORT
@@ -145,7 +145,7 @@ flowchart TB
 ```
 
 ```bash
-# scripts/run-api-tests.sh:26-31
+# scripts/test/run-api.sh:26-31
 # API テスト環境変数を読み込み
 cd "$PROJECT_ROOT/backend"
 set -a                      # ① 以降の変数定義を自動 export
@@ -186,7 +186,7 @@ sequenceDiagram
 ```
 
 ```bash
-# scripts/run-api-tests.sh:57-69
+# scripts/test/run-api.sh:57-69
 for i in {1..30}; do
     if curl -sf "http://localhost:$BFF_PORT/health" > /dev/null 2>&1 && \  # ①
        curl -sf "http://localhost:$CORE_PORT/health" > /dev/null 2>&1 && \
@@ -209,7 +209,7 @@ done
 E2E テストスクリプトはバックエンドのヘルスチェック（60 秒タイムアウト）に加え、Vite 開発サーバーの起動も待つ:
 
 ```bash
-# scripts/run-e2e-tests.sh:75-92
+# scripts/test/run-e2e.sh:75-92
 # Vite 開発サーバーを起動（BFF_PORT でプロキシ先を API テスト BFF に向ける）
 cd "$PROJECT_ROOT/frontend"
 VITE_PORT=$E2E_VITE_PORT pnpm run dev &                         # ①
@@ -252,7 +252,7 @@ flowchart TB
 #### API テスト（hurl）
 
 ```bash
-# scripts/run-api-tests.sh:72-76
+# scripts/test/run-api.sh:72-76
 # API テスト実行
 echo "API テストを実行中..."
 hurl --test --jobs 1 \
@@ -277,7 +277,7 @@ hurl --test --jobs 1 \
 #### E2E テスト（Playwright）
 
 ```bash
-# scripts/run-e2e-tests.sh:94-97
+# scripts/test/run-e2e.sh:94-97
 # E2E テスト実行
 echo "E2E テストを実行中..."
 cd "$PROJECT_ROOT/tests/e2e"
@@ -318,7 +318,7 @@ just check-all
 
 ### 1. `set -a && source` パターンの採用
 
-場所: `scripts/run-api-tests.sh:28-31`, `scripts/run-e2e-tests.sh:32-35`
+場所: `scripts/test/run-api.sh:28-31`, `scripts/test/run-e2e.sh:32-35`
 
 ```bash
 set -a
@@ -341,7 +341,7 @@ set +a
 
 ### 2. `--variable` と `--variables-file` の分離
 
-場所: `scripts/run-api-tests.sh:73-75`
+場所: `scripts/test/run-api.sh:73-75`
 
 ```bash
 hurl --test --jobs 1 \

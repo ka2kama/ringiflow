@@ -62,7 +62,7 @@ check-tools:
 # .env ファイルを作成（既存の場合はスキップ）
 # worktree の場合は空きポートオフセットを自動割り当て
 setup-env:
-    ./scripts/setup-env.sh
+    ./scripts/env/setup.sh
 
 # ルート開発ツールをインストール（@redocly/cli, jscpd）
 setup-root-deps:
@@ -214,7 +214,7 @@ redis-get key:
 
 # PostgreSQL: 現在のスキーマスナップショットを出力
 db-dump-schema:
-    ./scripts/dump-schema.sh "{{ _psql_url }}" > backend/schema.sql
+    ./scripts/tools/dump-schema.sh "{{ _psql_url }}" > backend/schema.sql
     @echo "✓ backend/schema.sql を更新しました"
 
 # データベースマイグレーション実行 + スキーマスナップショット更新
@@ -327,7 +327,7 @@ api-test-deps: setup-env
 
 # API テスト用の DB をリセット
 api-test-reset-db:
-    ./scripts/api-test-reset-db.sh
+    ./scripts/test/reset-db.sh
 
 # API テスト用の DB/Redis を停止
 api-test-stop:
@@ -344,12 +344,12 @@ api-test-clean:
 # API テスト実行（hurl）
 # サービスを起動してテストを実行し、終了後にサービスを停止する
 test-api: api-test-deps api-test-reset-db
-    ./scripts/run-api-tests.sh
+    ./scripts/test/run-api.sh
 
 # E2E テスト実行（Playwright）
 # バックエンド + Vite を起動してブラウザテストを実行し、終了後にサービスを停止する
 test-e2e: api-test-deps api-test-reset-db
-    ./scripts/run-e2e-tests.sh
+    ./scripts/test/run-e2e.sh
 
 # =============================================================================
 # セキュリティチェック
@@ -374,11 +374,11 @@ outdated:
 
 # ソースファイルの行数閾値チェック（500 行超で警告）
 check-file-size:
-    ./scripts/check-file-size.sh
+    ./scripts/check/file-size.sh
 
 # 関数の行数閾値チェック（50 行超で警告）
 check-fn-size:
-    ./scripts/check-fn-size.sh {{ _cargo_q }}
+    ./scripts/check/fn-size.sh {{ _cargo_q }}
 
 # コード重複（コピー＆ペースト）を検出（jscpd）
 # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
@@ -393,21 +393,21 @@ check-duplicates:
 
 # 改善記録の標準フォーマット準拠チェック（カテゴリ・失敗タイプの値検証）
 lint-improvements:
-    ./scripts/check-improvement-records.sh
+    ./scripts/check/improvement-records.sh
 
 # .claude/rules/ 内のルールファイルが CLAUDE.md または paths: で参照されているかチェック
 lint-rules:
-    ./scripts/check-rule-files.sh
+    ./scripts/check/rule-files.sh
 
 # ドキュメント内の相対パスリンク切れをチェック
 # 警告のみ（exit 0）: 既存のリンク切れが多数あるため、ブロックしない
 check-doc-links:
-    ./scripts/check-doc-links.sh
+    ./scripts/check/doc-links.sh
 
 # 実装解説のファイル命名規則をチェック
 # 警告のみ（exit 0）: 既存の違反がある場合にブロックしない
 check-impl-docs:
-    ./scripts/check-impl-docs.sh
+    ./scripts/check/impl-docs.sh
 
 # =============================================================================
 # 未使用依存チェック
@@ -441,12 +441,12 @@ coverage-summary:
 # pre-push フックで使用するチェック（DB 不要のサブセット）
 # lint + unit test + ビルド + 構造品質チェック。統合テスト・SQLx・スキーマチェックを除外。
 check-pre-push:
-    ./scripts/check-parallel.sh --skip-db
+    ./scripts/check/parallel.sh --skip-db
 
 # 実装中の軽量チェック（リント、テスト、統合テスト、ビルド、SQLx キャッシュ同期、OpenAPI 同期、構造品質）
 # Rust レーンと Non-Rust レーンを並列実行して高速化
 check:
-    ./scripts/check-parallel.sh
+    ./scripts/check/parallel.sh
 
 # プッシュ前の全チェック（軽量チェック + API テスト + E2E テスト + セキュリティ）
 # audit を最後に配置: cargo deny が取得するパッケージキャッシュのロックが
@@ -480,7 +480,7 @@ schema-check:
     set -euo pipefail
     temp=$(mktemp)
     trap 'rm -f "$temp"' EXIT
-    ./scripts/dump-schema.sh "{{ _psql_url }}" > "$temp"
+    ./scripts/tools/dump-schema.sh "{{ _psql_url }}" > "$temp"
     if ! diff -q backend/schema.sql "$temp" > /dev/null 2>&1; then
         echo "ERROR: backend/schema.sql が現在の DB スキーマと同期していません"
         echo "  'just db-dump-schema' を実行して更新してください"
@@ -526,7 +526,7 @@ clean:
 # 不要なブランチとワークツリーを整理（マージ済み・リモート削除済みを検出）
 # 使い方: just cleanup [--dry-run]
 cleanup *flags:
-    ./scripts/cleanup.sh {{flags}}
+    ./scripts/worktree/cleanup.sh {{flags}}
 
 # マージ済みローカルブランチを削除（cleanup に統合済み。後方互換のため残す）
 clean-branches:
@@ -541,21 +541,21 @@ clean-branches:
 # 例: just worktree-create 1
 # スロット番号がポートオフセットとして使用される
 worktree-create n:
-    ./scripts/worktree-create.sh {{n}}
+    ./scripts/worktree/create.sh {{n}}
 
 # worktree スロット内のブランチを切り替え
 # 使い方: just worktree-switch N BRANCH
 # 例: just worktree-switch 1 feature/625-persistent-slots
 # DB マイグレーションと依存関係の差分更新を自動で行う
 worktree-switch n branch:
-    ./scripts/worktree-switch.sh {{n}} {{branch}}
+    ./scripts/worktree/switch.sh {{n}} {{branch}}
 
 # Issue 番号からブランチを作成してスロットに切り替え
 # 使い方: just worktree-issue NUMBER [SLOT]
 # 例: just worktree-issue 321 1
 # SLOT を省略した場合、現在のスロットを自動検出
 worktree-issue number *slot:
-    ./scripts/worktree-issue.sh {{number}} {{slot}}
+    ./scripts/worktree/issue.sh {{number}} {{slot}}
 
 # worktree を削除
 # 使い方: just worktree-remove NAME

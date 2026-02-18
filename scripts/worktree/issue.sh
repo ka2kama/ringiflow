@@ -2,19 +2,19 @@
 # =============================================================================
 # Issue 番号からブランチを作成してスロットに切り替えるスクリプト
 #
-# Issue タイトルからブランチ名を自動生成し、worktree-switch.sh に委譲する。
+# Issue タイトルからブランチ名を自動生成し、switch.sh に委譲する。
 #
 # 使い方:
-#   ./scripts/worktree-issue.sh NUMBER [SLOT]
+#   ./scripts/worktree/issue.sh NUMBER [SLOT]
 #
 # 引数:
 #   NUMBER : GitHub Issue 番号
 #   SLOT   : スロット番号（省略時は現在のスロットを自動検出）
 #
 # 例:
-#   ./scripts/worktree-issue.sh 321 1
+#   ./scripts/worktree/issue.sh 321 1
 #   → feature/321-add-hurl-api-tests-for-uncovered を生成
-#   → worktree-switch.sh 1 feature/321-add-hurl-api-tests-for-uncovered を実行
+#   → switch.sh 1 feature/321-add-hurl-api-tests-for-uncovered を実行
 # =============================================================================
 
 set -euo pipefail
@@ -92,4 +92,4 @@ echo "Branch: ${BRANCH}"
 echo "Slot: ${SLOT}"
 echo ""
 
-"$SCRIPT_DIR/worktree-switch.sh" "$SLOT" "$BRANCH"
+"$SCRIPT_DIR/switch.sh" "$SLOT" "$BRANCH"

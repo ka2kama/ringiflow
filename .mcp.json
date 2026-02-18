@@ -2,7 +2,7 @@
   "mcpServers": {
     "postgres": {
       "command": "bash",
-      "args": ["scripts/mcp-postgres.sh"]
+      "args": ["scripts/tools/mcp-postgres.sh"]
     }
   }
 }
