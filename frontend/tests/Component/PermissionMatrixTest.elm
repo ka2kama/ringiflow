@@ -15,8 +15,7 @@ import Test.Html.Selector as Selector
 
 
 type TestMsg
-    = Toggle String
-    | ToggleAll String
+    = NoOp
 
 
 defaultConfig :
@@ -27,8 +26,8 @@ defaultConfig :
     }
 defaultConfig =
     { selectedPermissions = Set.empty
-    , onToggle = Toggle
-    , onToggleAll = ToggleAll
+    , onToggle = always NoOp
+    , onToggleAll = always NoOp
     , disabled = False
     }
 

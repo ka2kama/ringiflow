@@ -8,13 +8,21 @@ module Component.ButtonTest exposing (suite)
 
 import Component.Button as Button exposing (Variant(..))
 import Expect
+import Html
 import Test exposing (..)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
+
+
+type TestMsg
+    = NoOp
 
 
 suite : Test
 suite =
     describe "Component.Button"
         [ variantClassTests
+        , focusIndicatorTests
         ]
 
 
@@ -85,4 +93,24 @@ variantClassTests =
                 Button.variantClass Primary
                     |> String.contains "text-white"
                     |> Expect.equal True
+        ]
+
+
+
+-- focusIndicator
+
+
+focusIndicatorTests : Test
+focusIndicatorTests =
+    describe "フォーカスインジケータ"
+        [ test "ボタンに focus-visible:ring-2 クラスが適用される" <|
+            \_ ->
+                Button.view { variant = Primary, disabled = False, onClick = NoOp } [ Html.text "テスト" ]
+                    |> Query.fromHtml
+                    |> Query.has [ Selector.class "focus-visible:ring-2" ]
+        , test "ボタンに focus-visible:ring-primary-500 クラスが適用される" <|
+            \_ ->
+                Button.view { variant = Primary, disabled = False, onClick = NoOp } [ Html.text "テスト" ]
+                    |> Query.fromHtml
+                    |> Query.has [ Selector.class "focus-visible:ring-primary-500" ]
         ]

@@ -43,6 +43,9 @@
  *   構造   : inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium
  *   色指定 : bg-{color}-{shade} text-{color}-{shade} border-{color}-{shade}
  *
+ * ボタン:
+ *   フォーカス   : outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2
+ *
  * フォーム入力:
  *   構造         : w-full rounded-lg border px-3 py-2 text-sm outline-none
  *   フォーカス   : focus-visible:ring-2 focus-visible:ring-{color}-500 focus-visible:border-{color}-500

@@ -20,11 +20,7 @@ import Test.Html.Selector as Selector
 
 
 type TestMsg
-    = Search String
-    | Select_ UserItem
-    | Clear
-    | KeyDown String
-    | CloseDropdown
+    = NoOp
 
 
 suite : Test
@@ -91,11 +87,11 @@ searchViewConfig =
     { state = ApproverSelector.init
     , users = RemoteData.Success [ testUser1, testUser2 ]
     , validationError = Nothing
-    , onSearch = Search
-    , onSelect = Select_
-    , onClear = Clear
-    , onKeyDown = KeyDown
-    , onCloseDropdown = CloseDropdown
+    , onSearch = always NoOp
+    , onSelect = always NoOp
+    , onClear = NoOp
+    , onKeyDown = always NoOp
+    , onCloseDropdown = NoOp
     }
 
 
@@ -232,6 +228,12 @@ viewTests =
                     |> Query.fromHtml
                     |> Query.find [ Selector.tag "button" ]
                     |> Query.has [ Selector.attribute (Html.Attributes.attribute "aria-label" "承認者を解除") ]
+        , test "解除ボタンに focus-visible:ring-2 クラスが適用される" <|
+            \_ ->
+                ApproverSelector.view selectedViewConfig
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "button" ]
+                    |> Query.has [ Selector.class "focus-visible:ring-2" ]
         ]
 
 
