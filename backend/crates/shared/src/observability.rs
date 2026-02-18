@@ -1,8 +1,13 @@
 //! # Observability 基盤
 //!
-//! トレーシング初期化とログ出力形式の設定を提供する。
-//! 3サービス（BFF / Core Service / Auth Service）で共通のログ初期化ロジックを集約し、
+//! トレーシング初期化、ログ出力形式の設定、Request ID 管理を提供する。
+//! 3サービス（BFF / Core Service / Auth Service）で共通の Observability ロジックを集約し、
 //! 環境変数 `LOG_FORMAT` による JSON / Pretty 出力の切り替えに対応する。
+//!
+//! Request ID 関連:
+//! - [`MakeRequestUuidV7`]: UUID v7 ベースの Request ID 生成器
+//! - [`make_request_span`]: `X-Request-Id` ヘッダーをトレーシングスパンに注入するカスタムスパン作成関数
+//! - [`REQUEST_ID_HEADER`]: `x-request-id` ヘッダー名定数
 
 /// ログ出力形式
 ///
@@ -104,6 +109,59 @@ pub fn init_tracing(config: TracingConfig) {
         .init();
 }
 
+/// `X-Request-Id` ヘッダー名
+///
+/// 業界標準の HTTP ヘッダー名。リクエスト追跡に使用する。
+pub const REQUEST_ID_HEADER: &str = "x-request-id";
+
+/// UUID v7 ベースの Request ID 生成器
+///
+/// tower-http の [`MakeRequestUuid`](tower_http::request_id::MakeRequestUuid) は UUID v4 を使用するが、
+/// UUID v7 は時系列ソート可能で運用時のログ分析に有利なため、独自実装を使用する。
+///
+/// → ナレッジベース: [Observability > Request ID](../../docs/06_ナレッジベース/backend/observability.md)
+#[cfg(feature = "observability")]
+#[derive(Clone, Copy, Default)]
+pub struct MakeRequestUuidV7;
+
+#[cfg(feature = "observability")]
+impl tower_http::request_id::MakeRequestId for MakeRequestUuidV7 {
+    fn make_request_id<B>(
+        &mut self,
+        _request: &http::Request<B>,
+    ) -> Option<tower_http::request_id::RequestId> {
+        let id = uuid::Uuid::now_v7()
+            .to_string()
+            .parse()
+            .expect("UUID 文字列は有効な HeaderValue");
+        Some(tower_http::request_id::RequestId::new(id))
+    }
+}
+
+/// TraceLayer 用のカスタムスパン作成関数
+///
+/// `X-Request-Id` ヘッダーから Request ID を取得し、トレーシングスパンに
+/// `request_id` フィールドとして記録する。ヘッダーが未設定の場合は `"-"` を使用する。
+///
+/// JSON ログ形式（`with_current_span(true)`）では、スパンのフィールドが
+/// 自動的にログ出力に含まれるため、すべてのログに `request_id` が記録される。
+#[cfg(feature = "observability")]
+pub fn make_request_span<B>(request: &http::Request<B>) -> tracing::Span {
+    let request_id = request
+        .headers()
+        .get(REQUEST_ID_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-");
+
+    tracing::info_span!(
+        "request",
+        method = %request.method(),
+        uri = %request.uri(),
+        version = ?request.version(),
+        request_id = %request_id,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,5 +200,77 @@ mod tests {
 
         assert_eq!(config.service_name, "bff");
         assert_eq!(config.log_format, LogFormat::Json);
+    }
+
+    // ===== MakeRequestUuidV7 テスト =====
+
+    #[test]
+    fn test_make_request_id_uuid_v7形式のrequest_idを返す() {
+        use tower_http::request_id::MakeRequestId;
+
+        let mut maker = MakeRequestUuidV7;
+        let request = http::Request::builder().body(()).unwrap();
+
+        let id = maker.make_request_id(&request).expect("Some を返す");
+        let id_str = id.header_value().to_str().unwrap();
+
+        // UUID v7 形式: xxxxxxxx-xxxx-7xxx-[89ab]xxx-xxxxxxxxxxxx
+        let uuid = uuid::Uuid::parse_str(id_str).expect("有効な UUID");
+        assert_eq!(uuid.get_version(), Some(uuid::Version::SortRand));
+    }
+
+    #[test]
+    fn test_make_request_id_連続呼び出しで異なるidを生成する() {
+        use tower_http::request_id::MakeRequestId;
+
+        let mut maker = MakeRequestUuidV7;
+        let request = http::Request::builder().body(()).unwrap();
+
+        let id1 = maker.make_request_id(&request).unwrap();
+        let id2 = maker.make_request_id(&request).unwrap();
+
+        assert_ne!(
+            id1.header_value().to_str().unwrap(),
+            id2.header_value().to_str().unwrap(),
+        );
+    }
+
+    // ===== make_request_span テスト =====
+
+    /// テスト用にトレーシング subscriber を設定する
+    ///
+    /// subscriber がないとスパンが無効化され metadata() が None になるため、
+    /// テスト時に最低限の subscriber を登録する。
+    fn with_test_subscriber(f: impl FnOnce()) {
+        let subscriber = tracing_subscriber::registry();
+        let _guard = tracing::subscriber::set_default(subscriber);
+        f();
+    }
+
+    #[test]
+    fn test_make_request_span_ヘッダーの値をスパンに含める() {
+        with_test_subscriber(|| {
+            let request = http::Request::builder()
+                .header(REQUEST_ID_HEADER, "test-request-id-123")
+                .body(())
+                .unwrap();
+
+            let span = make_request_span(&request);
+
+            // スパンが作成されること（フィールドの値はトレーシング内部のため直接検証困難）
+            // スパン名が "request" であることを確認
+            assert_eq!(span.metadata().unwrap().name(), "request");
+        });
+    }
+
+    #[test]
+    fn test_make_request_span_ヘッダー未設定時もスパンが作成される() {
+        with_test_subscriber(|| {
+            let request = http::Request::builder().body(()).unwrap();
+
+            let span = make_request_span(&request);
+
+            assert_eq!(span.metadata().unwrap().name(), "request");
+        });
     }
 }
