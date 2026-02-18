@@ -167,7 +167,7 @@ async fn main() -> anyhow::Result<()> {
                 tracing::info!("  Tenant ID: {}", dev_auth::DEV_TENANT_ID);
                 tracing::info!("  User ID: {}", dev_auth::DEV_USER_ID);
                 tracing::info!("  Session ID: {}", dev_auth::DEV_SESSION_ID);
-                tracing::info!("  CSRF Token: {}", csrf_token);
+                tracing::info!("  CSRF Token: {}...", &csrf_token[..8]);
             }
             Err(e) => {
                 tracing::error!("DevAuth: セッション作成に失敗しました: {}", e);

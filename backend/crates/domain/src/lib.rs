@@ -55,3 +55,9 @@ pub mod value_objects;
 pub mod workflow;
 
 pub use error::DomainError;
+
+/// PII / シークレットの Debug 出力で使用するマスク文字列
+///
+/// カスタム `Debug` 実装で値の代わりに出力する。
+/// 全クレートで同じ文字列を使うことで、一貫性とテスト容易性を保証する。
+pub const REDACTED: &str = "[REDACTED]";

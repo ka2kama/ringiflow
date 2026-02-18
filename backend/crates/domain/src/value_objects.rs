@@ -324,6 +324,7 @@ define_validated_string! {
     /// ユーザー表示名（値オブジェクト）
     ///
     /// ユーザーの表示名を表現する。
+    /// PII（個人識別情報）のため、Debug 出力はマスクされる。
     ///
     /// # バリデーション
     ///
@@ -332,6 +333,7 @@ define_validated_string! {
     pub struct UserName {
         label: "ユーザー名",
         max_length: 100,
+        pii: true,
     }
 }
 
@@ -570,5 +572,36 @@ mod tests {
     fn test_ワークフロー名は201文字以上を拒否する() {
         let long_name = "あ".repeat(201);
         assert!(WorkflowName::new(&long_name).is_err());
+    }
+
+    // UserName PII マスキングのテスト
+
+    #[test]
+    fn test_ユーザー名のdebug出力はマスクされる() {
+        let name = UserName::new("山田太郎").unwrap();
+        let debug = format!("{:?}", name);
+        assert!(debug.contains(crate::REDACTED));
+        assert!(!debug.contains("山田太郎"));
+    }
+
+    #[test]
+    fn test_ユーザー名のas_strは実際の値を返す() {
+        let name = UserName::new("山田太郎").unwrap();
+        assert_eq!(name.as_str(), "山田太郎");
+    }
+
+    // WorkflowName 既存動作維持のテスト
+
+    #[test]
+    fn test_ワークフロー名のdebug出力は実際の値を表示する() {
+        let name = WorkflowName::new("汎用申請").unwrap();
+        let debug = format!("{:?}", name);
+        assert!(debug.contains("汎用申請"));
+    }
+
+    #[test]
+    fn test_ワークフロー名のdisplay出力は実際の値を表示する() {
+        let name = WorkflowName::new("汎用申請").unwrap();
+        assert_eq!(name.to_string(), "汎用申請");
     }
 }

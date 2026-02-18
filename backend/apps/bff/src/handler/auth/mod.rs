@@ -35,10 +35,19 @@ pub struct AuthState {
 // --- リクエスト/レスポンス型 ---
 
 /// ログインリクエスト
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
     pub email:    String,
     pub password: String,
+}
+
+impl std::fmt::Debug for LoginRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LoginRequest")
+            .field("email", &ringiflow_domain::REDACTED)
+            .field("password", &ringiflow_domain::REDACTED)
+            .finish()
+    }
 }
 
 /// ログインレスポンスデータ
@@ -409,4 +418,21 @@ pub(super) mod test_utils {
     }
 
     pub const TEST_TENANT_ID: &str = "00000000-0000-0000-0000-000000000001";
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ログインリクエストのdebug出力はメールアドレスとパスワードをマスクする() {
+        let req = LoginRequest {
+            email:    "secret@example.com".to_string(),
+            password: "my-secret-password".to_string(),
+        };
+        let debug = format!("{:?}", req);
+        assert!(!debug.contains("secret@example.com"));
+        assert!(!debug.contains("my-secret-password"));
+        assert!(debug.contains(ringiflow_domain::REDACTED));
+    }
 }

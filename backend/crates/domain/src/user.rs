@@ -63,8 +63,14 @@ define_uuid_id! {
 ///
 /// RFC 5322 に準拠した形式を要求する。
 /// 生成時にバリデーションを実行し、不正な値の作成を防ぐ。
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Email(String);
+
+impl std::fmt::Debug for Email {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Email").field(&crate::REDACTED).finish()
+    }
+}
 
 impl Email {
     /// メールアドレスを作成する
@@ -117,12 +123,6 @@ impl Email {
     /// 所有権を持つ文字列に変換する
     pub fn into_string(self) -> String {
         self.0
-    }
-}
-
-impl std::fmt::Display for Email {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
@@ -511,5 +511,34 @@ mod tests {
     #[rstest]
     fn test_ユーザーから表示用連番を取得できる(active_user: User) {
         assert_eq!(active_user.display_number().as_i64(), 42);
+    }
+
+    // Email PII マスキングのテスト
+
+    #[rstest]
+    fn test_メールアドレスのdebug出力はマスクされる() {
+        let email = Email::new("user@example.com").unwrap();
+        let debug = format!("{:?}", email);
+        assert!(debug.contains(crate::REDACTED));
+        assert!(!debug.contains("user@example.com"));
+    }
+
+    #[rstest]
+    fn test_メールアドレスのas_strは実際の値を返す() {
+        let email = Email::new("user@example.com").unwrap();
+        assert_eq!(email.as_str(), "user@example.com");
+    }
+
+    #[rstest]
+    fn test_ユーザーのdebug出力はメールアドレスを含まない(active_user: User) {
+        let debug = format!("{:?}", active_user);
+        assert!(!debug.contains("user@example.com"));
+        assert!(debug.contains(crate::REDACTED));
+    }
+
+    #[rstest]
+    fn test_ユーザーのdebug出力はユーザー名を含まない(active_user: User) {
+        let debug = format!("{:?}", active_user);
+        assert!(!debug.contains("Test User"));
     }
 }
