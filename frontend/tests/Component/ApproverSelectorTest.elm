@@ -2,15 +2,29 @@ module Component.ApproverSelectorTest exposing (suite)
 
 {-| Component.ApproverSelector のテスト
 
-純粋関数のキーボードナビゲーションロジックと承認者選択状態のヘルパーを検証する。
+純粋関数のキーボードナビゲーションロジックと承認者選択状態のヘルパー、
+および view のアクセシビリティ属性を検証する。
 
 -}
 
+import Api exposing (ApiError)
 import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..), KeyResult(..))
 import Data.UserItem exposing (UserItem)
 import Data.UserRef exposing (UserRef)
 import Expect
+import Html.Attributes
+import RemoteData
 import Test exposing (..)
+import Test.Html.Query as Query
+import Test.Html.Selector as Selector
+
+
+type TestMsg
+    = Search String
+    | Select_ UserItem
+    | Clear
+    | KeyDown String
+    | CloseDropdown
 
 
 suite : Test
@@ -19,6 +33,7 @@ suite =
         [ handleKeyDownTests
         , initTests
         , selectedUserIdTests
+        , viewTests
         ]
 
 
@@ -58,6 +73,50 @@ testRef =
 twoCandidates : List UserItem
 twoCandidates =
     [ testUser1, testUser2 ]
+
+
+{-| 検索入力表示用の config（NotSelected 状態）
+-}
+searchViewConfig :
+    { state : ApproverSelector.State
+    , users : RemoteData.RemoteData ApiError (List UserItem)
+    , validationError : Maybe String
+    , onSearch : String -> TestMsg
+    , onSelect : UserItem -> TestMsg
+    , onClear : TestMsg
+    , onKeyDown : String -> TestMsg
+    , onCloseDropdown : TestMsg
+    }
+searchViewConfig =
+    { state = ApproverSelector.init
+    , users = RemoteData.Success [ testUser1, testUser2 ]
+    , validationError = Nothing
+    , onSearch = Search
+    , onSelect = Select_
+    , onClear = Clear
+    , onKeyDown = KeyDown
+    , onCloseDropdown = CloseDropdown
+    }
+
+
+{-| 選択済み表示用の config（Selected 状態）
+-}
+selectedViewConfig :
+    { state : ApproverSelector.State
+    , users : RemoteData.RemoteData ApiError (List UserItem)
+    , validationError : Maybe String
+    , onSearch : String -> TestMsg
+    , onSelect : UserItem -> TestMsg
+    , onClear : TestMsg
+    , onKeyDown : String -> TestMsg
+    , onCloseDropdown : TestMsg
+    }
+selectedViewConfig =
+    let
+        state =
+            ApproverSelector.init
+    in
+    { searchViewConfig | state = { state | selection = Selected testUser1 } }
 
 
 
@@ -149,6 +208,30 @@ selectedUserIdTests =
             \_ ->
                 ApproverSelector.selectedUserId (Preselected testRef)
                     |> Expect.equal (Just "u-003")
+        ]
+
+
+
+-- ────────────────────────────────────
+-- view
+-- ────────────────────────────────────
+
+
+viewTests : Test
+viewTests =
+    describe "view"
+        [ test "検索入力に aria-label=\"承認者を検索\" が存在する" <|
+            \_ ->
+                ApproverSelector.view searchViewConfig
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.id "approver-search" ]
+                    |> Query.has [ Selector.attribute (Html.Attributes.attribute "aria-label" "承認者を検索") ]
+        , test "解除ボタンに aria-label=\"承認者を解除\" が存在する" <|
+            \_ ->
+                ApproverSelector.view selectedViewConfig
+                    |> Query.fromHtml
+                    |> Query.find [ Selector.tag "button" ]
+                    |> Query.has [ Selector.attribute (Html.Attributes.attribute "aria-label" "承認者を解除") ]
         ]
 
 

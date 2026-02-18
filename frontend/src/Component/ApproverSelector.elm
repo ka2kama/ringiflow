@@ -233,6 +233,7 @@ viewSelectedApprover name maybeDisplayId onClear =
             [ Html.Events.onClick onClear
             , class "border-0 bg-transparent cursor-pointer text-secondary-400 hover:text-secondary-600 transition-colors text-xl"
             , type_ "button"
+            , attribute "aria-label" "承認者を解除"
             ]
             [ text "×" ]
         ]
@@ -264,6 +265,7 @@ viewSearchInput config =
         [ input
             [ type_ "text"
             , id "approver-search"
+            , attribute "aria-label" "承認者を検索"
             , Html.Attributes.value config.state.search
             , Html.Events.onInput config.onSearch
             , Html.Events.onBlur config.onCloseDropdown
