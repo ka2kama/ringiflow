@@ -65,13 +65,13 @@ view config =
         [ table [ class "w-full" ]
             [ thead [ class "bg-secondary-50" ]
                 [ tr []
-                    (th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ]
+                    (th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ]
                         [ text "リソース" ]
-                        :: th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-500" ]
+                        :: th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-600" ]
                             [ text "すべて" ]
                         :: List.map
                             (\( _, actionLabel ) ->
-                                th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-500" ]
+                                th [ class "px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-secondary-600" ]
                                     [ text actionLabel ]
                             )
                             actions
