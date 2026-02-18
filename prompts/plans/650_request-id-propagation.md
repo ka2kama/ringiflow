@@ -145,9 +145,9 @@ BFF のルーターに `SetRequestIdLayer`、`PropagateRequestIdLayer`、カス�
 - `backend/apps/bff/src/main.rs` — レイヤー追加・順序変更
 
 #### 確認事項
-- [ ] ライブラリ: `SetRequestIdLayer::x_request_id(impl MakeRequestId)` → docs.rs
-- [ ] ライブラリ: `PropagateRequestIdLayer::x_request_id()` → docs.rs
-- [ ] パターン: BFF `main.rs` のレイヤー構成 → L259-373 確認済み
+- [x] ライブラリ: `SetRequestIdLayer::x_request_id(impl MakeRequestId)` → docs.rs 確認済み
+- [x] ライブラリ: `PropagateRequestIdLayer::x_request_id()` → docs.rs 確認済み
+- [x] パターン: BFF `main.rs` のレイヤー構成 → L259-373 確認済み
 
 #### テストリスト
 
@@ -171,8 +171,8 @@ E2E テスト（該当なし）
 - `backend/apps/auth-service/src/main.rs` — `TraceLayer` カスタマイズ
 
 #### 確認事項
-- [ ] パターン: Core Service `main.rs` の `TraceLayer` 位置 → L337 確認済み
-- [ ] パターン: Auth Service `main.rs` の `TraceLayer` 位置 → L127 確認済み
+- [x] パターン: Core Service `main.rs` の `TraceLayer` 位置 → L337 確認済み
+- [x] パターン: Auth Service `main.rs` の `TraceLayer` 位置 → L127 確認済み
 
 #### テストリスト
 
@@ -239,10 +239,10 @@ let response = inject_request_id(self.client.get(&url)).send().await?;
 ```
 
 #### 確認事項
-- [ ] 型: `tower_http::request_id::RequestId::header_value()` → docs.rs 確認済み: `&HeaderValue` を返す
-- [ ] ライブラリ: `tokio::task_local!` マクロの使用法 → tokio docs
-- [ ] ライブラリ: `axum::middleware::from_fn`（state なし）→ Grep 既存使用 or docs
-- [ ] パターン: `self.client.get/post/patch` 呼び出しパターン → 34 箇所確認済み
+- [x] 型: `tower_http::request_id::RequestId::header_value()` → docs.rs 確認済み: `&HeaderValue` を返す
+- [x] ライブラリ: `tokio::task_local!` マクロの使用法 → tokio docs 確認済み
+- [x] ライブラリ: `axum::middleware::from_fn`（state なし）→ Grep 確認済み、`from_fn_with_state` パターンが既存
+- [x] パターン: `self.client.get/post/patch` 呼び出しパターン → 34 箇所確認済み
 
 #### テストリスト
 
@@ -273,7 +273,7 @@ header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a
 ```
 
 #### 確認事項
-- [ ] パターン: Hurl ヘッダーアサーション構文 → `login.hurl` の `header "Set-Cookie" contains` パターン確認済み
+- [x] パターン: Hurl ヘッダーアサーション構文 → `login.hurl` の `header "Set-Cookie" contains` パターン確認済み
 
 #### テストリスト
 

@@ -18,6 +18,7 @@
 //! → ナレッジベース: [Observability > Request ID 伝播](../../docs/06_ナレッジベース/backend/observability.md)
 
 use axum::{body::Body, http::Request, middleware::Next, response::Response};
+use ringiflow_shared::observability::REQUEST_ID_HEADER;
 use tower_http::request_id::RequestId;
 
 tokio::task_local! {
@@ -54,7 +55,7 @@ pub async fn store_request_id(request: Request<Body>, next: Next) -> Response {
 /// task-local スコープ外の場合はビルダーをそのまま返す。
 pub fn inject_request_id(builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
     match current_request_id() {
-        Some(id) => builder.header("x-request-id", id),
+        Some(id) => builder.header(REQUEST_ID_HEADER, id),
         None => builder,
     }
 }
