@@ -39,13 +39,13 @@ import Html.Events exposing (onInput)
 -}
 inputClass : Maybe String -> String
 inputClass error =
-    "w-full rounded-lg border px-3 py-2 text-sm "
+    "w-full rounded-lg border px-3 py-2 text-sm outline-none "
         ++ (case error of
                 Just _ ->
-                    "border-error-300 focus:border-error-500 focus:ring-error-500"
+                    "border-error-300 focus-visible:ring-2 focus-visible:ring-error-500 focus-visible:border-error-500"
 
                 Nothing ->
-                    "border-secondary-300 focus:border-primary-500 focus:ring-primary-500"
+                    "border-secondary-300 focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
            )
 
 
@@ -92,7 +92,7 @@ viewTextArea config =
             , onInput config.onInput
             , placeholder config.placeholder
             , rows 3
-            , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+            , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
             ]
             []
         ]
