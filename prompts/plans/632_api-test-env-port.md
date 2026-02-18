@@ -54,8 +54,8 @@ fi
 
 ### 確認事項
 
-- [ ] パターン: `setup-env.sh` の分岐ロジック → L30-92 を Read 済み
-- [ ] 動作: sentinel 欠落時のフォールスルーで正しいパスが実行されること
+- [x] パターン: `setup-env.sh` の分岐ロジック → L30-92 を Read 済み。オフセット再利用 → worktree → main の3パスを確認
+- [x] 動作: sentinel 欠落時のフォールスルーで正しいパスが実行されること → `just setup-env` 2回実行で検証済み
 
 ### テストリスト
 
@@ -104,9 +104,9 @@ api-test-reset-db:
 
 ### 確認事項
 
-- [ ] パターン: shebang レシピの依存宣言 → `setup: check-tools setup-env ...` (L23)
-- [ ] パターン: `set -a; source .env; set +a` → `run-api-tests.sh` L28-31
-- [ ] 動作: shebang レシピ内の `cd backend` が正しく動作すること
+- [x] パターン: shebang レシピの依存宣言 → `setup: check-tools setup-env ...` (L23) を確認
+- [x] パターン: `set -a; source .env; set +a` → `run-api-tests.sh` L28-31 と同一パターン
+- [x] 動作: shebang レシピ内の `cd backend` が正しく動作すること → `just api-test-reset-db` で 28 マイグレーション適用成功
 
 ### テストリスト
 

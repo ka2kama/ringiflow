@@ -326,17 +326,8 @@ api-test-deps: setup-env
     echo "  プロジェクト名: $PROJECT_NAME"
 
 # API テスト用の DB をリセット
-# dotenv-load は just 起動時に1回のみ読み込むため、
-# .env が起動後に生成された場合にも対応するため直接 source する
 api-test-reset-db:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    set -a
-    source .env
-    set +a
-    echo "API テスト用データベースをリセット中..."
-    cd backend && DATABASE_URL="postgres://ringiflow:ringiflow@localhost:${API_TEST_POSTGRES_PORT}/ringiflow" sqlx database reset -y
-    echo "✓ API テスト用データベースリセット完了"
+    ./scripts/api-test-reset-db.sh
 
 # API テスト用の DB/Redis を停止
 api-test-stop:
