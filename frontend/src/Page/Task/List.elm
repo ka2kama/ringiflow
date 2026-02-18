@@ -166,7 +166,7 @@ viewTaskList zone tasks =
 
     else
         div []
-            [ div [ class "overflow-x-auto" ] [ viewTaskTable zone tasks ]
+            [ div [ class "overflow-x-auto rounded-lg border border-secondary-200" ] [ viewTaskTable zone tasks ]
             , viewCount (List.length tasks)
             ]
 
@@ -174,23 +174,23 @@ viewTaskList zone tasks =
 viewTaskTable : Time.Zone -> List TaskItem -> Html Msg
 viewTaskTable zone tasks =
     table [ class "w-full" ]
-        [ thead [ class "border-b border-secondary-100" ]
+        [ thead [ class "bg-secondary-50" ]
             [ tr []
-                [ th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステップ名" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "申請タイトル" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステータス" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "期限" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "開始日" ]
+                [ th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "ステップ名" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "申請タイトル" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "ステータス" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "期限" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "開始日" ]
                 ]
             ]
-        , tbody []
+        , tbody [ class "divide-y divide-secondary-200 bg-white" ]
             (List.map (viewTaskRow zone) tasks)
         ]
 
 
 viewTaskRow : Time.Zone -> TaskItem -> Html Msg
 viewTaskRow zone task =
-    tr [ class "border-b border-secondary-100" ]
+    tr [ class "hover:bg-secondary-50 transition-colors" ]
         [ td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.TaskDetail task.workflow.displayNumber task.displayNumber)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
                 [ text task.stepName ]

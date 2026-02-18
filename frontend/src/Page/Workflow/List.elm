@@ -278,7 +278,7 @@ viewWorkflowList zone maybeNow filter workflows =
 
           else
             div []
-                [ div [ class "overflow-x-auto" ] [ viewWorkflowTable zone filteredWorkflows ]
+                [ div [ class "overflow-x-auto rounded-lg border border-secondary-200" ] [ viewWorkflowTable zone filteredWorkflows ]
                 , viewCount (List.length filteredWorkflows)
                 ]
         ]
@@ -376,23 +376,23 @@ statusFromFilterValue str =
 
 viewWorkflowTable : Time.Zone -> List WorkflowInstance -> Html Msg
 viewWorkflowTable zone workflows =
-    table [ class "w-full border-collapse" ]
-        [ thead [ class "border-b border-secondary-100" ]
+    table [ class "w-full" ]
+        [ thead [ class "bg-secondary-50" ]
             [ tr []
-                [ th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ID" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "タイトル" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "ステータス" ]
-                , th [ class "px-4 py-3 text-left text-sm font-medium text-secondary-500" ] [ text "作成日" ]
+                [ th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "ID" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "タイトル" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "ステータス" ]
+                , th [ class "px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-secondary-500" ] [ text "作成日" ]
                 ]
             ]
-        , tbody []
+        , tbody [ class "divide-y divide-secondary-200 bg-white" ]
             (List.map (viewWorkflowRow zone) workflows)
         ]
 
 
 viewWorkflowRow : Time.Zone -> WorkflowInstance -> Html Msg
 viewWorkflowRow zone workflow =
-    tr [ class "border-b border-secondary-100" ]
+    tr [ class "hover:bg-secondary-50 transition-colors" ]
         [ td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text workflow.displayId ]
         , td [ class "px-4 py-3" ]
             [ a [ href (Route.toString (Route.WorkflowDetail workflow.displayNumber)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
