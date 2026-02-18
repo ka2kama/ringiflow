@@ -245,4 +245,4 @@ Core Service から認証ロジックを除去した後の API 設計。
 - [コード解説](./02_AuthService_コード解説.md)
 - [ADR: AuthService 分離の方針](../../05_ADR/017_AuthService分離の方針.md)
 - [詳細設計書: AuthService 設計](../../03_詳細設計書/08_AuthService設計.md)
-- [認証機能 - 機能解説](../01_認証機能/01_認証機能_機能解説.md)
+- [認証機能 - 機能解説](../PR46_認証機能/01_認証機能_機能解説.md)
