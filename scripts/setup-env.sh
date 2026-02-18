@@ -2,7 +2,7 @@
 # =============================================================================
 # 環境変数ファイルをセットアップする
 #
-# .env ファイルが存在しない場合に作成する。
+# .env ファイルが存在しない場合、または古い形式の場合に作成/再生成する。
 # worktree の場合は空きポートオフセットを自動で割り当てる。
 #
 # 使い方:
@@ -18,13 +18,17 @@ cd "$PROJECT_ROOT"
 
 echo "環境変数ファイルを確認中..."
 
-# 全ファイルが揃っている場合はスキップ
+# 全ファイルが揃っており、必須変数も存在する場合のみスキップ
+# API_TEST_POSTGRES_PORT は #624 で追加された sentinel キー
 if [[ -f .env && -f backend/.env && -f backend/.env.api-test ]]; then
-    echo "  確認: .env"
-    echo "  確認: backend/.env"
-    echo "  確認: backend/.env.api-test"
-    echo "✓ 環境変数ファイル準備完了"
-    exit 0
+    if grep -q '^API_TEST_POSTGRES_PORT=' .env 2>/dev/null; then
+        echo "  確認: .env"
+        echo "  確認: backend/.env"
+        echo "  確認: backend/.env.api-test"
+        echo "✓ 環境変数ファイル準備完了"
+        exit 0
+    fi
+    echo "  ⚠ .env が古い形式です。再生成します..."
 fi
 
 # .env が既に存在する場合（一部ファイルが欠けている）
