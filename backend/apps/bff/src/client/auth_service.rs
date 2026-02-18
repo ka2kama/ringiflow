@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::middleware::request_id::inject_request_id;
+
 /// Auth Service クライアントエラー
 #[derive(Debug, Clone, Error)]
 pub enum AuthServiceError {
@@ -132,7 +134,10 @@ impl AuthServiceClient for AuthServiceClientImpl {
             password: password.to_string(),
         };
 
-        let response = self.client.post(&url).json(&request).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&request)
+            .send()
+            .await?;
 
         match response.status() {
             status if status.is_success() => {
@@ -179,7 +184,10 @@ impl AuthServiceClient for AuthServiceClientImpl {
             credential_data: credential_data.to_string(),
         };
 
-        let response = self.client.post(&url).json(&request).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(&request)
+            .send()
+            .await?;
 
         match response.status() {
             status if status.is_success() => {

@@ -2458,10 +2458,14 @@ dependencies = [
 name = "ringiflow-shared"
 version = "0.1.0"
 dependencies = [
+ "http 1.4.0",
  "serde",
  "serde_json",
+ "tower-http",
+ "tracing",
  "tracing-subscriber",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -3405,6 +3409,7 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

@@ -20,6 +20,7 @@ Content-Type: application/json
 
 HTTP 200
 [Asserts]
+header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 # ユーザー情報が正しく返される
 jsonpath "$.data.user.id" exists
 jsonpath "$.data.user.email" == "admin@example.com"
@@ -50,6 +51,7 @@ Content-Type: application/json
 
 HTTP 401
 [Asserts]
+header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 jsonpath "$.type" == "https://ringiflow.example.com/errors/authentication-failed"
 jsonpath "$.title" == "Authentication Failed"
 jsonpath "$.status" == 401
@@ -72,6 +74,7 @@ Content-Type: application/json
 
 HTTP 401
 [Asserts]
+header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 # パスワード不一致と同じエラーを返す（ユーザー列挙攻撃の防止）
 jsonpath "$.type" == "https://ringiflow.example.com/errors/authentication-failed"
 jsonpath "$.status" == 401
@@ -93,6 +96,7 @@ Content-Type: application/json
 
 HTTP 400
 [Asserts]
+header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
 jsonpath "$.title" == "Validation Error"
 jsonpath "$.status" == 400

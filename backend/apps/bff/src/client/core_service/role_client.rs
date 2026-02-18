@@ -10,6 +10,7 @@ use super::{
     response::handle_response,
     types::{CreateRoleCoreRequest, RoleDetailDto, RoleItemDto, UpdateRoleCoreRequest},
 };
+use crate::middleware::request_id::inject_request_id;
 
 /// ロール関連の Core Service クライアントトレイト
 #[async_trait]
@@ -71,7 +72,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
     ) -> Result<ApiResponse<Vec<RoleItemDto>>, CoreServiceError> {
         let url = format!("{}/internal/roles?tenant_id={}", self.base_url, tenant_id);
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, None).await
     }
 
@@ -85,7 +86,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
             self.base_url, role_id, tenant_id
         );
 
-        let response = self.client.get(&url).send().await?;
+        let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::RoleNotFound)).await
     }
 
@@ -95,7 +96,10 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
     ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
         let url = format!("{}/internal/roles", self.base_url);
 
-        let response = self.client.post(&url).json(req).send().await?;
+        let response = inject_request_id(self.client.post(&url))
+            .json(req)
+            .send()
+            .await?;
         handle_response(response, None).await
     }
 
@@ -106,14 +110,17 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
     ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
         let url = format!("{}/internal/roles/{}", self.base_url, role_id);
 
-        let response = self.client.patch(&url).json(req).send().await?;
+        let response = inject_request_id(self.client.patch(&url))
+            .json(req)
+            .send()
+            .await?;
         handle_response(response, Some(CoreServiceError::RoleNotFound)).await
     }
 
     async fn delete_role(&self, role_id: Uuid) -> Result<(), CoreServiceError> {
         let url = format!("{}/internal/roles/{}", self.base_url, role_id);
 
-        let response = self.client.delete(&url).send().await?;
+        let response = inject_request_id(self.client.delete(&url)).send().await?;
         let status = response.status();
 
         if status.is_success() {

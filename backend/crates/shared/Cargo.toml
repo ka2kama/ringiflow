@@ -6,12 +6,17 @@ license.workspace = true
 
 [features]
 openapi = ["dep:utoipa"]
-observability = ["dep:tracing-subscriber"]
+observability = ["dep:tracing-subscriber", "dep:http", "dep:tower-http", "dep:tracing", "dep:uuid"]
 
 [dependencies]
+http = { workspace = true, optional = true }
 serde.workspace = true
+tower-http = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
 tracing-subscriber = { workspace = true, optional = true }
 utoipa = { workspace = true, optional = true }
+uuid = { workspace = true, optional = true }
 
 [dev-dependencies]
+http.workspace = true
 serde_json.workspace = true
