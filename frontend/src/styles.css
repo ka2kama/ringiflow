@@ -118,9 +118,60 @@
 
   /* ─── Layout ─── */
   --spacing-sidebar: 16rem;
+
+  /* ─── Animation ─── */
+  --animate-alert-in: alert-in 200ms ease-out;
+
+  @keyframes alert-in {
+    from {
+      opacity: 0;
+      transform: translateY(-0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-/* 確認ダイアログのバックドロップ */
+/* 確認ダイアログのアニメーション */
 #confirm-dialog::backdrop {
   background: rgb(0 0 0 / 0.5);
+  animation: backdrop-in 150ms ease-out;
+}
+
+#confirm-dialog[open] .dialog-content {
+  animation: dialog-in 150ms ease-out;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* アクセシビリティ: モーション軽減 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
