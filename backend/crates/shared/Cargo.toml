@@ -6,9 +6,11 @@ license.workspace = true
 
 [features]
 openapi = ["dep:utoipa"]
+observability = ["dep:tracing-subscriber"]
 
 [dependencies]
 serde.workspace = true
+tracing-subscriber = { workspace = true, optional = true }
 utoipa = { workspace = true, optional = true }
 
 [dev-dependencies]

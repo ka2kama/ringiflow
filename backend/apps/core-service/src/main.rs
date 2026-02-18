@@ -130,9 +130,9 @@ use ringiflow_infra::{
         workflow_step_repository::PostgresWorkflowStepRepository,
     },
 };
+use ringiflow_shared::observability::TracingConfig;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use usecase::{
     DashboardUseCaseImpl,
     RoleUseCaseImpl,
@@ -146,18 +146,13 @@ use usecase::{
 /// BFF とは独立した設定（`CORE_HOST`, `CORE_PORT`）を使用する。
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // jscpd:ignore-start — サーバー起動ボイラープレート（意図的な重複、詳細は ADR-049）
     // .env ファイルを読み込む（存在する場合）
     dotenvy::dotenv().ok();
 
     // トレーシング初期化
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,ringiflow=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    let tracing_config = TracingConfig::from_env("core-service");
+    ringiflow_shared::observability::init_tracing(tracing_config);
+    let _tracing_guard = tracing::info_span!("app", service = "core-service").entered();
 
     // 設定読み込み
     let config = CoreConfig::from_env().expect("設定の読み込みに失敗しました");
@@ -179,7 +174,6 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("マイグレーションの実行に失敗しました");
     tracing::info!("マイグレーションを適用しました");
-    // jscpd:ignore-end
 
     // 共有リポジトリインスタンスを初期化
     let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));

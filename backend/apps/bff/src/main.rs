@@ -110,9 +110,9 @@ use ringiflow_infra::{
     dynamodb,
     repository::DynamoDbAuditLogRepository,
 };
+use ringiflow_shared::observability::TracingConfig;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 /// BFF サーバーのエントリーポイント
 ///
@@ -125,22 +125,14 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 /// 5. HTTP サーバーの起動
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // jscpd:ignore-start — サーバー起動ボイラープレート（意図的な重複、詳細は ADR-049）
     // .env ファイルを読み込む（存在する場合）
     // 本番環境では .env ファイルは使用せず、環境変数を直接設定する
     dotenvy::dotenv().ok();
 
     // トレーシング初期化
-    // RUST_LOG 環境変数でログレベルを制御可能
-    // 例: RUST_LOG=debug,tower_http=trace
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,ringiflow=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-    // jscpd:ignore-end
+    let tracing_config = TracingConfig::from_env("bff");
+    ringiflow_shared::observability::init_tracing(tracing_config);
+    let _tracing_guard = tracing::info_span!("app", service = "bff").entered();
 
     // 設定読み込み
     let config = BffConfig::from_env().expect("設定の読み込みに失敗しました");
