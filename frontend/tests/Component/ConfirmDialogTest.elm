@@ -89,6 +89,11 @@ viewTests =
                     |> Query.fromHtml
                     |> Query.find [ Selector.id "confirm-dialog-message" ]
                     |> Query.has [ Selector.text "テストメッセージ" ]
+        , test "内容要素に dialog-content クラスが含まれる" <|
+            \_ ->
+                ConfirmDialog.view defaultConfig
+                    |> Query.fromHtml
+                    |> Query.has [ Selector.class "dialog-content" ]
         ]
 
 

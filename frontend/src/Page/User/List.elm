@@ -212,7 +212,7 @@ viewUserRow user =
         [ td [ class "px-4 py-3 text-sm" ]
             [ a
                 [ href (Route.toString (Route.UserDetail user.displayNumber))
-                , class "font-medium text-primary-600 hover:text-primary-800"
+                , class "font-medium text-primary-600 hover:text-primary-800 transition-colors"
                 ]
                 [ text (String.fromInt user.displayNumber) ]
             ]

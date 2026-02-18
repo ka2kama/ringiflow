@@ -344,7 +344,7 @@ viewCompletedTodayBadge =
         [ text "本日完了のみ"
         , button
             [ onClick ClearCompletedToday
-            , class "ml-1 hover:text-success-900"
+            , class "ml-1 hover:text-success-900 transition-colors"
             , attribute "aria-label" "フィルタ解除"
             ]
             [ text "×" ]
@@ -391,7 +391,7 @@ viewWorkflowRow zone workflow =
     tr [ class "hover:bg-secondary-50 transition-colors" ]
         [ td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text workflow.displayId ]
         , td [ class "px-4 py-3" ]
-            [ a [ href (Route.toString (Route.WorkflowDetail workflow.displayNumber)), class "text-primary-600 hover:text-primary-700 hover:underline" ]
+            [ a [ href (Route.toString (Route.WorkflowDetail workflow.displayNumber)), class "text-primary-600 hover:text-primary-700 hover:underline transition-colors" ]
                 [ text workflow.title ]
             ]
         , td [ class "px-4 py-3" ]
