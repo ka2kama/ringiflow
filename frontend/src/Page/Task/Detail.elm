@@ -32,6 +32,7 @@ import Api.Workflow as WorkflowApi
 import Component.Badge as Badge
 import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
+import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.Task exposing (TaskDetail)
@@ -356,15 +357,10 @@ viewContent model =
 
 viewError : Html Msg
 viewError =
-    div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-        [ p [] [ text "データの取得に失敗しました。" ]
-        , Button.view
-            { variant = Button.Outline
-            , disabled = False
-            , onClick = Refresh
-            }
-            [ text "再読み込み" ]
-        ]
+    ErrorState.view
+        { message = "データの取得に失敗しました。"
+        , onRefresh = Refresh
+        }
 
 
 viewTaskDetail : TaskDetail -> Model -> Html Msg

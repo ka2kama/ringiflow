@@ -13,6 +13,7 @@ import Api.Role as RoleApi
 import Component.Badge as Badge
 import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
+import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.Role exposing (RoleItem)
@@ -182,15 +183,10 @@ viewContent model =
             LoadingSpinner.view
 
         Failure err ->
-            div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-                [ p [] [ text (ErrorMessage.toUserMessage { entityName = "ロール" } err) ]
-                , Button.view
-                    { variant = Button.Outline
-                    , disabled = False
-                    , onClick = Refresh
-                    }
-                    [ text "再読み込み" ]
-                ]
+            ErrorState.view
+                { message = ErrorMessage.toUserMessage { entityName = "ロール" } err
+                , onRefresh = Refresh
+                }
 
         Success roles ->
             viewRoleSections roles
