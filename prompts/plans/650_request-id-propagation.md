@@ -126,10 +126,10 @@ pub fn make_request_span<B>(request: &Request<B>) -> tracing::Span {
 #### テストリスト
 
 ユニットテスト:
-- [ ] `MakeRequestUuidV7` が有効な UUID v7 形式の `RequestId` を返す
-- [ ] `MakeRequestUuidV7` が連続呼び出しで異なる ID を生成する
-- [ ] `make_request_span` が `X-Request-Id` ヘッダーの値をスパンに含める
-- [ ] `make_request_span` がヘッダー未設定時に `"-"` をフォールバックとして使用する
+- [x] `MakeRequestUuidV7` が有効な UUID v7 形式の `RequestId` を返す
+- [x] `MakeRequestUuidV7` が連続呼び出しで異なる ID を生成する
+- [x] `make_request_span` が `X-Request-Id` ヘッダーの値をスパンに含める
+- [x] `make_request_span` がヘッダー未設定時に `"-"` をフォールバックとして使用する
 
 ハンドラテスト（該当なし）
 
@@ -154,9 +154,9 @@ BFF のルーターに `SetRequestIdLayer`、`PropagateRequestIdLayer`、カス�
 ユニットテスト（該当なし — main.rs 設定）
 
 ハンドラテスト:
-- [ ] ヘルスチェックのレスポンスに `X-Request-Id` ヘッダーが含まれる
-- [ ] クライアント提供の `X-Request-Id` がそのまま返される
-- [ ] 自動生成の `X-Request-Id` が UUID 形式である
+- [x] ヘルスチェックのレスポンスに `X-Request-Id` ヘッダーが含まれる
+- [x] クライアント提供の `X-Request-Id` がそのまま返される
+- [x] 自動生成の `X-Request-Id` が UUID 形式である
 
 API テスト（該当なし — Phase 5 でまとめて実施）
 
@@ -247,9 +247,9 @@ let response = inject_request_id(self.client.get(&url)).send().await?;
 #### テストリスト
 
 ユニットテスト:
-- [ ] `inject_request_id` が task-local 設定時にヘッダーを付与する
-- [ ] `inject_request_id` が task-local 未設定時にビルダーを変更しない
-- [ ] `current_request_id` が task-local スコープ外で `None` を返す
+- [x] `inject_request_id` が task-local 設定時にヘッダーを付与する
+- [x] `inject_request_id` が task-local 未設定時にビルダーを変更しない
+- [x] `current_request_id` が task-local スコープ外で `None` を返す
 
 ハンドラテスト（該当なし — 透過的ミドルウェア）
 
@@ -282,8 +282,8 @@ header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a
 ハンドラテスト（該当なし）
 
 API テスト:
-- [ ] `health.hurl`: レスポンスに UUID v7 形式の `X-Request-Id` ヘッダーが含まれる
-- [ ] `auth/login.hurl`: 全リクエストのレスポンスに `X-Request-Id` ヘッダーが含まれる
+- [x] `health.hurl`: レスポンスに UUID v7 形式の `X-Request-Id` ヘッダーが含まれる
+- [x] `auth/login.hurl`: 全リクエストのレスポンスに `X-Request-Id` ヘッダーが含まれる
 
 E2E テスト（該当なし）
 
