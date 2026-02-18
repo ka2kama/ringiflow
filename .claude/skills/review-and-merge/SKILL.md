@@ -355,7 +355,7 @@ gh pr checks
 #### マージ実行
 
 ```bash
-gh pr merge --squash --delete-branch
+gh pr merge --squash
 just clean-branches
 ```
 
@@ -368,11 +368,11 @@ just clean-branches
 
 #### `gh pr merge` 失敗時の対応
 
-`gh pr merge --squash --delete-branch` が失敗した場合、`--auto` にフォールバックせず以下の手順で対応する:
+`gh pr merge --squash` が失敗した場合、`--auto` にフォールバックせず以下の手順で対応する:
 
 1. エラーメッセージから原因を特定する
 2. 原因を解消する（下表参照）
-3. 解消後、`gh pr merge --squash --delete-branch` を再試行する
+3. 解消後、`gh pr merge --squash` を再試行する
 
 | 原因 | 対応 |
 |------|------|
