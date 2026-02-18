@@ -67,7 +67,7 @@ git -C "$WORKTREE_PATH" fetch origin --quiet
 echo "スロット $N のブランチを切り替え中: $BRANCH"
 
 # ブランチ切り替え
-if git -C "$WORKTREE_PATH" rev-parse --verify "$BRANCH" >/dev/null 2>&1; then
+if git -C "$WORKTREE_PATH" show-ref --verify "refs/heads/$BRANCH" >/dev/null 2>&1; then
     # ローカルに存在するブランチ
     git -C "$WORKTREE_PATH" switch "$BRANCH"
 elif git -C "$WORKTREE_PATH" ls-remote --exit-code origin "$BRANCH" >/dev/null 2>&1; then
