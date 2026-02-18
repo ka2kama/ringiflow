@@ -58,8 +58,8 @@ flowchart LR
 
 **目的:** 実装すべき振る舞いを明確にする
 
-1. テストを1つだけ書く
-2. コンパイルエラーを解消する（最小限のスタブ）
+1. テストを1つだけ書く（→ Red: compile）
+2. コンパイルエラーを解消する（→ Green: compile / Red: test failure）
 3. テストを実行して **失敗することを確認** する
 
 ```rust
@@ -76,6 +76,68 @@ async fn test_find_user_by_email_returns_user_when_exists() {
     assert!(result.unwrap().is_some());
 }
 ```
+
+#### 二層の Red モデル
+
+静的型付き言語（Rust / Elm）では、テストからのフィードバックが 2 層になる:
+
+| レベル | フィードバック源 | 教えてくれること | 書くもの | 書かないもの |
+|--------|----------------|----------------|---------|------------|
+| Red (compile) | コンパイラ | 何を定義すべきか | 型定義、関数シグネチャ、`todo!()` / `Debug.todo` | ロジック、分岐、計算 |
+| Red (test failure) | テストランナー | 何を実装すべきか | — （失敗を確認するだけ） | — |
+
+```mermaid
+flowchart LR
+    T["テスト記述"] --> RC["🔴 Red<br/>(compile)"]
+    RC --> GC["スタブ作成<br/>todo!()"]
+    GC --> RT["🔴 Red<br/>(test failure)"]
+    RT --> G["🟢 Green"]
+```
+
+メンタルモデル: コンパイラは「最初のテストランナー」。コンパイラのエラーメッセージが「何を定義すべきか」を教え、テストランナーが「何を実装すべきか」を教える。この 2 つのフィードバックを混同しないことが重要。
+
+Robert C. Martin はこれを nano-cycle（Red 内の小サイクル）と呼ぶ。テストを書く → コンパイルエラーを解消する → テスト失敗を確認する、という一連の流れが Red フェーズ内部のサイクルを成す。
+
+#### コンパイルエラー解消の原則
+
+コンパイルエラーの解消では、コンパイラが要求する最小限の定義だけを記述する:
+
+| 書くもの | 書かないもの |
+|---------|------------|
+| 構造体、enum の型定義 | フィールドの値を計算するロジック |
+| 関数シグネチャ（引数と戻り値の型） | 関数の本体ロジック |
+| `todo!()`（Rust）/ `Debug.todo`（Elm） | 条件分岐、ループ、ビジネスルール |
+| トレイト実装の骨格 | トレイトメソッドの具体的な処理 |
+
+Rust の例:
+
+```rust
+// コンパイルエラー解消で書くもの: 型定義 + todo!()
+pub struct UserRepository {
+    pool: PgPool,
+}
+
+impl UserRepository {
+    pub async fn find_by_email(
+        &self,
+        tenant_id: &TenantId,
+        email: &Email,
+    ) -> Result<Option<User>> {
+        todo!() // ロジックは Green フェーズで書く
+    }
+}
+```
+
+Elm の例:
+
+```elm
+-- コンパイルエラー解消で書くもの: 型定義 + Debug.todo
+findByEmail : TenantId -> Email -> Cmd Msg
+findByEmail tenantId email =
+    Debug.todo "findByEmail" -- ロジックは Green フェーズで書く
+```
+
+プロジェクト内の実例: テストスタブで `todo!()` を使用するパターン → `core-service/src/handler/auth/tests.rs`
 
 重要: 失敗を確認せずに実装に進まない。失敗を見ることで：
 - テストが正しく書けていることを確認できる
@@ -492,6 +554,18 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 - 『テスト駆動開発』Kent Beck 著、和田卓人 訳
 - t_wada のスライド・講演資料
 - [テスト駆動開発についてまとめてみた](https://qiita.com/t_wada/items/e2b3b1a5b9e89a5b7f9c)
+- Robert C. Martin (2021) "Clean Craftsmanship" — nano-cycle（Red 内の小サイクル）
+- Steve Freeman & Nat Pryce (2009) "Growing Object-Oriented Software, Guided by Tests" — "Write the test you wish you had"
+
+### 既知手法との対応
+
+| 概念 | 出典 | 本ドキュメントでの対応 |
+|------|------|---------------------|
+| nano-cycle（Red 内の小サイクル） | Robert C. Martin, *Clean Craftsmanship* (2021) | 二層の Red モデル |
+| Compiler-Driven Development | 静的型付き言語 TDD の一般的な考え方 | コンパイルエラー解消の原則 |
+| "Write the test you wish you had" | Freeman & Pryce, *GOOS* (2009) | Red フェーズの「テストを1つだけ書く」 |
+
+→ 詳細: [独自フレームワークと既知手法の対応](../../06_ナレッジベース/methodology/独自フレームワークと既知手法の対応.md)
 
 ---
 
@@ -499,6 +573,7 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-18 | Red フェーズに二層の Red モデル（compile → test failure）、コンパイルエラー解消の原則、既知手法との対応を追加（#637） |
 | 2026-02-11 | 確認事項の実施に結果記録（チェックボックス + 1行結果）の手順を追加 |
 | 2026-02-11 | E2E テスト（Playwright）の実行タイミングセクションを追加、チェックリストに E2E 項目を追加（#435） |
 | 2026-02-09 | 確認事項の実施ステップを追加。推測ではなく事実に基づくコード記述の構造的強制 |
