@@ -23,7 +23,9 @@ pub struct PlainPassword(String);
 
 impl std::fmt::Debug for PlainPassword {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("PlainPassword").field(&"[REDACTED]").finish()
+        f.debug_tuple("PlainPassword")
+            .field(&crate::REDACTED)
+            .finish()
     }
 }
 
@@ -111,7 +113,7 @@ mod tests {
     fn test_平文パスワードのdebug出力はマスクされる() {
         let password = PlainPassword::new("secret");
         let debug = format!("{:?}", password);
-        assert!(debug.contains("[REDACTED]"));
+        assert!(debug.contains(crate::REDACTED));
         assert!(!debug.contains("secret"));
     }
 

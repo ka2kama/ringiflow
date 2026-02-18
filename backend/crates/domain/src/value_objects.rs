@@ -580,7 +580,7 @@ mod tests {
     fn test_ユーザー名のdebug出力はマスクされる() {
         let name = UserName::new("山田太郎").unwrap();
         let debug = format!("{:?}", name);
-        assert!(debug.contains("[REDACTED]"));
+        assert!(debug.contains(crate::REDACTED));
         assert!(!debug.contains("山田太郎"));
     }
 

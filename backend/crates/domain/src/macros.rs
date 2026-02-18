@@ -154,7 +154,7 @@ macro_rules! define_validated_string {
 
         impl std::fmt::Debug for $Name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                f.debug_tuple(stringify!($Name)).field(&"[REDACTED]").finish()
+                f.debug_tuple(stringify!($Name)).field(&$crate::REDACTED).finish()
             }
         }
 

@@ -44,8 +44,8 @@ pub struct LoginRequest {
 impl std::fmt::Debug for LoginRequest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LoginRequest")
-            .field("email", &"[REDACTED]")
-            .field("password", &"[REDACTED]")
+            .field("email", &ringiflow_domain::REDACTED)
+            .field("password", &ringiflow_domain::REDACTED)
             .finish()
     }
 }
@@ -433,6 +433,6 @@ mod tests {
         let debug = format!("{:?}", req);
         assert!(!debug.contains("secret@example.com"));
         assert!(!debug.contains("my-secret-password"));
-        assert!(debug.contains("[REDACTED]"));
+        assert!(debug.contains(ringiflow_domain::REDACTED));
     }
 }

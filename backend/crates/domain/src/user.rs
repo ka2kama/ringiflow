@@ -68,7 +68,7 @@ pub struct Email(String);
 
 impl std::fmt::Debug for Email {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Email").field(&"[REDACTED]").finish()
+        f.debug_tuple("Email").field(&crate::REDACTED).finish()
     }
 }
 
@@ -519,7 +519,7 @@ mod tests {
     fn test_メールアドレスのdebug出力はマスクされる() {
         let email = Email::new("user@example.com").unwrap();
         let debug = format!("{:?}", email);
-        assert!(debug.contains("[REDACTED]"));
+        assert!(debug.contains(crate::REDACTED));
         assert!(!debug.contains("user@example.com"));
     }
 
@@ -533,7 +533,7 @@ mod tests {
     fn test_ユーザーのdebug出力はメールアドレスを含まない(active_user: User) {
         let debug = format!("{:?}", active_user);
         assert!(!debug.contains("user@example.com"));
-        assert!(debug.contains("[REDACTED]"));
+        assert!(debug.contains(crate::REDACTED));
     }
 
     #[rstest]

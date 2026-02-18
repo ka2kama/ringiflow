@@ -55,8 +55,8 @@ impl std::fmt::Debug for SessionData {
         f.debug_struct("SessionData")
             .field("user_id", &self.user_id)
             .field("tenant_id", &self.tenant_id)
-            .field("email", &"[REDACTED]")
-            .field("name", &"[REDACTED]")
+            .field("email", &ringiflow_domain::REDACTED)
+            .field("name", &ringiflow_domain::REDACTED)
             .field("roles", &self.roles)
             .field("permissions", &self.permissions)
             .field("created_at", &self.created_at)
@@ -470,7 +470,7 @@ mod tests {
         let debug = format!("{:?}", session);
         assert!(!debug.contains("secret@example.com"));
         assert!(!debug.contains("Secret User"));
-        assert!(debug.contains("[REDACTED]"));
+        assert!(debug.contains(ringiflow_domain::REDACTED));
     }
 
     #[test]
