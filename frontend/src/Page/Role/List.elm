@@ -285,10 +285,10 @@ viewRoleRow showActions role =
 typeToBadge : Bool -> { colorClass : String, label : String }
 typeToBadge isSystem =
     if isSystem then
-        { colorClass = "bg-primary-100 text-primary-800 border-primary-200", label = "システム" }
+        { colorClass = "bg-primary-50 text-primary-600 border-primary-200", label = "システム" }
 
     else
-        { colorClass = "bg-secondary-100 text-secondary-800 border-secondary-200", label = "カスタム" }
+        { colorClass = "bg-secondary-100 text-secondary-600 border-secondary-200", label = "カスタム" }
 
 
 viewConfirmDialog : Maybe RoleItem -> Html Msg

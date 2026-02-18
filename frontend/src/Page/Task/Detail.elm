@@ -332,7 +332,7 @@ view model =
 
 viewHeader : Html Msg
 viewHeader =
-    nav [ class "mb-6 flex items-center gap-2 text-sm" ]
+    nav [ class "mb-4 flex items-center gap-2 text-sm" ]
         [ a [ href (Route.toString Route.Tasks), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "タスク一覧" ]
         , span [ class "text-secondary-400" ] [ text "/" ]
         , span [ class "text-secondary-900 font-medium" ] [ text "タスク詳細" ]
