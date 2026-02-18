@@ -37,7 +37,7 @@ The quality strategy consists of two layers — V&V (Validation & Verification):
 | Layer | Question | Mechanism |
 |-------|----------|-----------|
 | Validation | Are we solving the right problem? | [Problem-solving framework](.claude/rules/problem-solving.md), [Issue triage](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査) |
-| Verification | Are we building it correctly? | Defense & offense (below) |
+| Verification | Are we building it correctly? | Defense & Offense (below) |
 
 The Verification layer has two complementary directions:
 
@@ -99,7 +99,7 @@ flowchart LR
     E -.->|Next session| A
 ```
 
-Currently [56 improvement records](process/improvements/) exist. Examples:
+Currently [79 improvement records](process/improvements/) exist. Examples:
 
 | Case | Problem | Countermeasure |
 |------|---------|----------------|

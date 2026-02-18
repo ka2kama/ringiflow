@@ -100,7 +100,7 @@ flowchart LR
     E -.->|次のセッション| A
 ```
 
-現在 [56 件の改善記録](process/improvements/)がある。事例:
+現在 [79 件の改善記録](process/improvements/)がある。事例:
 
 | 事例 | 問題 | 対策 |
 |------|------|------|
