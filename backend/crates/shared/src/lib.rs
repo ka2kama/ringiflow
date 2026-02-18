@@ -11,6 +11,8 @@
 
 pub mod api_response;
 pub mod error_response;
+#[cfg(feature = "observability")]
+pub mod event_log;
 pub mod health;
 pub mod observability;
 pub mod paginated_response;

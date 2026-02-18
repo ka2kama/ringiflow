@@ -52,14 +52,24 @@ impl IntoResponse for AuthError {
                 ),
             ),
             AuthError::Database(e) => {
-                tracing::error!("データベースエラー: {}", e);
+                tracing::error!(
+                    error.category = "infrastructure",
+                    error.kind = "database",
+                    "データベースエラー: {}",
+                    e
+                );
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse::internal_error(),
                 )
             }
             AuthError::Internal(msg) => {
-                tracing::error!("内部エラー: {}", msg);
+                tracing::error!(
+                    error.category = "infrastructure",
+                    error.kind = "internal",
+                    "内部エラー: {}",
+                    msg
+                );
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     ErrorResponse::internal_error(),

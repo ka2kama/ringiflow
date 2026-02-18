@@ -1,0 +1,113 @@
+# ログスキーマ
+
+## 概要
+
+RingiFlow の構造化ログにおけるフィールド命名規約とスキーマ定義。AI エージェントが `jq` で効率的にログを検索・フィルタできるよう、一貫したフィールド命名を提供する。
+
+## 前提
+
+- JSON ログ出力: `LOG_FORMAT=json` で有効化（[observability.rs](../../../backend/crates/shared/src/observability.rs)）
+- `flatten_event(true)`: スパンフィールドとイベントフィールドがフラットに出力される
+- Request ID: スパンフィールド `request_id` として自動注入（[#650](https://github.com/ka2kama/ringiflow-2/issues/650)）
+- PII マスキング: `REDACTED` 定数で機密情報を置換（[#651](https://github.com/ka2kama/ringiflow-2/issues/651)）
+
+## 自動注入フィールド
+
+tracing-subscriber が自動的に付与するフィールド。アプリケーションコードで指定する必要はない。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `timestamp` | string | ISO 8601 タイムスタンプ |
+| `level` | string | ログレベル（INFO, WARN, ERROR） |
+| `target` | string | Rust モジュールパス |
+| `request_id` | string | UUID v7 ベースの Request ID（スパンフィールド） |
+| `span.service` | string | サービス名（bff, core-service, auth-service） |
+
+## ビジネスイベントフィールド
+
+`log_business_event!` マクロで出力する。`event.kind = "business_event"` が自動付与される。
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `event.kind` | string | 自動 | 常に `"business_event"`（マクロが付与） |
+| `event.category` | string | 必須 | イベントカテゴリ（`"workflow"`, `"auth"`） |
+| `event.action` | string | 必須 | アクション名（下表参照） |
+| `event.tenant_id` | string | 必須 | テナント ID |
+| `event.result` | string | 必須 | `"success"` または `"failure"` |
+| `event.entity_type` | string | 推奨 | エンティティ種別（`"workflow_instance"`, `"workflow_step"`, `"user"`, `"session"`） |
+| `event.entity_id` | string | 推奨 | エンティティ ID |
+| `event.actor_id` | string | 推奨 | 操作者の User ID |
+| `event.reason` | string | 任意 | 失敗理由（`"password_mismatch"`, `"user_not_found"`） |
+
+### アクション一覧
+
+| カテゴリ | アクション | 説明 |
+|---------|----------|------|
+| workflow | `workflow.created` | ワークフロー作成 |
+| workflow | `workflow.submitted` | ワークフロー申請 |
+| workflow | `step.approved` | ステップ承認 |
+| workflow | `step.rejected` | ステップ却下 |
+| workflow | `step.changes_requested` | ステップ差し戻し |
+| workflow | `workflow.resubmitted` | ワークフロー再申請 |
+| auth | `auth.login_success` | ログイン成功 |
+| auth | `auth.login_failure` | ログイン失敗 |
+| auth | `auth.logout` | ログアウト |
+
+## エラーコンテキストフィールド
+
+既存の `tracing::error!` に追加する構造化フィールド。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `error.category` | string | エラーカテゴリ（`"infrastructure"`, `"external_service"`） |
+| `error.kind` | string | エラー種別（`"database"`, `"session"`, `"internal"` 等） |
+
+### エラーカテゴリと種別
+
+| カテゴリ | 種別 | 説明 |
+|---------|------|------|
+| `infrastructure` | `database` | DB 接続・クエリエラー |
+| `infrastructure` | `session` | セッションストア（Redis）エラー |
+| `infrastructure` | `internal` | 内部ロジックエラー |
+| `infrastructure` | `csrf_token` | CSRF トークン操作エラー |
+| `external_service` | `user_lookup` | Core Service ユーザー検索エラー |
+| `external_service` | `password_verification` | Auth Service パスワード検証エラー |
+| `external_service` | `service_communication` | サービス間通信エラー（汎用） |
+
+## jq クエリ例
+
+```bash
+# 全ビジネスイベント
+jq 'select(.["event.kind"] == "business_event")'
+
+# ワークフロー関連のイベント
+jq 'select(.["event.category"] == "workflow")'
+
+# 特定テナントのログイン失敗
+jq 'select(.["event.action"] == "auth.login_failure" and .["event.tenant_id"] == "テナントID")'
+
+# 特定ワークフローの操作履歴
+jq 'select(.["event.entity_id"] == "ワークフローID")'
+
+# DB エラー
+jq 'select(.["error.category"] == "infrastructure" and .["error.kind"] == "database")'
+
+# 外部サービスエラー
+jq 'select(.["error.category"] == "external_service")'
+
+# 特定 Request ID のログを追跡
+jq 'select(.request_id == "リクエストID")'
+```
+
+## プロジェクトでの使用箇所
+
+- マクロ定義: [`backend/crates/shared/src/event_log.rs`](../../../backend/crates/shared/src/event_log.rs)
+- ワークフローイベント: `backend/apps/core-service/src/usecase/workflow/command/` 配下
+- 認証イベント: `backend/apps/bff/src/handler/auth/login.rs`
+- エラーコンテキスト: 各サービスの `error.rs` + BFF auth ハンドラ
+
+## 関連リソース
+
+- [observability.rs](../../../backend/crates/shared/src/observability.rs) — トレーシング初期化
+- [運用設計書](../../02_基本設計書/04_運用設計.md) — 監査ログ要件
+- [Elastic Common Schema (ECS)](https://www.elastic.co/guide/en/ecs/current/index.html) — 命名規約の参考

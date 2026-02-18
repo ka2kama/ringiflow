@@ -13,6 +13,7 @@ use ringiflow_domain::{
     },
 };
 use ringiflow_infra::InfraError;
+use ringiflow_shared::{event_log::event, log_business_event};
 
 use crate::{
     error::CoreError,
@@ -150,6 +151,17 @@ impl WorkflowUseCaseImpl {
                 .await
                 .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
         }
+
+        log_business_event!(
+            event.category = event::category::WORKFLOW,
+            event.action = event::action::WORKFLOW_SUBMITTED,
+            event.entity_type = event::entity_type::WORKFLOW_INSTANCE,
+            event.entity_id = %instance_id,
+            event.actor_id = %in_progress_instance.initiated_by(),
+            event.tenant_id = %tenant_id,
+            event.result = event::result::SUCCESS,
+            "ワークフロー申請"
+        );
 
         Ok(in_progress_instance)
     }

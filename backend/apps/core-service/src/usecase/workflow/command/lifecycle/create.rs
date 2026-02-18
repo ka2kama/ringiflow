@@ -6,6 +6,7 @@ use ringiflow_domain::{
     value_objects::DisplayIdEntityType,
     workflow::{NewWorkflowInstance, WorkflowInstance, WorkflowInstanceId},
 };
+use ringiflow_shared::{event_log::event, log_business_event};
 
 use crate::{
     error::CoreError,
@@ -74,6 +75,17 @@ impl WorkflowUseCaseImpl {
             .insert(&instance)
             .await
             .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
+
+        log_business_event!(
+            event.category = event::category::WORKFLOW,
+            event.action = event::action::WORKFLOW_CREATED,
+            event.entity_type = event::entity_type::WORKFLOW_INSTANCE,
+            event.entity_id = %instance.id(),
+            event.actor_id = %instance.initiated_by(),
+            event.tenant_id = %instance.tenant_id(),
+            event.result = event::result::SUCCESS,
+            "ワークフロー作成"
+        );
 
         Ok(instance)
     }
