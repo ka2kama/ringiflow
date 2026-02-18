@@ -50,8 +50,8 @@ CORE-06 要件「WCAG 2.1 AA 準拠（SHOULD）」のギャップを解消する
 テーブルヘッダーの `text-secondary-500` → `text-secondary-600` 変更。
 
 ### 確認事項
-- [ ] パターン: テーブルヘッダーのクラス文字列 → Grep 結果で 6 ファイル確認済み
-- [ ] ライブラリ: Tailwind `text-secondary-600` トークン → styles.css @theme で定義済み
+- [x] パターン: テーブルヘッダーのクラス文字列 → Grep 結果で 6 ファイル確認済み
+- [x] ライブラリ: Tailwind `text-secondary-600` トークン → styles.css @theme L96 で定義済み
 
 ### 対象ファイル
 
@@ -80,9 +80,9 @@ E2E テスト（該当なし）: 視覚的な変更は目視確認。
 ## Phase 2: フォームラベル追加
 
 ### 確認事項
-- [ ] 型: `PermissionMatrix.Config` → `PermissionMatrix.elm` L30-35
-- [ ] パターン: 既存の `aria-label` 使用パターン → `MessageAlert.elm` L56: `attribute "aria-label" "閉じる"`, `ConfirmDialog.elm`: `attribute "aria-labelledby"`
-- [ ] パターン: `PermissionMatrix.viewResourceRow` の引数構造 → L86-87: `( resourceKey, resourceLabel )` と `actions` リスト `( actionKey, actionLabel )` でラベル構築可能
+- [x] 型: `PermissionMatrix.Config` → `PermissionMatrix.elm` L30-35、selectedPermissions: Set String
+- [x] パターン: 既存の `aria-label` 使用パターン → `MessageAlert.elm` L56: `attribute "aria-label" "閉じる"` を確認
+- [x] パターン: `PermissionMatrix.viewResourceRow` の引数構造 → L86-87: `( resourceKey, resourceLabel )` と `actions` リスト `( actionKey, actionLabel )` でラベル構築可能
 
 ### 対象ファイル
 
@@ -123,8 +123,8 @@ PermissionMatrix の `view` テストには `Config` を組み立てる。`selec
 ## Phase 3: フォーカスインジケータ追加
 
 ### 確認事項
-- [ ] パターン: フォーム入力のフォーカスパターン → `FormField.elm`: `outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500`
-- [ ] パターン: PermissionMatrix チェックボックス → L104: `outline-none focus-visible:ring-2 focus-visible:ring-primary-500`（既に対応済み）
+- [x] パターン: フォーム入力のフォーカスパターン → `FormField.elm`: `outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500` を確認
+- [x] パターン: PermissionMatrix チェックボックス → L104: `outline-none focus-visible:ring-2 focus-visible:ring-primary-500`（既に対応済み）
 
 ### 対象ファイル
 
