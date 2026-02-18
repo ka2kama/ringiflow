@@ -14,6 +14,7 @@ import Api.ErrorMessage as ErrorMessage
 import Component.Badge as Badge
 import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
+import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.AdminUser as AdminUser exposing (UserDetail, UserResponse)
@@ -228,15 +229,10 @@ viewContent model =
             LoadingSpinner.view
 
         Failure err ->
-            div [ class "rounded-lg bg-error-50 p-4 text-error-700" ]
-                [ p [] [ text (ErrorMessage.toUserMessage { entityName = "ユーザー" } err) ]
-                , Button.view
-                    { variant = Button.Outline
-                    , disabled = False
-                    , onClick = Refresh
-                    }
-                    [ text "再読み込み" ]
-                ]
+            ErrorState.view
+                { message = ErrorMessage.toUserMessage { entityName = "ユーザー" } err
+                , onRefresh = Refresh
+                }
 
         Success userDetail ->
             viewUserDetail model userDetail

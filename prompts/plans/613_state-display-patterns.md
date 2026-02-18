@@ -11,9 +11,9 @@ Error state（`rounded-lg bg-error-50 p-4 text-error-700`）が 17 箇所でペ�
 
 ### 対象
 
-**ErrorState コンポーネント化 + リファクタリング（12 箇所、8 ファイル）:**
+**ErrorState コンポーネント化 + リファクタリング（13 箇所、9 ファイル）:**
 
-リフレッシュボタンあり（7 箇所）:
+リフレッシュボタンあり（8 箇所）:
 1. `Page/User/List.elm:157` — `ErrorMessage.toUserMessage { entityName = "ユーザー" } err`
 2. `Page/Role/List.elm:185` — `ErrorMessage.toUserMessage { entityName = "ロール" } err`
 3. `Page/AuditLog/List.elm:300` — `ErrorMessage.toUserMessage { entityName = "監査ログ" } err`
@@ -21,6 +21,7 @@ Error state（`rounded-lg bg-error-50 p-4 text-error-700`）が 17 箇所でペ�
 5. `Page/Workflow/List.elm:248` — "データの取得に失敗しました。"
 6. `Page/Workflow/Detail.elm:719` — "データの取得に失敗しました。"
 7. `Page/Task/Detail.elm:359` — "データの取得に失敗しました。"
+8. `Page/User/Detail.elm:231` — `ErrorMessage.toUserMessage { entityName = "ユーザー" } err`（品質ゲートで検出、追加対応）
 
 リフレッシュボタンなし（5 箇所）:
 8. `Page/Home.elm:110` — "統計情報の取得に失敗しました"
@@ -131,9 +132,9 @@ E2E テスト（該当なし）
 #### 実装手順
 1. `tests/Component/ErrorStateTest.elm` を作成（Red）
 2. `src/Component/ErrorState.elm` を作成（Green）
-3. 全 12 箇所をリファクタリング（Refactor）
+3. 全 13 箇所をリファクタリング（Refactor）
    - `import Component.ErrorState as ErrorState` を追加
-   - `ErrorState.view { message = ..., onRefresh = Refresh }` に置換（7 箇所）
+   - `ErrorState.view { message = ..., onRefresh = Refresh }` に置換（8 箇所）
    - `ErrorState.viewSimple "..."` に置換（5 箇所）
    - 不要になった `import Component.Button` を削除（該当ファイルで Button が ErrorState 以外で使われていなければ）
 4. `just check` で全体コンパイル + テスト通過を確認
@@ -142,7 +143,7 @@ E2E テスト（該当なし）
 #### 変更ファイル
 - 新規: `frontend/src/Component/ErrorState.elm`
 - 新規: `frontend/tests/Component/ErrorStateTest.elm`
-- 変更: `Page/User/List.elm`, `Page/Role/List.elm`, `Page/AuditLog/List.elm`, `Page/Task/List.elm`, `Page/Workflow/List.elm`, `Page/Workflow/Detail.elm`, `Page/Task/Detail.elm`, `Page/Home.elm`, `Page/User/New.elm`, `Page/User/Edit.elm`, `Page/Role/Edit.elm`
+- 変更: `Page/User/List.elm`, `Page/User/Detail.elm`, `Page/Role/List.elm`, `Page/AuditLog/List.elm`, `Page/Task/List.elm`, `Page/Workflow/List.elm`, `Page/Workflow/Detail.elm`, `Page/Task/Detail.elm`, `Page/Home.elm`, `Page/User/New.elm`, `Page/User/Edit.elm`, `Page/Role/Edit.elm`
 
 ### Phase 2: EmptyState コンポーネント作成 + 全ページリファクタリング
 
@@ -196,7 +197,7 @@ E2E テスト（該当なし）
 
 | # | 観点 | 理想状態（To-Be） | 判定 | 確認内容 |
 |---|------|------------------|------|---------|
-| 1 | 網羅性 | 探索で発見された全対象が計画に含まれている | OK | `bg-error-50` の Grep 結果 19 箇所すべてを分類（対象 12 + 対象外 6 + MessageAlert 1）。Empty state 6 箇所も分類（対象 3 + 対象外 3） |
+| 1 | 網羅性 | 探索で発見された全対象が計画に含まれている | OK | `bg-error-50` の Grep 結果を分類（対象 13 + 対象外 6 + MessageAlert 1）。品質ゲートで User/Detail.elm の漏れを検出し追加対応。Empty state 6 箇所も分類（対象 3 + 対象外 3） |
 | 2 | 曖昧さ排除 | 不確定な記述がゼロ | OK | 各関数のシグネチャ、CSS クラス、対象ファイルの行番号を明示 |
 | 3 | 設計判断の完結性 | 全ての差異に判断が記載されている | OK | API 設計（2 関数 vs Maybe）、テストアプローチ、アクセシビリティ、padding 統一の判断を記載 |
 | 4 | スコープ境界 | 対象と対象外が両方明記されている | OK | 「スコープ」セクションで対象 / 対象外を明記、各対象外に除外理由あり |
