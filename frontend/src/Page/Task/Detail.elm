@@ -522,7 +522,7 @@ viewConfirmDialog maybePending =
 
 viewBasicInfo : Time.Zone -> WorkflowInstance -> Html Msg
 viewBasicInfo zone workflow =
-    div []
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
         , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
@@ -539,7 +539,7 @@ viewBasicInfo zone workflow =
 
 viewFormData : WorkflowInstance -> Html Msg
 viewFormData workflow =
-    div []
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
         , viewRawFormData workflow.formData
         ]
