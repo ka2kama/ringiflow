@@ -246,6 +246,14 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 | 視覚的階層 | [デザインガイドライン](../../03_詳細設計書/13_デザインガイドライン.md)のタイポグラフィ階層に沿い、関連要素が近接でグルーピングされているか？ |
 | 破壊的操作の防御 | 削除・却下等の破壊的操作に ConfirmDialog があり、ボタン色が操作の意味と一致しているか？ |
 
+デザイン品質向上（ページ/コンポーネントの完成時）:
+
+| レンズ | 問い |
+|--------|------|
+| コントラストの効果 | 重要な要素（CTA、見出し、状態バッジ）が周囲と明確に差別化され、ユーザーの視線を適切に誘導しているか？ |
+| 整列の一貫性 | 要素がスペーシンググリッド（4px 基準）に沿って整列し、視覚的な秩序を保っているか？ |
+| 余白の活用 | 余白が情報のグルーピングと呼吸感を適切に生み出し、窮屈さや散漫さがないか？ |
+
 コード設計レンズとの対応:
 
 | コード設計レンズ | 対応する UI/UX レンズ |
@@ -255,7 +263,7 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 | 要素の最小性 | （H8 ミニマルデザインとして視覚的階層に包含） |
 | 型の活用 | 状態の網羅性（RemoteData + Button.Variant） |
 
-既知手法との対応: UI/UX レンズは Nielsen の 10 Usability Heuristics（H1: 状態の網羅性、H4: デザイントークン準拠、H5/H3: 破壊的操作の防御、H8: 視覚的階層、H9: エラーのユーザビリティ）と WCAG 2.1 POUR 原則（アクセシビリティ）に対応。
+既知手法との対応: UI/UX レンズの守りは Nielsen の 10 Usability Heuristics（H1: 状態の網羅性、H4: デザイントークン準拠、H5/H3: 破壊的操作の防御、H8: 視覚的階層、H9: エラーのユーザビリティ）と WCAG 2.1 POUR 原則（アクセシビリティ）に対応。攻めは CRAP 原則（Robin Williams, 2004）の Contrast・Alignment・Proximity に対応（Repetition は守りレンズの「デザイントークン準拠」「共有コンポーネント活用」でカバー）。CRAP はデザイン実践の手法（How）、ゲシュタルト原則が理論的裏付け（Why）を提供する。
 
 ---
 
@@ -591,6 +599,7 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 - [テスト駆動開発についてまとめてみた](https://qiita.com/t_wada/items/e2b3b1a5b9e89a5b7f9c)
 - Robert C. Martin (2021) "Clean Craftsmanship" — nano-cycle（Red 内の小サイクル）
 - Steve Freeman & Nat Pryce (2009) "Growing Object-Oriented Software, Guided by Tests" — "Write the test you wish you had"
+- Robin Williams (2004) "The Non-Designer's Design Book" (CRAP 原則)
 
 ### 既知手法との対応
 
@@ -601,6 +610,7 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 | "Write the test you wish you had" | Freeman & Pryce, *GOOS* (2009) | Red フェーズの「テストを1つだけ書く」 |
 | Usability Heuristics | Jakob Nielsen, *10 Usability Heuristics for User Interface Design* (1994, 2024 更新) | UI/UX レンズ（H1, H3, H4, H5, H8, H9） |
 | POUR 原則 | W3C, *WCAG 2.1* (2018) | アクセシビリティレンズ（Perceivable + Operable） |
+| CRAP 原則 | Robin Williams, *The Non-Designer's Design Book* (2004) | デザイン品質向上レンズ（C: コントラストの効果、A: 整列の一貫性、P: 余白の活用）。R は守りレンズでカバー |
 
 → 詳細: [独自フレームワークと既知手法の対応](../../06_ナレッジベース/methodology/独自フレームワークと既知手法の対応.md)
 
@@ -610,6 +620,7 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-18 | UI/UX レンズにデザイン品質向上（攻め）レンズを追加。CRAP 原則を既知手法に記載（#653） |
 | 2026-02-18 | 設計原則レンズに UI/UX レンズ（フロントエンド変更時）を追加。Nielsen's Heuristics・WCAG 2.1 POUR を既知手法に記載（#644） |
 | 2026-02-18 | Red フェーズに二層の Red モデル（compile → test failure）、コンパイルエラー解消の原則、既知手法との対応を追加（#637） |
 | 2026-02-11 | 確認事項の実施に結果記録（チェックボックス + 1行結果）の手順を追加 |
