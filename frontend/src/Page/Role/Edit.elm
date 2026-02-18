@@ -277,10 +277,10 @@ viewBreadcrumb model =
             else
                 "編集"
     in
-    nav [ class "mb-4 text-sm text-secondary-500" ]
-        [ a [ href (Route.toString Route.Roles), class "hover:text-primary-600 transition-colors" ] [ text "ロール管理" ]
-        , span [ class "mx-2" ] [ text ">" ]
-        , span [] [ text lastSegment ]
+    nav [ class "mb-4 flex items-center gap-2 text-sm" ]
+        [ a [ href (Route.toString Route.Roles), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "ロール管理" ]
+        , span [ class "text-secondary-400" ] [ text "/" ]
+        , span [ class "text-secondary-900 font-medium" ] [ text lastSegment ]
         ]
 
 

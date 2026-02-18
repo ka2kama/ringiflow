@@ -214,13 +214,13 @@ statusToBadgeTests =
         [ test "active → 成功色とアクティブラベル" <|
             \_ ->
                 AdminUser.statusToBadge "active"
-                    |> Expect.equal { colorClass = "bg-success-100 text-success-800 border-success-200", label = "アクティブ" }
+                    |> Expect.equal { colorClass = "bg-success-50 text-success-600 border-success-200", label = "アクティブ" }
         , test "inactive → セカンダリ色と非アクティブラベル" <|
             \_ ->
                 AdminUser.statusToBadge "inactive"
-                    |> Expect.equal { colorClass = "bg-secondary-100 text-secondary-800 border-secondary-200", label = "非アクティブ" }
+                    |> Expect.equal { colorClass = "bg-secondary-100 text-secondary-600 border-secondary-200", label = "非アクティブ" }
         , test "未知の値 → セカンダリ色でステータス値をラベルに" <|
             \_ ->
                 AdminUser.statusToBadge "suspended"
-                    |> Expect.equal { colorClass = "bg-secondary-100 text-secondary-800 border-secondary-200", label = "suspended" }
+                    |> Expect.equal { colorClass = "bg-secondary-100 text-secondary-600 border-secondary-200", label = "suspended" }
         ]

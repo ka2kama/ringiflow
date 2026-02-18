@@ -272,13 +272,13 @@ view model =
 
 viewBreadcrumb : Int -> Html Msg
 viewBreadcrumb displayNumber =
-    nav [ class "mb-4 text-sm text-secondary-500" ]
-        [ a [ href (Route.toString Route.Users), class "hover:text-primary-600 transition-colors" ] [ text "ユーザー管理" ]
-        , span [ class "mx-2" ] [ text ">" ]
-        , a [ href (Route.toString (Route.UserDetail displayNumber)), class "hover:text-primary-600 transition-colors" ]
+    nav [ class "mb-4 flex items-center gap-2 text-sm" ]
+        [ a [ href (Route.toString Route.Users), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "ユーザー管理" ]
+        , span [ class "text-secondary-400" ] [ text "/" ]
+        , a [ href (Route.toString (Route.UserDetail displayNumber)), class "text-secondary-500 hover:text-primary-600 transition-colors" ]
             [ text ("#" ++ String.fromInt displayNumber) ]
-        , span [ class "mx-2" ] [ text ">" ]
-        , span [] [ text "編集" ]
+        , span [ class "text-secondary-400" ] [ text "/" ]
+        , span [ class "text-secondary-900 font-medium" ] [ text "編集" ]
         ]
 
 

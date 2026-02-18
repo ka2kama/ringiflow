@@ -123,7 +123,7 @@ viewStats remoteStats =
 -}
 viewStatsCards : DashboardStats -> Html Msg
 viewStatsCards stats =
-    div [ class "mt-4 grid gap-4 sm:grid-cols-3" ]
+    div [ class "grid gap-4 sm:grid-cols-3" ]
         [ viewStatCardLink
             { label = "承認待ちタスク"
             , value = stats.pendingTasks

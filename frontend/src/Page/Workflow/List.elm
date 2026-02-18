@@ -318,7 +318,7 @@ viewStatusDropdown currentFilter =
     in
     span [ class "flex items-center gap-2" ]
         [ label [ for "status-filter" ] [ text "ステータス: " ]
-        , select [ id "status-filter", onInput (statusFromFilterValue >> SetStatusFilter), class "rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm" ]
+        , select [ id "status-filter", onInput (statusFromFilterValue >> SetStatusFilter), class "rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500" ]
             (List.map
                 (\( maybeStatus, label_ ) ->
                     option

@@ -692,7 +692,7 @@ view model =
 
 viewHeader : Html Msg
 viewHeader =
-    nav [ class "mb-6 flex items-center gap-2 text-sm" ]
+    nav [ class "mb-4 flex items-center gap-2 text-sm" ]
         [ a [ href (Route.toString (Route.Workflows Route.emptyWorkflowFilter)), class "text-secondary-500 hover:text-primary-600 transition-colors" ] [ text "申請一覧" ]
         , span [ class "text-secondary-400" ] [ text "/" ]
         , span [ class "text-secondary-900 font-medium" ] [ text "申請詳細" ]
@@ -857,7 +857,7 @@ stepProgressStyle step =
 
 viewBasicInfo : Time.Zone -> WorkflowInstance -> Html Msg
 viewBasicInfo zone workflow =
-    div []
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "基本情報" ]
         , dl [ class "grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm" ]
             [ dt [ class "text-secondary-500" ] [ text "申請者" ]
@@ -908,7 +908,7 @@ viewResubmitSection model workflow =
 -}
 viewEditableFormData : Model -> Html Msg
 viewEditableFormData model =
-    div []
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ（編集中）" ]
         , case model.definition of
             Success definition ->
@@ -1005,17 +1005,14 @@ viewEditActions model =
 
 viewFormData : WorkflowInstance -> RemoteData ApiError WorkflowDefinition -> Html Msg
 viewFormData workflow maybeDefinition =
-    div []
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ" ]
         , case maybeDefinition of
             NotAsked ->
                 text ""
 
             Loading ->
-                div [ class "flex flex-col items-center justify-center py-8" ]
-                    [ div [ class "h-8 w-8 animate-spin rounded-full border-4 border-secondary-100 border-t-primary-600" ] []
-                    , p [ class "mt-4 text-secondary-500" ] [ text "読み込み中..." ]
-                    ]
+                LoadingSpinner.view
 
             Failure _ ->
                 viewRawFormData workflow.formData
@@ -1078,17 +1075,14 @@ viewRawFormData formData =
 -}
 viewCommentSection : Model -> Html Msg
 viewCommentSection model =
-    div []
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "コメント" ]
         , case model.comments of
             NotAsked ->
                 text ""
 
             Loading ->
-                div [ class "flex items-center gap-2 py-4 text-sm text-secondary-500" ]
-                    [ div [ class "h-4 w-4 animate-spin rounded-full border-2 border-secondary-200 border-t-primary-600" ] []
-                    , text "読み込み中..."
-                    ]
+                LoadingSpinner.view
 
             Failure _ ->
                 div [ class "rounded-lg bg-error-50 p-3 text-sm text-error-700" ]

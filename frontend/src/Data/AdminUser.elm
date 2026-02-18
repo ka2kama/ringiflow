@@ -39,13 +39,13 @@ statusToBadge : String -> BadgeConfig
 statusToBadge status =
     case status of
         "active" ->
-            { colorClass = "bg-success-100 text-success-800 border-success-200", label = "アクティブ" }
+            { colorClass = "bg-success-50 text-success-600 border-success-200", label = "アクティブ" }
 
         "inactive" ->
-            { colorClass = "bg-secondary-100 text-secondary-800 border-secondary-200", label = "非アクティブ" }
+            { colorClass = "bg-secondary-100 text-secondary-600 border-secondary-200", label = "非アクティブ" }
 
         _ ->
-            { colorClass = "bg-secondary-100 text-secondary-800 border-secondary-200", label = status }
+            { colorClass = "bg-secondary-100 text-secondary-600 border-secondary-200", label = status }
 
 
 
