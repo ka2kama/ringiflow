@@ -50,9 +50,9 @@ cargo build -p ringiflow-bff -p ringiflow-core-service -p ringiflow-auth-service
 
 # 起動フェーズ: ビルド済みバイナリを使うため即座に起動する
 echo "バックエンドサービスを起動中..."
-cargo run -p ringiflow-bff &
-cargo run -p ringiflow-core-service &
-cargo run -p ringiflow-auth-service &
+./target/debug/ringiflow-bff &
+./target/debug/ringiflow-core-service &
+./target/debug/ringiflow-auth-service &
 
 # ヘルスチェックを待機
 echo "バックエンドサービス起動を待機中..."
