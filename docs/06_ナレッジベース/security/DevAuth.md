@@ -142,4 +142,4 @@ Dockerfile はデフォルトで `--no-default-features`（`ARG CARGO_FEATURES="
 - Issue: [#79 開発用認証バイパス（DevAuth）を実装](https://github.com/ka2kama/ringiflow/issues/79)
 - Issue: [#288 本番ビルドで DevAuth が有効化されることを防止する](https://github.com/ka2kama/ringiflow/issues/288)
 - Issue: [#274 デモ環境の認証セットアップ](https://github.com/ka2kama/ringiflow/issues/274)
-- 認証機能設計: [07_認証機能設計.md](../03_詳細設計書/07_認証機能設計.md)
+- 認証機能設計: [07_認証機能設計.md](../../03_詳細設計書/07_認証機能設計.md)

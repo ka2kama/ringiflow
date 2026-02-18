@@ -432,7 +432,7 @@ Redis AOF:
   → 現在の状態: user:1 = "Alice Smith"
 ```
 
-参考: [Event Sourcing とデータ削除](./EventSourcingとデータ削除.md)
+参考: [Event Sourcing とデータ削除](../architecture/EventSourcingとデータ削除.md)
 
 **RDB との比較:**
 

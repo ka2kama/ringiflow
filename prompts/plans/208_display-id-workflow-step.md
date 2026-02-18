@@ -4,7 +4,7 @@
 
 Phase A（WorkflowInstance）で確立したパターンを適用し、WorkflowStep に表示用 ID（`STEP-7` 形式）を導入する。
 
-設計書: [docs/03_詳細設計書/12_表示用ID設計.md](../../00_Main/Assets/ghq/github.com/ka2kama/ringiflow/docs/03_詳細設計書/12_表示用ID設計.md)
+設計書: [docs/03_詳細設計書/12_表示用ID設計.md](../../docs/03_詳細設計書/12_表示用ID設計.md)
 
 ## 完了基準（Issue #208）
 

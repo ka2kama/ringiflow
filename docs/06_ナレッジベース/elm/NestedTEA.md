@@ -295,7 +295,7 @@ type Msg = ... | WorkflowExampleMsg Example.Msg
 
 - [Elm アーキテクチャ](Elmアーキテクチャ.md) - 基本的な TEA パターン
 - [Elm ルーティング](Elmルーティング.md) - URL 管理
-- [frontend/src/Main.elm](../../frontend/src/Main.elm) - 実装
+- [frontend/src/Main.elm](../../../frontend/src/Main.elm) - 実装
 
 ---
 

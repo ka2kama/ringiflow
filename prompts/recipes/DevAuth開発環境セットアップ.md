@@ -79,5 +79,5 @@ just dev-bff
 
 ## 関連ドキュメント
 
-- [DevAuth ナレッジベース](../docs/06_ナレッジベース/security/DevAuth.md)
-- [セッションログ: DevAuth設定と詳細画面バグ修正](runs/2026-01/2026-01-28_DevAuth設定と詳細画面バグ修正.md)
+- [DevAuth ナレッジベース](../../docs/06_ナレッジベース/security/DevAuth.md)
+- [セッションログ: DevAuth設定と詳細画面バグ修正](../runs/2026-01/2026-01-28_DevAuth設定と詳細画面バグ修正.md)

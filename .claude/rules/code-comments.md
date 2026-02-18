@@ -15,7 +15,7 @@ paths:
 コード・設定ファイル内でドキュメントを参照する場合、Markdown リンク形式で記述する。
 
 ```rust
-//! 詳細: [BFF パターン](../../../docs/06_ナレッジベース/architecture/BFFパターン.md)
+//! 詳細: [BFF パターン](../../docs/06_ナレッジベース/architecture/BFFパターン.md)
 ```
 
 ```yaml

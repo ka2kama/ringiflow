@@ -57,4 +57,4 @@ jq のパスを `.tool_input.*` 形式に修正したところ、hooks が正常
 ## 関連
 
 - PR: #67
-- 技術ノート: [ClaudeCode_Hooks.md](../../docs/06_技術ノート/ClaudeCode_Hooks.md)
+- 技術ノート: [ClaudeCode_Hooks.md](../../../docs/06_ナレッジベース/devtools/ClaudeCode_Hooks.md)

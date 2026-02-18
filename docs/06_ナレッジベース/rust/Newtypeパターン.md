@@ -338,7 +338,7 @@ pub struct UserName(String);
 pub struct WorkflowName(String);
 ```
 
-Newtype 化の判断基準は [ADR-016](../05_ADR/016_プリミティブ型のNewtype化方針.md) を参照。
+Newtype 化の判断基準は [ADR-016](../../05_ADR/016_プリミティブ型のNewtype化方針.md) を参照。
 
 ---
 
@@ -347,5 +347,5 @@ Newtype 化の判断基準は [ADR-016](../05_ADR/016_プリミティブ型のNe
 - [Rust Design Patterns - Newtype](https://rust-unofficial.github.io/patterns/patterns/behavioural/newtype.html)
 
 関連ドキュメント:
-- [Rust実装ルール](../../.claude/rules/rust.md)
-- [DDD エンティティパターン](./DDD_エンティティパターン.md)
+- [Rust実装ルール](../../../.claude/rules/rust.md)
+- [DDD エンティティパターン](../architecture/DDD_エンティティパターン.md)

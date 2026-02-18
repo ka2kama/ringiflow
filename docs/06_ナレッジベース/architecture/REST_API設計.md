@@ -138,7 +138,7 @@ POST /api/v1/workflows/{id}/approve
 }
 ```
 
-詳細は [RFC 9457 セクション](./Rustエラーハンドリング.md#rfc-9457-problem-details) を参照。
+詳細は [RFC 9457 セクション](../rust/Rustエラーハンドリング.md#rfc-9457-problem-details) を参照。
 
 ## ペジネーション
 
@@ -224,7 +224,7 @@ ISO 8601 形式を使用する。
 
 ## プロジェクトでの使用
 
-API 設計の詳細は [03_API設計.md](../03_詳細設計書/03_API設計.md) を参照。
+API 設計の詳細は [03_API設計.md](../../03_詳細設計書/03_API設計.md) を参照。
 
 ## 関連リソース
 

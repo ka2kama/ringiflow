@@ -76,7 +76,7 @@ GitHub 外のツールでタスク管理を行う。
 
 ### 関連ドキュメント
 
-- 手順書: [Issue/PR 運用フロー](../03_手順書/04_開発フロー/01_Issue駆動開発.md)
+- 手順書: [Issue/PR 運用フロー](../04_手順書/04_開発フロー/01_Issue駆動開発.md)
 - Project Board: https://github.com/users/ka2kama/projects/1
 - Milestones: https://github.com/ka2kama/ringiflow/milestones
 
