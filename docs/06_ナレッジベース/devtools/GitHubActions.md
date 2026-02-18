@@ -242,7 +242,7 @@ gh api "repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.he
   -f description="Check completed"
 ```
 
-→ 詳細: [ADR-011 補足](../05_ADR/011_Claude_Code_Action導入.md#補足-workflow_run-イベントでのステータス報告)
+→ 詳細: [ADR-011 補足](../../05_ADR/011_Claude_Code_Action導入.md#補足-workflow_run-イベントでのステータス報告)
 
 #### 2. 同時実行制御が必要
 

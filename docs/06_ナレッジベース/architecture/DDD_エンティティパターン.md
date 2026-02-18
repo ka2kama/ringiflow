@@ -445,5 +445,5 @@ RingiFlow での使用例:
 - Vaughn Vernon『実践ドメイン駆動設計』
 
 関連ドキュメント:
-- [Rust実装ルール](../../.claude/rules/rust.md)
-- [Newtype パターン](./Newtypeパターン.md)
+- [Rust実装ルール](../../../.claude/rules/rust.md)
+- [Newtype パターン](../rust/Newtypeパターン.md)

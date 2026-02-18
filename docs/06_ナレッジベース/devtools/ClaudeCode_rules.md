@@ -134,7 +134,7 @@ paths:
 ## 関連リソース
 
 - [Claude Code Memory Management](https://docs.anthropic.com/en/docs/claude-code/memory)
-- [CLAUDE.md](../../CLAUDE.md)
+- [CLAUDE.md](../../../CLAUDE.md)
 
 ---
 

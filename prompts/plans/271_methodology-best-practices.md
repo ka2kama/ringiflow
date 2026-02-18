@@ -74,9 +74,9 @@ CLAUDE.md の「ベストプラクティス起点」は「全領域に適用...�
 行 198-199 の間に1行挿入:
 
 ```
-→ 技術・ツール領域での具体化: [最新ベストプラクティス採用方針](.claude/rules/latest-practices.md)
-→ 方法論・プロセス設計での具体化: [方法論・プロセス設計の方針](.claude/rules/methodology-design.md)   ← 追加
-→ 収束の方法論: [俯瞰・実装リズム](.claude/rules/zoom-rhythm.md)の理想駆動
+→ 技術・ツール領域での具体化: [最新ベストプラクティス採用方針](../../.claude/rules/latest-practices.md)
+→ 方法論・プロセス設計での具体化: [方法論・プロセス設計の方針](../../.claude/rules/methodology-design.md)   ← 追加
+→ 収束の方法論: [俯瞰・実装リズム](../../.claude/rules/zoom-rhythm.md)の理想駆動
 ```
 
 ## 検証

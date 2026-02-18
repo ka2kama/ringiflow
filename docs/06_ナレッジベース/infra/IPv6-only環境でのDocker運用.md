@@ -78,5 +78,5 @@ Cloudflare のリバースプロキシを使えば、IPv4 しか持たないク�
 
 ## 関連リソース
 
-- [ADR-030: Lightsail 個人環境の構築](../../docs/05_ADR/030_Lightsail個人環境の構築.md)
+- [ADR-030: Lightsail 個人環境の構築](../../05_ADR/030_Lightsail個人環境の構築.md)
 - [Docker IPv6 Networking](https://docs.docker.com/config/daemon/ipv6/)

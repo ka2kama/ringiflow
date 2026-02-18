@@ -31,7 +31,7 @@ aws sts get-caller-identity
 
 Terraform で AWS リソースを IaC として管理する。
 
-→ 参照: [`/infra/terraform/README.md`](/infra/terraform/README.md)
+→ 参照: `infra/terraform/README.md`
 
 ---
 
@@ -56,7 +56,7 @@ infra/terraform/modules/rds
 infra/terraform/modules/redis
 ```
 
-→ 参照: [`/infra/terraform/README.md`](/infra/terraform/README.md)
+→ 参照: `infra/terraform/README.md`
 
 ---
 
@@ -147,11 +147,11 @@ aws dynamodb describe-table --table-name ringiflow-terraform-lock --query 'Table
 `infra/terraform/environments/dev/` に設定ファイルが存在することを確認する。
 
 → 参照:
-- [`/infra/terraform/environments/dev/backend.tf`](/infra/terraform/environments/dev/backend.tf)
-- [`/infra/terraform/environments/dev/main.tf`](/infra/terraform/environments/dev/main.tf)
-- [`/infra/terraform/environments/dev/variables.tf`](/infra/terraform/environments/dev/variables.tf)
-- [`/infra/terraform/environments/dev/outputs.tf`](/infra/terraform/environments/dev/outputs.tf)
-- [`/infra/terraform/environments/dev/terraform.tfvars`](/infra/terraform/environments/dev/terraform.tfvars)
+- `infra/terraform/environments/dev/backend.tf`
+- `infra/terraform/environments/dev/main.tf`
+- `infra/terraform/environments/dev/variables.tf`
+- `infra/terraform/environments/dev/outputs.tf`
+- `infra/terraform/environments/dev/terraform.tfvars`
 
 **注意**: `backend.tf` の S3 バケット名を自身の AWS アカウント ID に置き換えること。
 
@@ -162,10 +162,10 @@ aws dynamodb describe-table --table-name ringiflow-terraform-lock --query 'Table
 `infra/terraform/modules/` 配下にモジュールが存在することを確認する。
 
 → 参照:
-- [`/infra/terraform/modules/network/`](/infra/terraform/modules/network/)
-- [`/infra/terraform/modules/ecs/`](/infra/terraform/modules/ecs/)
-- [`/infra/terraform/modules/rds/`](/infra/terraform/modules/rds/)
-- [`/infra/terraform/modules/redis/`](/infra/terraform/modules/redis/)
+- `infra/terraform/modules/network/`
+- `infra/terraform/modules/ecs/`
+- `infra/terraform/modules/rds/`
+- `infra/terraform/modules/redis/`
 
 ---
 
@@ -173,7 +173,7 @@ aws dynamodb describe-table --table-name ringiflow-terraform-lock --query 'Table
 
 Terraform 固有のファイルが gitignore されていることを確認する。
 
-→ 参照: [`/infra/terraform/.gitignore`](/infra/terraform/.gitignore)
+→ 参照: `infra/terraform/.gitignore`
 
 ---
 

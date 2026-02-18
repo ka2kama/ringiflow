@@ -138,7 +138,7 @@ CREATE TABLE entities (
 | 参照系（マスタ） | v4 | tenants, users, roles, workflow_definitions |
 | 時系列系（運用） | v7 | workflow_instances, workflow_steps, events |
 
-詳細: [ADR-001: ID 形式の選定](../05_ADR/001_ID形式の選定.md)
+詳細: [ADR-001: ID 形式の選定](../../05_ADR/001_ID形式の選定.md)
 
 ## 参考資料
 

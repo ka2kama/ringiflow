@@ -90,7 +90,7 @@ RESET ROLE;
 - マイグレーション: `backend/migrations/20260210000003_enable_rls_policies.sql`
 - 対象テーブル: 全 9 テナントスコープテーブル（tenants, users, roles, user_roles, workflow_definitions, workflow_instances, workflow_steps, display_id_counters, auth.credentials）
 - アプリケーションロール: `ringiflow_app`
-- 設計判断: [計画ファイル](../../prompts/plans/snoopy-prancing-abelson.md)（リネーム予定）
+- 設計判断: [計画ファイル](../../../prompts/plans/402_multi-tenant-rls.md)
 
 ## 関連リソース
 

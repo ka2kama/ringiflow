@@ -22,7 +22,7 @@
 | `delete_credentials()` | [`auth-service/src/handler/auth.rs:114`](../../../backend/apps/auth-service/src/handler/auth.rs) | 認証情報削除ハンドラ |
 | `AuthServiceClient` | [`bff/client/auth_service.rs:67`](../../../backend/apps/bff/src/client/auth_service.rs) | BFF → Auth Service クライアントトレイト |
 | `AuthServiceError` | [`bff/client/auth_service.rs:18`](../../../backend/apps/bff/src/client/auth_service.rs) | クライアントエラー型 |
-| `AuthState`（BFF） | [`bff/handler/auth.rs:52`](../../../backend/apps/bff/src/handler/auth.rs) | BFF ハンドラの共有状態（3つの依存） |
+| `AuthState`（BFF） | [`bff/handler/auth.rs:52`](../../../backend/apps/bff/src/handler/auth/mod.rs) | BFF ハンドラの共有状態（3つの依存） |
 
 ### 型の関係
 

@@ -277,7 +277,7 @@ Dependabot がセキュリティアラートを検出した場合の対応方法
 
 ### 関連 ADR
 
-- [ADR-018: cross-spawn 脆弱性への対応](../05_ADR/018_cross-spawn脆弱性への対応.md)
+- [ADR-018: cross-spawn 脆弱性への対応](../../05_ADR/018_cross-spawn脆弱性への対応.md)
 
 ## 関連リソース
 

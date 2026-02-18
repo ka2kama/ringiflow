@@ -134,7 +134,7 @@ E2E テスト（該当なし）
 `docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md` の冒頭にアーカイブ注記を追加:
 
 ```markdown
-> **注記**: [ADR-047](../../05_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md) により、Lightsail はデュアルスタックに切り替え済み。本ドキュメントは IPv6-only 環境での知見の記録として残す。
+> **注記**: [ADR-047](../../docs/05_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md) により、Lightsail はデュアルスタックに切り替え済み。本ドキュメントは IPv6-only 環境での知見の記録として残す。
 ```
 
 `## プロジェクトでの使用箇所` セクションも更新（deploy.sh の SCP_TARGET 分離は廃止された旨）。
