@@ -23,6 +23,7 @@ module Page.Task.List exposing
 import Api exposing (ApiError)
 import Api.Task as TaskApi
 import Component.Badge as Badge
+import Component.EmptyState as EmptyState
 import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Data.Task exposing (TaskItem)
@@ -154,10 +155,10 @@ viewError =
 viewTaskList : Time.Zone -> List TaskItem -> Html Msg
 viewTaskList zone tasks =
     if List.isEmpty tasks then
-        div [ class "py-12 text-center" ]
-            [ p [ class "text-secondary-500" ] [ text "承認待ちのタスクはありません" ]
-            , p [ class "mt-2 text-sm text-secondary-400" ] [ text "新しいタスクが割り当てられるとここに表示されます" ]
-            ]
+        EmptyState.view
+            { message = "承認待ちのタスクはありません"
+            , description = Just "新しいタスクが割り当てられるとここに表示されます"
+            }
 
     else
         div []

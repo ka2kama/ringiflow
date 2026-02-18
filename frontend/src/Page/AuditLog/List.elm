@@ -13,6 +13,7 @@ import Api.AuditLog as AuditLogApi exposing (AuditLogFilter)
 import Api.ErrorMessage as ErrorMessage
 import Component.Badge as Badge
 import Component.Button as Button
+import Component.EmptyState as EmptyState
 import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Data.AdminUser exposing (AdminUserItem)
@@ -310,8 +311,10 @@ viewContent model =
 viewAuditLogList : Model -> AuditLogList -> Html Msg
 viewAuditLogList model auditLogList =
     if List.isEmpty auditLogList.data then
-        div [ class "py-12 text-center text-secondary-500" ]
-            [ text "監査ログが見つかりません。" ]
+        EmptyState.view
+            { message = "監査ログが見つかりません。"
+            , description = Nothing
+            }
 
     else
         div []
