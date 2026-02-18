@@ -105,8 +105,15 @@ backend/
 frontend/src/
 ├── Main.elm            # エントリポイント
 ├── Route.elm           # ルーティング
+├── Api.elm             # API 通信の共通処理
+├── Ports.elm           # JavaScript 連携
+├── Shared.elm          # 共有状態
+├── Api/                # API エンドポイント別モジュール
+├── Component/          # 再利用可能な UI コンポーネント
+├── Data/               # データモデル・デコーダー
+├── Form/               # フォーム関連
 ├── Page/               # ページモジュール
-└── Ports.elm           # JavaScript 連携
+└── Util/               # ユーティリティ
 ```
 
 TEA（The Elm Architecture）パターンを採用。

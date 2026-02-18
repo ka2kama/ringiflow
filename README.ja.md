@@ -11,6 +11,125 @@
 
 > **学習 & 実験プロジェクト**: 商用レベルの品質を目指しながら、AI エージェント（Claude Code）主導で開発する実験。
 
+## デモ環境
+
+https://demo.ka2kama.com
+
+> ログインページは未実装のため、DevAuth（開発用認証バイパス）で認証済み状態を実現している。
+
+## 技術スタック
+
+| レイヤー | 技術 | 選定理由 |
+|---------|------|----------|
+| バックエンド | **Rust** + axum | 型安全性、メモリ安全性、高パフォーマンス |
+| フロントエンド | **Elm** | 純粋関数型、ランタイムエラーゼロ、The Elm Architecture |
+| データストア | PostgreSQL, Redis | ワークフロー・ユーザー管理、セッション管理 |
+| インフラ | AWS Lightsail, Cloudflare | デモ環境（個人開発向け低コスト構成） |
+
+## アーキテクチャ
+
+```mermaid
+flowchart LR
+    subgraph Client
+        Browser["Browser<br/>(Elm SPA)"]
+    end
+
+    subgraph Backend
+        BFF["BFF<br/>(Rust/axum)"]
+        Core["Core Service<br/>(Rust/axum)"]
+        Auth["Auth Service<br/>(Rust/axum)"]
+    end
+
+    subgraph Data
+        PG["PostgreSQL"]
+        Redis["Redis<br/>(Session)"]
+    end
+
+    Browser --> BFF
+    BFF --> Core
+    BFF --> Auth
+    BFF --> Redis
+    Core --> PG
+    Auth --> PG
+```
+
+### 設計パターン
+
+| パターン | 目的 |
+|---------|------|
+| **BFF (Backend for Frontend)** | セキュリティ強化（トークン秘匿）、フロントエンド最適化 API |
+| **マルチテナント (tenant_id)** | アプリケーションレベルのテナントデータ分離 |
+| **レイヤードアーキテクチャ** | domain / infra / apps の責務分離 |
+
+## 開発状況
+
+**Phase 2（機能拡張）進行中** — Phase 1 MVP 完了
+
+| Phase | 状態 | 内容 |
+|-------|------|------|
+| Phase 0 | ✅ 完了 | 開発基盤構築（CI/CD、プロジェクト構造、ドキュメント体系） |
+| Phase 1 | ✅ 完了 | 最小限の動作するワークフローシステム |
+| Phase 2 | 🚧 進行中 | 機能拡張（マルチテナント、通知、ドキュメント管理） |
+| Phase 3 | 📋 計画中 | エンタープライズ機能（SSO/MFA、複雑なフロー） |
+| Phase 4 | 📋 計画中 | 高度な機能（CQRS/ES、リアルタイム） |
+
+詳細: [実装ロードマップ](docs/03_詳細設計書/00_実装ロードマップ.md)
+
+---
+
+## Getting Started
+
+開発環境の構築手順: [手順書](docs/04_手順書/01_開発参画/01_開発環境構築.md)
+
+複数タスクを同時に進める場合: [並行開発（Worktree）](docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
+
+```bash
+# 初回セットアップ（依存関係インストール、DB 起動、マイグレーション）
+just setup
+
+# 開発サーバー起動（BFF, Core Service, Auth Service, Web を一括起動）
+just dev-all
+
+# コミット前チェック（lint + test + API test）
+just check-all
+```
+
+## 開発フロー
+
+GitHub Projects + Issue でタスクを管理。
+
+1. Issue を作成または確認
+2. `feature/123-機能名` 形式でブランチ作成
+3. 実装 → PR 作成（`Closes #123` で紐付け）
+4. CI + AI レビュー → マージ
+
+→ [Project Board](https://github.com/users/ka2kama/projects/1) / [Issues](https://github.com/ka2kama/ringiflow/issues)
+
+## ディレクトリ構成
+
+```
+ringiflow/
+├── backend/           # Rust バックエンド
+│   ├── apps/          # BFF, Core Service, Auth Service
+│   └── crates/        # 共有ライブラリ（domain, infra, shared）
+├── frontend/          # Elm フロントエンド
+├── infra/             # Terraform, Docker
+├── openapi/           # OpenAPI 仕様
+├── scripts/           # シェルスクリプト（チェック、環境構築、テスト、ツール、worktree）
+├── tests/             # API テスト、E2E テスト
+├── process/           # 改善記録、診断レポート
+├── prompts/           # AI 運用（セッションログ、計画、レシピ）
+└── docs/              # ドキュメント
+    ├── 01_要件定義書/
+    ├── 02_基本設計書/
+    ├── 03_詳細設計書/
+    ├── 04_手順書/
+    ├── 05_ADR/
+    ├── 06_ナレッジベース/
+    ├── 07_実装解説/
+    └── 08_テスト/
+```
+
 ---
 
 ## プロジェクト理念
@@ -62,8 +181,6 @@ Verification 層には守りと攻めの2方向がある:
 - 起点を高く置く（ベストプラクティスから始めて調整する）
 - 全領域に適用（コード設計、UI/UX、セキュリティ、テスト、開発プロセス——例外なし）
 - 意識的な調整（外れるときは理由を記録する）
-
----
 
 ## AI 駆動開発
 
@@ -144,58 +261,6 @@ flowchart LR
 
 → 詳細: [CLAUDE.md](CLAUDE.md)
 
----
-
-## 技術スタック
-
-| レイヤー | 技術 | 選定理由 |
-|---------|------|----------|
-| バックエンド | **Rust** + axum | 型安全性、メモリ安全性、高パフォーマンス |
-| フロントエンド | **Elm** | 純粋関数型、ランタイムエラーゼロ、The Elm Architecture |
-| データストア | PostgreSQL, Redis | ワークフロー・ユーザー管理、セッション管理 |
-| インフラ | AWS Lightsail, Cloudflare | デモ環境（個人開発向け低コスト構成） |
-
-## デモ環境
-
-https://demo.ka2kama.com
-
-> ログインページは未実装のため、DevAuth（開発用認証バイパス）で認証済み状態を実現している。
-
-## アーキテクチャ
-
-```mermaid
-flowchart LR
-    subgraph Client
-        Browser["Browser<br/>(Elm SPA)"]
-    end
-
-    subgraph Backend
-        BFF["BFF<br/>(Rust/axum)"]
-        Core["Core Service<br/>(Rust/axum)"]
-        Auth["Auth Service<br/>(Rust/axum)"]
-    end
-
-    subgraph Data
-        PG["PostgreSQL"]
-        Redis["Redis<br/>(Session)"]
-    end
-
-    Browser --> BFF
-    BFF --> Core
-    BFF --> Auth
-    BFF --> Redis
-    Core --> PG
-    Auth --> PG
-```
-
-### 設計パターン
-
-| パターン | 目的 |
-|---------|------|
-| **BFF (Backend for Frontend)** | セキュリティ強化（トークン秘匿）、フロントエンド最適化 API |
-| **マルチテナント (tenant_id)** | アプリケーションレベルのテナントデータ分離 |
-| **レイヤードアーキテクチャ** | domain / infra / apps の責務分離 |
-
 ## 技術的ハイライト
 
 ### ドキュメント体系
@@ -224,66 +289,3 @@ flowchart LR
 
 - **並行開発対応**: git worktree + Docker Compose の永続スロット方式で、複数タスクを独立した環境で同時進行可能
   - **決定的ポートマッピング**: スロット番号に基づく予測可能なポート割り当て
-
-## ディレクトリ構成
-
-```
-ringiflow/
-├── backend/           # Rust バックエンド
-│   ├── apps/          # BFF, Core Service, Auth Service
-│   └── crates/        # 共有ライブラリ（domain, infra, shared）
-├── frontend/          # Elm フロントエンド
-├── infra/             # Terraform, Docker
-├── openapi/           # OpenAPI 仕様
-├── prompts/           # AI 運用（セッションログ、改善記録、計画）
-└── docs/              # ドキュメント
-    ├── 01_要件定義書/
-    ├── 02_基本設計書/
-    ├── 03_詳細設計書/
-    ├── 04_手順書/
-    ├── 05_ADR/
-    ├── 06_ナレッジベース/
-    └── 07_実装解説/
-```
-
-## 開発フロー
-
-GitHub Projects + Issue でタスクを管理。
-
-1. Issue を作成または確認
-2. `feature/123-機能名` 形式でブランチ作成
-3. 実装 → PR 作成（`Closes #123` で紐付け）
-4. CI + AI レビュー → マージ
-
-→ [Project Board](https://github.com/users/ka2kama/projects/1) / [Issues](https://github.com/ka2kama/ringiflow/issues)
-
-## Getting Started
-
-開発環境の構築手順: [手順書](docs/04_手順書/01_開発参画/01_開発環境構築.md)
-
-複数タスクを同時に進める場合: [並行開発（Worktree）](docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
-
-```bash
-# 初回セットアップ（依存関係インストール、DB 起動、マイグレーション）
-just setup
-
-# 開発サーバー起動（BFF, Core Service, Auth Service, Web を一括起動）
-just dev-all
-
-# コミット前チェック（lint + test + API test）
-just check-all
-```
-
-## 開発状況
-
-**Phase 2（機能拡張）進行中** — Phase 1 MVP 完了
-
-| Phase | 状態 | 内容 |
-|-------|------|------|
-| Phase 0 | ✅ 完了 | 開発基盤構築（CI/CD、プロジェクト構造、ドキュメント体系） |
-| Phase 1 | ✅ 完了 | 最小限の動作するワークフローシステム |
-| Phase 2 | 🚧 進行中 | 機能拡張（マルチテナント、通知、ドキュメント管理） |
-| Phase 3 | 📋 計画中 | エンタープライズ機能（SSO/MFA、複雑なフロー） |
-| Phase 4 | 📋 計画中 | 高度な機能（CQRS/ES、リアルタイム） |
-
-詳細: [実装ロードマップ](docs/03_詳細設計書/00_実装ロードマップ.md)
