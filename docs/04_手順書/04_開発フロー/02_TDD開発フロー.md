@@ -226,13 +226,14 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 フロントエンド（Elm ビュー関数、Tailwind クラス）を変更する場合、コード設計レンズに加えて以下を適用する。
 
-→ 参照: デザイントークンとガイドライン — [`frontend/src/styles.css`](../../../frontend/src/styles.css)
+→ 参照: デザインガイドライン — [`docs/03_詳細設計書/13_デザインガイドライン.md`](../../03_詳細設計書/13_デザインガイドライン.md)
+→ 参照: デザイントークン定義 — [`frontend/src/styles.css`](../../../frontend/src/styles.css)
 
 毎 Refactor:
 
 | レンズ | 問い |
 |--------|------|
-| デザイントークン準拠 | styles.css のトークンとガイドラインを使用しているか？生の色値・未定義シェードはないか？ |
+| デザイントークン準拠 | [デザインガイドライン](../../03_詳細設計書/13_デザインガイドライン.md)に準拠しているか？生の色値・未定義シェードはないか？ |
 | 共有コンポーネント活用 | 既存の共有コンポーネント（Button, Badge, FormField, ErrorState, EmptyState 等）で実現できないか？ |
 | 状態の網羅性 | RemoteData の全状態（NotAsked/Loading/Failure/Success）と空データにフィードバックがあるか？ |
 
@@ -242,7 +243,7 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 |--------|------|
 | アクセシビリティ | セマンティック HTML、ARIA 属性、キーボード操作（focus-visible）、フォームの label 関連付けが適切か？ |
 | エラーのユーザビリティ | エラー表示がユーザーの言語で表現され、回復手段（再読み込み等）を提供しているか？ |
-| 視覚的階層 | styles.css のタイポグラフィ階層に沿い、関連要素が近接でグルーピングされているか？ |
+| 視覚的階層 | [デザインガイドライン](../../03_詳細設計書/13_デザインガイドライン.md)のタイポグラフィ階層に沿い、関連要素が近接でグルーピングされているか？ |
 | 破壊的操作の防御 | 削除・却下等の破壊的操作に ConfirmDialog があり、ボタン色が操作の意味と一致しているか？ |
 
 コード設計レンズとの対応:
