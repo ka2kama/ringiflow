@@ -57,6 +57,19 @@
  *   text-secondary-900 : プライマリテキスト（見出し、重要情報）
  *   text-secondary-700 : セカンダリテキスト（フォームラベル、説明文）
  *   text-secondary-500 : ターシャリテキスト（ヘルパー、ヘッダー）
+ *
+ * アニメーション:
+ *   animate-alert-in    : 通知アラート表示（fade-in + slide-down, 200ms）
+ *   dialog-in           : 確認ダイアログ表示（scale-in + fade-in, 150ms）
+ *                         CSS `#confirm-dialog[open] .dialog-content` で適用
+ *   backdrop-in         : ダイアログ backdrop 表示（fade-in, 150ms）
+ *
+ * トランジション:
+ *   transition-colors   : hover を持つ全要素に付与する（色変化の滑らかさ）
+ *
+ * アクセシビリティ:
+ *   prefers-reduced-motion : グローバルメディアクエリで一括無効化
+ *                            アニメーション/トランジション/スクロールすべてに適用
  */
 
 @import "tailwindcss";
