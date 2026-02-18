@@ -16,7 +16,7 @@ if [ -f "$PROJECT_ROOT/.env" ]; then
     source "$PROJECT_ROOT/.env"
 fi
 
-export DATABASE_URL="${DATABASE_URL:-postgresql://ringiflow:ringiflow@localhost:${POSTGRES_PORT:-15432}/ringiflow_dev}"
+export DATABASE_URL="${DATABASE_URL:-postgresql://ringiflow:ringiflow@localhost:${POSTGRES_PORT:-15432}/ringiflow}"
 
 PACKAGE="@zeddotdev/postgres-context-server"
 INSTALL_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/ringiflow-mcp-postgres"

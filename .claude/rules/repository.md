@@ -261,6 +261,25 @@ cd backend && cargo sqlx prepare --workspace -- --all-targets
 - **単体テスト（src/）**: トレイトの型チェックのみ、DB 接続不要
 - **統合テスト（tests/）**: 実際の DB を使用してクエリの動作確認
 
+## ORDER BY の決定性
+
+`ORDER BY` には必ず決定的（ユニーク）なカラムを含める。同一値を持つ行の並び順は PostgreSQL で保証されない。
+
+```sql
+-- Bad: created_at が同一の行があると順序が非決定的
+ORDER BY created_at ASC
+
+-- Good: display_number はインスタンス内でユニーク
+ORDER BY display_number ASC
+
+-- Good: ユニークでないカラムで並べる場合は、ユニークカラムをタイブレーカーに追加
+ORDER BY created_at DESC, id ASC
+```
+
+判定テスト: 「このカラムに同一値の行が複数存在しうるか？」→ Yes なら、ユニークカラムをタイブレーカーとして追加する。
+
+改善の経緯: `ORDER BY created_at ASC` で `workflow_steps` の順序が非決定的になり、API テストが失敗した（#679）
+
 ## パフォーマンス最適化
 
 ### N+1 問題の回避
@@ -347,6 +366,7 @@ pub async fn save_many(&self, users: &[User]) -> Result<(), RepositoryError> {
 - 文字列結合による SQL 構築
 - トランザクションが必要な箇所での未使用
 - テストなしでのリポジトリ実装
+- ユニークでないカラムのみの `ORDER BY`（タイブレーカーなし）
 
 ## エンティティ追加・更新パス追加時の必須対応
 
