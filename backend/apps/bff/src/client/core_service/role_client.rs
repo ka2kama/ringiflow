@@ -66,6 +66,7 @@ pub trait CoreServiceRoleClient: Send + Sync {
 
 #[async_trait]
 impl CoreServiceRoleClient for CoreServiceClientImpl {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn list_roles(
         &self,
         tenant_id: Uuid,
@@ -76,6 +77,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%role_id, %tenant_id))]
     async fn get_role(
         &self,
         role_id: Uuid,
@@ -90,6 +92,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::RoleNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn create_role(
         &self,
         req: &CreateRoleCoreRequest,
@@ -103,6 +106,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%role_id))]
     async fn update_role(
         &self,
         role_id: Uuid,
@@ -117,6 +121,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::RoleNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%role_id))]
     async fn delete_role(&self, role_id: Uuid) -> Result<(), CoreServiceError> {
         let url = format!("{}/internal/roles/{}", self.base_url, role_id);
 

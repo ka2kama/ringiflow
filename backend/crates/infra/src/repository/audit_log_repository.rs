@@ -70,6 +70,7 @@ impl DynamoDbAuditLogRepository {
 
 #[async_trait]
 impl AuditLogRepository for DynamoDbAuditLogRepository {
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn record(&self, log: &AuditLog) -> Result<(), InfraError> {
         let sk = log.sort_key();
 
@@ -133,6 +134,7 @@ impl AuditLogRepository for DynamoDbAuditLogRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_by_tenant(
         &self,
         tenant_id: &TenantId,

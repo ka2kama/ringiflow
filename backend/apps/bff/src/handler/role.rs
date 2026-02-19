@@ -97,6 +97,7 @@ pub struct RoleDetailData {
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn list_roles(
     State(state): State<Arc<RoleState>>,
     headers: HeaderMap,
@@ -140,6 +141,7 @@ pub async fn list_roles(
       (status = 404, description = "ロールが見つからない", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(%role_id))]
 pub async fn get_role(
     State(state): State<Arc<RoleState>>,
     headers: HeaderMap,
@@ -182,6 +184,7 @@ pub async fn get_role(
       (status = 409, description = "ロール名重複", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn create_role(
     State(state): State<Arc<RoleState>>,
     headers: HeaderMap,
@@ -250,6 +253,7 @@ pub async fn create_role(
       (status = 404, description = "ロールが見つからない", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(%role_id))]
 pub async fn update_role(
     State(state): State<Arc<RoleState>>,
     headers: HeaderMap,
@@ -320,6 +324,7 @@ pub async fn update_role(
       (status = 404, description = "ロールが見つからない", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(%role_id))]
 pub async fn delete_role(
     State(state): State<Arc<RoleState>>,
     headers: HeaderMap,

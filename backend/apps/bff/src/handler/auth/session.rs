@@ -31,6 +31,7 @@ use crate::{
       (status = 401, description = "未認証", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn me(
     State(state): State<Arc<AuthState>>,
     headers: HeaderMap,
@@ -92,6 +93,7 @@ pub async fn me(
       (status = 401, description = "未認証", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn csrf(
     State(state): State<Arc<AuthState>>,
     headers: HeaderMap,

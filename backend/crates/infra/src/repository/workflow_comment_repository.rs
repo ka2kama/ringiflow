@@ -91,6 +91,7 @@ impl PostgresWorkflowCommentRepository {
 
 #[async_trait]
 impl WorkflowCommentRepository for PostgresWorkflowCommentRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn insert(
         &self,
         comment: &WorkflowComment,
@@ -118,6 +119,7 @@ impl WorkflowCommentRepository for PostgresWorkflowCommentRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%instance_id, %tenant_id))]
     async fn find_by_instance(
         &self,
         instance_id: &WorkflowInstanceId,

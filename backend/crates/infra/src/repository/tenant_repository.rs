@@ -37,6 +37,7 @@ impl PostgresTenantRepository {
 
 #[async_trait]
 impl TenantRepository for PostgresTenantRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
     async fn find_by_id(&self, id: &TenantId) -> Result<Option<Tenant>, InfraError> {
         let row = sqlx::query!(
             r#"

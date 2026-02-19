@@ -36,6 +36,7 @@ use crate::error::CoreError;
 /// 1. クエリパラメータからテナント ID を取得
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
+#[tracing::instrument(skip_all)]
 pub async fn list_workflow_definitions(
     State(state): State<Arc<WorkflowState>>,
     Query(query): Query<TenantQuery>,
@@ -64,6 +65,7 @@ pub async fn list_workflow_definitions(
 /// 2. クエリパラメータからテナント ID を取得
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
+#[tracing::instrument(skip_all, fields(%id))]
 pub async fn get_workflow_definition(
     State(state): State<Arc<WorkflowState>>,
     Path(id): Path<Uuid>,
@@ -91,6 +93,7 @@ pub async fn get_workflow_definition(
 /// 1. クエリパラメータからテナント ID とユーザー ID を取得
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
+#[tracing::instrument(skip_all)]
 pub async fn list_my_workflows(
     State(state): State<Arc<WorkflowState>>,
     Query(query): Query<UserQuery>,
@@ -129,6 +132,7 @@ pub async fn list_my_workflows(
 /// 2. クエリパラメータからテナント ID を取得
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
+#[tracing::instrument(skip_all, fields(%id))]
 pub async fn get_workflow(
     State(state): State<Arc<WorkflowState>>,
     Path(id): Path<Uuid>,
@@ -158,6 +162,7 @@ pub async fn get_workflow(
 /// 2. クエリパラメータからテナント ID を取得
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + ワークフロー詳細を返す
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn get_workflow_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(display_number): Path<i64>,
@@ -190,6 +195,7 @@ pub async fn get_workflow_by_display_number(
 /// 2. クエリパラメータからテナント ID を取得
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + コメント一覧を返す
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn list_comments(
     State(state): State<Arc<WorkflowState>>,
     Path(display_number): Path<i64>,

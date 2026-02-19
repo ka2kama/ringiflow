@@ -44,6 +44,7 @@ impl From<DashboardStats> for DashboardStatsDto {
 ///
 /// ## エンドポイント
 /// GET /internal/dashboard/stats?tenant_id={tenant_id}&user_id={user_id}
+#[tracing::instrument(skip_all)]
 pub async fn get_dashboard_stats(
     State(state): State<Arc<DashboardState>>,
     Query(query): Query<UserQuery>,

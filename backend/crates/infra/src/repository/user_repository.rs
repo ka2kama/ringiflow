@@ -187,6 +187,7 @@ impl PostgresUserRepository {
 
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_by_email(
         &self,
         tenant_id: &TenantId,
@@ -217,6 +218,7 @@ impl UserRepository for PostgresUserRepository {
         row.map(User::try_from).transpose()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, InfraError> {
         let row = sqlx::query_as!(
             UserRow,
@@ -242,6 +244,7 @@ impl UserRepository for PostgresUserRepository {
         row.map(User::try_from).transpose()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
     async fn find_with_roles(&self, id: &UserId) -> Result<Option<(User, Vec<Role>)>, InfraError> {
         // ユーザーを取得
         let Some(user) = self.find_by_id(id).await? else {
@@ -290,6 +293,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(Some((user, roles)))
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn find_by_ids(&self, ids: &[UserId]) -> Result<Vec<User>, InfraError> {
         if ids.is_empty() {
             return Ok(Vec::new());
@@ -321,6 +325,7 @@ impl UserRepository for PostgresUserRepository {
         rows.into_iter().map(User::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_all_active_by_tenant(
         &self,
         tenant_id: &TenantId,
@@ -350,6 +355,7 @@ impl UserRepository for PostgresUserRepository {
         rows.into_iter().map(User::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
     async fn update_last_login(&self, id: &UserId) -> Result<(), InfraError> {
         sqlx::query!(
             r#"
@@ -365,6 +371,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn insert(&self, user: &User) -> Result<(), InfraError> {
         let status: &str = user.status().into();
         sqlx::query!(
@@ -391,6 +398,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn update(&self, user: &User) -> Result<(), InfraError> {
         sqlx::query!(
             r#"
@@ -408,6 +416,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn update_status(&self, user: &User) -> Result<(), InfraError> {
         let status: &str = user.status().into();
         sqlx::query!(
@@ -426,6 +435,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %display_number))]
     async fn find_by_display_number(
         &self,
         tenant_id: &TenantId,
@@ -449,6 +459,7 @@ impl UserRepository for PostgresUserRepository {
         row.map(User::try_from).transpose()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_all_by_tenant(
         &self,
         tenant_id: &TenantId,
@@ -496,6 +507,7 @@ impl UserRepository for PostgresUserRepository {
         rows.into_iter().map(User::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%user_id, %role_id, %tenant_id))]
     async fn insert_user_role(
         &self,
         user_id: &UserId,
@@ -517,6 +529,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%user_id, %role_id, %tenant_id))]
     async fn replace_user_roles(
         &self,
         user_id: &UserId,
@@ -551,6 +564,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn find_role_by_name(&self, name: &str) -> Result<Option<Role>, InfraError> {
         let row = sqlx::query!(
             r#"
@@ -581,6 +595,7 @@ impl UserRepository for PostgresUserRepository {
         )))
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn count_active_users_with_role(
         &self,
         tenant_id: &TenantId,
@@ -629,6 +644,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(count)
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_roles_for_users(
         &self,
         user_ids: &[UserId],

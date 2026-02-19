@@ -224,6 +224,7 @@ impl PostgresWorkflowInstanceRepository {
 
 #[async_trait]
 impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
         let status: &str = instance.status().into();
         sqlx::query!(
@@ -258,6 +259,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn update_with_version_check(
         &self,
         instance: &WorkflowInstance,
@@ -301,6 +303,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]
     async fn find_by_id(
         &self,
         id: &WorkflowInstanceId,
@@ -326,6 +329,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         row.map(WorkflowInstance::try_from).transpose()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_by_tenant(
         &self,
         tenant_id: &TenantId,
@@ -350,6 +354,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         rows.into_iter().map(WorkflowInstance::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn find_by_initiated_by(
         &self,
         tenant_id: &TenantId,
@@ -376,6 +381,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         rows.into_iter().map(WorkflowInstance::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_by_ids(
         &self,
         ids: &[WorkflowInstanceId],
@@ -408,6 +414,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         rows.into_iter().map(WorkflowInstance::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%display_number, %tenant_id))]
     async fn find_by_display_number(
         &self,
         display_number: DisplayNumber,

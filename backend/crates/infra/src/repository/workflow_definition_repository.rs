@@ -123,6 +123,7 @@ impl PostgresWorkflowDefinitionRepository {
 
 #[async_trait]
 impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_published_by_tenant(
         &self,
         tenant_id: &TenantId,
@@ -153,6 +154,7 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
         rows.into_iter().map(WorkflowDefinition::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]
     async fn find_by_id(
         &self,
         id: &WorkflowDefinitionId,

@@ -106,6 +106,7 @@ pub struct UpdateRoleRequest {
 ///
 /// テナントで利用可能なロール一覧をユーザー数付きで取得する。
 /// system_admin は除外される。
+#[tracing::instrument(skip_all)]
 pub async fn list_roles(
     State(state): State<Arc<RoleState>>,
     Query(query): Query<RoleTenantQuery>,
@@ -138,6 +139,7 @@ pub async fn list_roles(
 /// ロール詳細を取得する。
 /// テナント分離: システムロールは全テナントからアクセス可能、
 /// テナントロールは所属テナントのみアクセス可能。
+#[tracing::instrument(skip_all, fields(%role_id))]
 pub async fn get_role(
     State(state): State<Arc<RoleState>>,
     Path(role_id): Path<Uuid>,
@@ -171,6 +173,7 @@ pub async fn get_role(
 /// - `201 Created`: 作成されたロール
 /// - `400 Bad Request`: 権限が空
 /// - `409 Conflict`: 同名ロール重複
+#[tracing::instrument(skip_all)]
 pub async fn create_role(
     State(state): State<Arc<RoleState>>,
     Json(req): Json<CreateRoleRequest>,
@@ -198,6 +201,7 @@ pub async fn create_role(
 /// - `200 OK`: 更新後のロール
 /// - `400 Bad Request`: システムロール、権限空
 /// - `404 Not Found`: ロールが見つからない
+#[tracing::instrument(skip_all, fields(%role_id))]
 pub async fn update_role(
     State(state): State<Arc<RoleState>>,
     Path(role_id): Path<Uuid>,
@@ -227,6 +231,7 @@ pub async fn update_role(
 /// - `400 Bad Request`: システムロール
 /// - `404 Not Found`: ロールが見つからない
 /// - `409 Conflict`: ユーザー割り当てあり
+#[tracing::instrument(skip_all, fields(%role_id))]
 pub async fn delete_role(
     State(state): State<Arc<RoleState>>,
     Path(role_id): Path<Uuid>,

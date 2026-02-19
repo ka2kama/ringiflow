@@ -284,6 +284,7 @@ impl RedisSessionManager {
 
 #[async_trait]
 impl SessionManager for RedisSessionManager {
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn create(&self, data: &SessionData) -> Result<String, InfraError> {
         // UUID v4 でセッション ID を生成（暗号論的に安全なランダム値）
         let session_id = Uuid::new_v4().to_string();
@@ -291,6 +292,7 @@ impl SessionManager for RedisSessionManager {
         Ok(session_id)
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn create_with_id(&self, session_id: &str, data: &SessionData) -> Result<(), InfraError> {
         let key = Self::session_key(data.tenant_id(), session_id);
         let json = serde_json::to_string(data)?;
@@ -301,6 +303,7 @@ impl SessionManager for RedisSessionManager {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn get(
         &self,
         tenant_id: &TenantId,
@@ -320,6 +323,7 @@ impl SessionManager for RedisSessionManager {
         }
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn delete(&self, tenant_id: &TenantId, session_id: &str) -> Result<(), InfraError> {
         let session_key = Self::session_key(tenant_id, session_id);
         let csrf_key = Self::csrf_key(tenant_id, session_id);
@@ -335,6 +339,7 @@ impl SessionManager for RedisSessionManager {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn delete_all_for_tenant(&self, tenant_id: &TenantId) -> Result<(), InfraError> {
         let mut conn = self.conn.clone();
 
@@ -348,6 +353,7 @@ impl SessionManager for RedisSessionManager {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn get_ttl(
         &self,
         tenant_id: &TenantId,
@@ -364,6 +370,7 @@ impl SessionManager for RedisSessionManager {
 
     // --- CSRF トークン管理 ---
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn create_csrf_token(
         &self,
         tenant_id: &TenantId,
@@ -378,6 +385,7 @@ impl SessionManager for RedisSessionManager {
         Ok(token)
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn get_csrf_token(
         &self,
         tenant_id: &TenantId,
@@ -390,6 +398,7 @@ impl SessionManager for RedisSessionManager {
         Ok(result)
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn delete_csrf_token(
         &self,
         tenant_id: &TenantId,
@@ -401,6 +410,7 @@ impl SessionManager for RedisSessionManager {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn delete_all_csrf_for_tenant(&self, tenant_id: &TenantId) -> Result<(), InfraError> {
         let pattern = Self::tenant_csrf_pattern(tenant_id);
         let mut conn = self.conn.clone();

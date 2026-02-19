@@ -169,6 +169,7 @@ fn generate_initial_password() -> String {
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn list_users(
     State(state): State<Arc<UserState>>,
     headers: HeaderMap,
@@ -216,6 +217,7 @@ pub async fn list_users(
       (status = 409, description = "メールアドレス重複", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn create_user(
     State(state): State<Arc<UserState>>,
     headers: HeaderMap,
@@ -304,6 +306,7 @@ pub async fn create_user(
       (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn get_user_detail(
     State(state): State<Arc<UserState>>,
     headers: HeaderMap,
@@ -349,6 +352,7 @@ pub async fn get_user_detail(
       (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn update_user(
     State(state): State<Arc<UserState>>,
     headers: HeaderMap,
@@ -425,6 +429,7 @@ pub async fn update_user(
       (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn update_user_status(
     State(state): State<Arc<UserState>>,
     headers: HeaderMap,

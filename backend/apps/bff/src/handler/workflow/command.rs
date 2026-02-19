@@ -45,6 +45,7 @@ use crate::error::{authenticate, log_and_convert_core_error, validation_error_re
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn create_workflow(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -93,6 +94,7 @@ pub async fn create_workflow(
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn submit_workflow(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -156,6 +158,7 @@ pub async fn submit_workflow(
       (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn approve_step(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -217,6 +220,7 @@ pub async fn approve_step(
       (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn reject_step(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -278,6 +282,7 @@ pub async fn reject_step(
       (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn request_changes_step(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -343,6 +348,7 @@ pub async fn request_changes_step(
       (status = 409, description = "競合", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn resubmit_workflow(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -408,6 +414,7 @@ pub async fn resubmit_workflow(
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn post_comment(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,

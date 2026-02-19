@@ -121,6 +121,7 @@ impl AuthServiceClientImpl {
 
 #[async_trait]
 impl AuthServiceClient for AuthServiceClientImpl {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn verify_password(
         &self,
         tenant_id: Uuid,
@@ -160,6 +161,7 @@ impl AuthServiceClient for AuthServiceClientImpl {
         }
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn create_credentials(
         &self,
         tenant_id: Uuid,

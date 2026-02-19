@@ -47,6 +47,7 @@ use crate::{
       (status = 401, description = "認証エラー", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn list_workflow_definitions(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -90,6 +91,7 @@ pub async fn list_workflow_definitions(
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(%definition_id))]
 pub async fn get_workflow_definition(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -127,6 +129,7 @@ pub async fn get_workflow_definition(
       (status = 401, description = "認証エラー", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn list_my_workflows(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -173,6 +176,7 @@ pub async fn list_my_workflows(
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn get_workflow(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -213,6 +217,7 @@ pub async fn get_workflow(
       (status = 404, description = "タスクが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn get_task_by_display_numbers(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,
@@ -277,6 +282,7 @@ pub async fn get_task_by_display_numbers(
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn list_comments(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,

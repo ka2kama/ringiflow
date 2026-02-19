@@ -147,6 +147,7 @@ impl PostgresWorkflowStepRepository {
 
 #[async_trait]
 impl WorkflowStepRepository for PostgresWorkflowStepRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn insert(&self, step: &WorkflowStep, tenant_id: &TenantId) -> Result<(), InfraError> {
         let status: &str = step.status().into();
         let decision: Option<&str> = step.decision().map(|d| d.into());
@@ -184,6 +185,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn update_with_version_check(
         &self,
         step: &WorkflowStep,
@@ -228,6 +230,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]
     async fn find_by_id(
         &self,
         id: &WorkflowStepId,
@@ -253,6 +256,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         row.map(WorkflowStep::try_from).transpose()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%instance_id, %tenant_id))]
     async fn find_by_instance(
         &self,
         instance_id: &WorkflowInstanceId,
@@ -279,6 +283,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         rows.into_iter().map(WorkflowStep::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn find_by_assigned_to(
         &self,
         tenant_id: &TenantId,
@@ -305,6 +310,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         rows.into_iter().map(WorkflowStep::try_from).collect()
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%display_number, %instance_id, %tenant_id))]
     async fn find_by_display_number(
         &self,
         display_number: DisplayNumber,
