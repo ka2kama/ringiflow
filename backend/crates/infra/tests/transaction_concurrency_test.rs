@@ -15,6 +15,7 @@
 mod common;
 
 use common::{assert_workflow_invariants, create_test_instance, create_test_step, seed_tenant_id};
+use pretty_assertions::assert_eq;
 use ringiflow_infra::{
     InfraError,
     db::{PgTransactionManager, TransactionManager},
