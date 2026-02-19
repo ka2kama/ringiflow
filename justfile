@@ -20,7 +20,7 @@ default:
 # 順序: ツール確認 → 環境変数 → Git フック → Docker 起動 → DB マイグレーション → 依存関係ビルド
 # ※ sqlx の query! マクロはコンパイル時に DB スキーマを検証するため、
 #    マイグレーション完了後に cargo build を実行する必要がある
-setup: check-tools setup-env setup-hooks dev-deps setup-db setup-root-deps setup-deps
+setup: setup-mise check-tools setup-env setup-hooks dev-deps setup-db setup-root-deps setup-deps
     @echo ""
     @echo "✓ セットアップ完了"
     @echo "  - just dev-all         : 全サーバー一括起動（推奨）"
@@ -28,6 +28,10 @@ setup: check-tools setup-env setup-hooks dev-deps setup-db setup-root-deps setup
     @echo "  - just dev-core-service: Core Service 起動"
     @echo "  - just dev-auth-service: Auth Service 起動"
     @echo "  - just dev-web         : フロントエンド起動"
+
+# mise の設定ファイルを信頼済みにする（mise がインストール済みの場合のみ）
+setup-mise:
+    @which mise > /dev/null 2>&1 && mise trust || true
 
 # 開発ツールのインストール確認
 check-tools:
