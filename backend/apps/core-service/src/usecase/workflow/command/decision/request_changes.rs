@@ -67,12 +67,44 @@ impl WorkflowUseCaseImpl {
             .request_changes(input.comment, now)
             .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-        // 5. 差し戻しステップを保存
+        // 5. 残りの Pending ステップを Skipped に遷移（トランザクション開始前にドメインロジック実行）
+        let all_steps = self
+            .step_repo
+            .find_by_instance(request_changes_step.instance_id(), &tenant_id)
+            .await
+            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+        let mut skipped_steps = Vec::new();
+        for pending_step in all_steps
+            .into_iter()
+            .filter(|s| s.status() == WorkflowStepStatus::Pending)
+        {
+            let version = pending_step.version();
+            let skipped = pending_step
+                .skipped(now)
+                .map_err(|e| CoreError::Internal(format!("ステップのスキップに失敗: {}", e)))?;
+            skipped_steps.push((skipped, version));
+        }
+
+        // 6. インスタンスを取得して ChangesRequested に遷移（トランザクション開始前にドメインロジック実行）
+        let instance = self
+            .instance_repo
+            .find_by_id(request_changes_step.instance_id(), &tenant_id)
+            .await
+            .or_not_found("インスタンス")?;
+
+        let instance_expected_version = instance.version();
+        let changes_requested_instance = instance
+            .complete_with_request_changes(now)
+            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
+
+        // 7. 全更新を単一トランザクションで実行
         let mut tx = self
             .tx_manager
             .begin()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
+
         self.step_repo
             .update_with_version_check(
                 &mut tx,
@@ -87,34 +119,13 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
             })?;
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
-        // 6. 残りの Pending ステップを Skipped に遷移
-        let all_steps = self
-            .step_repo
-            .find_by_instance(request_changes_step.instance_id(), &tenant_id)
-            .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
-
-        for pending_step in all_steps
-            .into_iter()
-            .filter(|s| s.status() == WorkflowStepStatus::Pending)
-        {
-            let pending_expected_version = pending_step.version();
-            let skipped_step = pending_step
-                .skipped(now)
-                .map_err(|e| CoreError::Internal(format!("ステップのスキップに失敗: {}", e)))?;
-            let mut tx =
-                self.tx_manager.begin().await.map_err(|e| {
-                    CoreError::Internal(format!("トランザクション開始に失敗: {}", e))
-                })?;
+        for (skipped_step, pending_expected_version) in &skipped_steps {
             self.step_repo
                 .update_with_version_check(
                     &mut tx,
-                    &skipped_step,
-                    pending_expected_version,
+                    skipped_step,
+                    *pending_expected_version,
                     &tenant_id,
                 )
                 .await
@@ -125,28 +136,8 @@ impl WorkflowUseCaseImpl {
                     ),
                     other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
                 })?;
-            tx.commit().await.map_err(|e| {
-                CoreError::Internal(format!("トランザクションコミットに失敗: {}", e))
-            })?;
         }
 
-        // 7. インスタンスを取得して ChangesRequested に遷移
-        let instance = self
-            .instance_repo
-            .find_by_id(request_changes_step.instance_id(), &tenant_id)
-            .await
-            .or_not_found("インスタンス")?;
-
-        let instance_expected_version = instance.version();
-        let changes_requested_instance = instance
-            .complete_with_request_changes(now)
-            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
-
-        let mut tx = self
-            .tx_manager
-            .begin()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
         self.instance_repo
             .update_with_version_check(
                 &mut tx,
@@ -162,6 +153,7 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
             })?;
+
         tx.commit()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
