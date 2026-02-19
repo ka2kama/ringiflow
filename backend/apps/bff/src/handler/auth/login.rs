@@ -105,7 +105,12 @@ pub async fn login(
                     let user_with_roles = match state.core_service_client.get_user(user.id).await {
                         Ok(u) => u,
                         Err(e) => {
-                            tracing::error!("ユーザー情報取得で内部エラー: {}", e);
+                            tracing::error!(
+                                error.category = "external_service",
+                                error.kind = "user_lookup",
+                                "ユーザー情報取得で内部エラー: {}",
+                                e
+                            );
                             return internal_error_response();
                         }
                     };
@@ -129,7 +134,12 @@ pub async fn login(
                                 .create_csrf_token(&tenant_id, &session_id)
                                 .await
                             {
-                                tracing::error!("CSRF トークン作成に失敗: {}", e);
+                                tracing::error!(
+                                    error.category = "infrastructure",
+                                    error.kind = "csrf_token",
+                                    "CSRF トークン作成に失敗: {}",
+                                    e
+                                );
                                 return internal_error_response();
                             }
 
@@ -162,7 +172,12 @@ pub async fn login(
                             (jar, Json(response)).into_response()
                         }
                         Err(e) => {
-                            tracing::error!("セッション作成に失敗: {}", e);
+                            tracing::error!(
+                                error.category = "infrastructure",
+                                error.kind = "session",
+                                "セッション作成に失敗: {}",
+                                e
+                            );
                             internal_error_response()
                         }
                     }
@@ -182,7 +197,12 @@ pub async fn login(
                 }
                 Err(AuthServiceError::ServiceUnavailable) => service_unavailable_response(),
                 Err(e) => {
-                    tracing::error!("パスワード検証で内部エラー: {}", e);
+                    tracing::error!(
+                        error.category = "external_service",
+                        error.kind = "password_verification",
+                        "パスワード検証で内部エラー: {}",
+                        e
+                    );
                     internal_error_response()
                 }
             }
@@ -209,7 +229,12 @@ pub async fn login(
             authentication_failed_response()
         }
         Err(e) => {
-            tracing::error!("ユーザー検索で内部エラー: {}", e);
+            tracing::error!(
+                error.category = "external_service",
+                error.kind = "user_lookup",
+                "ユーザー検索で内部エラー: {}",
+                e
+            );
             internal_error_response()
         }
     }

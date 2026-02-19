@@ -76,7 +76,12 @@ pub async fn get_session(
         Ok(Some(data)) => Ok(data),
         Ok(None) => Err(unauthorized_response()),
         Err(e) => {
-            tracing::error!("セッション取得で内部エラー: {}", e);
+            tracing::error!(
+                error.category = "infrastructure",
+                error.kind = "session",
+                "セッション取得で内部エラー: {}",
+                e
+            );
             Err(internal_error_response())
         }
     }
@@ -143,7 +148,13 @@ impl IntoResponse for CoreServiceError {
 pub fn log_and_convert_core_error(context: &str, err: CoreServiceError) -> Response {
     match &err {
         CoreServiceError::Network(_) | CoreServiceError::Unexpected(_) => {
-            tracing::error!("{}で内部エラー: {}", context, err);
+            tracing::error!(
+                error.category = "external_service",
+                error.kind = "service_communication",
+                "{}で内部エラー: {}",
+                context,
+                err
+            );
         }
         _ => {}
     }
