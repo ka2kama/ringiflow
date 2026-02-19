@@ -11,7 +11,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::SessionData;
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::{ApiResponse, ErrorResponse, event_log::event, log_business_event};
 use uuid::Uuid;
 
 use super::{
@@ -148,6 +148,17 @@ pub async fn login(
                                 },
                             });
 
+                            log_business_event!(
+                                event.category = event::category::AUTH,
+                                event.action = event::action::LOGIN_SUCCESS,
+                                event.entity_type = event::entity_type::SESSION,
+                                event.entity_id = %session_id,
+                                event.actor_id = %user.id,
+                                event.tenant_id = %user.tenant_id,
+                                event.result = event::result::SUCCESS,
+                                "ログイン成功"
+                            );
+
                             (jar, Json(response)).into_response()
                         }
                         Err(e) => {
@@ -156,7 +167,19 @@ pub async fn login(
                         }
                     }
                 }
-                Err(AuthServiceError::AuthenticationFailed) => authentication_failed_response(),
+                Err(AuthServiceError::AuthenticationFailed) => {
+                    log_business_event!(
+                        event.category = event::category::AUTH,
+                        event.action = event::action::LOGIN_FAILURE,
+                        event.entity_type = event::entity_type::USER,
+                        event.entity_id = %user.id,
+                        event.tenant_id = %user.tenant_id,
+                        event.result = event::result::FAILURE,
+                        event.reason = "password_mismatch",
+                        "ログイン失敗: パスワード不一致"
+                    );
+                    authentication_failed_response()
+                }
                 Err(AuthServiceError::ServiceUnavailable) => service_unavailable_response(),
                 Err(e) => {
                     tracing::error!("パスワード検証で内部エラー: {}", e);
@@ -173,6 +196,16 @@ pub async fn login(
                 .verify_password(tenant_id, dummy_user_id, &req.password)
                 .await;
 
+            log_business_event!(
+                event.category = event::category::AUTH,
+                event.action = event::action::LOGIN_FAILURE,
+                event.entity_type = event::entity_type::USER,
+                event.entity_id = ringiflow_domain::REDACTED,
+                event.tenant_id = %tenant_id,
+                event.result = event::result::FAILURE,
+                event.reason = "user_not_found",
+                "ログイン失敗: ユーザー不存在"
+            );
             authentication_failed_response()
         }
         Err(e) => {
@@ -225,6 +258,15 @@ pub async fn logout(
             tracing::warn!("セッション削除に失敗（無視）: {}", e);
         }
     }
+
+    log_business_event!(
+        event.category = event::category::AUTH,
+        event.action = event::action::LOGOUT,
+        event.entity_type = event::entity_type::SESSION,
+        event.tenant_id = %tenant_id,
+        event.result = event::result::SUCCESS,
+        "ログアウト"
+    );
 
     // Cookie をクリア
     let cookie = build_clear_cookie();
