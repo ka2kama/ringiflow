@@ -288,6 +288,6 @@ User Detail と List で重複する statusToBadge の移動先。
 ## 関連ドキュメント
 
 - [コード解説](./01_Elmクローン削減_コード解説.md)
-- [フォーム dirty-state 機能解説](../12_フォームdirty-state/01_フォームdirty-state_機能解説.md)（Dirty フラグの初期実装）
+- [フォーム dirty-state 機能解説](../PR264_フォームdirty-state/01_フォームdirty-state_機能解説.md)（Dirty フラグの初期実装）
 - [セッションログ](../../../prompts/runs/2026-02/2026-02-16_2125_Elmクローン削減.md)
 - [計画ファイル](../../../prompts/plans/533_elm-clone-reduction.md)

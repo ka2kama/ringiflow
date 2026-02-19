@@ -208,7 +208,7 @@ All knowledge is documented — aiming for **zero tacit knowledge**.
 | How to operate (HOW TO) | [Procedures](docs/04_手順書/) |
 | Why that decision (WHY) | [ADRs](docs/05_ADR/) (e.g., [ID format](docs/05_ADR/001_ID形式の選定.md) / [Data deletion](docs/05_ADR/007_テナント退会時のデータ削除方針.md) / [Newtype wrapping](docs/05_ADR/016_プリミティブ型のNewtype化方針.md)) |
 | Technical knowledge | [Knowledge base](docs/06_ナレッジベース/) |
-| Implementation walkthroughs | [Implementation guides](docs/07_実装解説/) (e.g., [Authentication](docs/07_実装解説/01_認証機能/01_認証機能_機能解説.md)) |
+| Implementation walkthroughs | [Implementation guides](docs/07_実装解説/) (e.g., [Authentication](docs/07_実装解説/PR46_認証機能/01_認証機能_機能解説.md)) |
 | Tests | [Tests](docs/08_テスト/) (API test matrices, test specifications) |
 | Development history | [Session logs](prompts/runs/) |
 

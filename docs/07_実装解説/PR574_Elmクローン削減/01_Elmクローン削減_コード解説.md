@@ -419,5 +419,5 @@ validateRequiredString :
 ## 関連ドキュメント
 
 - [機能解説](./01_Elmクローン削減_機能解説.md)
-- [フォーム dirty-state コード解説](../12_フォームdirty-state/02_フォームdirty-state_コード解説.md)（Dirty フラグの初期実装）
+- [フォーム dirty-state コード解説](../PR264_フォームdirty-state/02_フォームdirty-state_コード解説.md)（Dirty フラグの初期実装）
 - [計画ファイル](../../../prompts/plans/533_elm-clone-reduction.md)
