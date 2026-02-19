@@ -168,10 +168,10 @@ E2E テスト（該当なし）
 
 ### 確認事項
 
-- [ ] `sqlx::test` での並行実行パターン → `tokio::spawn` + `Arc` 共有
-- [ ] `PgTransactionManager::new` の引数 → `PgPool`
-- [ ] `common/mod.rs` の `assert_workflow_invariants` シグネチャ → `(pool, instance_id, tenant_id)`
-- [ ] `setup_test_data` の戻り値 → `(TenantId, UserId)`
+- [x] `sqlx::test` での並行実行パターン → `tokio::spawn` は不可（単一接続 savepoint ベースのため）。逐次実行で同等の競合シナリオを検証
+- [x] `PgTransactionManager::new` の引数 → `PgPool`
+- [x] `common/mod.rs` の `assert_workflow_invariants` シグネチャ → `(&PgPool, &WorkflowInstanceId, &TenantId)`
+- [x] テストデータ作成 → `seed_tenant_id()` を使用（マイグレーションでシードデータ作成済み。`setup_test_data` は不要）
 
 ### テストリスト
 
@@ -179,8 +179,8 @@ E2E テスト（該当なし）
 ハンドラテスト（該当なし）
 
 統合テスト:
-- [ ] 並行更新で一方が Conflict を返し、もう一方が成功する
-- [ ] 並行更新後に不変条件が保持されている
+- [x] 楽観的ロックで古いバージョンの更新が Conflict を返す
+- [x] トランザクション原子性で部分更新がロールバックされる
 
 API テスト（該当なし）
 E2E テスト（該当なし）
