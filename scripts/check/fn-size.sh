@@ -6,8 +6,8 @@
 #
 # 警告のみ（exit 0）: CI をブロックしない。肥大化の可視化が目的。
 #
-# Usage: ./scripts/check-fn-size.sh [clippy options...]
-# 例: ./scripts/check-fn-size.sh --quiet
+# Usage: ./scripts/check/fn-size.sh [clippy options...]
+# 例: ./scripts/check/fn-size.sh --quiet
 
 set -euo pipefail
 

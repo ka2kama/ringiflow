@@ -10,7 +10,7 @@
 #
 # 有効値の定義: process/improvements/README.md
 #
-# Usage: ./scripts/check-improvement-records.sh
+# Usage: ./scripts/check/improvement-records.sh
 
 set -euo pipefail
 

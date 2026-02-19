@@ -5,7 +5,7 @@
 # - paths: フロントマターを持つ
 # - CLAUDE.md から参照されている
 #
-# Usage: ./scripts/check-rule-files.sh
+# Usage: ./scripts/check/rule-files.sh
 
 set -euo pipefail
 

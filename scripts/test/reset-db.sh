@@ -6,13 +6,13 @@
 # .env が起動後に生成された場合にも対応するため直接 source する。
 #
 # 使い方:
-#   ./scripts/api-test-reset-db.sh
+#   ./scripts/test/reset-db.sh
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 cd "$PROJECT_ROOT"
 

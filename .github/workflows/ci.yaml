@@ -277,7 +277,7 @@ jobs:
       - name: Check schema snapshot
         run: |
           export PATH="/usr/lib/postgresql/17/bin:$PATH"
-          ./scripts/dump-schema.sh "$DATABASE_URL" > /tmp/schema-check.sql
+          ./scripts/tools/dump-schema.sh "$DATABASE_URL" > /tmp/schema-check.sql
           if ! diff -q backend/schema.sql /tmp/schema-check.sql > /dev/null 2>&1; then
             echo "::error::backend/schema.sql is out of sync. Run 'just db-dump-schema' to update."
             diff --unified backend/schema.sql /tmp/schema-check.sql || true

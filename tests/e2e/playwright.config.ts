@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Playwright 設定
  *
  * ローカル: `just dev-all` で起動した開発サーバーに対してテストを実行する。
- * CI: `scripts/run-e2e-tests.sh` でテスト用環境を構築してから実行する。
+ * CI: `scripts/test/run-e2e.sh` でテスト用環境を構築してから実行する。
  */
 export default defineConfig({
   testDir: "./tests",

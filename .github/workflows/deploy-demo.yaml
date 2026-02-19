@@ -76,4 +76,4 @@ jobs:
           DEPLOY_HOST: ${{ secrets.LIGHTSAIL_HOST }}
           DEPLOY_USER: ${{ secrets.LIGHTSAIL_USER }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/deploy-lightsail.sh
+        run: ./scripts/tools/deploy-lightsail.sh

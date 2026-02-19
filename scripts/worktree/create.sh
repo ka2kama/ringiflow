@@ -3,23 +3,23 @@
 # 永続 worktree スロットを作成するスクリプト
 #
 # 固定の作業ディレクトリを作成する。スロットは削除せずに再利用する。
-# ブランチの切り替えは worktree-switch.sh で行う。
+# ブランチの切り替えは worktree/switch.sh で行う。
 #
 # 使い方:
-#   ./scripts/worktree-create.sh N
+#   ./scripts/worktree/create.sh N
 #
 # 引数:
 #   N : スロット番号（1-9）。ポートオフセットとしても使用される
 #
 # 例:
-#   ./scripts/worktree-create.sh 1
+#   ./scripts/worktree/create.sh 1
 #   → ringiflow-1/ ディレクトリを作成（detached HEAD、ポートオフセット 1）
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # 引数チェック
 if [[ $# -lt 1 ]]; then
@@ -60,7 +60,7 @@ echo "$N" > "$WORKTREE_PATH/.worktree-slot"
 
 # .env を生成（offset = スロット番号）
 cd "$WORKTREE_PATH"
-./scripts/generate-env.sh "$N"
+./scripts/env/generate.sh "$N"
 
 # セットアップ実行
 echo ""

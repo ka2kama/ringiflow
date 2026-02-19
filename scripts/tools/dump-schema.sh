@@ -3,7 +3,7 @@
 # pg_dump の環境依存出力（バージョン行、restrict、extension ブロック）を除去し、
 # どの環境でも同一の出力を得る。
 #
-# Usage: ./scripts/dump-schema.sh <DATABASE_URL>
+# Usage: ./scripts/tools/dump-schema.sh <DATABASE_URL>
 set -euo pipefail
 
 pg_dump --schema-only --no-owner --no-privileges --no-tablespaces \

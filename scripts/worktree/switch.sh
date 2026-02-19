@@ -6,21 +6,21 @@
 # 差分更新を自動で行う。
 #
 # 使い方:
-#   ./scripts/worktree-switch.sh N BRANCH
+#   ./scripts/worktree/switch.sh N BRANCH
 #
 # 引数:
 #   N      : スロット番号（1-9）
 #   BRANCH : 切り替え先のブランチ名
 #
 # 例:
-#   ./scripts/worktree-switch.sh 1 feature/625-persistent-slots
+#   ./scripts/worktree/switch.sh 1 feature/625-persistent-slots
 #   → スロット 1 のブランチを feature/625-persistent-slots に切り替え
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # 引数チェック
 if [[ $# -lt 2 ]]; then

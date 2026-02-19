@@ -3,21 +3,21 @@
 # worktree 用の .env ファイルを生成する
 #
 # 使い方:
-#   ./scripts/generate-env.sh [PORT_OFFSET]
+#   ./scripts/env/generate.sh [PORT_OFFSET]
 #
 # 引数:
 #   PORT_OFFSET: ポートオフセット（0-9）。省略時は 0（メインworktree用）
 #
 # 例:
-#   ./scripts/generate-env.sh      # メインworktree用（オフセット 0）
-#   ./scripts/generate-env.sh 1    # worktree 1 用（オフセット +100）
-#   ./scripts/generate-env.sh 2    # worktree 2 用（オフセット +200）
+#   ./scripts/env/generate.sh      # メインworktree用（オフセット 0）
+#   ./scripts/env/generate.sh 1    # worktree 1 用（オフセット +100）
+#   ./scripts/env/generate.sh 2    # worktree 2 用（オフセット +200）
 # =============================================================================
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 PORT_OFFSET="${1:-0}"
 
@@ -71,7 +71,7 @@ cat > "$PROJECT_ROOT/.env" << EOF
 # =============================================================================
 # RingiFlow ローカル開発環境設定（共通）
 # =============================================================================
-# このファイルは scripts/generate-env.sh により自動生成されました
+# このファイルは scripts/env/generate.sh により自動生成されました
 # ポートオフセット: $PORT_OFFSET（+${OFFSET}）
 
 # -----------------------------------------------------------------------------
@@ -100,7 +100,7 @@ cat > "$PROJECT_ROOT/backend/.env" << EOF
 # =============================================================================
 # RingiFlow バックエンド設定
 # =============================================================================
-# このファイルは scripts/generate-env.sh により自動生成されました
+# このファイルは scripts/env/generate.sh により自動生成されました
 # ポートオフセット: $PORT_OFFSET（+${OFFSET}）
 
 # -----------------------------------------------------------------------------
@@ -164,7 +164,7 @@ cat > "$PROJECT_ROOT/backend/.env.api-test" << EOF
 # =============================================================================
 # RingiFlow API テスト環境設定
 # =============================================================================
-# このファイルは scripts/generate-env.sh により自動生成されました
+# このファイルは scripts/env/generate.sh により自動生成されました
 # ポートオフセット: $PORT_OFFSET（+${OFFSET}）
 # 開発環境とは独立した DB/Redis/ポートを使用する。
 # just test-api / just test-e2e で自動的にこの設定が読み込まれる。

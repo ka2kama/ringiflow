@@ -6,7 +6,7 @@
 # 対象: docs/, prompts/, .claude/, CLAUDE.md
 # スキップ: HTTP(S) リンク、アンカーのみ（#section）、テンプレート/プレースホルダー、コードブロック内
 #
-# Usage: ./scripts/check-doc-links.sh
+# Usage: ./scripts/check/doc-links.sh
 
 set -euo pipefail
 

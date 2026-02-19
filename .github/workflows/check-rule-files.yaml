@@ -27,4 +27,4 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Check rule files are properly referenced
-        run: ./scripts/check-rule-files.sh
+        run: ./scripts/check/rule-files.sh

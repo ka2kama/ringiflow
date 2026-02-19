@@ -5,7 +5,7 @@
 #
 # 警告のみ（exit 0）: CI をブロックしない。肥大化の可視化が目的。
 #
-# Usage: ./scripts/check-file-size.sh
+# Usage: ./scripts/check/file-size.sh
 # 環境変数: WARN_THRESHOLD（デフォルト: 500）
 
 set -euo pipefail

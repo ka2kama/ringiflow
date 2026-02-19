@@ -8,7 +8,7 @@
 # - ワークツリーに紐づかないマージ済みローカルブランチ
 #
 # 使い方:
-#   ./scripts/cleanup.sh [--dry-run]
+#   ./scripts/worktree/cleanup.sh [--dry-run]
 #
 # オプション:
 #   --dry-run : 削除対象を表示するだけで、実際の削除は行わない

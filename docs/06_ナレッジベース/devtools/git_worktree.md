@@ -95,7 +95,7 @@ Docker コンテナは分離できても、ポートは依然として競合す�
 1. 各 worktree で異なる `.env` ファイルを生成
 2. ポートにオフセットを加算（例: main=15432, auth=15532）
 
-このプロジェクトでは `scripts/generate-env.sh` でこれを自動化している。
+このプロジェクトでは `scripts/env/generate.sh` でこれを自動化している。
 
 ## ユースケース
 

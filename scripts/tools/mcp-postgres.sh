@@ -10,7 +10,7 @@ set -euo pipefail
 
 # プロジェクトルートの .env からポート設定を読み込む（worktree 対応）
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 if [ -f "$PROJECT_ROOT/.env" ]; then
     # shellcheck source=/dev/null
     source "$PROJECT_ROOT/.env"
