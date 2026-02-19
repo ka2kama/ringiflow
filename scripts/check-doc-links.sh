@@ -18,7 +18,7 @@ ERRORS=()
 extract_links_outside_codeblocks() {
     local file="$1"
     awk '
-        /^```/ { in_code = !in_code; next }
+        /^[[:space:]]*```/ { in_code = !in_code; next }
         !in_code { print }
     ' "$file" | grep -oP '\]\(\K[^)]+(?=\))' 2>/dev/null
 }
