@@ -48,7 +48,7 @@ async fn test_insert_で新規インスタンスを作成できる(pool: PgPool)
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_id_でインスタンスを取得できる(pool: PgPool) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let tx_manager = PgTransactionManager::new(pool);
+    let tx_manager = PgTransactionManager::new(pool.clone());
 
     let instance = create_test_instance(100);
     let instance_id = instance.id().clone();
@@ -142,7 +142,7 @@ async fn test_find_by_initiated_by_申請者によるインスタンスを取得
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_update_with_version_check_バージョン一致で更新できる(pool: PgPool) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let tx_manager = PgTransactionManager::new(pool);
+    let tx_manager = PgTransactionManager::new(pool.clone());
     let tenant_id = seed_tenant_id();
     let now = test_now();
 
