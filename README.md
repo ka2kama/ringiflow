@@ -11,6 +11,125 @@ An **enterprise workflow management system (SaaS)** that unifies approval flows,
 
 > **Learning & Experimentation Project**: An experiment in building production-quality software driven primarily by an AI agent (Claude Code).
 
+## Demo
+
+https://demo.ka2kama.com
+
+> The login page is not yet implemented; DevAuth (development authentication bypass) provides an authenticated state.
+
+## Tech Stack
+
+| Layer | Technology | Rationale |
+|-------|-----------|-----------|
+| Backend | **Rust** + axum | Type safety, memory safety, high performance |
+| Frontend | **Elm** | Pure functional, zero runtime errors, The Elm Architecture |
+| Data stores | PostgreSQL, Redis | Workflow & user management, session management |
+| Infrastructure | AWS Lightsail, Cloudflare | Demo environment (low-cost setup for solo development) |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Client
+        Browser["Browser<br/>(Elm SPA)"]
+    end
+
+    subgraph Backend
+        BFF["BFF<br/>(Rust/axum)"]
+        Core["Core Service<br/>(Rust/axum)"]
+        Auth["Auth Service<br/>(Rust/axum)"]
+    end
+
+    subgraph Data
+        PG["PostgreSQL"]
+        Redis["Redis<br/>(Session)"]
+    end
+
+    Browser --> BFF
+    BFF --> Core
+    BFF --> Auth
+    BFF --> Redis
+    Core --> PG
+    Auth --> PG
+```
+
+### Design Patterns
+
+| Pattern | Purpose |
+|---------|---------|
+| **BFF (Backend for Frontend)** | Security hardening (token concealment), frontend-optimized API |
+| **Multi-tenant (tenant_id)** | Application-level tenant data isolation |
+| **Layered architecture** | Separation of concerns across domain / infra / apps |
+
+## Development Status
+
+**Phase 2 (Feature Expansion) in progress** — Phase 1 MVP complete
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 0 | ✅ Complete | Development foundation (CI/CD, project structure, documentation system) |
+| Phase 1 | ✅ Complete | Minimum viable workflow system |
+| Phase 2 | 🚧 In Progress | Feature expansion (multi-tenant, notifications, document management) |
+| Phase 3 | 📋 Planning | Enterprise features (SSO/MFA, complex workflows) |
+| Phase 4 | 📋 Planning | Advanced features (CQRS/ES, real-time) |
+
+Details: [Implementation Roadmap](docs/03_詳細設計書/00_実装ロードマップ.md)
+
+---
+
+## Getting Started
+
+Development environment setup: [Procedures](docs/04_手順書/01_開発参画/01_開発環境構築.md)
+
+For working on multiple tasks simultaneously: [Parallel development (Worktree)](docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
+
+```bash
+# Initial setup (install dependencies, start DB, run migrations)
+just setup
+
+# Start dev servers (BFF, Core Service, Auth Service, Web — all at once)
+just dev-all
+
+# Pre-commit check (lint + test + API test)
+just check-all
+```
+
+## Development Flow
+
+Tasks are managed with GitHub Projects + Issues.
+
+1. Create or review an Issue
+2. Create a branch in the `feature/123-feature-name` format
+3. Implement → Create PR (link with `Closes #123`)
+4. CI + AI review → Merge
+
+→ [Project Board](https://github.com/users/ka2kama/projects/1) / [Issues](https://github.com/ka2kama/ringiflow/issues)
+
+## Directory Structure
+
+```
+ringiflow/
+├── backend/           # Rust backend
+│   ├── apps/          # BFF, Core Service, Auth Service
+│   └── crates/        # Shared libraries (domain, infra, shared)
+├── frontend/          # Elm frontend
+├── infra/             # Terraform, Docker
+├── openapi/           # OpenAPI specs
+├── scripts/           # Shell scripts (CI, deploy, DB, worktree)
+├── tests/             # API tests, E2E tests
+├── process/           # Improvement records, diagnostic reports
+├── prompts/           # AI operations (session logs, plans, recipes)
+└── docs/              # Documentation
+    ├── 01_要件定義書/   # Requirements
+    ├── 02_基本設計書/   # High-level design
+    ├── 03_詳細設計書/   # Detailed design
+    ├── 04_手順書/      # Procedures
+    ├── 05_ADR/        # Architecture Decision Records
+    ├── 06_ナレッジベース/ # Knowledge base
+    ├── 07_実装解説/    # Implementation guides
+    └── 08_テスト/      # Test specifications
+```
+
 ---
 
 ## Project Philosophy
@@ -62,8 +181,6 @@ Start from industry best practices and adjust to fit the project's context.
 - Set the bar high (start from best practices, then adapt)
 - Apply to every domain (code design, UI/UX, security, testing, development process — no exceptions)
 - Adjust consciously (document the reason when deviating)
-
----
 
 ## AI-Driven Development
 
@@ -143,58 +260,6 @@ flowchart LR
 
 → Details: [CLAUDE.md](CLAUDE.md)
 
----
-
-## Tech Stack
-
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| Backend | **Rust** + axum | Type safety, memory safety, high performance |
-| Frontend | **Elm** | Pure functional, zero runtime errors, The Elm Architecture |
-| Data stores | PostgreSQL, Redis | Workflow & user management, session management |
-| Infrastructure | AWS Lightsail, Cloudflare | Demo environment (low-cost setup for solo development) |
-
-## Demo
-
-https://demo.ka2kama.com
-
-> The login page is not yet implemented; DevAuth (development authentication bypass) provides an authenticated state.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    subgraph Client
-        Browser["Browser<br/>(Elm SPA)"]
-    end
-
-    subgraph Backend
-        BFF["BFF<br/>(Rust/axum)"]
-        Core["Core Service<br/>(Rust/axum)"]
-        Auth["Auth Service<br/>(Rust/axum)"]
-    end
-
-    subgraph Data
-        PG["PostgreSQL"]
-        Redis["Redis<br/>(Session)"]
-    end
-
-    Browser --> BFF
-    BFF --> Core
-    BFF --> Auth
-    BFF --> Redis
-    Core --> PG
-    Auth --> PG
-```
-
-### Design Patterns
-
-| Pattern | Purpose |
-|---------|---------|
-| **BFF (Backend for Frontend)** | Security hardening (token concealment), frontend-optimized API |
-| **Multi-tenant (tenant_id)** | Application-level tenant data isolation |
-| **Layered architecture** | Separation of concerns across domain / infra / apps |
-
 ## Technical Highlights
 
 ### Documentation System
@@ -223,66 +288,3 @@ All knowledge is documented — aiming for **zero tacit knowledge**.
 
 - **Parallel development**: git worktree + Docker Compose with persistent slot system for running multiple tasks in isolated environments simultaneously
   - **Deterministic port mapping**: Predictable port assignments based on slot numbers
-
-## Directory Structure
-
-```
-ringiflow/
-├── backend/           # Rust backend
-│   ├── apps/          # BFF, Core Service, Auth Service
-│   └── crates/        # Shared libraries (domain, infra, shared)
-├── frontend/          # Elm frontend
-├── infra/             # Terraform, Docker
-├── openapi/           # OpenAPI specs
-├── prompts/           # AI operations (session logs, improvement records, plans)
-└── docs/              # Documentation
-    ├── 01_要件定義書/   # Requirements
-    ├── 02_基本設計書/   # High-level design
-    ├── 03_詳細設計書/   # Detailed design
-    ├── 04_手順書/      # Procedures
-    ├── 05_ADR/        # Architecture Decision Records
-    ├── 06_ナレッジベース/ # Knowledge base
-    └── 07_実装解説/    # Implementation guides
-```
-
-## Development Flow
-
-Tasks are managed with GitHub Projects + Issues.
-
-1. Create or review an Issue
-2. Create a branch in the `feature/123-feature-name` format
-3. Implement → Create PR (link with `Closes #123`)
-4. CI + AI review → Merge
-
-→ [Project Board](https://github.com/users/ka2kama/projects/1) / [Issues](https://github.com/ka2kama/ringiflow/issues)
-
-## Getting Started
-
-Development environment setup: [Procedures](docs/04_手順書/01_開発参画/01_開発環境構築.md)
-
-For working on multiple tasks simultaneously: [Parallel development (Worktree)](docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
-
-```bash
-# Initial setup (install dependencies, start DB, run migrations)
-just setup
-
-# Start dev servers (BFF, Core Service, Auth Service, Web — all at once)
-just dev-all
-
-# Pre-commit check (lint + test + API test)
-just check-all
-```
-
-## Development Status
-
-**Phase 2 (Feature Expansion) in progress** — Phase 1 MVP complete
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 0 | ✅ Complete | Development foundation (CI/CD, project structure, documentation system) |
-| Phase 1 | ✅ Complete | Minimum viable workflow system |
-| Phase 2 | 🚧 In Progress | Feature expansion (multi-tenant, notifications, document management) |
-| Phase 3 | 📋 Planning | Enterprise features (SSO/MFA, complex workflows) |
-| Phase 4 | 📋 Planning | Advanced features (CQRS/ES, real-time) |
-
-Details: [Implementation Roadmap](docs/03_詳細設計書/00_実装ロードマップ.md)
