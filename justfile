@@ -409,6 +409,10 @@ check-doc-links:
 check-impl-docs:
     ./scripts/check/impl-docs.sh
 
+# 計装（tracing::instrument）の漏れを検出
+check-instrumentation:
+    ./scripts/check/instrumentation.sh
+
 # =============================================================================
 # 未使用依存チェック
 # =============================================================================

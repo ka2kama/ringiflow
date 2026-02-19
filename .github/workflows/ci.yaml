@@ -735,6 +735,9 @@ jobs:
       - name: Check code duplicates
         run: just check-duplicates
 
+      - name: Check instrumentation
+        run: just check-instrumentation
+
   # ブランチ保護用ステータス統合: skipped を成功扱いにし、単一ステータスを提供
   ci-success:
     name: CI Success
