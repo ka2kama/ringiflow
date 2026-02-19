@@ -36,9 +36,9 @@
 ## Phase 1: ユーザー追加（8人、display_number 3-10）
 
 ### 確認事項
-- [ ] users テーブルカラム: id, tenant_id, email, name, status, display_number（password_hash は削除済み）
-- [ ] auth.credentials カラム: id, user_id, tenant_id, credential_type, credential_data, is_active
-- [ ] user_roles カラム: id, user_id, role_id, tenant_id
+- [x] users テーブルカラム: id, tenant_id, email, name, status, display_number（password_hash は削除済み） → 既存マイグレーション確認済み、6カラム構成
+- [x] auth.credentials カラム: id, user_id, tenant_id, credential_type, credential_data, is_active → 6カラム、credential_type='password'
+- [x] user_roles カラム: id, user_id, role_id, tenant_id → 4カラム構成
 
 ### データ
 
@@ -68,9 +68,9 @@ E2E テスト: 該当なし
 ## Phase 2: ワークフローインスタンス追加（25件、display_number 6-30）
 
 ### 確認事項
-- [ ] form_data 形式: 汎用は `{"title":..., "description":...}`、2段階は `{"title":..., "description":..., "amount":...}`
-- [ ] ステータス CHECK 制約値: draft, pending, in_progress, approved, rejected, cancelled, changes_requested
-- [ ] current_step_id: draft は NULL、pending/in_progress は step_id 文字列、approved/rejected は最終 step_id
+- [x] form_data 形式: 汎用は `{"title":..., "description":...}`、2段階は `{"title":..., "description":..., "amount":...}` → 既存シードデータ確認済み
+- [x] ステータス CHECK 制約値: draft, pending, in_progress, approved, rejected, cancelled, changes_requested → マイグレーション 20260130000001 で定義
+- [x] current_step_id: draft は NULL、pending/in_progress は step_id 文字列、approved/rejected は最終 step_id → 既存データと整合確認済み
 
 ### データ（25件）
 
@@ -137,9 +137,9 @@ E2E テスト: 該当なし
 ## Phase 3: ワークフローステップ追加（24件、display_number 5-28）
 
 ### 確認事項
-- [ ] ステップの version: pending/active は 1、completed は 2（既存パターン準拠）
-- [ ] display_number: テナント全体で通し番号を採番。ユニーク制約は (instance_id, display_number)
-- [ ] 2段階承認のステップ: manager_approval / finance_approval
+- [x] ステップの version: pending/active は 1、completed は 2（既存パターン準拠） → 既存シードデータ4件で確認済み
+- [x] display_number: テナント全体で通し番号を採番。ユニーク制約は (instance_id, display_number) → display_id_counters テーブルで管理
+- [x] 2段階承認のステップ: manager_approval / finance_approval → 既存ワークフロー定義で確認済み
 
 ### 設計判断
 
@@ -214,8 +214,8 @@ E2E テスト: 該当なし
 ## Phase 4: ワークフローコメント追加（12件）
 
 ### 確認事項
-- [ ] workflow_comments.id は UUID v7（DEFAULT なし、アプリ生成）。シードでは `c0000000-...` 固定パターンを使用
-- [ ] body は 1〜2000文字の CHECK 制約
+- [x] workflow_comments.id は UUID v7（DEFAULT なし、アプリ生成）。シードでは `c0000000-...` 固定パターンを使用 → マイグレーション定義確認済み
+- [x] body は 1〜2000文字の CHECK 制約 → 全コメント制約範囲内
 
 ### データ（12件）
 
