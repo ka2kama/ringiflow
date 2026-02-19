@@ -124,6 +124,7 @@ pub struct WorkflowUseCaseImpl {
 
 impl WorkflowUseCaseImpl {
     /// 新しいワークフローユースケースを作成
+    // FIXME(#688): deps 構造体への統合で too_many_arguments を解消する
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         definition_repo: Arc<dyn WorkflowDefinitionRepository>,
