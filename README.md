@@ -115,7 +115,7 @@ ringiflow/
 ├── frontend/          # Elm frontend
 ├── infra/             # Terraform, Docker
 ├── openapi/           # OpenAPI specs
-├── scripts/           # Shell scripts (CI, deploy, DB, worktree)
+├── scripts/           # Shell scripts (checks, env setup, tests, tools, worktree)
 ├── tests/             # API tests, E2E tests
 ├── process/           # Improvement records, diagnostic reports
 ├── prompts/           # AI operations (session logs, plans, recipes)
