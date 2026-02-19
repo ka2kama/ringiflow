@@ -77,9 +77,7 @@ if [ ${#ERRORS[@]} -gt 0 ]; then
     for error in "${ERRORS[@]}"; do
         echo "  - $error"
     done
-    # 警告のみ（exit 0）: 既存の違反がある場合にブロックしない
-    # 修正後に exit 1 に切り替える
-    exit 0
+    exit 1
 fi
 
 echo "✅ 実装解説のファイル命名規則に準拠しています"

@@ -364,7 +364,7 @@ test-utils = [
 
 ## 設計解説
 
-コード実装レベルの判断を記載する。機能・仕組みレベルの判断は[機能解説](./01_機能解説.md#設計判断)を参照。
+コード実装レベルの判断を記載する。機能・仕組みレベルの判断は[機能解説](./01_WorkflowTestBuilder_機能解説.md#設計判断)を参照。
 
 ### 1. Arc<dyn Trait> による trait object パターン
 
@@ -487,7 +487,7 @@ pub mod test_utils;
 
 ## 関連ドキュメント
 
-- [機能解説](./01_機能解説.md)
+- [機能解説](./01_WorkflowTestBuilder_機能解説.md)
 - [計画ファイル](../../../prompts/plans/525_phase1-workflow-test-builder.md)
 - [セッションログ](../../../prompts/runs/2026-02/2026-02-15_1137_Phase1-WorkflowTestBuilder実装.md)
 - [`WorkflowTestBuilder` ソースコード](../../../backend/apps/core-service/src/test_utils/workflow_test_builder.rs)

@@ -280,7 +280,7 @@ sequenceDiagram
 
 ## 設計判断
 
-機能・仕組みレベルの判断を記載する。コード実装レベルの判断は[コード解説](./01_コード解説.md#設計解説)を参照。
+機能・仕組みレベルの判断を記載する。コード実装レベルの判断は[コード解説](./01_WorkflowTestBuilder_コード解説.md#設計解説)を参照。
 
 ### 1. 統合テストを tests/ に配置するか、既存ユニットテストを書き換えるか
 
@@ -317,7 +317,7 @@ WorkflowTestSetup が複数の Mock リポジトリを保持する必要があ�
 
 ## 関連ドキュメント
 
-- [コード解説](./01_コード解説.md)
+- [コード解説](./01_WorkflowTestBuilder_コード解説.md)
 - [計画ファイル](../../../prompts/plans/525_phase1-workflow-test-builder.md)
 - [セッションログ](../../../prompts/runs/2026-02/2026-02-15_1137_Phase1-WorkflowTestBuilder実装.md)
 - Issue #525: Core Service ユースケース層のクローン削減・ファイルサイズ削減
