@@ -63,7 +63,10 @@ export async function createAndSubmitMultiStepWorkflow(
     .first()
     .click();
 
-  // 経理承認の承認者を選択（選択後は唯一の #approver-search）
+  // 選択完了を待機（badge に置き換わり、#approver-search が1つになる）
+  await expect(page.locator("#approver-search")).toHaveCount(1);
+
+  // 経理承認の承認者を選択（残った唯一の #approver-search）
   await page.locator("#approver-search").fill(step2ApproverSearch);
   await page
     .locator("li")
@@ -124,5 +127,7 @@ export async function verifyWorkflowStatus(
 ): Promise<void> {
   await page.goto("/workflows");
   const workflowRow = page.locator("tr").filter({ hasText: workflowTitle });
-  await expect(workflowRow.getByText(expectedStatus)).toBeVisible();
+  await expect(
+    workflowRow.getByText(expectedStatus, { exact: true }),
+  ).toBeVisible();
 }

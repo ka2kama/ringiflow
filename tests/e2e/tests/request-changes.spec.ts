@@ -38,10 +38,18 @@ test.describe("差し戻し→再申請フロー", () => {
       .first()
       .click();
 
+    // ワークフロー定義のロード完了を待機（フォームデータが表示される）
+    await expect(page.getByText("テスト件名")).toBeVisible();
+
     await page.getByRole("button", { name: "再申請する" }).click();
-    await page
-      .locator('label:text-is("内容") + input')
-      .fill("修正後のテスト内容");
+
+    // フォームフィールドを修正（承認者は既存選択が保持される）
+    const contentField = page
+      .locator(".space-y-1")
+      .filter({ has: page.locator("label", { hasText: /^内容$/ }) })
+      .locator("input");
+    await contentField.fill("修正後のテスト内容");
+
     await page.getByRole("button", { name: "再申請する" }).click();
     await expect(page.getByText("再申請しました")).toBeVisible();
 
