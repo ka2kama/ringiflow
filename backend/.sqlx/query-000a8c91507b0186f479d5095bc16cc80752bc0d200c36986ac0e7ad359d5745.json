@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE workflow_instances SET\n                title = $1,\n                form_data = $2,\n                status = $3,\n                version = $4,\n                current_step_id = $5,\n                submitted_at = $6,\n                completed_at = $7,\n                updated_at = $8\n            WHERE id = $9 AND version = $10 AND tenant_id = $11\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Jsonb",
+        "Varchar",
+        "Int4",
+        "Varchar",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Uuid",
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "000a8c91507b0186f479d5095bc16cc80752bc0d200c36986ac0e7ad359d5745"
+}

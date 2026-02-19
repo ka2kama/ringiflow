@@ -141,7 +141,7 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
 
     // バージョン一致で更新
     let result = sut
-        .update_with_version_check(&submitted_instance, expected_version)
+        .update_with_version_check(&submitted_instance, expected_version, &tenant_id)
         .await;
 
     assert!(result.is_ok());
@@ -162,6 +162,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
     pool: PgPool,
 ) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tenant_id = seed_tenant_id();
     let now = test_now();
 
     let instance = create_test_instance(100);
@@ -174,9 +175,40 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
     // 不一致バージョン（version 2）で更新を試みる
     let wrong_version = Version::initial().next();
     let result = sut
-        .update_with_version_check(&submitted_instance, wrong_version)
+        .update_with_version_check(&submitted_instance, wrong_version, &tenant_id)
         .await;
 
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(
+        matches!(err, ringiflow_infra::InfraError::Conflict { .. }),
+        "InfraError::Conflict を期待したが {:?} が返った",
+        err
+    );
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_update_with_version_check_別テナントのインスタンスは更新できない(
+    pool: PgPool,
+) {
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let now = test_now();
+
+    let instance = create_test_instance(100);
+    let expected_version = instance.version();
+
+    sut.insert(&instance).await.unwrap();
+
+    // 申請を実行（ステータス変更 + バージョンインクリメント）
+    let submitted_instance = instance.submitted(now).unwrap();
+
+    // 別テナントの ID で更新を試みる
+    let other_tenant_id = TenantId::new();
+    let result = sut
+        .update_with_version_check(&submitted_instance, expected_version, &other_tenant_id)
+        .await;
+
+    // tenant_id が一致しないため、rows_affected が 0 → Conflict エラー
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(

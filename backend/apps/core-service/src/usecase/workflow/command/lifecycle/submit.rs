@@ -135,7 +135,7 @@ impl WorkflowUseCaseImpl {
 
         // 7. インスタンスとステップを保存
         self.instance_repo
-            .update_with_version_check(&in_progress_instance, expected_version)
+            .update_with_version_check(&in_progress_instance, expected_version, &tenant_id)
             .await
             .map_err(|e| match e {
                 InfraError::Conflict { .. } => CoreError::Conflict(

@@ -50,12 +50,15 @@ pub trait WorkflowInstanceRepository: Send + Sync {
     ///
     /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
     /// 不一致の場合は `InfraError::Conflict` を返す。
+    /// `tenant_id` は RLS
+    /// 二重防御用。アプリケーション層でもテナント分離を保証する。
     ///
     /// # 引数
     ///
     /// - `instance`: 更新後のワークフローインスタンス
     /// - `expected_version`: 読み取り時のバージョン（DB
     ///   上の現在値と一致すべき値）
+    /// - `tenant_id`: テナント ID（RLS 二重防御）
     ///
     /// # エラー
     ///
@@ -66,6 +69,7 @@ pub trait WorkflowInstanceRepository: Send + Sync {
         &self,
         instance: &WorkflowInstance,
         expected_version: Version,
+        tenant_id: &TenantId,
     ) -> Result<(), InfraError>;
 
     /// ID でインスタンスを取得
@@ -264,6 +268,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         &self,
         instance: &WorkflowInstance,
         expected_version: Version,
+        tenant_id: &TenantId,
     ) -> Result<(), InfraError> {
         let status: &str = instance.status().into();
         let result = sqlx::query!(
@@ -277,7 +282,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
                 submitted_at = $6,
                 completed_at = $7,
                 updated_at = $8
-            WHERE id = $9 AND version = $10
+            WHERE id = $9 AND version = $10 AND tenant_id = $11
             "#,
             instance.title(),
             instance.form_data(),
@@ -289,6 +294,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
             instance.updated_at(),
             instance.id().as_uuid(),
             expected_version.as_i32(),
+            tenant_id.as_uuid(),
         )
         .execute(&self.pool)
         .await?;

@@ -123,6 +123,7 @@ impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
         &self,
         instance: &WorkflowInstance,
         expected_version: Version,
+        _tenant_id: &TenantId,
     ) -> Result<(), InfraError> {
         let mut instances = self.instances.lock().unwrap();
         if let Some(pos) = instances.iter().position(|i| i.id() == instance.id()) {
