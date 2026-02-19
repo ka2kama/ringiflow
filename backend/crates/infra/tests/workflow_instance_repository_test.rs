@@ -25,16 +25,22 @@ use ringiflow_domain::{
     value_objects::{DisplayNumber, Version},
     workflow::WorkflowInstanceId,
 };
-use ringiflow_infra::repository::{PostgresWorkflowInstanceRepository, WorkflowInstanceRepository};
+use ringiflow_infra::{
+    db::{PgTransactionManager, TransactionManager},
+    repository::{PostgresWorkflowInstanceRepository, WorkflowInstanceRepository},
+};
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_insert_で新規インスタンスを作成できる(pool: PgPool) {
-    let sut = PostgresWorkflowInstanceRepository::new(pool);
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
 
     let instance = create_test_instance(100);
 
-    let result = sut.insert(&instance).await;
+    let mut tx = tx_manager.begin().await.unwrap();
+    let result = sut.insert(&mut tx, &instance).await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_ok());
 }
@@ -42,12 +48,15 @@ async fn test_insert_で新規インスタンスを作成できる(pool: PgPool)
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_id_でインスタンスを取得できる(pool: PgPool) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
 
     let instance = create_test_instance(100);
     let instance_id = instance.id().clone();
     let tenant_id = seed_tenant_id();
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let result = sut.find_by_id(&instance_id, &tenant_id).await;
 
@@ -76,13 +85,16 @@ async fn test_find_by_id_存在しない場合はnoneを返す(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_tenant_テナント内の一覧を取得できる(pool: PgPool) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
 
     let instance1 = create_test_instance(100);
     let instance2 = create_test_instance(101);
 
-    sut.insert(&instance1).await.unwrap();
-    sut.insert(&instance2).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance1).await.unwrap();
+    sut.insert(&mut tx, &instance2).await.unwrap();
+    tx.commit().await.unwrap();
 
     let result = sut.find_by_tenant(&tenant_id).await;
 
@@ -110,12 +122,15 @@ async fn test_find_by_initiated_by_申請者によるインスタンスを取得
     pool: PgPool,
 ) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
     let user_id = seed_user_id();
 
     let instance = create_test_instance(100);
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let result = sut.find_by_initiated_by(&tenant_id, &user_id).await;
 
@@ -127,6 +142,7 @@ async fn test_find_by_initiated_by_申請者によるインスタンスを取得
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_update_with_version_check_バージョン一致で更新できる(pool: PgPool) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
     let now = test_now();
 
@@ -134,15 +150,19 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
     let instance_id = instance.id().clone();
     let expected_version = instance.version();
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     // 申請を実行（ステータス変更 + バージョンインクリメント）
     let submitted_instance = instance.submitted(now).unwrap();
 
     // バージョン一致で更新
+    let mut tx = tx_manager.begin().await.unwrap();
     let result = sut
-        .update_with_version_check(&submitted_instance, expected_version, &tenant_id)
+        .update_with_version_check(&mut tx, &submitted_instance, expected_version, &tenant_id)
         .await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_ok());
 
@@ -162,21 +182,26 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
     pool: PgPool,
 ) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
     let now = test_now();
 
     let instance = create_test_instance(100);
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     // 申請を実行（バージョンインクリメント）
     let submitted_instance = instance.submitted(now).unwrap();
 
     // 不一致バージョン（version 2）で更新を試みる
     let wrong_version = Version::initial().next();
+    let mut tx = tx_manager.begin().await.unwrap();
     let result = sut
-        .update_with_version_check(&submitted_instance, wrong_version, &tenant_id)
+        .update_with_version_check(&mut tx, &submitted_instance, wrong_version, &tenant_id)
         .await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -192,21 +217,31 @@ async fn test_update_with_version_check_別テナントのインスタンスは�
     pool: PgPool,
 ) {
     let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let now = test_now();
 
     let instance = create_test_instance(100);
     let expected_version = instance.version();
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     // 申請を実行（ステータス変更 + バージョンインクリメント）
     let submitted_instance = instance.submitted(now).unwrap();
 
     // 別テナントの ID で更新を試みる
     let other_tenant_id = TenantId::new();
+    let mut tx = tx_manager.begin().await.unwrap();
     let result = sut
-        .update_with_version_check(&submitted_instance, expected_version, &other_tenant_id)
+        .update_with_version_check(
+            &mut tx,
+            &submitted_instance,
+            expected_version,
+            &other_tenant_id,
+        )
         .await;
+    tx.commit().await.unwrap();
 
     // tenant_id が一致しないため、rows_affected が 0 → Conflict エラー
     assert!(result.is_err());
@@ -233,7 +268,8 @@ async fn test_find_by_ids_空のvecを渡すと空のvecが返る(pool: PgPool) 
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_ids_存在するidを渡すとインスタンスが返る(pool: PgPool) {
-    let sut = PostgresWorkflowInstanceRepository::new(pool);
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
 
     let instance1 = create_test_instance(100);
     let instance2 = create_test_instance(101);
@@ -241,8 +277,10 @@ async fn test_find_by_ids_存在するidを渡すとインスタンスが返る(
     let id2 = instance2.id().clone();
     let tenant_id = seed_tenant_id();
 
-    sut.insert(&instance1).await.unwrap();
-    sut.insert(&instance2).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance1).await.unwrap();
+    sut.insert(&mut tx, &instance2).await.unwrap();
+    tx.commit().await.unwrap();
 
     let result = sut
         .find_by_ids(&[id1.clone(), id2.clone()], &tenant_id)
@@ -261,14 +299,17 @@ async fn test_find_by_ids_存在するidを渡すとインスタンスが返る(
 async fn test_find_by_ids_存在しないidを含んでも存在するもののみ返る(
     pool: PgPool,
 ) {
-    let sut = PostgresWorkflowInstanceRepository::new(pool);
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
 
     let instance = create_test_instance(100);
     let existing_id = instance.id().clone();
     let nonexistent_id = WorkflowInstanceId::new();
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let result = sut
         .find_by_ids(&[existing_id.clone(), nonexistent_id], &tenant_id)
@@ -282,13 +323,16 @@ async fn test_find_by_ids_存在しないidを含んでも存在するものの�
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_ids_テナントidでフィルタされる(pool: PgPool) {
-    let sut = PostgresWorkflowInstanceRepository::new(pool);
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let other_tenant_id = TenantId::new();
 
     let instance = create_test_instance(100);
     let instance_id = instance.id().clone();
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     // 別のテナント ID で検索
     let result = sut.find_by_ids(&[instance_id], &other_tenant_id).await;
@@ -301,14 +345,17 @@ async fn test_find_by_ids_テナントidでフィルタされる(pool: PgPool) {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_display_number_存在するdisplay_numberで検索できる(pool: PgPool) {
-    let sut = PostgresWorkflowInstanceRepository::new(pool);
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
     let display_number = DisplayNumber::new(42).unwrap();
 
     let instance = create_test_instance(42);
     let instance_id = instance.id().clone();
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let result = sut.find_by_display_number(display_number, &tenant_id).await;
 
@@ -337,13 +384,16 @@ async fn test_find_by_display_number_存在しない場合はnoneを返す(pool:
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_display_number_別テナントでは見つからない(pool: PgPool) {
-    let sut = PostgresWorkflowInstanceRepository::new(pool);
+    let sut = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let other_tenant_id = TenantId::new();
     let display_number = DisplayNumber::new(42).unwrap();
 
     let instance = create_test_instance(42);
 
-    sut.insert(&instance).await.unwrap();
+    let mut tx = tx_manager.begin().await.unwrap();
+    sut.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     // 別のテナント ID で検索
     let result = sut

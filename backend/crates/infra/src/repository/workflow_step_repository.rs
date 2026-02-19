@@ -20,25 +20,33 @@ use ringiflow_domain::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::error::InfraError;
+use crate::{db::TxContext, error::InfraError};
 
 /// WorkflowStepRepository トレイト
 #[async_trait]
 pub trait WorkflowStepRepository: Send + Sync {
     /// 新規ステップを作成する
     ///
+    /// `tx` はトランザクションコンテキスト（構造的強制）。
     /// `tenant_id` は RLS
     /// 二重防御用。ドメインモデルではなくインフラ層で管理する。
-    async fn insert(&self, step: &WorkflowStep, tenant_id: &TenantId) -> Result<(), InfraError>;
+    async fn insert(
+        &self,
+        tx: &mut TxContext,
+        step: &WorkflowStep,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError>;
 
     /// 楽観的ロック付きでステップを更新する
     ///
     /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
     /// 不一致の場合は `InfraError::Conflict` を返す。
+    /// `tx` はトランザクションコンテキスト（構造的強制）。
     /// `tenant_id` は RLS
     /// 二重防御用。アプリケーション層でもテナント分離を保証する。
     async fn update_with_version_check(
         &self,
+        tx: &mut TxContext,
         step: &WorkflowStep,
         expected_version: Version,
         tenant_id: &TenantId,
@@ -148,7 +156,12 @@ impl PostgresWorkflowStepRepository {
 #[async_trait]
 impl WorkflowStepRepository for PostgresWorkflowStepRepository {
     #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
-    async fn insert(&self, step: &WorkflowStep, tenant_id: &TenantId) -> Result<(), InfraError> {
+    async fn insert(
+        &self,
+        tx: &mut TxContext,
+        step: &WorkflowStep,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
         let status: &str = step.status().into();
         let decision: Option<&str> = step.decision().map(|d| d.into());
         sqlx::query!(
@@ -179,7 +192,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
             step.created_at(),
             step.updated_at(),
         )
-        .execute(&self.pool)
+        .execute(tx.conn())
         .await?;
 
         Ok(())
@@ -188,6 +201,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
     #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn update_with_version_check(
         &self,
+        tx: &mut TxContext,
         step: &WorkflowStep,
         expected_version: Version,
         tenant_id: &TenantId,
@@ -217,7 +231,7 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
             expected_version.as_i32(),
             tenant_id.as_uuid(),
         )
-        .execute(&self.pool)
+        .execute(tx.conn())
         .await?;
 
         if result.rows_affected() == 0 {
@@ -336,6 +350,57 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         .await?;
 
         row.map(WorkflowStep::try_from).transpose()
+    }
+}
+
+// =============================================================================
+// テスト用拡張 trait
+// =============================================================================
+
+/// テストセットアップ用の拡張メソッド
+///
+/// mock TxContext で書き込みメソッドを呼ぶヘルパー。
+/// テストセットアップコードの冗長化を抑制する。
+#[cfg(any(test, feature = "test-utils"))]
+#[async_trait]
+pub trait WorkflowStepRepositoryTestExt {
+    /// テスト用: mock TxContext で insert する
+    async fn insert_for_test(
+        &self,
+        step: &WorkflowStep,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError>;
+
+    /// テスト用: mock TxContext で update_with_version_check する
+    async fn update_for_test(
+        &self,
+        step: &WorkflowStep,
+        expected_version: Version,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError>;
+}
+
+#[cfg(any(test, feature = "test-utils"))]
+#[async_trait]
+impl<T: WorkflowStepRepository + ?Sized> WorkflowStepRepositoryTestExt for T {
+    async fn insert_for_test(
+        &self,
+        step: &WorkflowStep,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
+        let mut tx = TxContext::mock();
+        self.insert(&mut tx, step, tenant_id).await
+    }
+
+    async fn update_for_test(
+        &self,
+        step: &WorkflowStep,
+        expected_version: Version,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
+        let mut tx = TxContext::mock();
+        self.update_with_version_check(&mut tx, step, expected_version, tenant_id)
+            .await
     }
 }
 

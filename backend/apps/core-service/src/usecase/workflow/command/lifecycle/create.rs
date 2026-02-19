@@ -71,10 +71,18 @@ impl WorkflowUseCaseImpl {
         });
 
         // 4. リポジトリに保存
+        let mut tx = self
+            .tx_manager
+            .begin()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
         self.instance_repo
-            .insert(&instance)
+            .insert(&mut tx, &instance)
             .await
             .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
+        tx.commit()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
         log_business_event!(
             event.category = event::category::WORKFLOW,
@@ -111,6 +119,7 @@ mod tests {
     use ringiflow_infra::{
         mock::{
             MockDisplayIdCounterRepository,
+            MockTransactionManager,
             MockUserRepository,
             MockWorkflowCommentRepository,
             MockWorkflowDefinitionRepository,
@@ -157,6 +166,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = CreateWorkflowInput {
@@ -214,6 +224,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = CreateWorkflowInput {

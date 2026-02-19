@@ -13,22 +13,29 @@ mod common;
 
 use common::{create_test_comment, create_test_instance, seed_tenant_id, seed_user_id};
 use ringiflow_domain::{tenant::TenantId, workflow::WorkflowInstanceId};
-use ringiflow_infra::repository::{
-    PostgresWorkflowCommentRepository,
-    PostgresWorkflowInstanceRepository,
-    WorkflowCommentRepository,
-    WorkflowInstanceRepository,
+use ringiflow_infra::{
+    db::{PgTransactionManager, TransactionManager},
+    repository::{
+        PostgresWorkflowCommentRepository,
+        PostgresWorkflowInstanceRepository,
+        WorkflowCommentRepository,
+        WorkflowInstanceRepository,
+    },
 };
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_insert_で新規コメントを作成できる(pool: PgPool) {
     let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let sut = PostgresWorkflowCommentRepository::new(pool);
+    let sut = PostgresWorkflowCommentRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
 
     let instance = create_test_instance(100);
-    instance_repo.insert(&instance).await.unwrap();
+
+    let mut tx = tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let comment = create_test_comment(instance.id(), &seed_user_id(), "テストコメント");
 
@@ -40,12 +47,16 @@ async fn test_insert_で新規コメントを作成できる(pool: PgPool) {
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_instance_でコメント一覧を取得できる(pool: PgPool) {
     let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let sut = PostgresWorkflowCommentRepository::new(pool);
+    let sut = PostgresWorkflowCommentRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
 
     let instance = create_test_instance(100);
     let instance_id = instance.id().clone();
-    instance_repo.insert(&instance).await.unwrap();
+
+    let mut tx = tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let comment1 = create_test_comment(&instance_id, &seed_user_id(), "コメント1");
     let comment2 = create_test_comment(&instance_id, &seed_user_id(), "コメント2");
@@ -77,12 +88,16 @@ async fn test_find_by_instance_存在しないインスタンスは空ベクタ�
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_find_by_instance_複数コメントが時系列昇順で返る(pool: PgPool) {
     let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let sut = PostgresWorkflowCommentRepository::new(pool);
+    let sut = PostgresWorkflowCommentRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
 
     let instance = create_test_instance(100);
     let instance_id = instance.id().clone();
-    instance_repo.insert(&instance).await.unwrap();
+
+    let mut tx = tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let comment1 = create_test_comment(&instance_id, &seed_user_id(), "最初のコメント");
     let comment2 = create_test_comment(&instance_id, &seed_user_id(), "2番目のコメント");
@@ -103,12 +118,16 @@ async fn test_find_by_instance_複数コメントが時系列昇順で返る(poo
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_テナント分離_別テナントのコメントは取得できない(pool: PgPool) {
     let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let sut = PostgresWorkflowCommentRepository::new(pool);
+    let sut = PostgresWorkflowCommentRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool);
     let tenant_id = seed_tenant_id();
 
     let instance = create_test_instance(100);
     let instance_id = instance.id().clone();
-    instance_repo.insert(&instance).await.unwrap();
+
+    let mut tx = tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
 
     let comment = create_test_comment(&instance_id, &seed_user_id(), "テストコメント");
     sut.insert(&comment, &tenant_id).await.unwrap();

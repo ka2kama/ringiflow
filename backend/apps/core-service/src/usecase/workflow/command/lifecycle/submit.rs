@@ -134,8 +134,13 @@ impl WorkflowUseCaseImpl {
         let in_progress_instance = submitted_instance.with_current_step(first_step_id, now);
 
         // 7. インスタンスとステップを保存
+        let mut tx = self
+            .tx_manager
+            .begin()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
         self.instance_repo
-            .update_with_version_check(&in_progress_instance, expected_version, &tenant_id)
+            .update_with_version_check(&mut tx, &in_progress_instance, expected_version, &tenant_id)
             .await
             .map_err(|e| match e {
                 InfraError::Conflict { .. } => CoreError::Conflict(
@@ -144,12 +149,22 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
             })?;
+        tx.commit()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
         for step in &steps {
+            let mut tx =
+                self.tx_manager.begin().await.map_err(|e| {
+                    CoreError::Internal(format!("トランザクション開始に失敗: {}", e))
+                })?;
             self.step_repo
-                .insert(step, &tenant_id)
+                .insert(&mut tx, step, &tenant_id)
                 .await
                 .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
+            tx.commit().await.map_err(|e| {
+                CoreError::Internal(format!("トランザクションコミットに失敗: {}", e))
+            })?;
         }
 
         log_business_event!(
@@ -224,13 +239,14 @@ mod tests {
     use ringiflow_infra::{
         mock::{
             MockDisplayIdCounterRepository,
+            MockTransactionManager,
             MockUserRepository,
             MockWorkflowCommentRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
         },
-        repository::{WorkflowInstanceRepository, WorkflowStepRepository},
+        repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepository},
     };
 
     use super::super::super::test_helpers::{
@@ -279,7 +295,7 @@ mod tests {
             initiated_by: user_id.clone(),
             now,
         });
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -289,6 +305,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = SubmitWorkflowInput {
@@ -362,7 +379,7 @@ mod tests {
             initiated_by: user_id.clone(),
             now,
         });
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -372,6 +389,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = SubmitWorkflowInput {
@@ -457,7 +475,7 @@ mod tests {
             initiated_by: user_id.clone(),
             now,
         });
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -467,6 +485,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         // 2段階定義に1人しか指定しない
@@ -526,7 +545,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -536,6 +555,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = SubmitWorkflowInput {

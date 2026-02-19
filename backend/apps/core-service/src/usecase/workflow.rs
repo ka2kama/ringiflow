@@ -14,13 +14,16 @@ use ringiflow_domain::{
     value_objects::Version,
     workflow::{WorkflowDefinitionId, WorkflowInstance, WorkflowStep},
 };
-use ringiflow_infra::repository::{
-    DisplayIdCounterRepository,
-    UserRepository,
-    WorkflowCommentRepository,
-    WorkflowDefinitionRepository,
-    WorkflowInstanceRepository,
-    WorkflowStepRepository,
+use ringiflow_infra::{
+    TransactionManager,
+    repository::{
+        DisplayIdCounterRepository,
+        UserRepository,
+        WorkflowCommentRepository,
+        WorkflowDefinitionRepository,
+        WorkflowInstanceRepository,
+        WorkflowStepRepository,
+    },
 };
 use serde_json::Value as JsonValue;
 
@@ -116,10 +119,12 @@ pub struct WorkflowUseCaseImpl {
     user_repo:       Arc<dyn UserRepository>,
     counter_repo:    Arc<dyn DisplayIdCounterRepository>,
     clock:           Arc<dyn Clock>,
+    tx_manager:      Arc<dyn TransactionManager>,
 }
 
 impl WorkflowUseCaseImpl {
     /// 新しいワークフローユースケースを作成
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         definition_repo: Arc<dyn WorkflowDefinitionRepository>,
         instance_repo: Arc<dyn WorkflowInstanceRepository>,
@@ -128,6 +133,7 @@ impl WorkflowUseCaseImpl {
         user_repo: Arc<dyn UserRepository>,
         counter_repo: Arc<dyn DisplayIdCounterRepository>,
         clock: Arc<dyn Clock>,
+        tx_manager: Arc<dyn TransactionManager>,
     ) -> Self {
         Self {
             definition_repo,
@@ -137,6 +143,7 @@ impl WorkflowUseCaseImpl {
             user_repo,
             counter_repo,
             clock,
+            tx_manager,
         }
     }
 

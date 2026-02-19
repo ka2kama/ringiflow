@@ -113,7 +113,11 @@ impl MockWorkflowInstanceRepository {
 
 #[async_trait]
 impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
-    async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+    async fn insert(
+        &self,
+        _tx: &mut TxContext,
+        instance: &WorkflowInstance,
+    ) -> Result<(), InfraError> {
         let mut instances = self.instances.lock().unwrap();
         instances.push(instance.clone());
         Ok(())
@@ -121,6 +125,7 @@ impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
 
     async fn update_with_version_check(
         &self,
+        _tx: &mut TxContext,
         instance: &WorkflowInstance,
         expected_version: Version,
         _tenant_id: &TenantId,
@@ -228,7 +233,12 @@ impl MockWorkflowStepRepository {
 
 #[async_trait]
 impl WorkflowStepRepository for MockWorkflowStepRepository {
-    async fn insert(&self, step: &WorkflowStep, _tenant_id: &TenantId) -> Result<(), InfraError> {
+    async fn insert(
+        &self,
+        _tx: &mut TxContext,
+        step: &WorkflowStep,
+        _tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
         let mut steps = self.steps.lock().unwrap();
         steps.push(step.clone());
         Ok(())
@@ -236,6 +246,7 @@ impl WorkflowStepRepository for MockWorkflowStepRepository {
 
     async fn update_with_version_check(
         &self,
+        _tx: &mut TxContext,
         step: &WorkflowStep,
         expected_version: Version,
         _tenant_id: &TenantId,

@@ -46,8 +46,12 @@ pub use workflow_definition_repository::{
     PostgresWorkflowDefinitionRepository,
     WorkflowDefinitionRepository,
 };
+#[cfg(any(test, feature = "test-utils"))]
+pub use workflow_instance_repository::WorkflowInstanceRepositoryTestExt;
 pub use workflow_instance_repository::{
     PostgresWorkflowInstanceRepository,
     WorkflowInstanceRepository,
 };
+#[cfg(any(test, feature = "test-utils"))]
+pub use workflow_step_repository::WorkflowStepRepositoryTestExt;
 pub use workflow_step_repository::{PostgresWorkflowStepRepository, WorkflowStepRepository};

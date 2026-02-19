@@ -27,7 +27,7 @@ use ringiflow_domain::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::error::InfraError;
+use crate::{db::TxContext, error::InfraError};
 
 /// ワークフローインスタンスリポジトリトレイト
 ///
@@ -38,23 +38,30 @@ pub trait WorkflowInstanceRepository: Send + Sync {
     ///
     /// # 引数
     ///
+    /// - `tx`: トランザクションコンテキスト（構造的強制）
     /// - `instance`: ワークフローインスタンス
     ///
     /// # 戻り値
     ///
     /// - `Ok(())`: 作成成功
     /// - `Err(_)`: データベースエラー（重複 ID の場合を含む）
-    async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError>;
+    async fn insert(
+        &self,
+        tx: &mut TxContext,
+        instance: &WorkflowInstance,
+    ) -> Result<(), InfraError>;
 
     /// 楽観的ロック付きでインスタンスを更新する
     ///
     /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
     /// 不一致の場合は `InfraError::Conflict` を返す。
+    /// `tx` はトランザクションコンテキスト（構造的強制）。
     /// `tenant_id` は RLS
     /// 二重防御用。アプリケーション層でもテナント分離を保証する。
     ///
     /// # 引数
     ///
+    /// - `tx`: トランザクションコンテキスト（構造的強制）
     /// - `instance`: 更新後のワークフローインスタンス
     /// - `expected_version`: 読み取り時のバージョン（DB
     ///   上の現在値と一致すべき値）
@@ -67,6 +74,7 @@ pub trait WorkflowInstanceRepository: Send + Sync {
     /// - `InfraError::Database`: データベースエラー
     async fn update_with_version_check(
         &self,
+        tx: &mut TxContext,
         instance: &WorkflowInstance,
         expected_version: Version,
         tenant_id: &TenantId,
@@ -229,7 +237,11 @@ impl PostgresWorkflowInstanceRepository {
 #[async_trait]
 impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
     #[tracing::instrument(skip_all, level = "debug")]
-    async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+    async fn insert(
+        &self,
+        tx: &mut TxContext,
+        instance: &WorkflowInstance,
+    ) -> Result<(), InfraError> {
         let status: &str = instance.status().into();
         sqlx::query!(
             r#"
@@ -257,7 +269,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
             instance.created_at(),
             instance.updated_at()
         )
-        .execute(&self.pool)
+        .execute(tx.conn())
         .await?;
 
         Ok(())
@@ -266,6 +278,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
     #[tracing::instrument(skip_all, level = "debug")]
     async fn update_with_version_check(
         &self,
+        tx: &mut TxContext,
         instance: &WorkflowInstance,
         expected_version: Version,
         tenant_id: &TenantId,
@@ -296,7 +309,7 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
             expected_version.as_i32(),
             tenant_id.as_uuid(),
         )
-        .execute(&self.pool)
+        .execute(tx.conn())
         .await?;
 
         if result.rows_affected() == 0 {
@@ -444,6 +457,30 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         .await?;
 
         row.map(WorkflowInstance::try_from).transpose()
+    }
+}
+
+// =============================================================================
+// テスト用拡張 trait
+// =============================================================================
+
+/// テストセットアップ用の拡張メソッド
+///
+/// mock TxContext で書き込みメソッドを呼ぶヘルパー。
+/// テストセットアップコードの冗長化を抑制する。
+#[cfg(any(test, feature = "test-utils"))]
+#[async_trait]
+pub trait WorkflowInstanceRepositoryTestExt {
+    /// テスト用: mock TxContext で insert する
+    async fn insert_for_test(&self, instance: &WorkflowInstance) -> Result<(), InfraError>;
+}
+
+#[cfg(any(test, feature = "test-utils"))]
+#[async_trait]
+impl<T: WorkflowInstanceRepository + ?Sized> WorkflowInstanceRepositoryTestExt for T {
+    async fn insert_for_test(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+        let mut tx = TxContext::mock();
+        self.insert(&mut tx, instance).await
     }
 }
 

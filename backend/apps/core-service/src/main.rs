@@ -110,6 +110,7 @@ use handler::{
 };
 use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
+    PgTransactionManager,
     db,
     repository::{
         DisplayIdCounterRepository,
@@ -211,6 +212,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // ワークフロー UseCase
+    let tx_manager = Arc::new(PgTransactionManager::new(pool.clone()));
     let workflow_usecase = WorkflowUseCaseImpl::new(
         definition_repo,
         instance_repo.clone(),
@@ -219,6 +221,7 @@ async fn main() -> anyhow::Result<()> {
         user_repo.clone(),
         counter_repo,
         clock,
+        tx_manager,
     );
     let workflow_state = Arc::new(WorkflowState {
         usecase: workflow_usecase,

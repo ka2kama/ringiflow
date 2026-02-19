@@ -253,7 +253,6 @@ impl TxContext {
     ///
     /// Postgres リポジトリ実装が `sqlx::query!().execute(tx.conn())` として使用する。
     /// Phase 3（#687）で書き込みメソッドが TxContext を要求するようになった時に使用される。
-    #[allow(dead_code)]
     pub(crate) fn conn(&mut self) -> &mut PgConnection {
         match &mut self.0 {
             TxContextInner::Pg(tx) => tx,
