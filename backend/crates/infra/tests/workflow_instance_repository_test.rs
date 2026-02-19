@@ -13,7 +13,13 @@ mod common;
 
 use std::collections::HashSet;
 
-use common::{create_test_instance, seed_tenant_id, seed_user_id, test_now};
+use common::{
+    assert_workflow_invariants,
+    create_test_instance,
+    seed_tenant_id,
+    seed_user_id,
+    test_now,
+};
 use ringiflow_domain::{
     tenant::TenantId,
     value_objects::{DisplayNumber, Version},
@@ -51,6 +57,8 @@ async fn test_find_by_id_でインスタンスを取得できる(pool: PgPool) {
     let found = found.unwrap();
     assert_eq!(found.id(), &instance_id);
     assert_eq!(found.title(), "テスト申請");
+
+    assert_workflow_invariants(&pool, &instance_id, &tenant_id).await;
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -145,6 +153,8 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
         .unwrap()
         .unwrap();
     assert!(found.submitted_at().is_some());
+
+    assert_workflow_invariants(&pool, &instance_id, &tenant_id).await;
 }
 
 #[sqlx::test(migrations = "../../migrations")]

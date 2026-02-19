@@ -18,14 +18,23 @@ use ringiflow_domain::{
         NewWorkflowComment,
         NewWorkflowInstance,
         NewWorkflowStep,
+        StepDecision,
         WorkflowComment,
         WorkflowCommentId,
         WorkflowDefinitionId,
         WorkflowInstance,
         WorkflowInstanceId,
+        WorkflowInstanceStatus,
         WorkflowStep,
         WorkflowStepId,
+        WorkflowStepStatus,
     },
+};
+use ringiflow_infra::repository::{
+    PostgresWorkflowInstanceRepository,
+    PostgresWorkflowStepRepository,
+    WorkflowInstanceRepository,
+    WorkflowStepRepository,
 };
 use serde_json::json;
 use sqlx::PgPool;
@@ -198,4 +207,152 @@ pub async fn assign_role(pool: &PgPool, user_id: &UserId, tenant_id: &TenantId) 
     .execute(pool)
     .await
     .expect("ロール割り当てに失敗");
+}
+
+// =============================================================================
+// 不変条件チェック
+// =============================================================================
+
+/// ワークフローの不変条件を検証する。
+///
+/// 統合テストの末尾で呼び出すことで、全ユースケースの不変条件遵守を保証する。
+/// 新しいユースケースのテストでもこの関数を呼び出すだけで不変条件チェックが追加される。
+/// 不変条件が増えた場合、この関数に追加するだけで全テストに反映される。
+///
+/// 検証する不変条件:
+/// - INV-I1〜I4: WorkflowInstance の不変条件
+/// - INV-S1〜S4: WorkflowStep の不変条件
+/// - INV-X1〜X3: クロスエンティティ不変条件
+///
+/// 参照: `docs/03_詳細設計書/エンティティ影響マップ/`
+pub async fn assert_workflow_invariants(
+    pool: &PgPool,
+    instance_id: &WorkflowInstanceId,
+    tenant_id: &TenantId,
+) {
+    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
+
+    let instance = instance_repo
+        .find_by_id(instance_id, tenant_id)
+        .await
+        .expect("不変条件チェック: DB エラー")
+        .expect("不変条件チェック: Instance が見つからない");
+
+    let steps = step_repo
+        .find_by_instance(instance_id, tenant_id)
+        .await
+        .expect("不変条件チェック: DB エラー");
+
+    // === Instance 不変条件 ===
+
+    // INV-I1: status=Approved ⇒ completed_at IS NOT NULL
+    if instance.status() == WorkflowInstanceStatus::Approved {
+        assert!(
+            instance.completed_at().is_some(),
+            "INV-I1 violated: Approved instance must have completed_at"
+        );
+    }
+
+    // INV-I2: status=Rejected ⇒ completed_at IS NOT NULL
+    if instance.status() == WorkflowInstanceStatus::Rejected {
+        assert!(
+            instance.completed_at().is_some(),
+            "INV-I2 violated: Rejected instance must have completed_at"
+        );
+    }
+
+    // INV-I3: status=InProgress ⇒ current_step_id IS NOT NULL
+    if instance.status() == WorkflowInstanceStatus::InProgress {
+        assert!(
+            instance.current_step_id().is_some(),
+            "INV-I3 violated: InProgress instance must have current_step_id"
+        );
+    }
+
+    // INV-I4: status=Draft ⇒ submitted_at IS NULL
+    if instance.status() == WorkflowInstanceStatus::Draft {
+        assert!(
+            instance.submitted_at().is_none(),
+            "INV-I4 violated: Draft instance must not have submitted_at"
+        );
+    }
+
+    // === Step 不変条件 ===
+
+    // INV-S1: 同一 Instance 内で Active なステップは最大1つ
+    let active_count = steps
+        .iter()
+        .filter(|s| s.status() == WorkflowStepStatus::Active)
+        .count();
+    assert!(
+        active_count <= 1,
+        "INV-S1 violated: found {} Active steps, expected at most 1",
+        active_count
+    );
+
+    for step in &steps {
+        // INV-S2: status=Completed ⇒ decision IS NOT NULL
+        if step.status() == WorkflowStepStatus::Completed {
+            assert!(
+                step.decision().is_some(),
+                "INV-S2 violated: Completed step {} must have decision",
+                step.id()
+            );
+        }
+
+        // INV-S3: status=Completed ⇒ completed_at IS NOT NULL
+        if step.status() == WorkflowStepStatus::Completed {
+            assert!(
+                step.completed_at().is_some(),
+                "INV-S3 violated: Completed step {} must have completed_at",
+                step.id()
+            );
+        }
+
+        // INV-S4: status=Active ⇒ started_at IS NOT NULL
+        if step.status() == WorkflowStepStatus::Active {
+            assert!(
+                step.started_at().is_some(),
+                "INV-S4 violated: Active step {} must have started_at",
+                step.id()
+            );
+        }
+    }
+
+    // === クロスエンティティ不変条件 ===
+
+    // INV-X1: Instance.status=Approved ⇒ 最終 Completed ステップの decision=Approved
+    if instance.status() == WorkflowInstanceStatus::Approved && !steps.is_empty() {
+        let last_completed = steps
+            .iter()
+            .filter(|s| s.status() == WorkflowStepStatus::Completed)
+            .last();
+        if let Some(last) = last_completed {
+            assert_eq!(
+                last.decision(),
+                Some(StepDecision::Approved),
+                "INV-X1 violated: last completed step of Approved instance must have Approved decision"
+            );
+        }
+    }
+
+    // INV-X2: Instance.status=Rejected ⇒ いずれかのステップの decision=Rejected
+    if instance.status() == WorkflowInstanceStatus::Rejected && !steps.is_empty() {
+        let has_rejected = steps
+            .iter()
+            .any(|s| s.decision() == Some(StepDecision::Rejected));
+        assert!(
+            has_rejected,
+            "INV-X2 violated: Rejected instance must have at least one Rejected step"
+        );
+    }
+
+    // INV-X3: Instance.status=InProgress ⇒ Steps が1つ以上存在
+    if instance.status() == WorkflowInstanceStatus::InProgress {
+        assert!(
+            !steps.is_empty(),
+            "INV-X3 violated: InProgress instance must have at least one step"
+        );
+    }
 }

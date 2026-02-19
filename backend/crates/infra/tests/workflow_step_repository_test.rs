@@ -11,7 +11,14 @@
 
 mod common;
 
-use common::{create_test_instance, create_test_step, seed_tenant_id, seed_user_id, test_now};
+use common::{
+    assert_workflow_invariants,
+    create_test_instance,
+    create_test_step,
+    seed_tenant_id,
+    seed_user_id,
+    test_now,
+};
 use ringiflow_domain::{
     tenant::TenantId,
     value_objects::{DisplayNumber, Version},
@@ -26,6 +33,7 @@ use ringiflow_infra::repository::{
 use sqlx::PgPool;
 
 struct StepTestContext {
+    pool:      PgPool,
     sut:       PostgresWorkflowStepRepository,
     instance:  WorkflowInstance,
     tenant_id: TenantId,
@@ -34,11 +42,12 @@ struct StepTestContext {
 /// リポジトリ初期化 + インスタンス INSERT の共通セットアップ
 async fn setup_repos_with_instance(pool: PgPool, display_number: i64) -> StepTestContext {
     let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
-    let sut = PostgresWorkflowStepRepository::new(pool);
+    let sut = PostgresWorkflowStepRepository::new(pool.clone());
     let tenant_id = seed_tenant_id();
     let instance = create_test_instance(display_number);
     instance_repo.insert(&instance).await.unwrap();
     StepTestContext {
+        pool,
         sut,
         instance,
         tenant_id,
@@ -105,6 +114,8 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
     assert!(result.is_ok());
     let steps = result.unwrap();
     assert_eq!(steps.len(), 2);
+
+    assert_workflow_invariants(&ctx.pool, ctx.instance.id(), &ctx.tenant_id).await;
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -163,6 +174,8 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
         .unwrap()
         .unwrap();
     assert!(found.started_at().is_some());
+
+    assert_workflow_invariants(&ctx.pool, ctx.instance.id(), &ctx.tenant_id).await;
 }
 
 #[sqlx::test(migrations = "../../migrations")]
@@ -326,4 +339,6 @@ async fn test_ステップを完了できる(pool: PgPool) {
     assert!(found.completed_at().is_some());
     assert_eq!(found.decision(), Some(StepDecision::Approved));
     assert_eq!(found.comment(), Some("承認します"));
+
+    assert_workflow_invariants(&ctx.pool, ctx.instance.id(), &ctx.tenant_id).await;
 }
