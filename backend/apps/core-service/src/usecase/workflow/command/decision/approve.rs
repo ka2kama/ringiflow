@@ -93,12 +93,33 @@ impl WorkflowUseCaseImpl {
             (completed, None)
         };
 
-        // 8. 楽観的ロック付きでステップを保存
+        // 8. 次ステップがあればデータを準備（トランザクション開始前に読み取り）
+        let activated_next_step = if let Some(next_step_id) = next_step_to_activate {
+            let all_steps = self
+                .step_repo
+                .find_by_instance(updated_instance.id(), &tenant_id)
+                .await
+                .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+            all_steps
+                .into_iter()
+                .find(|s| s.step_id() == next_step_id)
+                .map(|next_step| {
+                    let version = next_step.version();
+                    let activated = next_step.activated(now);
+                    (activated, version)
+                })
+        } else {
+            None
+        };
+
+        // 9. 全更新を単一トランザクションで実行
         let mut tx = self
             .tx_manager
             .begin()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
+
         self.step_repo
             .update_with_version_check(&mut tx, &approved_step, step_expected_version, &tenant_id)
             .await
@@ -108,52 +129,25 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
             })?;
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
-        // 9. 次ステップがあれば Active 化して保存
-        if let Some(next_step_id) = next_step_to_activate {
-            // インスタンスに紐づくステップから次ステップを見つけて Active 化
-            let all_steps = self
-                .step_repo
-                .find_by_instance(updated_instance.id(), &tenant_id)
+        if let Some((ref activated_step, next_expected_version)) = activated_next_step {
+            self.step_repo
+                .update_with_version_check(
+                    &mut tx,
+                    activated_step,
+                    next_expected_version,
+                    &tenant_id,
+                )
                 .await
-                .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
-
-            if let Some(next_step) = all_steps.into_iter().find(|s| s.step_id() == next_step_id) {
-                let next_expected_version = next_step.version();
-                let activated_step = next_step.activated(now);
-                let mut tx = self.tx_manager.begin().await.map_err(|e| {
-                    CoreError::Internal(format!("トランザクション開始に失敗: {}", e))
+                .map_err(|e| match e {
+                    InfraError::Conflict { .. } => CoreError::Conflict(
+                        "ステップは既に更新されています。最新の情報を取得してください。"
+                            .to_string(),
+                    ),
+                    other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
                 })?;
-                self.step_repo
-                    .update_with_version_check(
-                        &mut tx,
-                        &activated_step,
-                        next_expected_version,
-                        &tenant_id,
-                    )
-                    .await
-                    .map_err(|e| match e {
-                        InfraError::Conflict { .. } => CoreError::Conflict(
-                            "ステップは既に更新されています。最新の情報を取得してください。"
-                                .to_string(),
-                        ),
-                        other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-                    })?;
-                tx.commit().await.map_err(|e| {
-                    CoreError::Internal(format!("トランザクションコミットに失敗: {}", e))
-                })?;
-            }
         }
 
-        // 10. インスタンスを保存
-        let mut tx = self
-            .tx_manager
-            .begin()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
         self.instance_repo
             .update_with_version_check(
                 &mut tx,
@@ -169,11 +163,12 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
             })?;
+
         tx.commit()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
-        // 11. 保存後のステップ一覧を取得して返却
+        // 10. 保存後のステップ一覧を取得して返却
         let steps = self
             .step_repo
             .find_by_instance(updated_instance.id(), &tenant_id)

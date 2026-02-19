@@ -67,65 +67,26 @@ impl WorkflowUseCaseImpl {
             .reject(input.comment, now)
             .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-        // 5. 却下されたステップを保存
-        let mut tx = self
-            .tx_manager
-            .begin()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
-        self.step_repo
-            .update_with_version_check(&mut tx, &rejected_step, step_expected_version, &tenant_id)
-            .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
-                    "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
-                ),
-                other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-            })?;
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
-
-        // 6. 残りの Pending ステップを Skipped に遷移
+        // 5. 残りの Pending ステップを Skipped に遷移（トランザクション開始前にドメインロジック実行）
         let all_steps = self
             .step_repo
             .find_by_instance(rejected_step.instance_id(), &tenant_id)
             .await
             .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
 
+        let mut skipped_steps = Vec::new();
         for pending_step in all_steps
             .into_iter()
             .filter(|s| s.status() == WorkflowStepStatus::Pending)
         {
-            let pending_expected_version = pending_step.version();
-            let skipped_step = pending_step
+            let version = pending_step.version();
+            let skipped = pending_step
                 .skipped(now)
                 .map_err(|e| CoreError::Internal(format!("ステップのスキップに失敗: {}", e)))?;
-            let mut tx =
-                self.tx_manager.begin().await.map_err(|e| {
-                    CoreError::Internal(format!("トランザクション開始に失敗: {}", e))
-                })?;
-            self.step_repo
-                .update_with_version_check(
-                    &mut tx,
-                    &skipped_step,
-                    pending_expected_version,
-                    &tenant_id,
-                )
-                .await
-                .map_err(|e| match e {
-                    InfraError::Conflict { .. } => CoreError::Conflict(
-                        "ステップは既に更新されています。最新の情報を取得してください。"
-                            .to_string(),
-                    ),
-                    other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-                })?;
-            tx.commit().await.map_err(|e| {
-                CoreError::Internal(format!("トランザクションコミットに失敗: {}", e))
-            })?;
+            skipped_steps.push((skipped, version));
         }
 
-        // 7. インスタンスを取得して Rejected に遷移
+        // 6. インスタンスを取得して Rejected に遷移（トランザクション開始前にドメインロジック実行）
         let instance = self
             .instance_repo
             .find_by_id(rejected_step.instance_id(), &tenant_id)
@@ -137,11 +98,41 @@ impl WorkflowUseCaseImpl {
             .complete_with_rejection(now)
             .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
+        // 7. 全更新を単一トランザクションで実行
         let mut tx = self
             .tx_manager
             .begin()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
+
+        self.step_repo
+            .update_with_version_check(&mut tx, &rejected_step, step_expected_version, &tenant_id)
+            .await
+            .map_err(|e| match e {
+                InfraError::Conflict { .. } => CoreError::Conflict(
+                    "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
+                ),
+                other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+            })?;
+
+        for (skipped_step, pending_expected_version) in &skipped_steps {
+            self.step_repo
+                .update_with_version_check(
+                    &mut tx,
+                    skipped_step,
+                    *pending_expected_version,
+                    &tenant_id,
+                )
+                .await
+                .map_err(|e| match e {
+                    InfraError::Conflict { .. } => CoreError::Conflict(
+                        "ステップは既に更新されています。最新の情報を取得してください。"
+                            .to_string(),
+                    ),
+                    other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+                })?;
+        }
+
         self.instance_repo
             .update_with_version_check(
                 &mut tx,
@@ -157,6 +148,7 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
             })?;
+
         tx.commit()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
