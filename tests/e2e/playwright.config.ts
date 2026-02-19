@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { ADMIN_AUTH_FILE } from "./helpers/test-data";
 
 /**
  * Playwright 設定
@@ -39,7 +40,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        storageState: "tests/.auth/admin.json",
+        storageState: ADMIN_AUTH_FILE,
       },
       dependencies: ["setup"],
     },

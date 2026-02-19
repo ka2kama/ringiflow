@@ -10,11 +10,19 @@
 
 import { test as setup } from "@playwright/test";
 import { login } from "../helpers/auth";
-import { ADMIN_USER } from "../helpers/test-data";
-
-const authFile = "tests/.auth/admin.json";
+import {
+  ADMIN_AUTH_FILE,
+  ADMIN_USER,
+  REGULAR_USER,
+  USER_AUTH_FILE,
+} from "../helpers/test-data";
 
 setup("管理者ユーザーでログインする", async ({ request }) => {
   await login(request, ADMIN_USER.email, ADMIN_USER.password);
-  await request.storageState({ path: authFile });
+  await request.storageState({ path: ADMIN_AUTH_FILE });
+});
+
+setup("一般ユーザーでログインする", async ({ request }) => {
+  await login(request, REGULAR_USER.email, REGULAR_USER.password);
+  await request.storageState({ path: USER_AUTH_FILE });
 });
