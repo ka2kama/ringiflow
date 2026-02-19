@@ -60,6 +60,7 @@ impl From<DashboardStatsDto> for DashboardStatsData {
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn get_dashboard_stats(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,

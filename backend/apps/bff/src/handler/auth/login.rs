@@ -71,6 +71,7 @@ use crate::{
       (status = 503, description = "サービス利用不可", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn login(
     State(state): State<Arc<AuthState>>,
     headers: HeaderMap,
@@ -253,6 +254,7 @@ pub async fn login(
       (status = 401, description = "未認証", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn logout(
     State(state): State<Arc<AuthState>>,
     headers: HeaderMap,

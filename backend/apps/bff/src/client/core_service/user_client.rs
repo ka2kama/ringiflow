@@ -93,6 +93,7 @@ pub trait CoreServiceUserClient: Send + Sync {
 
 #[async_trait]
 impl CoreServiceUserClient for CoreServiceClientImpl {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn list_users(
         &self,
         tenant_id: Uuid,
@@ -107,6 +108,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn get_user_by_email(
         &self,
         tenant_id: Uuid,
@@ -123,6 +125,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::UserNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%user_id))]
     async fn get_user(
         &self,
         user_id: Uuid,
@@ -133,6 +136,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::UserNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn create_user(
         &self,
         req: &CreateUserCoreRequest,
@@ -146,6 +150,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%user_id))]
     async fn update_user(
         &self,
         user_id: Uuid,
@@ -160,6 +165,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::UserNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%user_id))]
     async fn update_user_status(
         &self,
         user_id: Uuid,
@@ -174,6 +180,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::UserNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, display_number))]
     async fn get_user_by_display_number(
         &self,
         tenant_id: Uuid,

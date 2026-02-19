@@ -70,6 +70,7 @@ pub struct CreateCredentialsResponse {
 ///
 /// ユーザーが存在しない場合も、実際にダミーハッシュで検証を行い、
 /// 処理時間を均一化する。これによりユーザー存在確認攻撃を防ぐ。
+#[tracing::instrument(skip_all)]
 pub async fn verify(
     State(state): State<Arc<AuthState>>,
     Json(req): Json<VerifyRequest>,
@@ -88,6 +89,7 @@ pub async fn verify(
 /// POST /internal/auth/credentials
 ///
 /// 認証情報を登録する（ユーザー作成時に呼び出し）。
+#[tracing::instrument(skip_all)]
 pub async fn create_credentials(
     State(state): State<Arc<AuthState>>,
     Json(req): Json<CreateCredentialsRequest>,
@@ -111,6 +113,7 @@ pub async fn create_credentials(
 /// DELETE /internal/auth/credentials/{tenant_id}/{user_id}
 ///
 /// ユーザーの全認証情報を削除する（ユーザー削除時に呼び出し）。
+#[tracing::instrument(skip_all, fields(%tenant_id, %user_id))]
 pub async fn delete_credentials(
     State(state): State<Arc<AuthState>>,
     Path((tenant_id, user_id)): Path<(Uuid, Uuid)>,

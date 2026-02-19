@@ -187,6 +187,7 @@ pub struct CreateUserResponseDto {
 /// ## レスポンス
 ///
 /// - `200 OK`: ユーザー一覧（ロール情報付き）
+#[tracing::instrument(skip_all)]
 pub async fn list_users(
     State(state): State<Arc<UserState>>,
     Query(query): Query<TenantQuery>,
@@ -268,6 +269,7 @@ pub async fn list_users(
 /// - `200 OK`: ユーザー情報
 /// - `400 Bad Request`: メールアドレスの形式が不正
 /// - `404 Not Found`: ユーザーが見つからない
+#[tracing::instrument(skip_all)]
 pub async fn get_user_by_email(
     State(state): State<Arc<UserState>>,
     Query(query): Query<GetUserByEmailQuery>,
@@ -320,6 +322,7 @@ pub async fn get_user_by_email(
 ///
 /// テナント名も含めたレスポンスを返す。
 /// 認証フローで BFF が呼び出し、フロントエンドに必要な情報を一括取得する。
+#[tracing::instrument(skip_all, fields(%user_id))]
 pub async fn get_user(
     State(state): State<Arc<UserState>>,
     Path(user_id): Path<Uuid>,
@@ -391,6 +394,7 @@ pub async fn get_user(
 /// - `201 Created`: 作成されたユーザー情報
 /// - `400 Bad Request`: バリデーションエラー（メール形式不正、ロール不存在）
 /// - `409 Conflict`: メールアドレスが既に使用されている
+#[tracing::instrument(skip_all)]
 pub async fn create_user(
     State(state): State<Arc<UserState>>,
     Json(req): Json<CreateUserRequest>,
@@ -435,6 +439,7 @@ pub async fn create_user(
 ///
 /// - `200 OK`: ユーザー詳細（ロール・権限付き）
 /// - `404 Not Found`: ユーザーが見つからない
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn get_user_by_display_number(
     State(state): State<Arc<UserState>>,
     Path(display_number): Path<i64>,
@@ -488,6 +493,7 @@ pub async fn get_user_by_display_number(
 /// - `200 OK`: 更新後のユーザー情報
 /// - `400 Bad Request`: バリデーションエラー
 /// - `404 Not Found`: ユーザーが見つからない
+#[tracing::instrument(skip_all, fields(%user_id))]
 pub async fn update_user(
     State(state): State<Arc<UserState>>,
     Path(user_id): Path<Uuid>,
@@ -530,6 +536,7 @@ pub async fn update_user(
 /// - `200 OK`: 更新後のユーザー情報
 /// - `400 Bad Request`: 自己無効化、最後の管理者無効化、不正なステータス
 /// - `404 Not Found`: ユーザーが見つからない
+#[tracing::instrument(skip_all, fields(%user_id))]
 pub async fn update_user_status(
     State(state): State<Arc<UserState>>,
     Path(user_id): Path<Uuid>,

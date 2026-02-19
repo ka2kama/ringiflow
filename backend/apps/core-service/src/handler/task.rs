@@ -114,6 +114,7 @@ pub struct TaskDetailDto {
 ///
 /// ## エンドポイント
 /// GET /internal/tasks/my?tenant_id={tenant_id}&user_id={user_id}
+#[tracing::instrument(skip_all)]
 pub async fn list_my_tasks(
     State(state): State<Arc<TaskState>>,
     Query(query): Query<UserQuery>,
@@ -148,6 +149,7 @@ pub async fn list_my_tasks(
 ///
 /// ## エンドポイント
 /// GET /internal/tasks/{id}?tenant_id={tenant_id}&user_id={user_id}
+#[tracing::instrument(skip_all, fields(%id))]
 pub async fn get_task(
     State(state): State<Arc<TaskState>>,
     Path(id): Path<Uuid>,
@@ -183,6 +185,7 @@ pub async fn get_task(
 /// ## エンドポイント
 /// GET /internal/workflows/by-display-number/{workflow_display_number}/tasks/
 /// {step_display_number}?tenant_id={tenant_id}&user_id={user_id}
+#[tracing::instrument(skip_all, fields(workflow_display_number = params.workflow_display_number, step_display_number = params.step_display_number))]
 pub async fn get_task_by_display_numbers(
     State(state): State<Arc<TaskState>>,
     Path(params): Path<TaskByDisplayNumberPathParams>,

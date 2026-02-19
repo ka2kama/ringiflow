@@ -88,6 +88,7 @@ pub struct AuditLogItemData {
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn list_audit_logs(
     State(state): State<Arc<AuditLogState>>,
     headers: HeaderMap,

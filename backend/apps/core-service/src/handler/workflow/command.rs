@@ -51,6 +51,7 @@ use crate::{
 /// 1. リクエストをパース
 /// 2. ユースケースを呼び出し
 /// 3. レスポンスを返す
+#[tracing::instrument(skip_all)]
 pub async fn create_workflow(
     State(state): State<Arc<WorkflowState>>,
     Json(req): Json<CreateWorkflowRequest>,
@@ -89,6 +90,7 @@ pub async fn create_workflow(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. レスポンスを返す
+#[tracing::instrument(skip_all, fields(%id))]
 pub async fn submit_workflow(
     State(state): State<Arc<WorkflowState>>,
     Path(id): Path<Uuid>,
@@ -125,6 +127,7 @@ pub async fn submit_workflow(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
+#[tracing::instrument(skip_all, fields(%params.step_id))]
 pub async fn approve_step(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepPathParams>,
@@ -163,6 +166,7 @@ pub async fn approve_step(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
+#[tracing::instrument(skip_all, fields(%params.step_id))]
 pub async fn reject_step(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepPathParams>,
@@ -203,6 +207,7 @@ pub async fn reject_step(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 申請後のワークフローを返す
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn submit_workflow_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(display_number): Path<i64>,
@@ -237,6 +242,7 @@ pub async fn submit_workflow_by_display_number(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn approve_step_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepByDisplayNumberPathParams>,
@@ -277,6 +283,7 @@ pub async fn approve_step_by_display_number(
 ///
 /// ## エンドポイント
 /// POST /internal/workflows/{id}/steps/{step_id}/request-changes
+#[tracing::instrument(skip_all, fields(%params.step_id))]
 pub async fn request_changes_step(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepPathParams>,
@@ -309,6 +316,7 @@ pub async fn request_changes_step(
 ///
 /// ## エンドポイント
 /// POST /internal/workflows/{id}/resubmit
+#[tracing::instrument(skip_all, fields(%id))]
 pub async fn resubmit_workflow(
     State(state): State<Arc<WorkflowState>>,
     Path(id): Path<Uuid>,
@@ -349,6 +357,7 @@ pub async fn resubmit_workflow(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 200 OK + 更新されたワークフローを返す
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn reject_step_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepByDisplayNumberPathParams>,
@@ -390,6 +399,7 @@ pub async fn reject_step_by_display_number(
 /// ## エンドポイント
 /// POST /internal/workflows/by-display-number/{display_number}/steps/
 /// by-display-number/{step_display_number}/request-changes
+#[tracing::instrument(skip_all, fields(display_number = params.display_number, step_display_number = params.step_display_number))]
 pub async fn request_changes_step_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(params): Path<StepByDisplayNumberPathParams>,
@@ -430,6 +440,7 @@ pub async fn request_changes_step_by_display_number(
 ///
 /// ## エンドポイント
 /// POST /internal/workflows/by-display-number/{display_number}/resubmit
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn resubmit_workflow_by_display_number(
     State(state): State<Arc<WorkflowState>>,
     Path(display_number): Path<i64>,
@@ -471,6 +482,7 @@ pub async fn resubmit_workflow_by_display_number(
 /// 2. リクエストをパース
 /// 3. ユースケースを呼び出し
 /// 4. 201 Created + コメントを返す
+#[tracing::instrument(skip_all, fields(display_number))]
 pub async fn post_comment(
     State(state): State<Arc<WorkflowState>>,
     Path(display_number): Path<i64>,

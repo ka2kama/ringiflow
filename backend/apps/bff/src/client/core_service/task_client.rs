@@ -59,6 +59,7 @@ pub trait CoreServiceTaskClient: Send + Sync {
 
 #[async_trait]
 impl CoreServiceTaskClient for CoreServiceClientImpl {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn list_my_tasks(
         &self,
         tenant_id: Uuid,
@@ -73,6 +74,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%task_id, %tenant_id))]
     async fn get_task(
         &self,
         task_id: Uuid,
@@ -88,6 +90,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn get_dashboard_stats(
         &self,
         tenant_id: Uuid,
@@ -102,6 +105,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(workflow_display_number, step_display_number, %tenant_id))]
     async fn get_task_by_display_numbers(
         &self,
         workflow_display_number: i64,

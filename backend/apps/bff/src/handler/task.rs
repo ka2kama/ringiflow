@@ -115,6 +115,7 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn list_my_tasks(
     State(state): State<Arc<WorkflowState>>,
     headers: HeaderMap,

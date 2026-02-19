@@ -89,6 +89,7 @@ pub(crate) fn permissions_to_json(permissions: &[Permission]) -> serde_json::Val
 
 #[async_trait]
 impl RoleRepository for PostgresRoleRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn find_all_by_tenant_with_user_count(
         &self,
         tenant_id: &TenantId,
@@ -138,6 +139,7 @@ impl RoleRepository for PostgresRoleRepository {
         Ok(results)
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
     async fn find_by_id(&self, id: &RoleId) -> Result<Option<Role>, InfraError> {
         let row = sqlx::query!(
             r#"
@@ -175,6 +177,7 @@ impl RoleRepository for PostgresRoleRepository {
         )))
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn insert(&self, role: &Role) -> Result<(), InfraError> {
         let permissions_json = permissions_to_json(role.permissions());
 
@@ -198,6 +201,7 @@ impl RoleRepository for PostgresRoleRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn update(&self, role: &Role) -> Result<(), InfraError> {
         let permissions_json = permissions_to_json(role.permissions());
 
@@ -219,6 +223,7 @@ impl RoleRepository for PostgresRoleRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
     async fn delete(&self, id: &RoleId) -> Result<(), InfraError> {
         sqlx::query!(
             r#"
@@ -233,6 +238,7 @@ impl RoleRepository for PostgresRoleRepository {
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%role_id))]
     async fn count_users_with_role(&self, role_id: &RoleId) -> Result<i64, InfraError> {
         let count = sqlx::query_scalar!(
             r#"

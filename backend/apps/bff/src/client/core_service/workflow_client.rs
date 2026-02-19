@@ -190,6 +190,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
 
 #[async_trait]
 impl CoreServiceWorkflowClient for CoreServiceClientImpl {
+    #[tracing::instrument(skip_all, level = "debug")]
     async fn create_workflow(
         &self,
         req: CreateWorkflowRequest,
@@ -203,6 +204,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%workflow_id))]
     async fn submit_workflow(
         &self,
         workflow_id: Uuid,
@@ -220,6 +222,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn list_workflow_definitions(
         &self,
         tenant_id: Uuid,
@@ -233,6 +236,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%definition_id, %tenant_id))]
     async fn get_workflow_definition(
         &self,
         definition_id: Uuid,
@@ -247,6 +251,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id, %user_id))]
     async fn list_my_workflows(
         &self,
         tenant_id: Uuid,
@@ -261,6 +266,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, None).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%workflow_id, %tenant_id))]
     async fn get_workflow(
         &self,
         workflow_id: Uuid,
@@ -275,6 +281,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%workflow_id, %step_id))]
     async fn approve_step(
         &self,
         workflow_id: Uuid,
@@ -293,6 +300,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(%workflow_id, %step_id))]
     async fn reject_step(
         &self,
         workflow_id: Uuid,
@@ -311,6 +319,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(display_number, %tenant_id))]
     async fn get_workflow_by_display_number(
         &self,
         display_number: i64,
@@ -325,6 +334,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(display_number))]
     async fn submit_workflow_by_display_number(
         &self,
         display_number: i64,
@@ -342,6 +352,11 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
+    #[tracing::instrument(
+        skip_all,
+        level = "debug",
+        fields(workflow_display_number, step_display_number)
+    )]
     async fn approve_step_by_display_number(
         &self,
         workflow_display_number: i64,
@@ -360,6 +375,11 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
+    #[tracing::instrument(
+        skip_all,
+        level = "debug",
+        fields(workflow_display_number, step_display_number)
+    )]
     async fn reject_step_by_display_number(
         &self,
         workflow_display_number: i64,
@@ -378,6 +398,11 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
+    #[tracing::instrument(
+        skip_all,
+        level = "debug",
+        fields(workflow_display_number, step_display_number)
+    )]
     async fn request_changes_step_by_display_number(
         &self,
         workflow_display_number: i64,
@@ -396,6 +421,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::StepNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(display_number))]
     async fn resubmit_workflow_by_display_number(
         &self,
         display_number: i64,
@@ -413,6 +439,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(display_number))]
     async fn post_comment(
         &self,
         display_number: i64,
@@ -430,6 +457,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
     }
 
+    #[tracing::instrument(skip_all, level = "debug", fields(display_number, %tenant_id))]
     async fn list_comments(
         &self,
         display_number: i64,

@@ -64,6 +64,7 @@ impl PostgresDisplayIdCounterRepository {
 
 #[async_trait]
 impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn next_display_number(
         &self,
         tenant_id: &TenantId,
