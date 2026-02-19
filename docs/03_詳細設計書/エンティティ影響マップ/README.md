@@ -18,4 +18,7 @@ AI エージェントはリポジトリ全体をメモリに保持しないた�
 
 ## 影響マップ一覧
 
-作成次第、ここにリンクを追加する。
+| エンティティ | テーブル | 更新パス数 | 主な競合リスク |
+|-------------|---------|-----------|--------------|
+| [WorkflowInstance](WorkflowInstance.md) | `workflow_instances` | 7 | 同時判断操作による状態不整合 |
+| [WorkflowStep](WorkflowStep.md) | `workflow_steps` | 8 | 同一ステップへの同時判断、Pending→Skipped の二重処理 |
