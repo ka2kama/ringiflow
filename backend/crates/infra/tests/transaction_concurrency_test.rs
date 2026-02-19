@@ -110,6 +110,83 @@ async fn test_楽観的ロックで古いバージョンの更新がconflictを�
     assert_workflow_invariants(&pool, &instance_id, &tenant_id).await;
 }
 
+/// トランザクション原子性: ステップ INSERT 失敗時にインスタンス更新もロールバックされる
+///
+/// ライフサイクル系ユースケース（submit/resubmit）では、インスタンス更新後に
+/// ステップを INSERT する。INSERT 失敗時にインスタンス更新もロールバックされることを検証する。
+///
+/// シナリオ:
+/// 1. Instance(InProgress), Step を DB に挿入
+/// 2. TX: instance を更新（InProgress → Rejected）+ 同じステップを INSERT（主キー重複 → エラー）
+/// 3. TX drop → 全ロールバック
+/// 4. instance が InProgress のまま（Rejected にはなっていない）
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_ステップinsert失敗時にインスタンス更新もロールバックされる(
+    pool: PgPool,
+) {
+    let tenant_id = seed_tenant_id();
+    let now = common::test_now();
+
+    let instance = create_test_instance(400)
+        .submitted(now)
+        .unwrap()
+        .with_current_step("step1".to_string(), now);
+    let step = create_test_step(instance.id(), 1).activated(now);
+
+    let instance_id = instance.id().clone();
+    let instance_version = instance.version();
+
+    let tx_manager = PgTransactionManager::new(pool.clone());
+    let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
+    let step_repo = PostgresWorkflowStepRepository::new(pool.clone());
+
+    // 初期データを挿入
+    let mut tx = tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance).await.unwrap();
+    step_repo.insert(&mut tx, &step, &tenant_id).await.unwrap();
+    tx.commit().await.unwrap();
+
+    // TX: instance の更新はトランザクション内で成功する
+    let rejected_instance = instance.complete_with_rejection(now).unwrap();
+
+    let mut tx = tx_manager.begin().await.unwrap();
+
+    instance_repo
+        .update_with_version_check(&mut tx, &rejected_instance, instance_version, &tenant_id)
+        .await
+        .unwrap();
+
+    // 同じステップを再度 INSERT → 主キー重複でエラー
+    let insert_result = step_repo.insert(&mut tx, &step, &tenant_id).await;
+
+    assert!(
+        insert_result.is_err(),
+        "主キー重複の INSERT はエラーを返すべき: {:?}",
+        insert_result
+    );
+
+    // TX を drop → ロールバック
+    drop(tx);
+
+    // 検証: instance は TX の更新前の状態に戻っている
+    let instance_after = instance_repo
+        .find_by_id(&instance_id, &tenant_id)
+        .await
+        .unwrap()
+        .unwrap();
+
+    // TX の instance 更新はロールバックされたので、
+    // ステータスは InProgress のまま（Rejected にはなっていない）
+    assert_eq!(
+        instance_after.status(),
+        ringiflow_domain::workflow::WorkflowInstanceStatus::InProgress,
+        "ロールバックにより instance は InProgress のまま"
+    );
+
+    // 不変条件の検証
+    assert_workflow_invariants(&pool, &instance_id, &tenant_id).await;
+}
+
 /// トランザクション原子性: 途中で Conflict が発生すると全書き込みがロールバックされる
 ///
 /// シナリオ:
