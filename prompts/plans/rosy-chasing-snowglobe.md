@@ -59,9 +59,9 @@
 
 ### 確認事項
 
-- [ ] 型: `TxContext` は `&mut` 借用で複数の書き込みに順次渡せるか → `db.rs`
-- [ ] パターン: 既存の単一 TX 内で複数書き込みを行うパターン → 統合テスト `workflow_instance_repository_test.rs`
-- [ ] ライブラリ: `activated()` の戻り値の型（Result or 直値）→ 既存使用パターン
+- [x] 型: `TxContext` は `&mut` 借用で複数の書き込みに順次渡せるか → `workflow_step_repository.rs` L47, `tx: &mut TxContext`
+- [x] パターン: 既存の単一 TX 内で複数書き込みを行うパターン → `workflow_instance_repository_test.rs` で `begin → write → commit`
+- [x] ライブラリ: `activated()` は `Self` を返す直値。`skipped()` は `Result<Self, DomainError>` → `step.rs` L255, L295
 
 ### テストリスト
 
@@ -106,8 +106,8 @@ E2E テスト（該当なし）
 
 ### 確認事項
 
-- [ ] 型: `skipped()` の戻り値型（`Result<WorkflowStep, _>`）→ 既存使用
-- [ ] パターン: Phase 1 で確立したパターンを踏襲
+- [x] 型: `skipped()` は `Result<Self, DomainError>`。`self` を消費する → `step.rs` L295
+- [x] パターン: Phase 1 で確立したパターンを踏襲（`&mut tx` を複数の write に順次渡す）
 
 ### テストリスト
 
