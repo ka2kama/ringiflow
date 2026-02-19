@@ -51,8 +51,18 @@ use std::{
     time::Duration,
 };
 
+use async_trait::async_trait;
 use ringiflow_domain::tenant::TenantId;
-use sqlx::{PgConnection, PgPool, Postgres, pool::PoolConnection, postgres::PgPoolOptions};
+use sqlx::{
+    PgConnection,
+    PgPool,
+    Postgres,
+    Transaction,
+    pool::PoolConnection,
+    postgres::PgPoolOptions,
+};
+
+use crate::error::InfraError;
 
 /// RLS 用の `after_release` フックを含む `PgPoolOptions` を返す
 ///
@@ -176,5 +186,138 @@ impl Deref for TenantConnection {
 impl DerefMut for TenantConnection {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.conn
+    }
+}
+
+// =============================================================================
+// TxContext
+// =============================================================================
+
+/// トランザクションコンテキスト
+///
+/// 書き込みリポジトリメソッドの必須引数。
+/// トランザクションなしの書き込みをコンパイルエラーにする（構造的強制）。
+///
+/// # 構造的強制とは
+///
+/// 従来は「書き込みにはトランザクションを使うべき」というルールだったが、
+/// ルールの存在だけでは守られなかった。`TxContext` を必須引数にすることで、
+/// トランザクションなしの書き込みはコンパイルエラーになる。
+///
+/// # ライフサイクル
+///
+/// 1. `TransactionManager::begin()` で作成
+/// 2. 書き込みメソッドに `&mut TxContext` として渡す
+/// 3. `commit()` でコミット、またはドロップでロールバック
+pub struct TxContext(TxContextInner);
+
+enum TxContextInner {
+    Pg(Transaction<'static, Postgres>),
+    #[cfg(any(test, feature = "test-utils"))]
+    Mock,
+}
+
+impl TxContext {
+    /// Postgres トランザクションを開始する
+    ///
+    /// `PgTransactionManager` のみが使用する。
+    /// ユースケース層は `TransactionManager` trait 経由で TxContext を取得する。
+    pub(crate) async fn begin_pg(pool: &PgPool) -> Result<Self, InfraError> {
+        Ok(Self(TxContextInner::Pg(pool.begin().await?)))
+    }
+
+    /// テスト用のモック TxContext を作成する
+    ///
+    /// Mock リポジトリはインメモリ実装のため、実際のトランザクションは不要。
+    /// `conn()` を呼ぶと panic するが、Mock リポジトリは `conn()` を使用しない。
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn mock() -> Self {
+        Self(TxContextInner::Mock)
+    }
+
+    /// トランザクションをコミットする
+    ///
+    /// 呼ばずにドロップすると、sqlx が自動的にロールバックする。
+    pub async fn commit(self) -> Result<(), InfraError> {
+        match self.0 {
+            TxContextInner::Pg(tx) => {
+                tx.commit().await?;
+                Ok(())
+            }
+            #[cfg(any(test, feature = "test-utils"))]
+            TxContextInner::Mock => Ok(()),
+        }
+    }
+
+    /// トランザクション内の DB コネクションを取得する
+    ///
+    /// Postgres リポジトリ実装が `sqlx::query!().execute(tx.conn())` として使用する。
+    /// Phase 3（#687）で書き込みメソッドが TxContext を要求するようになった時に使用される。
+    #[allow(dead_code)]
+    pub(crate) fn conn(&mut self) -> &mut PgConnection {
+        match &mut self.0 {
+            TxContextInner::Pg(tx) => tx,
+            #[cfg(any(test, feature = "test-utils"))]
+            TxContextInner::Mock => {
+                panic!("BUG: conn() called on Mock TxContext. Mock repos should not call conn().")
+            }
+        }
+    }
+}
+
+// =============================================================================
+// TransactionManager
+// =============================================================================
+
+/// トランザクション管理 trait
+///
+/// ユースケース層が TxContext を作成するための抽象化。
+/// ユースケース層は PgPool に直接依存せず、この trait 経由で
+/// トランザクションを開始する。
+#[async_trait]
+pub trait TransactionManager: Send + Sync {
+    /// トランザクションを開始し、TxContext を返す
+    async fn begin(&self) -> Result<TxContext, InfraError>;
+}
+
+/// Postgres 用 TransactionManager 実装
+pub struct PgTransactionManager {
+    pool: PgPool,
+}
+
+impl PgTransactionManager {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl TransactionManager for PgTransactionManager {
+    async fn begin(&self) -> Result<TxContext, InfraError> {
+        TxContext::begin_pg(&self.pool).await
+    }
+}
+
+// Send + Sync 検証
+#[cfg(test)]
+mod tx_context_tests {
+    use super::*;
+
+    fn assert_send<T: Send>() {}
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    #[test]
+    fn test_tx_contextはsendを実装している() {
+        assert_send::<TxContext>();
+    }
+
+    #[test]
+    fn test_pg_transaction_managerはsendとsyncを実装している() {
+        assert_send_sync::<PgTransactionManager>();
+    }
+
+    #[test]
+    fn test_transaction_manager_traitはsendとsyncを実装している() {
+        assert_send_sync::<Box<dyn TransactionManager>>();
     }
 }

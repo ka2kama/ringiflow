@@ -47,10 +47,10 @@ Epic #685 の Story #687 として、トランザクションコンテキスト�
 `TxContext` 型と `TransactionManager` trait を追加し、ADR-051 を作成する。既存コードへの破壊的変更なし。
 
 #### 確認事項
-- [ ] 型: `sqlx::Transaction<'static, Postgres>` → `db.rs` L55 の既存 import
-- [ ] パターン: `TenantConnection` のラッパーパターン → `db.rs` L137-180
-- [ ] ライブラリ: `pool.begin()` の戻り値型 → Grep 既存使用 `display_id_counter_repository.rs`
-- [ ] パターン: `test-utils` feature ゲート → `mock.rs` L1-10, `lib.rs` L56-57, `Cargo.toml` L25
+- [x] 型: `sqlx::Transaction<'static, Postgres>` → `db.rs` L55 に `Postgres` import 済み、`Transaction` の追加 import が必要
+- [x] パターン: `TenantConnection` のラッパーパターン → `db.rs` L137-180 で確認、struct + impl パターン
+- [x] ライブラリ: `pool.begin()` の戻り値型 → `display_id_counter_repository.rs:72` で `let mut tx = self.pool.begin().await?;` として使用
+- [x] パターン: `test-utils` feature ゲート → `Cargo.toml` L25 `test-utils = []`、`lib.rs` L56-57 `#[cfg(any(test, feature = "test-utils"))]`
 
 #### 実装内容
 

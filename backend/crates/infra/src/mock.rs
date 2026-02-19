@@ -32,6 +32,7 @@ use ringiflow_domain::{
 };
 
 use crate::{
+    db::{TransactionManager, TxContext},
     error::InfraError,
     repository::{
         DisplayIdCounterRepository,
@@ -496,5 +497,20 @@ impl WorkflowCommentRepository for MockWorkflowCommentRepository {
             .collect();
         result.sort_by_key(|c| c.created_at());
         Ok(result)
+    }
+}
+
+// ===== MockTransactionManager =====
+
+/// テスト用の MockTransactionManager
+///
+/// `begin()` は常に `TxContext::mock()` を返す。
+/// Mock リポジトリはインメモリ実装のため、実際のトランザクションは不要。
+pub struct MockTransactionManager;
+
+#[async_trait]
+impl TransactionManager for MockTransactionManager {
+    async fn begin(&self) -> Result<TxContext, InfraError> {
+        Ok(TxContext::mock())
     }
 }
