@@ -145,7 +145,7 @@ impl WorkflowUseCaseImpl {
             .resubmitted(input.form_data, first_step_id, now)
             .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
-        // 9. インスタンスとステップを保存
+        // 9. インスタンスとステップを保存（単一トランザクション）
         let mut tx = self
             .tx_manager
             .begin()
@@ -166,23 +166,15 @@ impl WorkflowUseCaseImpl {
                 ),
                 other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
             })?;
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
-
         for step in &steps {
-            let mut tx =
-                self.tx_manager.begin().await.map_err(|e| {
-                    CoreError::Internal(format!("トランザクション開始に失敗: {}", e))
-                })?;
             self.step_repo
                 .insert(&mut tx, step, &tenant_id)
                 .await
                 .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
-            tx.commit().await.map_err(|e| {
-                CoreError::Internal(format!("トランザクションコミットに失敗: {}", e))
-            })?;
         }
+        tx.commit()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
         log_business_event!(
             event.category = event::category::WORKFLOW,
