@@ -26,13 +26,13 @@ justfile、CI ワークフロー、設定ファイル内の複雑な処理は、
 ```yaml
 # .github/workflows/check-rule-files.yaml
 - name: Check rule files
-  run: ./scripts/check-rule-files.sh
+  run: ./scripts/check/rule-files.sh
 ```
 
 ```just
 # justfile
 check-rule-files:
-    ./scripts/check-rule-files.sh
+    ./scripts/check/rule-files.sh
 ```
 
 ## 悪い例
@@ -52,9 +52,12 @@ check-rule-files:
 
 | 用途 | 配置先 |
 |------|--------|
-| 汎用スクリプト | `scripts/` |
+| 品質チェック | `scripts/check/` |
+| テスト実行 | `scripts/test/` |
+| worktree 管理 | `scripts/worktree/` |
+| 環境変数管理 | `scripts/env/` |
+| 独立ツール | `scripts/tools/` |
 | Git hooks | `scripts/hooks/` |
-| CI 専用スクリプト | `scripts/` または `.github/scripts/`（プロジェクトの規約に従う） |
 
 ## 開発ツール追加時の必須対応
 
