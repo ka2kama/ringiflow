@@ -37,7 +37,7 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 |---------|------|
 | バックエンド | Rust + axum（BFF / Core Service / Auth Service） |
 | フロントエンド | Elm |
-| インフラ | AWS（ECS Fargate, Aurora PostgreSQL, ElastiCache Redis） |
+| インフラ | AWS（ECS Fargate, Aurora PostgreSQL, ElastiCache Redis, DynamoDB） |
 | IaC | Terraform |
 
 ## 開発コマンド

@@ -23,7 +23,7 @@ https://demo.ka2kama.com
 |---------|------|----------|
 | バックエンド | **Rust** + axum | 型安全性、メモリ安全性、高パフォーマンス |
 | フロントエンド | **Elm** | 純粋関数型、ランタイムエラーゼロ、The Elm Architecture |
-| データストア | PostgreSQL, Redis | ワークフロー・ユーザー管理、セッション管理 |
+| データストア | PostgreSQL, Redis, DynamoDB | ワークフロー・ユーザー管理、セッション管理、監査ログ |
 | インフラ | AWS Lightsail, Cloudflare | デモ環境（個人開発向け低コスト構成） |
 
 ## アーキテクチャ
@@ -43,12 +43,14 @@ flowchart LR
     subgraph Data
         PG["PostgreSQL"]
         Redis["Redis<br/>(Session)"]
+        DynamoDB["DynamoDB<br/>(Audit Log)"]
     end
 
     Browser --> BFF
     BFF --> Core
     BFF --> Auth
     BFF --> Redis
+    BFF --> DynamoDB
     Core --> PG
     Auth --> PG
 ```
