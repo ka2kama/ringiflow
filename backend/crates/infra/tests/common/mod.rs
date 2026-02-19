@@ -326,8 +326,7 @@ pub async fn assert_workflow_invariants(
     if instance.status() == WorkflowInstanceStatus::Approved && !steps.is_empty() {
         let last_completed = steps
             .iter()
-            .filter(|s| s.status() == WorkflowStepStatus::Completed)
-            .last();
+            .rfind(|s| s.status() == WorkflowStepStatus::Completed);
         if let Some(last) = last_completed {
             assert_eq!(
                 last.decision(),
