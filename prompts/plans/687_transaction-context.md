@@ -178,9 +178,9 @@ E2E テスト（該当なし）
 `WorkflowInstanceRepository::update_with_version_check` に `tenant_id: &TenantId` 引数を追加し、WHERE 句に `AND tenant_id = $N` を追加する。
 
 #### 確認事項
-- [ ] 型: `WorkflowInstanceRepository` trait の現在のシグネチャ → `workflow_instance_repository.rs` L65-69
-- [ ] パターン: `WorkflowStepRepository::update_with_version_check` の tenant_id 使用 → `workflow_step_repository.rs` L40-45, L187-229
-- [ ] 呼び出し元: approve.rs L134, reject.rs L121, request_changes.rs L121, submit.rs L138, resubmit.rs L150
+- [x] 型: `WorkflowInstanceRepository` trait の現在のシグネチャ → `workflow_instance_repository.rs` L65-69、`update_with_version_check` に `tenant_id` なし確認
+- [x] パターン: `WorkflowStepRepository::update_with_version_check` の tenant_id 使用 → `workflow_step_repository.rs` L40-45, L187-229、WHERE 句に `AND tenant_id = $N` パターン確認
+- [x] 呼び出し元: approve.rs, reject.rs, request_changes.rs, submit.rs, resubmit.rs の全5箇所を更新済み
 
 #### 変更ファイル
 
@@ -215,9 +215,9 @@ E2E テスト（該当なし）
 4つの書き込みメソッドに `tx: &mut TxContext` を第2引数として追加する。テスト用拡張 trait を提供し、テストセットアップの冗長化を抑制する。
 
 #### 確認事項
-- [ ] 型: Phase 1 で定義した TxContext の `conn()` 戻り値型 → Phase 1 の実装結果
-- [ ] パターン: `sqlx::query!().execute(&self.pool)` → `sqlx::query!().execute(conn)` への変更 → `workflow_step_repository.rs` L181, L218, `workflow_instance_repository.rs` L255, L291
-- [ ] 呼び出し元: `instance_repo.insert()` 全箇所（約 50 箇所）、`step_repo.insert()` 全箇所（約 30 箇所）
+- [x] 型: Phase 1 で定義した TxContext の `conn()` 戻り値型 → `&mut PgConnection` を確認
+- [x] パターン: `sqlx::query!().execute(&self.pool)` → `sqlx::query!().execute(tx.conn())` への変更 → 4メソッド全て変更済み
+- [x] 呼び出し元: `instance_repo.insert()` 全箇所、`step_repo.insert()` 全箇所を更新済み（テスト用拡張 trait 経由含む約80箇所）
 
 #### 変更メソッドシグネチャ
 
