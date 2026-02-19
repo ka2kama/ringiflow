@@ -7,6 +7,7 @@ use ringiflow_domain::{
     workflow::{WorkflowStepId, WorkflowStepStatus},
 };
 use ringiflow_infra::InfraError;
+use ringiflow_shared::{event_log::event, log_business_event};
 
 use crate::{
     error::CoreError,
@@ -133,6 +134,17 @@ impl WorkflowUseCaseImpl {
             .find_by_instance(changes_requested_instance.id(), &tenant_id)
             .await
             .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+
+        log_business_event!(
+            event.category = event::category::WORKFLOW,
+            event.action = event::action::STEP_CHANGES_REQUESTED,
+            event.entity_type = event::entity_type::WORKFLOW_STEP,
+            event.entity_id = %step_id,
+            event.actor_id = %user_id,
+            event.tenant_id = %tenant_id,
+            event.result = event::result::SUCCESS,
+            "差し戻しステップ完了"
+        );
 
         Ok(WorkflowWithSteps {
             instance: changes_requested_instance,
