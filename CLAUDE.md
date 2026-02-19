@@ -416,14 +416,12 @@ Test plan: 単一 PR は実装テスト＋手動テスト手順を記載。Epic 
 5. `/wrap-up` でドキュメント整備
 6. wrap-up 完了の検証（`git -c core.quotepath=false diff --name-only main...HEAD | grep -E "^(prompts/runs/|process/improvements/|prompts/recipes/|docs/05_ADR/|docs/06_|docs/07_)"`）。なければ `/wrap-up` を実行
 7. base branch 同期確認（`git fetch origin main && git log HEAD..origin/main --oneline`、差分あれば rebase + `just check-all` で再確認）
-8. ユーザーに確認を求める（「Ready にしてよいですか？」）
-9. ユーザー承認後、`gh pr ready` で Ready にする
+8. `gh pr ready` で Ready にする
 
 **禁止:**
 
 - Draft なしで PR を作成すること
-- ユーザー確認なしに `gh pr ready` を実行すること
-- wrap-up 完了を検証せずに Ready を提案すること
+- wrap-up 完了を検証せずに Ready にすること
 
 ### Draft に戻した後、再度 Ready にする場合
 
@@ -432,8 +430,7 @@ Draft に戻した = 品質保証がリセットされた状態。コミット�
 1. 修正・追加コミットを実施
 2. `just check-all` で品質ゲート通過
 3. base branch 同期確認（差分があれば rebase + `just check-all` で再確認）
-4. ユーザーに確認を求める（「Ready にしてよいですか？」）
-5. ユーザー承認後、`gh pr ready` で Ready にする
+4. `gh pr ready` で Ready にする
 
 **禁止:** 品質ゲートを通過せずに Ready for Review に戻すこと
 
@@ -446,12 +443,14 @@ gh pr ready     # Draft を解除
 
 → 詳細チェックリスト: [手順書: 品質ゲートと Ready for Review](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-品質ゲートと-ready-for-review)
 
+マージはユーザーの指示を受けてから実行する（他 PR との兼ね合いがあるため）。
+
 ```bash
 gh pr merge --squash
 just clean-branches  # マージ後のブランチ削除（worktree のリセット含む）
 ```
 
-**禁止:** `--admin` で CI バイパス、CI 失敗状態での強制マージ
+**禁止:** `--admin` で CI バイパス、CI 失敗状態での強制マージ、ユーザー指示なしのマージ
 
 ## PR レビュー
 
