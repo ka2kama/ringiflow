@@ -1,0 +1,4 @@
+[tools]
+node = "22"
+elm = "0.19.1"
+"npm:elm-format" = "0.8.8"

@@ -19,9 +19,6 @@
     "vite": "^7.3.1",
     "vite-plugin-elm": "^3.0.1"
   },
-  "volta": {
-    "node": "22.16.0"
-  },
   "pnpm": {
     "neverBuiltDependencies": [
       "esbuild"
