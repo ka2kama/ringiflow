@@ -258,4 +258,4 @@ CoreServiceError::ValidationError(ref detail) => validation_error_response(detai
 ## 関連ドキュメント
 
 - [機能解説](./01_BFFハンドラクローン削減_機能解説.md)
-- [BFF レスポンスハンドリング共通化](../17_BFFレスポンスハンドリング共通化/)（前回のリファクタリング）
+- [BFF レスポンスハンドリング共通化](../PR421_BFFレスポンスハンドリング共通化/)（前回のリファクタリング）
