@@ -11,6 +11,10 @@ use ringiflow_domain::{
     value_objects::DisplayNumber,
     workflow::{NewWorkflowStep, WorkflowStep, WorkflowStepId},
 };
+use ringiflow_infra::repository::{
+    WorkflowInstanceRepositoryTestExt,
+    WorkflowStepRepositoryTestExt,
+};
 
 #[tokio::test]
 async fn test_post_comment_申請者がコメントを投稿できる() {
@@ -19,7 +23,11 @@ async fn test_post_comment_申請者がコメントを投稿できる() {
     let instance = builder.build_submitted_instance("テスト申請", 100);
     let setup = builder.build_workflow_usecase_impl();
 
-    setup.instance_repo.insert(&instance).await.unwrap();
+    setup
+        .instance_repo
+        .insert_for_test(&instance)
+        .await
+        .unwrap();
 
     let input = PostCommentInput {
         body: "テストコメント".to_string(),
@@ -50,7 +58,11 @@ async fn test_post_comment_承認者がコメントを投稿できる() {
     let instance = builder.build_submitted_instance("テスト申請", 100);
     let setup = builder.build_workflow_usecase_impl();
 
-    setup.instance_repo.insert(&instance).await.unwrap();
+    setup
+        .instance_repo
+        .insert_for_test(&instance)
+        .await
+        .unwrap();
 
     // 承認者のステップを作成
     let step = WorkflowStep::new(NewWorkflowStep {
@@ -66,7 +78,7 @@ async fn test_post_comment_承認者がコメントを投稿できる() {
     .activated(builder.now());
     setup
         .step_repo
-        .insert(&step, builder.tenant_id())
+        .insert_for_test(&step, builder.tenant_id())
         .await
         .unwrap();
 

@@ -16,6 +16,7 @@ use ringiflow_domain::{
 use ringiflow_infra::{
     mock::{
         MockDisplayIdCounterRepository,
+        MockTransactionManager,
         MockUserRepository,
         MockWorkflowCommentRepository,
         MockWorkflowDefinitionRepository,
@@ -165,6 +166,7 @@ impl WorkflowTestBuilder {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(self.now)),
+            Arc::new(MockTransactionManager),
         );
 
         WorkflowTestSetup {

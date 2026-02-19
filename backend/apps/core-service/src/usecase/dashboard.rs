@@ -119,7 +119,10 @@ mod tests {
             WorkflowStepId,
         },
     };
-    use ringiflow_infra::mock::{MockWorkflowInstanceRepository, MockWorkflowStepRepository};
+    use ringiflow_infra::{
+        mock::{MockWorkflowInstanceRepository, MockWorkflowStepRepository},
+        repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepositoryTestExt},
+    };
 
     use super::*;
 
@@ -147,7 +150,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         // Active ステップ（カウント対象）
         let active_step = WorkflowStep::new(NewWorkflowStep {
@@ -161,7 +164,10 @@ mod tests {
             now: Utc::now(),
         })
         .activated(Utc::now());
-        step_repo.insert(&active_step, &tenant_id).await.unwrap();
+        step_repo
+            .insert_for_test(&active_step, &tenant_id)
+            .await
+            .unwrap();
 
         // Pending ステップ（カウント対象外）
         let pending_step = WorkflowStep::new(NewWorkflowStep {
@@ -174,7 +180,10 @@ mod tests {
             assigned_to: Some(approver_id.clone()),
             now: Utc::now(),
         });
-        step_repo.insert(&pending_step, &tenant_id).await.unwrap();
+        step_repo
+            .insert_for_test(&pending_step, &tenant_id)
+            .await
+            .unwrap();
 
         let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
         let stats = sut
@@ -210,7 +219,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&in_progress).await.unwrap();
+        instance_repo.insert_for_test(&in_progress).await.unwrap();
 
         // Draft インスタンス（カウント対象外）
         let draft = WorkflowInstance::new(NewWorkflowInstance {
@@ -224,7 +233,7 @@ mod tests {
             initiated_by: user_id.clone(),
             now,
         });
-        instance_repo.insert(&draft).await.unwrap();
+        instance_repo.insert_for_test(&draft).await.unwrap();
 
         // Approved インスタンス（カウント対象外）
         let approved = WorkflowInstance::new(NewWorkflowInstance {
@@ -241,7 +250,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .approved(now);
-        instance_repo.insert(&approved).await.unwrap();
+        instance_repo.insert_for_test(&approved).await.unwrap();
 
         let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
         let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
@@ -273,7 +282,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         // 完了済みステップ（今日 → カウント対象）
         let completed_step = WorkflowStep::new(NewWorkflowStep {
@@ -289,7 +298,10 @@ mod tests {
         .activated(Utc::now())
         .approve(Some("OK".to_string()), Utc::now())
         .unwrap();
-        step_repo.insert(&completed_step, &tenant_id).await.unwrap();
+        step_repo
+            .insert_for_test(&completed_step, &tenant_id)
+            .await
+            .unwrap();
 
         let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
         let now = Utc::now();
@@ -344,7 +356,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         // approver_id にアサインされた Active ステップ
         let step = WorkflowStep::new(NewWorkflowStep {
@@ -358,7 +370,7 @@ mod tests {
             now: Utc::now(),
         })
         .activated(Utc::now());
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
 

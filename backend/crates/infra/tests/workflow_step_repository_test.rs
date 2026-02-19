@@ -24,33 +24,43 @@ use ringiflow_domain::{
     value_objects::{DisplayNumber, Version},
     workflow::{StepDecision, WorkflowInstance, WorkflowInstanceId, WorkflowStepId},
 };
-use ringiflow_infra::repository::{
-    PostgresWorkflowInstanceRepository,
-    PostgresWorkflowStepRepository,
-    WorkflowInstanceRepository,
-    WorkflowStepRepository,
+use ringiflow_infra::{
+    db::{PgTransactionManager, TransactionManager},
+    repository::{
+        PostgresWorkflowInstanceRepository,
+        PostgresWorkflowStepRepository,
+        WorkflowInstanceRepository,
+        WorkflowStepRepository,
+    },
 };
 use sqlx::PgPool;
 
 struct StepTestContext {
-    pool:      PgPool,
-    sut:       PostgresWorkflowStepRepository,
-    instance:  WorkflowInstance,
-    tenant_id: TenantId,
+    pool:       PgPool,
+    sut:        PostgresWorkflowStepRepository,
+    instance:   WorkflowInstance,
+    tenant_id:  TenantId,
+    tx_manager: PgTransactionManager,
 }
 
 /// リポジトリ初期化 + インスタンス INSERT の共通セットアップ
 async fn setup_repos_with_instance(pool: PgPool, display_number: i64) -> StepTestContext {
     let instance_repo = PostgresWorkflowInstanceRepository::new(pool.clone());
     let sut = PostgresWorkflowStepRepository::new(pool.clone());
+    let tx_manager = PgTransactionManager::new(pool.clone());
     let tenant_id = seed_tenant_id();
     let instance = create_test_instance(display_number);
-    instance_repo.insert(&instance).await.unwrap();
+
+    let mut tx = tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance).await.unwrap();
+    tx.commit().await.unwrap();
+
     StepTestContext {
         pool,
         sut,
         instance,
         tenant_id,
+        tx_manager,
     }
 }
 
@@ -60,7 +70,9 @@ async fn test_insert_で新規ステップを作成できる(pool: PgPool) {
 
     let step = create_test_step(ctx.instance.id(), 1);
 
-    let result = ctx.sut.insert(&step, &ctx.tenant_id).await;
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    let result = ctx.sut.insert(&mut tx, &step, &ctx.tenant_id).await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_ok());
 }
@@ -71,7 +83,13 @@ async fn test_find_by_id_でステップを取得できる(pool: PgPool) {
 
     let step = create_test_step(ctx.instance.id(), 1);
     let step_id = step.id().clone();
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     let result = ctx.sut.find_by_id(&step_id, &ctx.tenant_id).await;
 
@@ -106,8 +124,17 @@ async fn test_find_by_instance_インスタンスのステップ一覧を取得�
 
     let step1 = create_test_step(&instance_id, 1);
     let step2 = create_test_step(&instance_id, 2);
-    ctx.sut.insert(&step1, &ctx.tenant_id).await.unwrap();
-    ctx.sut.insert(&step2, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step1, &ctx.tenant_id)
+        .await
+        .unwrap();
+    ctx.sut
+        .insert(&mut tx, &step2, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     let result = ctx.sut.find_by_instance(&instance_id, &ctx.tenant_id).await;
 
@@ -138,7 +165,13 @@ async fn test_find_by_assigned_to_担当者のタスク一覧を取得できる(
     let user_id = seed_user_id();
 
     let step = create_test_step(ctx.instance.id(), 1);
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     let result = ctx.sut.find_by_assigned_to(&ctx.tenant_id, &user_id).await;
 
@@ -155,15 +188,23 @@ async fn test_update_with_version_check_バージョン一致で更新できる(
     let step = create_test_step(ctx.instance.id(), 1);
     let step_id = step.id().clone();
     let expected_version = step.version();
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     // アクティブ化（バージョンインクリメント）
     let activated_step = step.activated(now);
 
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
     let result = ctx
         .sut
-        .update_with_version_check(&activated_step, expected_version, &ctx.tenant_id)
+        .update_with_version_check(&mut tx, &activated_step, expected_version, &ctx.tenant_id)
         .await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_ok());
 
@@ -186,17 +227,25 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
     let now = test_now();
 
     let step = create_test_step(ctx.instance.id(), 1);
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     // アクティブ化（バージョンインクリメント）
     let activated_step = step.activated(now);
 
     // 不一致バージョン（version 2）で更新を試みる
     let wrong_version = Version::initial().next();
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
     let result = ctx
         .sut
-        .update_with_version_check(&activated_step, wrong_version, &ctx.tenant_id)
+        .update_with_version_check(&mut tx, &activated_step, wrong_version, &ctx.tenant_id)
         .await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -216,17 +265,25 @@ async fn test_update_with_version_check_別テナントのステップは更新�
 
     let step = create_test_step(ctx.instance.id(), 1);
     let expected_version = step.version();
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     // アクティブ化
     let activated_step = step.activated(now);
 
     // 別テナントで更新を試みる → Conflict エラー
     let other_tenant_id = TenantId::new();
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
     let result = ctx
         .sut
-        .update_with_version_check(&activated_step, expected_version, &other_tenant_id)
+        .update_with_version_check(&mut tx, &activated_step, expected_version, &other_tenant_id)
         .await;
+    tx.commit().await.unwrap();
 
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -248,7 +305,13 @@ async fn test_find_by_display_number_存在するdisplay_numberで検索でき�
 
     let step = create_test_step(&instance_id, 1);
     let step_id = step.id().clone();
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     let display_number = DisplayNumber::new(1).unwrap();
     let result = ctx
@@ -288,11 +351,20 @@ async fn test_find_by_display_number_別のinstance_idでは見つからない(p
 
     let instance_b = create_test_instance(101);
     let instance_b_id = instance_b.id().clone();
-    instance_repo.insert(&instance_b).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    instance_repo.insert(&mut tx, &instance_b).await.unwrap();
+    tx.commit().await.unwrap();
 
     // インスタンス A にステップを作成
     let step = create_test_step(&instance_a_id, 1);
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     // インスタンス B の display_number: 1 を検索 → 見つからないはず
     let display_number = DisplayNumber::new(1).unwrap();
@@ -313,24 +385,36 @@ async fn test_ステップを完了できる(pool: PgPool) {
     let step = create_test_step(ctx.instance.id(), 1);
     let step_id = step.id().clone();
     let v1 = step.version();
-    ctx.sut.insert(&step, &ctx.tenant_id).await.unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
+    ctx.sut
+        .insert(&mut tx, &step, &ctx.tenant_id)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     // ステップをアクティブ化
     let active_step = step.activated(now);
     let v2 = active_step.version();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
     ctx.sut
-        .update_with_version_check(&active_step, v1, &ctx.tenant_id)
+        .update_with_version_check(&mut tx, &active_step, v1, &ctx.tenant_id)
         .await
         .unwrap();
+    tx.commit().await.unwrap();
 
     // ステップを完了
     let completed_step = active_step
         .completed(StepDecision::Approved, Some("承認します".to_string()), now)
         .unwrap();
+
+    let mut tx = ctx.tx_manager.begin().await.unwrap();
     ctx.sut
-        .update_with_version_check(&completed_step, v2, &ctx.tenant_id)
+        .update_with_version_check(&mut tx, &completed_step, v2, &ctx.tenant_id)
         .await
         .unwrap();
+    tx.commit().await.unwrap();
 
     // 確認
     let result = ctx.sut.find_by_id(&step_id, &ctx.tenant_id).await;

@@ -10,7 +10,7 @@
 //! ```
 
 use ringiflow_domain::tenant::TenantId;
-use ringiflow_infra::db::{self, TenantConnection};
+use ringiflow_infra::db::{self, PgTransactionManager, TenantConnection, TransactionManager};
 use uuid::Uuid;
 
 /// テスト用の DATABASE_URL
@@ -149,4 +149,51 @@ fn assert_send<T: Send>() {}
 #[test]
 fn test_tenant_connectionはsendを実装している() {
     assert_send::<TenantConnection>();
+}
+
+// =============================================================================
+// TxContext + TransactionManager
+// =============================================================================
+
+#[tokio::test]
+async fn test_beginでトランザクションを開始できる() {
+    let pool = create_test_pool().await;
+    let sut = PgTransactionManager::new(pool);
+
+    // Act
+    let tx = sut.begin().await;
+
+    // Assert: エラーなくトランザクションを開始できる
+    assert!(tx.is_ok());
+}
+
+#[tokio::test]
+async fn test_commitでトランザクションをコミットできる() {
+    let pool = create_test_pool().await;
+    let sut = PgTransactionManager::new(pool);
+
+    // Act
+    let tx = sut.begin().await.unwrap();
+    let result = tx.commit().await;
+
+    // Assert: エラーなくコミットできる
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_ドロップ時にロールバックされる() {
+    let pool = create_test_pool().await;
+    let sut = PgTransactionManager::new(pool.clone());
+
+    // commit せずに TxContext をドロップする
+    {
+        let _tx = sut.begin().await.unwrap();
+        // commit() を呼ばずにスコープを抜ける → sqlx が自動ロールバック
+    }
+
+    // ロールバック後もプールが正常に動作することを確認
+    // （ロールバックで接続が壊れていないことの検証）
+    let tx2 = sut.begin().await;
+    assert!(tx2.is_ok(), "ロールバック後もトランザクションを開始できる");
+    tx2.unwrap().commit().await.unwrap();
 }

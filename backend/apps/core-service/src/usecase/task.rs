@@ -240,10 +240,9 @@ mod tests {
             WorkflowStepId,
         },
     };
-    use ringiflow_infra::mock::{
-        MockUserRepository,
-        MockWorkflowInstanceRepository,
-        MockWorkflowStepRepository,
+    use ringiflow_infra::{
+        mock::{MockUserRepository, MockWorkflowInstanceRepository, MockWorkflowStepRepository},
+        repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepositoryTestExt},
     };
 
     use super::*;
@@ -274,7 +273,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         // Active ステップ
         let active_step = WorkflowStep::new(NewWorkflowStep {
@@ -288,7 +287,10 @@ mod tests {
             now,
         })
         .activated(now);
-        step_repo.insert(&active_step, &tenant_id).await.unwrap();
+        step_repo
+            .insert_for_test(&active_step, &tenant_id)
+            .await
+            .unwrap();
 
         // Pending ステップ（同じ approver）
         let pending_step = WorkflowStep::new(NewWorkflowStep {
@@ -301,7 +303,10 @@ mod tests {
             assigned_to: Some(approver_id.clone()),
             now,
         });
-        step_repo.insert(&pending_step, &tenant_id).await.unwrap();
+        step_repo
+            .insert_for_test(&pending_step, &tenant_id)
+            .await
+            .unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -345,7 +350,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),
@@ -358,7 +363,7 @@ mod tests {
             now,
         })
         .activated(now);
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -403,7 +408,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),
@@ -416,7 +421,7 @@ mod tests {
             now,
         })
         .activated(now);
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -480,7 +485,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),
@@ -494,7 +499,7 @@ mod tests {
         })
         .activated(now);
         let step_id = step.id().clone();
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -564,7 +569,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),
@@ -578,7 +583,7 @@ mod tests {
         })
         .activated(now);
         let step_id = step.id().clone();
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -623,7 +628,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),
@@ -636,7 +641,7 @@ mod tests {
             now,
         })
         .activated(now);
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -710,7 +715,7 @@ mod tests {
             initiated_by: user_id.clone(),
             now,
         });
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
@@ -761,7 +766,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),
@@ -774,7 +779,7 @@ mod tests {
             now,
         })
         .activated(now);
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),

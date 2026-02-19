@@ -218,13 +218,14 @@ mod tests {
     use ringiflow_infra::{
         mock::{
             MockDisplayIdCounterRepository,
+            MockTransactionManager,
             MockUserRepository,
             MockWorkflowCommentRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
         },
-        repository::{WorkflowCommentRepository, WorkflowInstanceRepository},
+        repository::{WorkflowCommentRepository, WorkflowInstanceRepositoryTestExt},
     };
 
     use super::super::WorkflowUseCaseImpl;
@@ -256,7 +257,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         // コメントを2件追加
         let comment1 = WorkflowComment::new(NewWorkflowComment {
@@ -286,6 +287,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         // Act
@@ -320,6 +322,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         // Act

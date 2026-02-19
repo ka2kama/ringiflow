@@ -128,13 +128,14 @@ mod tests {
     use ringiflow_infra::{
         mock::{
             MockDisplayIdCounterRepository,
+            MockTransactionManager,
             MockUserRepository,
             MockWorkflowCommentRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
         },
-        repository::{WorkflowInstanceRepository, WorkflowStepRepository},
+        repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepositoryTestExt},
     };
 
     use crate::{
@@ -169,7 +170,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -179,6 +180,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = PostCommentInput {
@@ -224,7 +226,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         // approver_id が承認者のステップを作成
         let step = WorkflowStep::new(NewWorkflowStep {
@@ -238,7 +240,7 @@ mod tests {
             now,
         })
         .activated(now);
-        step_repo.insert(&step, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -248,6 +250,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = PostCommentInput {
@@ -297,7 +300,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now);
-        instance_repo.insert(&instance).await.unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
@@ -307,6 +310,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = PostCommentInput {
@@ -349,6 +353,7 @@ mod tests {
             Arc::new(MockUserRepository),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
         );
 
         let input = PostCommentInput {

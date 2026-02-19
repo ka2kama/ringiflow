@@ -32,6 +32,7 @@ use ringiflow_domain::{
 };
 
 use crate::{
+    db::{TransactionManager, TxContext},
     error::InfraError,
     repository::{
         DisplayIdCounterRepository,
@@ -112,7 +113,11 @@ impl MockWorkflowInstanceRepository {
 
 #[async_trait]
 impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
-    async fn insert(&self, instance: &WorkflowInstance) -> Result<(), InfraError> {
+    async fn insert(
+        &self,
+        _tx: &mut TxContext,
+        instance: &WorkflowInstance,
+    ) -> Result<(), InfraError> {
         let mut instances = self.instances.lock().unwrap();
         instances.push(instance.clone());
         Ok(())
@@ -120,8 +125,10 @@ impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
 
     async fn update_with_version_check(
         &self,
+        _tx: &mut TxContext,
         instance: &WorkflowInstance,
         expected_version: Version,
+        _tenant_id: &TenantId,
     ) -> Result<(), InfraError> {
         let mut instances = self.instances.lock().unwrap();
         if let Some(pos) = instances.iter().position(|i| i.id() == instance.id()) {
@@ -226,7 +233,12 @@ impl MockWorkflowStepRepository {
 
 #[async_trait]
 impl WorkflowStepRepository for MockWorkflowStepRepository {
-    async fn insert(&self, step: &WorkflowStep, _tenant_id: &TenantId) -> Result<(), InfraError> {
+    async fn insert(
+        &self,
+        _tx: &mut TxContext,
+        step: &WorkflowStep,
+        _tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
         let mut steps = self.steps.lock().unwrap();
         steps.push(step.clone());
         Ok(())
@@ -234,6 +246,7 @@ impl WorkflowStepRepository for MockWorkflowStepRepository {
 
     async fn update_with_version_check(
         &self,
+        _tx: &mut TxContext,
         step: &WorkflowStep,
         expected_version: Version,
         _tenant_id: &TenantId,
@@ -496,5 +509,20 @@ impl WorkflowCommentRepository for MockWorkflowCommentRepository {
             .collect();
         result.sort_by_key(|c| c.created_at());
         Ok(result)
+    }
+}
+
+// ===== MockTransactionManager =====
+
+/// テスト用の MockTransactionManager
+///
+/// `begin()` は常に `TxContext::mock()` を返す。
+/// Mock リポジトリはインメモリ実装のため、実際のトランザクションは不要。
+pub struct MockTransactionManager;
+
+#[async_trait]
+impl TransactionManager for MockTransactionManager {
+    async fn begin(&self) -> Result<TxContext, InfraError> {
+        Ok(TxContext::mock())
     }
 }
