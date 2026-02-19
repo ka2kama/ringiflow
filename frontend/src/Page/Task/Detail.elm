@@ -11,7 +11,7 @@ module Page.Task.Detail exposing
 {-| タスク詳細ページ
 
 タスク（承認ステップ）の詳細情報と、関連するワークフロー情報を表示する。
-承認/却下操作が可能。
+承認/却下/差し戻し操作が可能。
 
 
 ## 機能
@@ -19,9 +19,9 @@ module Page.Task.Detail exposing
   - タスク情報の表示（ステップ名、ステータス、担当者）
   - ワークフロー情報の表示（タイトル、申請者、フォームデータ）
   - 承認ステップの進捗表示
-  - 承認/却下ボタン（Active なステップの場合のみ）
+  - 承認/却下/差し戻しボタン（Active なステップの場合のみ）
   - コメント入力欄
-  - 承認/却下時の確認ダイアログ
+  - 承認/却下/差し戻し時の確認ダイアログ
 
 -}
 
@@ -60,12 +60,13 @@ import Util.DateFormat as DateFormat
 
 {-| 確認待ちの操作
 
-承認/却下ボタンクリック後、確認ダイアログで最終確認するまで保持する。
+承認/却下/差し戻しボタンクリック後、確認ダイアログで最終確認するまで保持する。
 
 -}
 type PendingAction
     = ConfirmApprove WorkflowStep
     | ConfirmReject WorkflowStep
+    | ConfirmRequestChanges WorkflowStep
 
 
 {-| ページの状態
@@ -78,7 +79,7 @@ type alias Model =
     -- API データ
     , task : RemoteData ApiError TaskDetail
 
-    -- 承認/却下の状態
+    -- 承認/却下/差し戻しの状態
     , comment : String
     , isSubmitting : Bool
     , pendingAction : Maybe PendingAction
@@ -129,10 +130,12 @@ type Msg
     | UpdateComment String
     | ClickApprove WorkflowStep
     | ClickReject WorkflowStep
+    | ClickRequestChanges WorkflowStep
     | ConfirmAction
     | CancelAction
     | GotApproveResult (Result ApiError WorkflowInstance)
     | GotRejectResult (Result ApiError WorkflowInstance)
+    | GotRequestChangesResult (Result ApiError WorkflowInstance)
     | DismissMessage
 
 
@@ -182,6 +185,11 @@ update msg model =
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
+        ClickRequestChanges step ->
+            ( { model | pendingAction = Just (ConfirmRequestChanges step) }
+            , Ports.showModalDialog ConfirmDialog.dialogId
+            )
+
         ConfirmAction ->
             case model.pendingAction of
                 Just (ConfirmApprove step) ->
@@ -192,6 +200,11 @@ update msg model =
                 Just (ConfirmReject step) ->
                     ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
                     , rejectStep model step
+                    )
+
+                Just (ConfirmRequestChanges step) ->
+                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , requestChangesStep model step
                     )
 
                 Nothing ->
@@ -207,6 +220,9 @@ update msg model =
 
         GotRejectResult result ->
             handleApprovalResult "却下しました" result model
+
+        GotRequestChangesResult result ->
+            handleApprovalResult "差し戻しました" result model
 
         DismissMessage ->
             ( { model | errorMessage = Nothing, successMessage = Nothing }
@@ -250,6 +266,27 @@ rejectStep model step =
                     , comment = nonEmptyComment model.comment
                     }
                 , toMsg = GotRejectResult
+                }
+
+        _ ->
+            Cmd.none
+
+
+{-| 差し戻し API 呼び出し
+-}
+requestChangesStep : Model -> WorkflowStep -> Cmd Msg
+requestChangesStep model step =
+    case model.task of
+        Success taskDetail ->
+            WorkflowApi.requestChangesStep
+                { config = Shared.toRequestConfig model.shared
+                , workflowDisplayNumber = taskDetail.workflow.displayNumber
+                , stepDisplayNumber = step.displayNumber
+                , body =
+                    { version = step.version
+                    , comment = nonEmptyComment model.comment
+                    }
+                , toMsg = GotRequestChangesResult
                 }
 
         _ ->
@@ -395,9 +432,9 @@ viewWorkflowStatus workflow =
 -- APPROVAL SECTION
 
 
-{-| 承認/却下セクション
+{-| 承認/却下/差し戻しセクション
 
-タスクのステップが Active な場合のみ承認/却下ボタンとコメント入力欄を表示。
+タスクのステップが Active な場合のみ承認/却下/差し戻しボタンとコメント入力欄を表示。
 
 -}
 viewApprovalSection : WorkflowStep -> Model -> Html Msg
@@ -442,6 +479,19 @@ viewApprovalButtons step isSubmitting =
 
                  else
                     "承認"
+                )
+            ]
+        , Button.view
+            { variant = Button.Warning
+            , disabled = isSubmitting
+            , onClick = ClickRequestChanges step
+            }
+            [ text
+                (if isSubmitting then
+                    "処理中..."
+
+                 else
+                    "差し戻し"
                 )
             ]
         , Button.view
@@ -510,6 +560,17 @@ viewConfirmDialog maybePending =
                 , onConfirm = ConfirmAction
                 , onCancel = CancelAction
                 , actionStyle = ConfirmDialog.Destructive
+                }
+
+        Just (ConfirmRequestChanges _) ->
+            ConfirmDialog.view
+                { title = "差し戻しの確認"
+                , message = "この申請を差し戻しますか？"
+                , confirmLabel = "差し戻す"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmAction
+                , onCancel = CancelAction
+                , actionStyle = ConfirmDialog.Caution
                 }
 
         Nothing ->
