@@ -326,25 +326,31 @@ pub async fn assert_workflow_invariants(
     if instance.status() == WorkflowInstanceStatus::Approved && !steps.is_empty() {
         let last_completed = steps
             .iter()
-            .rfind(|s| s.status() == WorkflowStepStatus::Completed);
-        if let Some(last) = last_completed {
-            assert_eq!(
-                last.decision(),
-                Some(StepDecision::Approved),
-                "INV-X1 violated: last completed step of Approved instance must have Approved decision"
-            );
-        }
+            .rfind(|s| s.status() == WorkflowStepStatus::Completed)
+            .expect("INV-X1 violated: Approved instance has steps but none is Completed");
+        assert_eq!(
+            last_completed.decision(),
+            Some(StepDecision::Approved),
+            "INV-X1 violated: last completed step of Approved instance must have Approved decision"
+        );
     }
 
-    // INV-X2: Instance.status=Rejected ⇒ いずれかのステップの decision=Rejected
+    // INV-X2: Instance.status=Rejected ⇒ いずれかのステップの decision=Rejected、かつ後続ステップは全て Skipped
     if instance.status() == WorkflowInstanceStatus::Rejected && !steps.is_empty() {
-        let has_rejected = steps
+        let rejected_pos = steps
             .iter()
-            .any(|s| s.decision() == Some(StepDecision::Rejected));
-        assert!(
-            has_rejected,
-            "INV-X2 violated: Rejected instance must have at least one Rejected step"
-        );
+            .position(|s| s.decision() == Some(StepDecision::Rejected))
+            .expect("INV-X2 violated: Rejected instance must have at least one Rejected step");
+
+        for step in &steps[rejected_pos + 1..] {
+            assert_eq!(
+                step.status(),
+                WorkflowStepStatus::Skipped,
+                "INV-X2 violated: step {} after Rejected step must be Skipped, but is {:?}",
+                step.id(),
+                step.status()
+            );
+        }
     }
 
     // INV-X3: Instance.status=InProgress ⇒ Steps が1つ以上存在
