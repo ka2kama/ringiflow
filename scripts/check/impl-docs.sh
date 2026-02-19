@@ -19,6 +19,11 @@ for dir in "$BASE_DIR"/*/; do
     dirname=$(basename "$dir")
 
     # ディレクトリ名チェック: PR<番号>_<機能名> または <機能名> パターン
+    # 旧形式（連番プレフィックス）を拒否
+    if [[ "$dirname" =~ ^[0-9]+_ ]]; then
+        ERRORS+=("旧形式の連番ディレクトリ名です。PR<番号>_<機能名> に変更してください: $dir")
+        continue
+    fi
     # PR プレフィックスがある場合は PR<数字>_ 形式を検証
     if [[ "$dirname" =~ ^PR ]] && ! [[ "$dirname" =~ ^PR[0-9]+_ ]]; then
         ERRORS+=("ディレクトリ名が PR<番号>_<機能名> パターンに合致しません: $dir")
