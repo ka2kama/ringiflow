@@ -105,7 +105,7 @@ gh issue list --state open --json number,title,labels,body --limit 50
 
 ---
 着手する場合: `just worktree-issue <Issue番号> <スロット番号>` でスロットのブランチを切り替え
-現在の作業を続ける場合: `/restore` を実行
+現在の作業を続ける場合: `/start` を実行
 ```
 
 進行中の作業がない場合は「📌 進行中の作業」セクションと「🟢 並行着手が可能な候補」セクションを省略し、フラット表示する:
@@ -140,6 +140,6 @@ gh issue list --state open --json number,title,labels,body --limit 50
 ## 補足
 
 - このスキルは「何をすべきか」を特定するまでが役割
-- 実際の作業開始は `/restore`、worktree のブランチ切り替え、または手動でブランチを作成して行う
+- 実際の作業開始は `/start`、worktree のブランチ切り替え、または手動でブランチを作成して行う
 - 優先度ラベルがない場合は、Issue の作成日時（古い順）を参考にする
 - worktree での並行開発については ADR-021 を参照
