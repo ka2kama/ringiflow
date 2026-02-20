@@ -80,20 +80,20 @@ type WorkflowDefinitionStatus
 
 {-| 文字列からステータスに変換
 
-バックエンドは小文字（"draft", "published", "archived"）で返す。
+バックエンドは PascalCase（"Draft", "Published", "Archived"）で返す。
 不明な値は Draft にフォールバックする（新規作成直後のデフォルト）。
 
 -}
 statusFromString : String -> WorkflowDefinitionStatus
 statusFromString str =
     case str of
-        "draft" ->
+        "Draft" ->
             Draft
 
-        "published" ->
+        "Published" ->
             Published
 
-        "archived" ->
+        "Archived" ->
             Archived
 
         _ ->

@@ -381,9 +381,9 @@ viewFilters statusFilter =
             , value (statusFilterToValue statusFilter)
             ]
             [ option [ value "" ] [ text "すべてのステータス" ]
-            , option [ value "draft" ] [ text "下書き" ]
-            , option [ value "published" ] [ text "公開済み" ]
-            , option [ value "archived" ] [ text "アーカイブ済み" ]
+            , option [ value "Draft" ] [ text "下書き" ]
+            , option [ value "Published" ] [ text "公開済み" ]
+            , option [ value "Archived" ] [ text "アーカイブ済み" ]
             ]
         ]
 
@@ -392,13 +392,13 @@ statusFilterToValue : Maybe WorkflowDefinitionStatus -> String
 statusFilterToValue maybeStatus =
     case maybeStatus of
         Just Draft ->
-            "draft"
+            "Draft"
 
         Just Published ->
-            "published"
+            "Published"
 
         Just Archived ->
-            "archived"
+            "Archived"
 
         Nothing ->
             ""

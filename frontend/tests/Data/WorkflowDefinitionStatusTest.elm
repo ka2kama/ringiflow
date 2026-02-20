@@ -32,17 +32,17 @@ suite =
 statusFromStringTests : Test
 statusFromStringTests =
     describe "statusFromString"
-        [ test "\"draft\" → Draft" <|
+        [ test "\"Draft\" → Draft" <|
             \_ ->
-                WorkflowDefinition.statusFromString "draft"
+                WorkflowDefinition.statusFromString "Draft"
                     |> Expect.equal Draft
-        , test "\"published\" → Published" <|
+        , test "\"Published\" → Published" <|
             \_ ->
-                WorkflowDefinition.statusFromString "published"
+                WorkflowDefinition.statusFromString "Published"
                     |> Expect.equal Published
-        , test "\"archived\" → Archived" <|
+        , test "\"Archived\" → Archived" <|
             \_ ->
-                WorkflowDefinition.statusFromString "archived"
+                WorkflowDefinition.statusFromString "Archived"
                     |> Expect.equal Archived
         , test "不明な値は Draft にフォールバック" <|
             \_ ->
@@ -123,19 +123,19 @@ statusToBadgeTests =
 definitionStatusTests : Test
 definitionStatusTests =
     describe "definitionStatus"
-        [ test "status が \"draft\" の定義 → Draft" <|
+        [ test "status が \"Draft\" の定義 → Draft" <|
             \_ ->
-                makeDefinition "draft"
+                makeDefinition "Draft"
                     |> WorkflowDefinition.definitionStatus
                     |> Expect.equal Draft
-        , test "status が \"published\" の定義 → Published" <|
+        , test "status が \"Published\" の定義 → Published" <|
             \_ ->
-                makeDefinition "published"
+                makeDefinition "Published"
                     |> WorkflowDefinition.definitionStatus
                     |> Expect.equal Published
-        , test "status が \"archived\" の定義 → Archived" <|
+        , test "status が \"Archived\" の定義 → Archived" <|
             \_ ->
-                makeDefinition "archived"
+                makeDefinition "Archived"
                     |> WorkflowDefinition.definitionStatus
                     |> Expect.equal Archived
         ]
