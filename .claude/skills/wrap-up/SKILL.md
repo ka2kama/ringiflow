@@ -24,6 +24,7 @@ $ARGUMENTS
 | `impl` | 実装解説 |
 | `recipe` | 操作レシピ |
 | `improvement` | 改善記録 |
+| `investigation` | 調査記録 |
 
 ## 手順
 
@@ -59,6 +60,7 @@ git diff --stat main...HEAD
 | 実装解説 | 設計判断を伴う実装があった。`/explain` の実行を推奨 | `docs/07_実装解説/` |
 | 操作レシピ | 非自明な操作で問題解決、再利用可能なパターンを発見した | `prompts/recipes/` |
 | 改善記録 | AI 運用上の問題と対策があった | `process/improvements/YYYY-MM/` |
+| 調査記録 | 仮説検証 2 回以上のトラブルシューティングがあった | `process/investigations/YYYY-MM/` |
 
 注意: Git 管理外の情報源（auto memory `~/.claude/projects/.../memory/`、会話コンテキスト等）は永続的なドキュメントではない。これらに設計解説や技術知識が含まれていても、ドキュメント作成を省略する理由にならない。判定基準は「リポジトリ（Git 管理下）に形式知として残っているか」である。
 
@@ -121,6 +123,17 @@ git diff --stat main...HEAD
 6. 恒久対策がある場合は GitHub Issue を作成し、記録に Issue 番号を記載
 7. `docs.md` の自己チェック（コンテキスト独立性、サニタイズ、文体整合）を実施する
 
+#### 調査記録
+
+規約: `process/investigations/README.md`
+
+1. README を Read で参照し、テンプレートと必須/任意セクションを確認する
+2. 初回コミット時刻を取得してファイル名を組み立てる（命名規則照合を実施）
+3. セッション中の仮説追跡表を転記し、検証データ（実際の出力、ログ等）を補完する
+4. 「診断パターン」セクションで、今後同種の問題が発生した場合のヒントを抽出する
+5. 関連ドキュメント（セッションログ、改善記録等）へのリンクを設定する
+6. `docs.md` の自己チェック（コンテキスト独立性、サニタイズ、文体整合）を実施する
+
 ### Step 4: 計画ファイルのリネーム
 
 セッション中に plan mode を使用した場合、計画ファイルをランダム名から命名規則に従ってリネームする。
@@ -148,4 +161,5 @@ git mv prompts/plans/clever-napping-panda.md prompts/plans/288_dev-auth-feature-
    - `Add implementation notes for <機能名>`
    - `Add recipe: <レシピ名>`
    - `Add improvement record: <トピック>`
+   - `Add investigation record: <トピック>`
    - `Rename plan file for #<Issue番号>`
