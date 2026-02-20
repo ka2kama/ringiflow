@@ -19,7 +19,23 @@ $ARGUMENTS
 
 ## 手順
 
-### Step 1: Issue を特定
+### Step 1: main を最新化
+
+```bash
+git fetch origin main
+```
+
+main ブランチにいる場合は `git pull origin main` で最新化する。feature ブランチにいる場合は、差分があれば rebase する:
+
+```bash
+# 差分があるか確認
+git log HEAD..origin/main --oneline
+
+# 差分があれば rebase
+git rebase origin/main
+```
+
+### Step 2: Issue を特定
 
 現在のブランチ名から Issue 番号を抽出する:
 
@@ -31,8 +47,8 @@ git branch --show-current
 
 | 状態 | 対応 |
 |------|------|
-| ブランチ名に Issue 番号あり | 抽出して Step 2 へ |
-| 引数で Issue 番号指定あり | 指定番号を使って Step 2 へ |
+| ブランチ名に Issue 番号あり | 抽出して Step 3 へ |
+| 引数で Issue 番号指定あり | 指定番号を使って Step 3 へ |
 | main ブランチ + 引数なし | オープンな Issue 一覧を表示し、ユーザーに選択を促す |
 | ブランチ名に番号なし + 引数なし | ユーザーに Issue 番号を確認 |
 
@@ -51,7 +67,7 @@ git checkout <ブランチ名>
 
 対応するブランチが存在しない場合は、新規ブランチ作成を提案する。
 
-### Step 2: Issue の状態を確認
+### Step 3: Issue の状態を確認
 
 ```bash
 gh issue view <Issue番号>
@@ -63,7 +79,7 @@ gh issue view <Issue番号>
 - 完了基準のチェックリスト（✅/⬜ の状態）
 - 実装計画（Phase の進捗、テストリスト）
 
-### Step 3: 直近の作業を確認
+### Step 4: 直近の作業を確認
 
 ```bash
 # このブランチのコミット一覧
@@ -79,7 +95,7 @@ Draft PR がある場合は PR の状態も確認する:
 gh pr view --json number,state,isDraft,title,url 2>/dev/null
 ```
 
-### Step 4: セッションログを参照
+### Step 5: セッションログを参照
 
 関連するセッションログを検索する:
 
@@ -94,7 +110,7 @@ grep -rl "#<Issue番号>" prompts/runs/ 2>/dev/null
 関連するセッションログがあれば内容を読み込み、前回の作業状況を把握する。
 なければスキップする（セッションログの有無は作業開始に影響しない）。
 
-### Step 5: コンテキストを提示して作業開始
+### Step 6: コンテキストを提示して作業開始
 
 収集した情報を以下の形式で提示する:
 
