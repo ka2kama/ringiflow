@@ -348,7 +348,11 @@ view model =
         , viewFilters model.statusFilter
         , viewContent model
         , viewConfirmDialog model.pendingAction
-        , viewCreateDialog model
+        , if model.showCreateDialog then
+            viewCreateDialog model
+
+          else
+            text ""
         ]
 
 
