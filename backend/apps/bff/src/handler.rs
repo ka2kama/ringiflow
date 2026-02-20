@@ -22,6 +22,7 @@ pub mod role;
 pub mod task;
 pub mod user;
 pub mod workflow;
+pub mod workflow_definition;
 
 pub use audit_log::{AuditLogState, list_audit_logs};
 pub use auth::{AuthState, csrf, login, logout, me};
@@ -52,4 +53,13 @@ pub use workflow::{
     request_changes_step,
     resubmit_workflow,
     submit_workflow,
+};
+pub use workflow_definition::{
+    WorkflowDefinitionState,
+    archive_definition,
+    create_definition,
+    delete_definition,
+    publish_definition,
+    update_definition,
+    validate_definition,
 };
