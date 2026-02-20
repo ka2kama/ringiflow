@@ -30,7 +30,6 @@ use crate::handler::{
    ),
    paths(
       // health
-      health::health_check,
       health::readiness_check,
       // auth
       auth::login,

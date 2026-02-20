@@ -1424,19 +1424,6 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
-  /health:
-    get:
-      tags:
-      - health
-      summary: BFF のヘルスチェックエンドポイント
-      operationId: health_check
-      responses:
-        '200':
-          description: サーバー稼働中
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HealthResponse'
   /health/ready:
     get:
       tags:
@@ -2484,35 +2471,6 @@ components:
           description: ワークフロータイトル
         form_data:
           description: フォームデータ
-    HealthResponse:
-      type: object
-      description: |-
-        ヘルスチェックレスポンス
-
-        各サービスのヘルスチェックエンドポイントが返すレスポンス型。
-        `status` はサービスの稼働状態、`version` は Cargo.toml のバージョンを示す。
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::HealthResponse;
-
-        let response = HealthResponse {
-            status:  "healthy".to_string(),
-            version: "0.1.0".to_string(),
-        };
-        assert_eq!(response.status, "healthy");
-        ```
-      required:
-      - status
-      - version
-      properties:
-        status:
-          type: string
-          description: 稼働状態（`"healthy"` または `"unhealthy"`）
-        version:
-          type: string
-          description: アプリケーションバージョン（Cargo.toml から取得）
     LoginRequest:
       type: object
       description: ログインリクエスト

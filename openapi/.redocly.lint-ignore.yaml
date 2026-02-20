@@ -1,0 +1,5 @@
+# Redocly lint ルール除外設定
+# ヘルスチェックエンドポイントは 4XX を返さないため除外
+openapi.yaml:
+  operation-4xx-response:
+    - '#/paths/~1health~1ready/get/responses'
