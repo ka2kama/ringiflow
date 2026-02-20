@@ -413,6 +413,10 @@ check-doc-links:
 check-impl-docs:
     ./scripts/check/impl-docs.sh
 
+# 計画ファイルの確認事項チェック漏れを検出
+lint-plans:
+    ./scripts/check/plan-confirmations.sh
+
 # 計装（tracing::instrument）の漏れを検出
 check-instrumentation:
     ./scripts/check/instrumentation.sh
