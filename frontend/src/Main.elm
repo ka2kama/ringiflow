@@ -919,7 +919,7 @@ viewAdminSection currentRoute shared =
         , viewNavItem currentRoute Route.WorkflowDefinitions "ワークフロー定義" Icons.workflowDefinitions
         , viewNavItem currentRoute Route.Users "ユーザー管理" Icons.users
         , viewNavItem currentRoute Route.Roles "ロール管理" Icons.roles
-        , viewNavItem currentRoute Route.WorkflowDefinitionDesignerNew "ワークフロー定義" Icons.workflowDesigner
+        , viewNavItem currentRoute Route.WorkflowDefinitionDesignerNew "ワークフローデザイナー" Icons.workflowDesigner
         , viewNavItem currentRoute Route.AuditLogs "監査ログ" Icons.auditLog
         ]
 
