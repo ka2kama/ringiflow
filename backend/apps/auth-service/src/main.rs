@@ -61,7 +61,15 @@ use axum::{
     routing::{delete, get, post},
 };
 use config::AuthConfig;
-use handler::{AuthState, create_credentials, delete_credentials, health_check, verify};
+use handler::{
+    AuthState,
+    ReadinessState,
+    create_credentials,
+    delete_credentials,
+    health_check,
+    readiness_check,
+    verify,
+};
 use ringiflow_infra::{
     Argon2PasswordChecker,
     PasswordChecker,
@@ -105,6 +113,9 @@ async fn main() -> anyhow::Result<()> {
         .expect("マイグレーションの実行に失敗しました");
     tracing::info!("マイグレーションを適用しました");
 
+    // Readiness Check 用 State（pool が move される前に clone）
+    let readiness_state = Arc::new(ReadinessState { pool: pool.clone() });
+
     // 依存コンポーネントを初期化
     let credentials_repo: Arc<dyn CredentialsRepository> =
         Arc::new(PostgresCredentialsRepository::new(pool));
@@ -117,6 +128,11 @@ async fn main() -> anyhow::Result<()> {
     // ルーター構築
     let app = Router::new()
         .route("/health", get(health_check))
+        .merge(
+            Router::new()
+                .route("/health/ready", get(readiness_check))
+                .with_state(readiness_state),
+        )
         .route("/internal/auth/verify", post(verify))
         .route("/internal/auth/credentials", post(create_credentials))
         .route(
