@@ -8,7 +8,7 @@ ADR-053 で決定した SVG + Elm 直接レンダリング方式に基づく。
 -}
 
 import Browser.Events
-import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..))
+import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), viewBoxHeight, viewBoxWidth)
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -24,20 +24,6 @@ import Svg.Events
 
 
 -- CONSTANTS
-
-
-{-| SVG viewBox の幅
--}
-viewBoxWidth : Float
-viewBoxWidth =
-    1200
-
-
-{-| SVG viewBox の高さ
--}
-viewBoxHeight : Float
-viewBoxHeight =
-    800
 
 
 {-| キャンバス SVG 要素の HTML id
@@ -198,21 +184,17 @@ update msg model =
                     )
 
         KeyDown key ->
-            if (key == "Delete" || key == "Backspace") && model.selectedStepId /= Nothing then
-                case model.selectedStepId of
-                    Just stepId ->
-                        ( { model
-                            | steps = Dict.remove stepId model.steps
-                            , selectedStepId = Nothing
-                          }
-                        , Cmd.none
-                        )
+            case ( key == "Delete" || key == "Backspace", model.selectedStepId ) of
+                ( True, Just stepId ) ->
+                    ( { model
+                        | steps = Dict.remove stepId model.steps
+                        , selectedStepId = Nothing
+                      }
+                    , Cmd.none
+                    )
 
-                    Nothing ->
-                        ( model, Cmd.none )
-
-            else
-                ( model, Cmd.none )
+                _ ->
+                    ( model, Cmd.none )
 
         GotCanvasBounds value ->
             case DesignerCanvas.decodeBounds value of

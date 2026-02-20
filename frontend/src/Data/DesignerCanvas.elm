@@ -15,6 +15,8 @@ module Data.DesignerCanvas exposing
     , stepColors
     , stepDimensions
     , stepTypeToString
+    , viewBoxHeight
+    , viewBoxWidth
     )
 
 {-| ワークフローデザイナー キャンバスのデータ型と純粋関数

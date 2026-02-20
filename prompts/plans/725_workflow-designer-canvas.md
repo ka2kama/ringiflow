@@ -153,11 +153,11 @@ TDD（Red → Green → Refactor）で MVP を積み上げる。
 キャンバスのデータ型を定義し、ルートとページを登録する。この Phase で Designer ページに空のキャンバス（グリッド線のみ）が表示される状態にする。
 
 #### 確認事項
-- [ ] 型: Route 型のバリアント追加パターン → `frontend/src/Route.elm`
-- [ ] パターン: Main.elm のページ登録パターン（Page, Msg, initPage, update, viewPage, subscriptions, updatePageShared）→ 既存ページ（WorkflowNew 等）を参照
-- [ ] パターン: Data/ モジュールの型定義パターン → `frontend/src/Data/WorkflowDefinition.elm`
-- [ ] ライブラリ: `Dict` の import パス → Grep 既存使用
-- [ ] パターン: SVG レンダリングパターン → `frontend/src/Component/Icons.elm`（Svg, SvgAttr の使い方）
+- [x] 型: Route 型のバリアント追加パターン → `Route.elm` L93, type Route にバリアント追加 + parser/toString/isRouteActive/pageTitle の 4 箇所
+- [x] パターン: Main.elm のページ登録パターン → WorkflowNew を参照、7 integration points（Page, Msg, initPage, update, viewPage, subscriptions, updatePageShared）
+- [x] パターン: Data/ モジュールの型定義パターン → `Data/WorkflowDefinition.elm` を参照、type alias + exposing リスト形式
+- [x] ライブラリ: `Dict` の import パス → Grep 結果 20+ 箇所、`import Dict exposing (Dict)` パターン
+- [x] パターン: SVG レンダリングパターン → `Component/Icons.elm` を参照、`Svg`, `Svg.Attributes as SvgAttr` import パターン
 
 #### テストリスト
 
@@ -179,10 +179,10 @@ E2E テスト（該当なし — Phase 4 完了後に開発サーバーで手動
 グリッド線の描画、ステップノードの SVG レンダリング（種別ごとの色・形状）、ステップパレット UI を実装する。この Phase でパレットの見た目とキャンバス上のステップ描画（ハードコードされたテストデータ）が動作する。
 
 #### 確認事項
-- [ ] ライブラリ: `Svg.line`, `Svg.rect`, `Svg.text_`, `Svg.g` の引数パターン → Grep 既存使用 or elm/svg ドキュメント
-- [ ] ライブラリ: `Svg.Attributes.viewBox`, `Svg.Attributes.fill`, `Svg.Attributes.stroke` → elm/svg ドキュメント
-- [ ] パターン: デザインガイドラインの色トークン → `docs/03_詳細設計書/13_デザインガイドライン.md`
-- [ ] パターン: ステップ種別ごとの色設計 → 詳細設計書 15 のレイヤー構成
+- [x] ライブラリ: `Svg.line`, `Svg.rect`, `Svg.text_`, `Svg.g` の引数パターン → `Component/Icons.elm` で使用確認、属性リスト + 子要素リストの 2 引数
+- [x] ライブラリ: `Svg.Attributes.viewBox`, `Svg.Attributes.fill`, `Svg.Attributes.stroke` → Icons.elm で使用確認、String 引数
+- [x] パターン: デザインガイドラインの色トークン → `13_デザインガイドライン.md` 参照、success/primary/secondary の 100/600 レベル
+- [x] パターン: ステップ種別ごとの色設計 → `15_ワークフローデザイナー設計.md` 参照、Start=success, Approval=primary, End=secondary
 
 #### テストリスト
 
@@ -201,11 +201,11 @@ E2E テスト（該当なし）
 Ports でキャンバス座標変換を実装し、パレットからキャンバスへのドラッグ&ドロップでステップを配置する機能を実装する。
 
 #### 確認事項
-- [ ] パターン: 既存 Ports の定義パターン → `frontend/src/Ports.elm`（port module 宣言、exposing リスト）
-- [ ] パターン: main.js の Port ハンドラパターン → `frontend/src/main.js` L223-250
-- [ ] ライブラリ: `Browser.Events.onMouseMove`, `Browser.Events.onMouseUp` のシグネチャ → elm/browser ドキュメント（プロジェクト初使用）
-- [ ] ライブラリ: `Json.Decode.field`, `Json.Decode.float` でマウスイベントをデコード → Grep 既存使用
-- [ ] パターン: subscriptions の Model 依存パターン → Main.elm L730-740（既存は `Sub Msg`、Designer は `Model -> Sub Msg`）
+- [x] パターン: 既存 Ports の定義パターン → `Ports.elm` L1 `port module` 宣言、Cmd msg / Sub msg シグネチャ、exposing リストにアルファベット順追加
+- [x] パターン: main.js の Port ハンドラパターン → `main.js` L223-250、`if (app.ports.xxx)` ガード + subscribe パターン
+- [x] ライブラリ: `Browser.Events.onMouseMove`, `Browser.Events.onMouseUp` → elm/browser ドキュメント確認、`Decode.Decoder msg -> Sub msg` シグネチャ
+- [x] ライブラリ: `Json.Decode.field`, `Json.Decode.float` でマウスイベントをデコード → Grep 結果 10+ 箇所、`Decode.field "key" Decode.string` 等のパターン
+- [x] パターン: subscriptions の Model 依存パターン → Main.elm L763 で `Designer.subscriptions subModel` と Model を渡す方式。既存ページ（`Sub Msg`）とは異なる
 
 #### テストリスト
 
@@ -231,9 +231,9 @@ E2E テスト（該当なし）
 配置済みステップのクリック選択、ドラッグ移動、Delete キー削除、背景クリック選択解除を実装する。
 
 #### 確認事項
-- [ ] ライブラリ: `Browser.Events.onKeyDown` のシグネチャとデコーダ → elm/browser ドキュメント
-- [ ] パターン: SVG 要素の `onMouseDown` イベント（offsetX/offsetY の取得方法）→ Grep 既存使用 or elm/svg ドキュメント
-- [ ] パターン: 既存の keyboard event handling パターン → Grep `onKeyDown` or `KeyDown`
+- [x] ライブラリ: `Browser.Events.onKeyDown` → elm/browser ドキュメント確認、`Decode.Decoder msg -> Sub msg` シグネチャ、`Decode.field "key" Decode.string` で文字列取得
+- [x] パターン: SVG 要素の `onMouseDown` イベント → `Html.Events.stopPropagationOn` を使用、offsetX/offsetY は SVG で不正確なため clientX/clientY を採用（判断ログに記載）
+- [x] パターン: 既存の keyboard event handling → プロジェクト初使用（Grep 結果 0 件）。elm/browser ドキュメントの `onKeyDown` パターンに従った
 
 #### テストリスト
 
