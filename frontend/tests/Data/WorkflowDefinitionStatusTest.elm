@@ -175,7 +175,7 @@ encodeCreateRequestTests =
                         , description = Ok "経費の精算を申請します"
                         , hasDefinition = True
                         }
-        , test "definition に steps 配列と start ステップが含まれる" <|
+        , test "definition に開始・承認・終了ステップと遷移が含まれる" <|
             \_ ->
                 let
                     encoded =
@@ -187,9 +187,18 @@ encodeCreateRequestTests =
                     stepsDecoder =
                         Decode.field "definition"
                             (Decode.field "steps" (Decode.list (Decode.field "type" Decode.string)))
+
+                    transitionsDecoder =
+                        Decode.field "definition"
+                            (Decode.field "transitions" (Decode.list (Decode.field "from" Decode.string)))
                 in
-                Decode.decodeValue stepsDecoder encoded
-                    |> Expect.equal (Ok [ "start" ])
+                { stepTypes = Decode.decodeValue stepsDecoder encoded
+                , transitionFroms = Decode.decodeValue transitionsDecoder encoded
+                }
+                    |> Expect.equal
+                        { stepTypes = Ok [ "start", "approval", "end", "end" ]
+                        , transitionFroms = Ok [ "start", "approval", "approval" ]
+                        }
         ]
 
 

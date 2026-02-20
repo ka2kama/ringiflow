@@ -177,7 +177,11 @@ encodeVersionRequest { version } =
         ]
 
 
-{-| 最小限のデフォルト定義（開始ステップのみ）
+{-| 最小限の有効なデフォルト定義
+
+公開バリデーションを通過するために、開始・承認・終了ステップと遷移を含む。
+デザイナー（#725/#726）でカスタマイズする前提の雛形。
+
 -}
 defaultDefinition : Encode.Value
 defaultDefinition =
@@ -188,6 +192,42 @@ defaultDefinition =
                     [ ( "id", Encode.string "start" )
                     , ( "type", Encode.string "start" )
                     , ( "name", Encode.string "開始" )
+                    ]
+                , Encode.object
+                    [ ( "id", Encode.string "approval" )
+                    , ( "type", Encode.string "approval" )
+                    , ( "name", Encode.string "承認" )
+                    , ( "assignee", Encode.object [ ( "type", Encode.string "user" ) ] )
+                    ]
+                , Encode.object
+                    [ ( "id", Encode.string "end_approved" )
+                    , ( "type", Encode.string "end" )
+                    , ( "name", Encode.string "承認完了" )
+                    , ( "status", Encode.string "approved" )
+                    ]
+                , Encode.object
+                    [ ( "id", Encode.string "end_rejected" )
+                    , ( "type", Encode.string "end" )
+                    , ( "name", Encode.string "却下" )
+                    , ( "status", Encode.string "rejected" )
+                    ]
+                ]
+          )
+        , ( "transitions"
+          , Encode.list identity
+                [ Encode.object
+                    [ ( "from", Encode.string "start" )
+                    , ( "to", Encode.string "approval" )
+                    ]
+                , Encode.object
+                    [ ( "from", Encode.string "approval" )
+                    , ( "to", Encode.string "end_approved" )
+                    , ( "trigger", Encode.string "approve" )
+                    ]
+                , Encode.object
+                    [ ( "from", Encode.string "approval" )
+                    , ( "to", Encode.string "end_rejected" )
+                    , ( "trigger", Encode.string "reject" )
                     ]
                 ]
           )
