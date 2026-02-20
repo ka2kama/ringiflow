@@ -11,6 +11,7 @@ ringiflow-infra.workspace = true
 ringiflow-shared = { workspace = true, features = ["openapi", "observability"] }
 axum.workspace = true
 axum-extra.workspace = true
+redis.workspace = true
 reqwest.workspace = true
 async-trait.workspace = true
 tokio.workspace = true
