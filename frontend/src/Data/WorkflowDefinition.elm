@@ -4,6 +4,7 @@ module Data.WorkflowDefinition exposing
     , WorkflowDefinitionId
     , approvalStepInfos
     , decoder
+    , detailDecoder
     , listDecoder
     )
 
@@ -73,6 +74,16 @@ decoder =
         |> required "created_by" Decode.string
         |> required "created_at" Decode.string
         |> required "updated_at" Decode.string
+
+
+{-| 単一のワークフロー定義レスポンスをデコード
+
+API レスポンスの `{ data: {...} }` 形式に対応。
+
+-}
+detailDecoder : Decoder WorkflowDefinition
+detailDecoder =
+    Decode.field "data" decoder
 
 
 {-| ワークフロー定義一覧をデコード

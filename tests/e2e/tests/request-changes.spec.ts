@@ -38,8 +38,9 @@ test.describe("差し戻し→再申請フロー", () => {
       .first()
       .click();
 
-    // ワークフロー定義のロード完了を待機（フォームデータが表示される）
-    await expect(page.getByText("テスト件名")).toBeVisible();
+    // 定義の非同期読み込み完了を待機
+    // Detail.elm: definition = Success → viewFormDataWithLabels が dt/dd を描画する
+    await expect(page.locator("dt").filter({ hasText: "件名" })).toBeVisible();
 
     await page.getByRole("button", { name: "再申請する" }).click();
 

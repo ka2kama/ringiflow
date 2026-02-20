@@ -659,14 +659,32 @@ getSelectedDefinition maybeId definitions =
 
 
 {-| 各ステップの承認者選択から承認者リストを構築する
+
+定義の承認ステップ順序に従って構築する。
+Dict.toList はキーのアルファベット順で返すため、バックエンドが期待する
+定義の steps 配列順と一致しない場合がある。
+
 -}
 buildApprovers : Model -> List WorkflowApi.StepApproverRequest
 buildApprovers model =
-    model.approvers
-        |> Dict.toList
+    let
+        -- 定義の承認ステップ順序を取得（定義が利用不可の場合は Dict のキー順）
+        stepIds =
+            case model.definitions of
+                Success definitions ->
+                    getSelectedDefinition model.selectedDefinitionId definitions
+                        |> Maybe.map WorkflowDefinition.approvalStepInfos
+                        |> Maybe.map (List.map .id)
+                        |> Maybe.withDefault (Dict.keys model.approvers)
+
+                _ ->
+                    Dict.keys model.approvers
+    in
+    stepIds
         |> List.filterMap
-            (\( stepId, state ) ->
-                ApproverSelector.selectedUserId state.selection
+            (\stepId ->
+                Dict.get stepId model.approvers
+                    |> Maybe.andThen (\state -> ApproverSelector.selectedUserId state.selection)
                     |> Maybe.map (\userId -> { stepId = stepId, assignedTo = userId })
             )
 

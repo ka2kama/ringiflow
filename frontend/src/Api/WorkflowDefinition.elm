@@ -71,6 +71,6 @@ getDefinition { config, id, toMsg } =
     Api.get
         { config = config
         , url = "/api/v1/workflow-definitions/" ++ id
-        , decoder = WorkflowDefinition.decoder
+        , decoder = WorkflowDefinition.detailDecoder
         , toMsg = toMsg
         }

@@ -74,6 +74,9 @@ export async function createAndSubmitMultiStepWorkflow(
     .first()
     .click();
 
+  // 全承認者の選択完了を待機（全 #approver-search が badge に置換される）
+  await expect(page.locator("#approver-search")).toHaveCount(0);
+
   await page.getByRole("button", { name: "申請する" }).click();
   await expect(page.getByText("申請が完了しました")).toBeVisible();
 }
