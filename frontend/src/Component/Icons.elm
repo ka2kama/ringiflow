@@ -5,6 +5,7 @@ module Component.Icons exposing
     , roles
     , tasks
     , users
+    , workflowDesigner
     , workflows
     )
 
@@ -120,6 +121,25 @@ auditLog =
         , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "10", SvgAttr.x2 "16", SvgAttr.y2 "10" ] []
         , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "14", SvgAttr.x2 "16", SvgAttr.y2 "14" ] []
         , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "18", SvgAttr.x2 "12", SvgAttr.y2 "18" ] []
+        ]
+
+
+{-| ワークフローデザイナー（フローチャート）
+-}
+workflowDesigner : Html msg
+workflowDesigner =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.rect [ SvgAttr.x "3", SvgAttr.y "3", SvgAttr.width "6", SvgAttr.height "4", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "15", SvgAttr.y "3", SvgAttr.width "6", SvgAttr.height "4", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "9", SvgAttr.y "17", SvgAttr.width "6", SvgAttr.height "4", SvgAttr.rx "1" ] []
+        , Svg.path [ SvgAttr.d "M6 7v3a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7" ] []
+        , Svg.line [ SvgAttr.x1 "12", SvgAttr.y1 "12", SvgAttr.x2 "12", SvgAttr.y2 "17" ] []
         ]
 
 

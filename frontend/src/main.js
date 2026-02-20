@@ -231,6 +231,30 @@ if (app.ports.showModalDialog) {
   });
 }
 
+/**
+ * キャンバス境界情報取得（Ports: requestCanvasBounds / receiveCanvasBounds）
+ *
+ * ワークフローデザイナーで SVG キャンバスの getBoundingClientRect を取得し、
+ * マウス座標 → SVG viewBox 座標への変換に使用する。
+ * requestAnimationFrame で DOM 更新完了後に取得する。
+ */
+if (app.ports.requestCanvasBounds) {
+  app.ports.requestCanvasBounds.subscribe((elementId) => {
+    requestAnimationFrame(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        app.ports.receiveCanvasBounds.send({
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
+      }
+    });
+  });
+}
+
 if (app.ports.setBeforeUnloadEnabled) {
   let beforeUnloadHandler = null;
 

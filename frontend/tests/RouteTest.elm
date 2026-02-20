@@ -93,6 +93,12 @@ fromUrlTests =
                     parseUrl "/audit-logs"
                         |> Expect.equal AuditLogs
             ]
+        , describe "ワークフロー定義ルート"
+            [ test "/workflow-definitions/new → WorkflowDefinitionDesignerNew" <|
+                \_ ->
+                    parseUrl "/workflow-definitions/new"
+                        |> Expect.equal WorkflowDefinitionDesignerNew
+            ]
         , describe "クエリパラメータ"
             [ test "/workflows?status=in_progress → InProgress フィルタ" <|
                 \_ ->
@@ -195,6 +201,12 @@ toStringTests =
                 \_ ->
                     Route.toString AuditLogs
                         |> Expect.equal "/audit-logs"
+            ]
+        , describe "ワークフロー定義ルート"
+            [ test "WorkflowDefinitionDesignerNew → /workflow-definitions/new" <|
+                \_ ->
+                    Route.toString WorkflowDefinitionDesignerNew
+                        |> Expect.equal "/workflow-definitions/new"
             ]
         , describe "クエリパラメータ"
             [ test "status=InProgress → /workflows?status=in_progress" <|
