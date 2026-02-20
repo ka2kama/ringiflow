@@ -35,7 +35,7 @@ test.describe("ワークフロー定義管理", () => {
     // When: フォームに入力して送信
     await page.getByLabel("名前").fill(uniqueName);
     await page.getByLabel("説明").fill("E2E テスト用の定義です");
-    await page.getByRole("button", { name: "作成" }).click();
+    await page.getByRole("button", { name: "作成", exact: true }).click();
 
     // Then: 成功メッセージが表示される
     await expect(
@@ -55,7 +55,7 @@ test.describe("ワークフロー定義管理", () => {
     await page.goto("/workflow-definitions");
     await page.getByRole("button", { name: "新規作成" }).click();
     await page.getByLabel("名前").fill(uniqueName);
-    await page.getByRole("button", { name: "作成" }).click();
+    await page.getByRole("button", { name: "作成", exact: true }).click();
     await expect(
       page.getByText("ワークフロー定義を作成しました"),
     ).toBeVisible();
