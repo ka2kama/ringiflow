@@ -5,6 +5,8 @@ module Api.WorkflowDefinition exposing
     , getDefinition
     , listDefinitions
     , publishDefinition
+    , updateDefinition
+    , validateDefinition
     )
 
 {-| ワークフロー定義 API クライアント
@@ -32,7 +34,7 @@ BFF の `/api/v1/workflow-definitions` エンドポイントへのアクセス�
 -}
 
 import Api exposing (ApiError, RequestConfig)
-import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
+import Data.WorkflowDefinition as WorkflowDefinition exposing (ValidationResult, WorkflowDefinition)
 import Http
 import Json.Encode as Encode
 
@@ -101,6 +103,53 @@ createDefinition { config, body, toMsg } =
         , url = "/api/v1/workflow-definitions"
         , body = Http.jsonBody body
         , decoder = WorkflowDefinition.detailDecoder
+        , toMsg = toMsg
+        }
+
+
+{-| ワークフロー定義を更新
+
+`PUT /api/v1/workflow-definitions/{id}`
+
+デザイナーからの保存に使用。version による楽観的ロックあり。
+
+-}
+updateDefinition :
+    { config : RequestConfig
+    , id : String
+    , body : Encode.Value
+    , toMsg : Result ApiError WorkflowDefinition -> msg
+    }
+    -> Cmd msg
+updateDefinition { config, id, body, toMsg } =
+    Api.put
+        { config = config
+        , url = "/api/v1/workflow-definitions/" ++ id
+        , body = Http.jsonBody body
+        , decoder = WorkflowDefinition.detailDecoder
+        , toMsg = toMsg
+        }
+
+
+{-| ワークフロー定義をバリデーション
+
+`POST /api/v1/workflow-definitions/validate`
+
+保存や公開の前にフロー定義の妥当性を検証する。
+
+-}
+validateDefinition :
+    { config : RequestConfig
+    , body : Encode.Value
+    , toMsg : Result ApiError ValidationResult -> msg
+    }
+    -> Cmd msg
+validateDefinition { config, body, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/workflow-definitions/validate"
+        , body = Http.jsonBody body
+        , decoder = WorkflowDefinition.validationResultDecoder
         , toMsg = toMsg
         }
 

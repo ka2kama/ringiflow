@@ -102,6 +102,10 @@ fromUrlTests =
                 \_ ->
                     parseUrl "/workflow-definitions/new"
                         |> Expect.equal WorkflowDefinitionDesignerNew
+            , test "/workflow-definitions/{uuid}/edit → WorkflowDefinitionDesignerEdit uuid" <|
+                \_ ->
+                    parseUrl "/workflow-definitions/550e8400-e29b-41d4-a716-446655440000/edit"
+                        |> Expect.equal (WorkflowDefinitionDesignerEdit "550e8400-e29b-41d4-a716-446655440000")
             ]
         , describe "クエリパラメータ"
             [ test "/workflows?status=in_progress → InProgress フィルタ" <|
@@ -215,6 +219,10 @@ toStringTests =
                 \_ ->
                     Route.toString WorkflowDefinitionDesignerNew
                         |> Expect.equal "/workflow-definitions/new"
+            , test "WorkflowDefinitionDesignerEdit uuid → /workflow-definitions/{uuid}/edit" <|
+                \_ ->
+                    Route.toString (WorkflowDefinitionDesignerEdit "abc-123")
+                        |> Expect.equal "/workflow-definitions/abc-123/edit"
             ]
         , describe "クエリパラメータ"
             [ test "status=InProgress → /workflows?status=in_progress" <|

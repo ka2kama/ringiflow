@@ -1,5 +1,7 @@
 module Data.WorkflowDefinition exposing
     ( ApprovalStepInfo
+    , ValidationError
+    , ValidationResult
     , WorkflowDefinition
     , WorkflowDefinitionId
     , WorkflowDefinitionStatus(..)
@@ -8,11 +10,13 @@ module Data.WorkflowDefinition exposing
     , definitionStatus
     , detailDecoder
     , encodeCreateRequest
+    , encodeUpdateRequest
     , encodeVersionRequest
     , listDecoder
     , statusFromString
     , statusToBadge
     , statusToJapanese
+    , validationResultDecoder
     )
 
 {-| ワークフロー定義のデータ型
@@ -177,6 +181,21 @@ encodeVersionRequest { version } =
         ]
 
 
+{-| ワークフロー定義更新リクエストの JSON を生成
+
+デザイナーから保存する際に使用。楽観的ロック用の version を含む。
+
+-}
+encodeUpdateRequest : { name : String, description : String, definition : Encode.Value, version : Int } -> Encode.Value
+encodeUpdateRequest { name, description, definition, version } =
+    Encode.object
+        [ ( "name", Encode.string name )
+        , ( "description", Encode.string description )
+        , ( "definition", definition )
+        , ( "version", Encode.int version )
+        ]
+
+
 {-| 最小限の有効なデフォルト定義
 
 公開バリデーションを通過するために、開始・承認・終了ステップと遷移を含む。
@@ -272,6 +291,55 @@ API レスポンスの `{ data: [...] }` 形式に対応。
 listDecoder : Decoder (List WorkflowDefinition)
 listDecoder =
     Decode.field "data" (Decode.list decoder)
+
+
+
+-- VALIDATION
+
+
+{-| バリデーション結果
+
+バックエンドの `ValidationResultData` に対応。
+
+-}
+type alias ValidationResult =
+    { valid : Bool
+    , errors : List ValidationError
+    }
+
+
+{-| バリデーションエラー
+
+`stepId` はエラーに関連するステップの ID（該当しない場合は Nothing）。
+
+-}
+type alias ValidationError =
+    { code : String
+    , message : String
+    , stepId : Maybe String
+    }
+
+
+{-| バリデーション結果デコーダー
+
+API レスポンスの `{ data: { valid, errors } }` 形式に対応。
+
+-}
+validationResultDecoder : Decode.Decoder ValidationResult
+validationResultDecoder =
+    Decode.field "data"
+        (Decode.map2 ValidationResult
+            (Decode.field "valid" Decode.bool)
+            (Decode.field "errors" (Decode.list validationErrorDecoder))
+        )
+
+
+validationErrorDecoder : Decode.Decoder ValidationError
+validationErrorDecoder =
+    Decode.map3 ValidationError
+        (Decode.field "code" Decode.string)
+        (Decode.field "message" Decode.string)
+        (Decode.maybe (Decode.field "step_id" Decode.string))
 
 
 

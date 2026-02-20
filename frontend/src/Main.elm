@@ -298,7 +298,14 @@ initPage key route shared =
         Route.WorkflowDefinitionDesignerNew ->
             let
                 ( model, cmd ) =
-                    Designer.init shared
+                    Designer.init shared ""
+            in
+            ( DesignerPage model, Cmd.map DesignerMsg cmd )
+
+        Route.WorkflowDefinitionDesignerEdit defId ->
+            let
+                ( model, cmd ) =
+                    Designer.init shared defId
             in
             ( DesignerPage model, Cmd.map DesignerMsg cmd )
 
@@ -766,6 +773,9 @@ isCurrentPageDirty model =
 
         RoleEditPage subModel ->
             RoleEdit.isDirty subModel
+
+        DesignerPage subModel ->
+            Designer.isDirty subModel
 
         _ ->
             False

@@ -29,6 +29,7 @@ import Html.Events exposing (onInput, onSubmit)
 import Json.Decode
 import Ports
 import RemoteData exposing (RemoteData(..))
+import Route
 import Shared exposing (Shared)
 
 
@@ -494,7 +495,12 @@ viewActions status def =
     div [ class "flex gap-2" ]
         (case status of
             Draft ->
-                [ Button.view
+                [ a
+                    [ href (Route.toString (Route.WorkflowDefinitionDesignerEdit def.id))
+                    , class "inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-primary-600 ring-1 ring-inset ring-primary-200 hover:bg-primary-50 transition-colors"
+                    ]
+                    [ text "編集" ]
+                , Button.view
                     { variant = Button.Success
                     , disabled = False
                     , onClick = ClickPublish def
