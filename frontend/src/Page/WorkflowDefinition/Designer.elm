@@ -8,7 +8,7 @@ ADR-053 で決定した SVG + Elm 直接レンダリング方式に基づく。
 -}
 
 import Browser.Events
-import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), viewBoxHeight, viewBoxWidth)
+import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -40,7 +40,9 @@ canvasElementId =
 type alias Model =
     { shared : Shared
     , steps : Dict String StepNode
+    , transitions : List Transition
     , selectedStepId : Maybe String
+    , selectedTransitionIndex : Maybe Int
     , dragging : Maybe DraggingState
     , canvasBounds : Maybe Bounds
     , nextStepNumber : Int
@@ -51,7 +53,9 @@ init : Shared -> ( Model, Cmd Msg )
 init shared =
     ( { shared = shared
       , steps = Dict.empty
+      , transitions = []
       , selectedStepId = Nothing
+      , selectedTransitionIndex = Nothing
       , dragging = Nothing
       , canvasBounds = Nothing
       , nextStepNumber = 1
@@ -76,6 +80,8 @@ type Msg
     | StepClicked String
     | CanvasBackgroundClicked
     | StepMouseDown String Float Float -- stepId, clientX, clientY
+    | ConnectionPortMouseDown String Float Float -- sourceStepId, clientX, clientY
+    | TransitionClicked Int
     | KeyDown String
     | GotCanvasBounds Encode.Value
 
@@ -160,22 +166,70 @@ update msg model =
                     , Cmd.none
                     )
 
-                Just (DraggingConnection _ _) ->
-                    -- Phase 2 で接続ドロップ判定を実装
-                    ( { model | dragging = Nothing }
+                Just (DraggingConnection sourceId mousePos) ->
+                    let
+                        -- ドロップ先のステップを判定
+                        targetStep =
+                            model.steps
+                                |> Dict.values
+                                |> List.filter (\s -> s.id /= sourceId)
+                                |> List.filter (DesignerCanvas.stepContainsPoint mousePos)
+                                |> List.head
+                    in
+                    case targetStep of
+                        Just target ->
+                            let
+                                sourceStep =
+                                    Dict.get sourceId model.steps
+
+                                trigger =
+                                    case sourceStep of
+                                        Just src ->
+                                            DesignerCanvas.autoTrigger src.stepType sourceId model.transitions
+
+                                        Nothing ->
+                                            Nothing
+
+                                newTransition =
+                                    { from = sourceId, to = target.id, trigger = trigger }
+                            in
+                            ( { model
+                                | transitions = model.transitions ++ [ newTransition ]
+                                , dragging = Nothing
+                              }
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( { model | dragging = Nothing }
+                            , Cmd.none
+                            )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        StepClicked stepId ->
+            ( { model | selectedStepId = Just stepId, selectedTransitionIndex = Nothing }
+            , Cmd.none
+            )
+
+        CanvasBackgroundClicked ->
+            ( { model | selectedStepId = Nothing, selectedTransitionIndex = Nothing }
+            , Cmd.none
+            )
+
+        ConnectionPortMouseDown sourceStepId clientX clientY ->
+            case DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY of
+                Just canvasPos ->
+                    ( { model | dragging = Just (DraggingConnection sourceStepId canvasPos) }
                     , Cmd.none
                     )
 
                 Nothing ->
                     ( model, Cmd.none )
 
-        StepClicked stepId ->
-            ( { model | selectedStepId = Just stepId }
-            , Cmd.none
-            )
-
-        CanvasBackgroundClicked ->
-            ( { model | selectedStepId = Nothing }
+        TransitionClicked index ->
+            ( { model | selectedTransitionIndex = Just index, selectedStepId = Nothing }
             , Cmd.none
             )
 
@@ -201,17 +255,35 @@ update msg model =
                     )
 
         KeyDown key ->
-            case ( key == "Delete" || key == "Backspace", model.selectedStepId ) of
-                ( True, Just stepId ) ->
-                    ( { model
-                        | steps = Dict.remove stepId model.steps
-                        , selectedStepId = Nothing
-                      }
-                    , Cmd.none
-                    )
+            if key == "Delete" || key == "Backspace" then
+                case ( model.selectedTransitionIndex, model.selectedStepId ) of
+                    ( Just index, _ ) ->
+                        -- 選択中の接続線を削除
+                        ( { model
+                            | transitions = removeAt index model.transitions
+                            , selectedTransitionIndex = Nothing
+                          }
+                        , Cmd.none
+                        )
 
-                _ ->
-                    ( model, Cmd.none )
+                    ( Nothing, Just stepId ) ->
+                        -- 選択中のステップと関連 transitions を削除
+                        ( { model
+                            | steps = Dict.remove stepId model.steps
+                            , transitions =
+                                List.filter
+                                    (\t -> t.from /= stepId && t.to /= stepId)
+                                    model.transitions
+                            , selectedStepId = Nothing
+                          }
+                        , Cmd.none
+                        )
+
+                    _ ->
+                        ( model, Cmd.none )
+
+            else
+                ( model, Cmd.none )
 
         GotCanvasBounds value ->
             case DesignerCanvas.decodeBounds value of
@@ -222,6 +294,13 @@ update msg model =
 
                 Err _ ->
                     ( model, Cmd.none )
+
+
+{-| リストの指定インデックスの要素を除去する
+-}
+removeAt : Int -> List a -> List a
+removeAt index list =
+    List.take index list ++ List.drop (index + 1) list
 
 
 
@@ -378,8 +457,11 @@ viewCanvasArea model =
             , SvgAttr.class "block"
             ]
             [ -- SVG レイヤー順: 先に描画 = 背面、後に描画 = 前面
-              viewCanvasBackground
+              viewArrowDefs
+            , viewCanvasBackground
             , viewGrid
+            , viewTransitions model
+            , viewConnectionDragPreview model
             , viewSteps model
             , viewDragPreview model
             ]
@@ -544,7 +626,250 @@ viewStepNode selectedStepId step =
             , SvgAttr.class "pointer-events-none select-none"
             ]
             [ Svg.text step.name ]
+
+        -- 出力ポート（右端中央の円）
+        , Svg.circle
+            [ SvgAttr.cx (String.fromFloat dim.width)
+            , SvgAttr.cy (String.fromFloat (dim.height / 2))
+            , SvgAttr.r "5"
+            , SvgAttr.fill colors.stroke
+            , SvgAttr.stroke "white"
+            , SvgAttr.strokeWidth "1.5"
+            , SvgAttr.class "cursor-crosshair"
+            , Html.Events.stopPropagationOn "mousedown"
+                (Decode.map2 (\cx cy -> ( ConnectionPortMouseDown step.id cx cy, True ))
+                    (Decode.field "clientX" Decode.float)
+                    (Decode.field "clientY" Decode.float)
+                )
+            ]
+            []
+
+        -- 入力ポート（左端中央の円）
+        , Svg.circle
+            [ SvgAttr.cx "0"
+            , SvgAttr.cy (String.fromFloat (dim.height / 2))
+            , SvgAttr.r "5"
+            , SvgAttr.fill colors.stroke
+            , SvgAttr.stroke "white"
+            , SvgAttr.strokeWidth "1.5"
+            , SvgAttr.class "pointer-events-none"
+            ]
+            []
         ]
+
+
+{-| SVG マーカー定義（矢印の先端形状）
+
+trigger に応じて3種の矢印を定義する:
+
+  - arrow-none: グレー（trigger なし）
+  - arrow-approve: 緑（承認）
+  - arrow-reject: 赤（却下）
+
+-}
+viewArrowDefs : Svg.Svg Msg
+viewArrowDefs =
+    Svg.defs []
+        [ viewArrowMarker "arrow-none" "#94a3b8"
+        , viewArrowMarker "arrow-approve" "#059669"
+        , viewArrowMarker "arrow-reject" "#dc2626"
+        ]
+
+
+{-| 個別の矢印マーカー定義
+-}
+viewArrowMarker : String -> String -> Svg.Svg Msg
+viewArrowMarker markerId color =
+    Svg.marker
+        [ SvgAttr.id markerId
+        , SvgAttr.viewBox "0 0 10 10"
+        , SvgAttr.refX "10"
+        , SvgAttr.refY "5"
+        , SvgAttr.markerWidth "8"
+        , SvgAttr.markerHeight "8"
+        , SvgAttr.orient "auto"
+        ]
+        [ Svg.path
+            [ SvgAttr.d "M 0 0 L 10 5 L 0 10 Z"
+            , SvgAttr.fill color
+            ]
+            []
+        ]
+
+
+{-| 接続線の描画
+
+全 Transition をベジェ曲線で描画する。trigger に応じて色と線種を変える:
+
+  - approve: 実線 + 緑矢印
+  - reject: 破線 + 赤矢印
+  - none: 実線 + グレー矢印
+
+-}
+viewTransitions : Model -> Svg.Svg Msg
+viewTransitions model =
+    Svg.g []
+        (model.transitions
+            |> List.indexedMap (viewTransitionLine model)
+        )
+
+
+{-| 個別の接続線描画
+-}
+viewTransitionLine : Model -> Int -> Transition -> Svg.Svg Msg
+viewTransitionLine model index transition =
+    let
+        fromStep =
+            Dict.get transition.from model.steps
+
+        toStep =
+            Dict.get transition.to model.steps
+    in
+    case ( fromStep, toStep ) of
+        ( Just from, Just to ) ->
+            let
+                startPos =
+                    DesignerCanvas.stepOutputPortPosition from
+
+                endPos =
+                    DesignerCanvas.stepInputPortPosition to
+
+                -- ベジェ曲線の制御点（水平方向に 1/3 オフセット）
+                dx =
+                    abs (endPos.x - startPos.x) / 3
+
+                pathData =
+                    "M "
+                        ++ String.fromFloat startPos.x
+                        ++ " "
+                        ++ String.fromFloat startPos.y
+                        ++ " C "
+                        ++ String.fromFloat (startPos.x + dx)
+                        ++ " "
+                        ++ String.fromFloat startPos.y
+                        ++ ", "
+                        ++ String.fromFloat (endPos.x - dx)
+                        ++ " "
+                        ++ String.fromFloat endPos.y
+                        ++ ", "
+                        ++ String.fromFloat endPos.x
+                        ++ " "
+                        ++ String.fromFloat endPos.y
+
+                ( strokeColor, markerId, dashArray ) =
+                    case transition.trigger of
+                        Just "approve" ->
+                            ( "#059669", "arrow-approve", "" )
+
+                        Just "reject" ->
+                            ( "#dc2626", "arrow-reject", "6 3" )
+
+                        _ ->
+                            ( "#94a3b8", "arrow-none", "" )
+
+                isSelected =
+                    model.selectedTransitionIndex == Just index
+
+                strokeWidth =
+                    if isSelected then
+                        "3"
+
+                    else
+                        "2"
+            in
+            Svg.g []
+                [ -- クリック判定用の透明な太いパス
+                  Svg.path
+                    [ SvgAttr.d pathData
+                    , SvgAttr.fill "none"
+                    , SvgAttr.stroke "transparent"
+                    , SvgAttr.strokeWidth "12"
+                    , SvgAttr.class "cursor-pointer"
+                    , Svg.Events.onClick (TransitionClicked index)
+                    ]
+                    []
+
+                -- 表示用のパス
+                , Svg.path
+                    ([ SvgAttr.d pathData
+                     , SvgAttr.fill "none"
+                     , SvgAttr.stroke strokeColor
+                     , SvgAttr.strokeWidth strokeWidth
+                     , SvgAttr.markerEnd ("url(#" ++ markerId ++ ")")
+                     , SvgAttr.class "pointer-events-none"
+                     ]
+                        ++ (if dashArray /= "" then
+                                [ SvgAttr.strokeDasharray dashArray ]
+
+                            else
+                                []
+                           )
+                        ++ (if isSelected then
+                                [ SvgAttr.filter "drop-shadow(0 0 3px rgba(99, 102, 241, 0.5))" ]
+
+                            else
+                                []
+                           )
+                    )
+                    []
+                ]
+
+        _ ->
+            Svg.text ""
+
+
+{-| 接続線ドラッグ中のプレビュー
+
+DraggingConnection 中、接続元の出力ポートから現在のマウス位置まで破線を描画する。
+
+-}
+viewConnectionDragPreview : Model -> Svg.Svg Msg
+viewConnectionDragPreview model =
+    case model.dragging of
+        Just (DraggingConnection sourceId mousePos) ->
+            case Dict.get sourceId model.steps of
+                Just sourceStep ->
+                    let
+                        startPos =
+                            DesignerCanvas.stepOutputPortPosition sourceStep
+
+                        dx =
+                            abs (mousePos.x - startPos.x) / 3
+
+                        pathData =
+                            "M "
+                                ++ String.fromFloat startPos.x
+                                ++ " "
+                                ++ String.fromFloat startPos.y
+                                ++ " C "
+                                ++ String.fromFloat (startPos.x + dx)
+                                ++ " "
+                                ++ String.fromFloat startPos.y
+                                ++ ", "
+                                ++ String.fromFloat (mousePos.x - dx)
+                                ++ " "
+                                ++ String.fromFloat mousePos.y
+                                ++ ", "
+                                ++ String.fromFloat mousePos.x
+                                ++ " "
+                                ++ String.fromFloat mousePos.y
+                    in
+                    Svg.path
+                        [ SvgAttr.d pathData
+                        , SvgAttr.fill "none"
+                        , SvgAttr.stroke "#94a3b8"
+                        , SvgAttr.strokeWidth "2"
+                        , SvgAttr.strokeDasharray "6 3"
+                        , SvgAttr.markerEnd "url(#arrow-none)"
+                        , SvgAttr.class "pointer-events-none"
+                        ]
+                        []
+
+                Nothing ->
+                    Svg.text ""
+
+        _ ->
+            Svg.text ""
 
 
 {-| ドラッグ中のプレビュー表示
@@ -611,4 +936,10 @@ viewDragPreview model =
 viewStatusBar : Model -> Html Msg
 viewStatusBar model =
     div [ class "border-t border-secondary-200 bg-white px-4 py-1.5 text-xs text-secondary-500" ]
-        [ text (String.fromInt (Dict.size model.steps) ++ " ステップ") ]
+        [ text
+            (String.fromInt (Dict.size model.steps)
+                ++ " ステップ / "
+                ++ String.fromInt (List.length model.transitions)
+                ++ " 接続"
+            )
+        ]

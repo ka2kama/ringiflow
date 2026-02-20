@@ -8,6 +8,7 @@ module Data.DesignerCanvas exposing
     , StepNode
     , StepType(..)
     , Transition
+    , autoTrigger
     , clientToCanvas
     , createStepFromDrop
     , decodeBounds
@@ -18,7 +19,10 @@ module Data.DesignerCanvas exposing
     , loadTransitionsFromDefinition
     , snapToGrid
     , stepColors
+    , stepContainsPoint
     , stepDimensions
+    , stepInputPortPosition
+    , stepOutputPortPosition
     , stepTypeToString
     , viewBoxHeight
     , viewBoxWidth
@@ -284,6 +288,74 @@ boundsDecoder =
         (Decode.field "y" Decode.float)
         (Decode.field "width" Decode.float)
         (Decode.field "height" Decode.float)
+
+
+
+-- CONNECTION HELPERS
+
+
+{-| ステップの出力ポート位置（右端中央）
+-}
+stepOutputPortPosition : StepNode -> Position
+stepOutputPortPosition step =
+    { x = step.position.x + stepDimensions.width
+    , y = step.position.y + stepDimensions.height / 2
+    }
+
+
+{-| ステップの入力ポート位置（左端中央）
+-}
+stepInputPortPosition : StepNode -> Position
+stepInputPortPosition step =
+    { x = step.position.x
+    , y = step.position.y + stepDimensions.height / 2
+    }
+
+
+{-| 座標がステップの矩形内に含まれるか判定する
+-}
+stepContainsPoint : Position -> StepNode -> Bool
+stepContainsPoint point step =
+    let
+        right =
+            step.position.x + stepDimensions.width
+
+        bottom =
+            step.position.y + stepDimensions.height
+    in
+    point.x >= step.position.x && point.x <= right && point.y >= step.position.y && point.y <= bottom
+
+
+{-| 新しい接続に対する trigger を自動判定する
+
+Approval ステップからの接続は approve/reject を自動設定する。
+
+-}
+autoTrigger : StepType -> String -> List Transition -> Maybe String
+autoTrigger sourceType sourceId transitions =
+    case sourceType of
+        Approval ->
+            let
+                fromTransitions =
+                    List.filter (\t -> t.from == sourceId) transitions
+
+                hasApprove =
+                    List.any (\t -> t.trigger == Just "approve") fromTransitions
+
+                hasReject =
+                    List.any (\t -> t.trigger == Just "reject") fromTransitions
+            in
+            if not hasApprove then
+                Just "approve"
+
+            else if not hasReject then
+                Just "reject"
+
+            else
+                Nothing
+
+        _ ->
+            Nothing
 
 
 

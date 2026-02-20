@@ -30,6 +30,10 @@ suite =
         , encodeDefinitionTests
         , loadStepsFromDefinitionTests
         , loadTransitionsFromDefinitionTests
+        , stepOutputPortPositionTests
+        , stepInputPortPositionTests
+        , stepContainsPointTests
+        , autoTriggerTests
         ]
 
 
@@ -590,3 +594,161 @@ loadTransitionsFromDefinitionTests =
                     Err err ->
                         Expect.fail ("Expected Ok, got Err: " ++ Decode.errorToString err)
         ]
+
+
+
+-- stepOutputPortPosition
+
+
+stepOutputPortPositionTests : Test
+stepOutputPortPositionTests =
+    describe "stepOutputPortPosition"
+        [ test "ステップ右端中央の座標を返す" <|
+            \_ ->
+                let
+                    step =
+                        makeStep "step_1" Start { x = 100, y = 200 }
+
+                    pos =
+                        DesignerCanvas.stepOutputPortPosition step
+                in
+                -- stepDimensions: width=120, height=60
+                -- 右端中央: (100+120, 200+60/2) = (220, 230)
+                Expect.all
+                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 220
+                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 230
+                    ]
+                    pos
+        ]
+
+
+
+-- stepInputPortPosition
+
+
+stepInputPortPositionTests : Test
+stepInputPortPositionTests =
+    describe "stepInputPortPosition"
+        [ test "ステップ左端中央の座標を返す" <|
+            \_ ->
+                let
+                    step =
+                        makeStep "step_1" Approval { x = 300, y = 200 }
+
+                    pos =
+                        DesignerCanvas.stepInputPortPosition step
+                in
+                -- 左端中央: (300, 200+60/2) = (300, 230)
+                Expect.all
+                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 300
+                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 230
+                    ]
+                    pos
+        ]
+
+
+
+-- stepContainsPoint
+
+
+stepContainsPointTests : Test
+stepContainsPointTests =
+    describe "stepContainsPoint"
+        [ test "矩形内の座標で True を返す" <|
+            \_ ->
+                let
+                    step =
+                        makeStep "step_1" Start { x = 100, y = 200 }
+                in
+                -- 矩形: x=[100,220], y=[200,260]
+                DesignerCanvas.stepContainsPoint { x = 150, y = 230 } step
+                    |> Expect.equal True
+        , test "矩形の境界で True を返す" <|
+            \_ ->
+                let
+                    step =
+                        makeStep "step_1" Start { x = 100, y = 200 }
+                in
+                Expect.all
+                    [ \_ ->
+                        DesignerCanvas.stepContainsPoint { x = 100, y = 200 } step
+                            |> Expect.equal True
+                    , \_ ->
+                        DesignerCanvas.stepContainsPoint { x = 220, y = 260 } step
+                            |> Expect.equal True
+                    ]
+                    ()
+        , test "矩形外の座標で False を返す" <|
+            \_ ->
+                let
+                    step =
+                        makeStep "step_1" Start { x = 100, y = 200 }
+                in
+                Expect.all
+                    [ \_ ->
+                        DesignerCanvas.stepContainsPoint { x = 99, y = 230 } step
+                            |> Expect.equal False
+                    , \_ ->
+                        DesignerCanvas.stepContainsPoint { x = 221, y = 230 } step
+                            |> Expect.equal False
+                    , \_ ->
+                        DesignerCanvas.stepContainsPoint { x = 150, y = 199 } step
+                            |> Expect.equal False
+                    ]
+                    ()
+        ]
+
+
+
+-- autoTrigger
+
+
+autoTriggerTests : Test
+autoTriggerTests =
+    describe "autoTrigger"
+        [ test "Approval から approve なし → Just \"approve\"" <|
+            \_ ->
+                DesignerCanvas.autoTrigger Approval "approval_1" []
+                    |> Expect.equal (Just "approve")
+        , test "Approval で approve あり reject なし → Just \"reject\"" <|
+            \_ ->
+                let
+                    existingTransitions =
+                        [ { from = "approval_1", to = "end_1", trigger = Just "approve" } ]
+                in
+                DesignerCanvas.autoTrigger Approval "approval_1" existingTransitions
+                    |> Expect.equal (Just "reject")
+        , test "Approval で approve/reject 両方あり → Nothing" <|
+            \_ ->
+                let
+                    existingTransitions =
+                        [ { from = "approval_1", to = "end_1", trigger = Just "approve" }
+                        , { from = "approval_1", to = "end_2", trigger = Just "reject" }
+                        ]
+                in
+                DesignerCanvas.autoTrigger Approval "approval_1" existingTransitions
+                    |> Expect.equal Nothing
+        , test "Start → Nothing" <|
+            \_ ->
+                DesignerCanvas.autoTrigger Start "start_1" []
+                    |> Expect.equal Nothing
+        , test "End → Nothing" <|
+            \_ ->
+                DesignerCanvas.autoTrigger End "end_1" []
+                    |> Expect.equal Nothing
+        ]
+
+
+
+-- ヘルパー
+
+
+makeStep : String -> StepType -> DesignerCanvas.Position -> DesignerCanvas.StepNode
+makeStep id stepType position =
+    { id = id
+    , stepType = stepType
+    , name = DesignerCanvas.defaultStepName stepType
+    , position = position
+    , assignee = Nothing
+    , endStatus = Nothing
+    }
