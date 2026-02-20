@@ -16,6 +16,7 @@ suite : Test
 suite =
     describe "Data.WorkflowComment"
         [ decoderTests
+        , detailDecoderTests
         , listDecoderTests
         ]
 
@@ -68,6 +69,59 @@ decoderTests =
                         """
                 in
                 Decode.decodeString WorkflowComment.decoder json
+                    |> Expect.err
+        ]
+
+
+
+-- detailDecoder
+
+
+detailDecoderTests : Test
+detailDecoderTests =
+    describe "detailDecoder"
+        [ test "data フィールドから単一コメントをデコード" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "data": {
+                                "id": "comment-001",
+                                "posted_by": {"id": "user-001", "name": "テストユーザー"},
+                                "body": "承認をお願いします",
+                                "created_at": "2026-01-15T10:00:00Z"
+                            }
+                        }
+                        """
+                in
+                Decode.decodeString WorkflowComment.detailDecoder json
+                    |> Result.map
+                        (\c ->
+                            { id = c.id
+                            , body = c.body
+                            }
+                        )
+                    |> Expect.equal
+                        (Ok
+                            { id = "comment-001"
+                            , body = "承認をお願いします"
+                            }
+                        )
+        , test "data フィールドがない場合はエラー" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "id": "comment-001",
+                            "posted_by": {"id": "user-001", "name": "テストユーザー"},
+                            "body": "承認をお願いします",
+                            "created_at": "2026-01-15T10:00:00Z"
+                        }
+                        """
+                in
+                Decode.decodeString WorkflowComment.detailDecoder json
                     |> Expect.err
         ]
 

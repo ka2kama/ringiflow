@@ -23,6 +23,7 @@ suite =
         , decisionToStringTests
         , decisionFromStringTests
         , decoderTests
+        , detailDecoderTests
         , listDecoderTests
         ]
 
@@ -455,6 +456,73 @@ decoderTests =
                         """
                 in
                 Decode.decodeString WorkflowInstance.decoder json
+                    |> Expect.err
+        ]
+
+
+
+-- detailDecoder
+
+
+detailDecoderTests : Test
+detailDecoderTests =
+    describe "detailDecoder"
+        [ test "data フィールドから単一インスタンスをデコード" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "data": {
+                                "id": "inst-001",
+                                "display_id": "WF-1",
+                                "display_number": 1,
+                                "title": "経費精算申請",
+                                "definition_id": "def-001",
+                                "status": "Draft",
+                                "form_data": {},
+                                "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "updated_at": "2026-01-01T00:00:00Z"
+                            }
+                        }
+                        """
+                in
+                Decode.decodeString WorkflowInstance.detailDecoder json
+                    |> Result.map
+                        (\i ->
+                            { id = i.id
+                            , title = i.title
+                            , status = i.status
+                            }
+                        )
+                    |> Expect.equal
+                        (Ok
+                            { id = "inst-001"
+                            , title = "経費精算申請"
+                            , status = Draft
+                            }
+                        )
+        , test "data フィールドがない場合はエラー" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "id": "inst-001",
+                            "display_id": "WF-1",
+                            "display_number": 1,
+                            "title": "経費精算申請",
+                            "definition_id": "def-001",
+                            "status": "Draft",
+                            "form_data": {},
+                            "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
+                            "created_at": "2026-01-01T00:00:00Z",
+                            "updated_at": "2026-01-01T00:00:00Z"
+                        }
+                        """
+                in
+                Decode.decodeString WorkflowInstance.detailDecoder json
                     |> Expect.err
         ]
 

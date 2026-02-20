@@ -50,7 +50,6 @@ import Api exposing (ApiError, RequestConfig)
 import Data.WorkflowComment as WorkflowComment exposing (WorkflowComment)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance)
 import Http
-import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 
 
@@ -94,7 +93,7 @@ getWorkflow { config, displayNumber, toMsg } =
     Api.get
         { config = config
         , url = "/api/v1/workflows/" ++ String.fromInt displayNumber
-        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -118,7 +117,7 @@ createWorkflow { config, body, toMsg } =
         { config = config
         , url = "/api/v1/workflows"
         , body = Http.jsonBody (encodeCreateRequest body)
-        , decoder = createResponseDecoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -143,7 +142,7 @@ submitWorkflow { config, displayNumber, body, toMsg } =
         { config = config
         , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/submit"
         , body = Http.jsonBody (encodeSubmitRequest body)
-        , decoder = submitResponseDecoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -174,7 +173,7 @@ approveStep { config, workflowDisplayNumber, stepDisplayNumber, body, toMsg } =
                 ++ String.fromInt stepDisplayNumber
                 ++ "/approve"
         , body = Http.jsonBody (encodeApproveRejectRequest body)
-        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -205,7 +204,7 @@ rejectStep { config, workflowDisplayNumber, stepDisplayNumber, body, toMsg } =
                 ++ String.fromInt stepDisplayNumber
                 ++ "/reject"
         , body = Http.jsonBody (encodeApproveRejectRequest body)
-        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -236,7 +235,7 @@ requestChangesStep { config, workflowDisplayNumber, stepDisplayNumber, body, toM
                 ++ String.fromInt stepDisplayNumber
                 ++ "/request-changes"
         , body = Http.jsonBody (encodeApproveRejectRequest body)
-        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -261,7 +260,7 @@ resubmitWorkflow { config, displayNumber, body, toMsg } =
         { config = config
         , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/resubmit"
         , body = Http.jsonBody (encodeResubmitRequest body)
-        , decoder = Decode.field "data" WorkflowInstance.decoder
+        , decoder = WorkflowInstance.detailDecoder
         , toMsg = toMsg
         }
 
@@ -307,7 +306,7 @@ postComment { config, displayNumber, body, toMsg } =
         { config = config
         , url = "/api/v1/workflows/" ++ String.fromInt displayNumber ++ "/comments"
         , body = Http.jsonBody (encodePostCommentRequest body)
-        , decoder = Decode.field "data" WorkflowComment.decoder
+        , decoder = WorkflowComment.detailDecoder
         , toMsg = toMsg
         }
 
@@ -423,27 +422,3 @@ encodePostCommentRequest req =
     Encode.object
         [ ( "body", Encode.string req.body )
         ]
-
-
-
--- DECODERS
-
-
-{-| 作成レスポンスのデコーダー
-
-レスポンス形式: `{ data: WorkflowInstance }`
-
--}
-createResponseDecoder : Decoder WorkflowInstance
-createResponseDecoder =
-    Decode.field "data" WorkflowInstance.decoder
-
-
-{-| 申請レスポンスのデコーダー
-
-レスポンス形式: `{ data: WorkflowInstance }`
-
--}
-submitResponseDecoder : Decoder WorkflowInstance
-submitResponseDecoder =
-    Decode.field "data" WorkflowInstance.decoder
