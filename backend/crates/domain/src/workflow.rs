@@ -36,10 +36,12 @@
 
 mod comment;
 mod definition;
+mod definition_validator;
 mod instance;
 mod step;
 
 pub use comment::*;
 pub use definition::*;
+pub use definition_validator::*;
 pub use instance::*;
 pub use step::*;
