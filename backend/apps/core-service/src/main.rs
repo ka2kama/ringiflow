@@ -68,6 +68,7 @@ use axum::{
 use config::CoreConfig;
 use handler::{
     DashboardState,
+    ReadinessState,
     RoleState,
     TaskState,
     UserState,
@@ -101,6 +102,7 @@ use handler::{
     list_users,
     post_comment,
     publish_definition,
+    readiness_check,
     reject_step,
     reject_step_by_display_number,
     request_changes_step,
@@ -184,6 +186,9 @@ async fn main() -> anyhow::Result<()> {
         .expect("マイグレーションの実行に失敗しました");
     tracing::info!("マイグレーションを適用しました");
 
+    // Readiness Check 用 State
+    let readiness_state = Arc::new(ReadinessState { pool: pool.clone() });
+
     // 共有リポジトリインスタンスを初期化
     let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
     let tenant_repo: Arc<dyn TenantRepository> =
@@ -257,6 +262,11 @@ async fn main() -> anyhow::Result<()> {
     // ルーター構築
     let app = Router::new()
       .route("/health", get(health_check))
+      .merge(
+          Router::new()
+              .route("/health/ready", get(readiness_check))
+              .with_state(readiness_state),
+      )
       .route("/internal/users", get(list_users).post(create_user))
       .route("/internal/users/by-email", get(get_user_by_email))
       .route(
