@@ -123,6 +123,60 @@ user.role
 - `List.map`, `List.filter` など標準で十分表現できる場合
 - パッケージの関数が逆に可読性を下げる場合
 
+## API レスポンスデコーダの命名規約
+
+BFF の API は `{ "data": ... }` 形式でレスポンスを返す。`"data"` ラッパーのデコード責務は **Data モジュール側**に配置する。
+
+### 命名規則
+
+| デコーダ | 責務 | 配置場所 |
+|---------|------|---------|
+| `decoder` | 内部デコーダ（`"data"` ラッパーなし） | `Data.*` モジュール |
+| `detailDecoder` | 単一レスポンス用（`Decode.field "data" decoder`） | `Data.*` モジュール |
+| `listDecoder` | 一覧レスポンス用（`Decode.field "data" (Decode.list decoder)`） | `Data.*` モジュール |
+
+```elm
+-- Data/WorkflowDefinition.elm（正しいパターン）
+decoder : Decoder WorkflowDefinition
+decoder =
+    Decode.succeed WorkflowDefinition
+        |> required "id" Decode.string
+        ...
+
+detailDecoder : Decoder WorkflowDefinition
+detailDecoder =
+    Decode.field "data" decoder
+
+listDecoder : Decoder (List WorkflowDefinition)
+listDecoder =
+    Decode.field "data" (Decode.list decoder)
+```
+
+```elm
+-- Api/WorkflowDefinition.elm（正しい使い方）
+getDefinition { config, id, toMsg } =
+    Api.get
+        { config = config
+        , url = "/api/v1/workflow-definitions/" ++ id
+        , decoder = WorkflowDefinition.detailDecoder  -- Data モジュールのデコーダを使用
+        , toMsg = toMsg
+        }
+```
+
+### 禁止事項
+
+Api モジュール内で `Decode.field "data"` をインラインで使用してはならない。
+
+```elm
+-- Bad: Api モジュールでインラインラッピング
+Api.get { decoder = Decode.field "data" WorkflowInstance.decoder, ... }
+
+-- Good: Data モジュールのレスポンスデコーダを使用
+Api.get { decoder = WorkflowInstance.detailDecoder, ... }
+```
+
+改善の経緯: [散弾銃デバッグによるトラブルシューティング効率低下](../../process/improvements/2026-02/2026-02-20_0012_散弾銃デバッグによるトラブルシューティング効率低下.md)
+
 ## AI エージェントへの指示
 
 1. 依存関係を追加する際は最新の stable バージョンを使用する
@@ -131,9 +185,11 @@ user.role
 4. API レスポンス状態には `krisajenkins/remotedata` を使用する
 5. リスト操作が冗長になる場合は `elm-community/list-extra` を検討する
 6. Maybe のチェーン処理には `elm-community/maybe-extra` を検討する
+7. API レスポンスデコーダは Data モジュールの `detailDecoder` / `listDecoder` を使用する。Api モジュールで `Decode.field "data"` をインラインで書かない
 
 禁止事項:
 - RemoteData パターンの自作実装（`krisajenkins/remotedata` を使用する）
+- Api モジュール内での `Decode.field "data"` インライン使用（Data モジュールの `detailDecoder` / `listDecoder` を使用する）
 
 ## 参照
 
