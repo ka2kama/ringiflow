@@ -26,8 +26,9 @@ test.describe("ワークフロー定義管理", () => {
   }) => {
     const uniqueName = `E2E テスト定義 ${Date.now()}`;
 
-    // Given: 定義一覧ページに移動
+    // Given: 定義一覧ページに移動し、初期ロード完了を待つ
     await page.goto("/workflow-definitions");
+    await expect(page.getByRole("table")).toBeVisible();
 
     // When: 新規作成ダイアログを開く
     await page.getByRole("button", { name: "新規作成" }).click();
@@ -51,8 +52,9 @@ test.describe("ワークフロー定義管理", () => {
   test("テナント管理者が定義を公開・アーカイブできる", async ({ page }) => {
     const uniqueName = `E2E 公開テスト ${Date.now()}`;
 
-    // Given: 新しい定義を作成
+    // Given: 新しい定義を作成（初期ロード完了を待ってから操作）
     await page.goto("/workflow-definitions");
+    await expect(page.getByRole("table")).toBeVisible();
     await page.getByRole("button", { name: "新規作成" }).click();
     await page.getByLabel("名前").fill(uniqueName);
     await page.getByRole("button", { name: "作成", exact: true }).click();
