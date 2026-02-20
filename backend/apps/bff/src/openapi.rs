@@ -9,7 +9,17 @@ use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
 };
 
-use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow, workflow_definition};
+use crate::handler::{
+    audit_log,
+    auth,
+    dashboard,
+    health,
+    role,
+    task,
+    user,
+    workflow,
+    workflow_definition,
+};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -19,6 +29,8 @@ use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow, wor
       description = "ワークフロー管理システム RingiFlow の BFF API"
    ),
    paths(
+      // health
+      health::readiness_check,
       // auth
       auth::login,
       auth::logout,
@@ -68,6 +80,7 @@ use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow, wor
       ringiflow_shared::ErrorResponse,
    )),
    tags(
+      (name = "health", description = "ヘルスチェック"),
       (name = "auth", description = "認証"),
       (name = "workflows", description = "ワークフロー管理"),
       (name = "workflow-definitions", description = "ワークフロー定義管理"),

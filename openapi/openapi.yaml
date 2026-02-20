@@ -1424,6 +1424,28 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
+  /health/ready:
+    get:
+      tags:
+      - health
+      summary: BFF の Readiness Check エンドポイント
+      description: |-
+        Redis と Core Service（DB 含む）の接続状態を並行チェックする。
+        全チェック OK → 200、1 つでも失敗 → 503。
+      operationId: readiness_check
+      responses:
+        '200':
+          description: 全依存サービス稼働中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: 一部の依存サービスが利用不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
 components:
   schemas:
     ApiResponse_CreateUserResponseData:
@@ -2378,6 +2400,12 @@ components:
           - string
           - 'null'
           description: コメント（任意）
+    CheckStatus:
+      type: string
+      description: 個別チェックの結果ステータス
+      enum:
+      - ok
+      - error
     CreateDefinitionRequest:
       type: object
       description: 定義作成リクエスト（BFF 公開 API）
@@ -2581,6 +2609,49 @@ components:
           type: integer
           format: int32
           description: 楽観的ロック用バージョン
+    ReadinessResponse:
+      type: object
+      description: |-
+        Readiness Check レスポンス
+
+        依存サービスへの接続状態を含むレスポンス型。
+        `status` は全体のステータス、`checks` は個別チェック結果を示す。
+
+        ## 使用例
+
+        ```
+        use std::collections::HashMap;
+
+        use ringiflow_shared::{CheckStatus, ReadinessResponse, ReadinessStatus};
+
+        let mut checks = HashMap::new();
+        checks.insert("database".to_string(), CheckStatus::Ok);
+        let response = ReadinessResponse {
+            status: ReadinessStatus::Ready,
+            checks,
+        };
+        assert_eq!(response.status, ReadinessStatus::Ready);
+        ```
+      required:
+      - status
+      - checks
+      properties:
+        status:
+          $ref: '#/components/schemas/ReadinessStatus'
+          description: 全体のステータス
+        checks:
+          type: object
+          description: '個別チェック結果（キー: チェック名、値: ステータス）'
+          additionalProperties:
+            $ref: '#/components/schemas/CheckStatus'
+          propertyNames:
+            type: string
+    ReadinessStatus:
+      type: string
+      description: Readiness 全体のステータス
+      enum:
+      - ready
+      - not_ready
     ResubmitWorkflowRequest:
       type: object
       description: ワークフロー再申請リクエスト（BFF 公開 API）
@@ -2870,6 +2941,8 @@ components:
       in: cookie
       name: session_id
 tags:
+- name: health
+  description: ヘルスチェック
 - name: auth
   description: 認証
 - name: workflows

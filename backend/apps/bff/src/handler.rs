@@ -27,7 +27,7 @@ pub mod workflow_definition;
 pub use audit_log::{AuditLogState, list_audit_logs};
 pub use auth::{AuthState, csrf, login, logout, me};
 pub use dashboard::get_dashboard_stats;
-pub use health::health_check;
+pub use health::{ReadinessState, health_check, readiness_check};
 pub use role::{RoleState, create_role, delete_role, get_role, list_roles, update_role};
 pub use task::list_my_tasks;
 pub use user::{

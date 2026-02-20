@@ -65,6 +65,7 @@ use config::BffConfig;
 use handler::{
     AuditLogState,
     AuthState,
+    ReadinessState,
     RoleState,
     UserState,
     WorkflowDefinitionState,
@@ -97,6 +98,7 @@ use handler::{
     me,
     post_comment,
     publish_definition,
+    readiness_check,
     reject_step,
     request_changes_step,
     resubmit_workflow,
@@ -122,6 +124,7 @@ use ringiflow_infra::{
     RedisSessionManager,
     SessionManager,
     dynamodb,
+    redis,
     repository::DynamoDbAuditLogRepository,
 };
 use ringiflow_shared::observability::{MakeRequestUuidV7, TracingConfig, make_request_span};
@@ -160,6 +163,16 @@ async fn main() -> anyhow::Result<()> {
     let redis_session_manager = RedisSessionManager::new(&config.redis_url)
         .await
         .expect("Redis への接続に失敗しました");
+
+    // Readiness Check 用の Redis 接続（SessionManager とは別の接続）
+    let readiness_redis_conn = redis::create_connection_manager(&config.redis_url)
+        .await
+        .expect("Redis への接続に失敗しました（readiness check 用）");
+    let readiness_state = Arc::new(ReadinessState {
+        redis_conn:       readiness_redis_conn,
+        core_service_url: config.core_url.clone(),
+        http_client:      reqwest::Client::new(),
+    });
 
     // DevAuth の初期化（dev-auth feature 有効時のみコンパイルされる）
     #[cfg(feature = "dev-auth")]
@@ -290,6 +303,11 @@ async fn main() -> anyhow::Result<()> {
     // CSRF ミドルウェアは POST/PUT/PATCH/DELETE リクエストを検証する
     let app = Router::new()
         .route("/health", get(health_check))
+        .merge(
+            Router::new()
+                .route("/health/ready", get(readiness_check))
+                .with_state(readiness_state),
+        )
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/logout", post(logout))
         .route("/api/v1/auth/me", get(me))

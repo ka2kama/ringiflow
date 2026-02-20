@@ -2126,6 +2126,38 @@ expression: json
           }
         ]
       }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "BFF の Readiness Check エンドポイント",
+        "description": "Redis と Core Service（DB 含む）の接続状態を並行チェックする。\n全チェック OK → 200、1 つでも失敗 → 503。",
+        "operationId": "readiness_check",
+        "responses": {
+          "200": {
+            "description": "全依存サービス稼働中",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "一部の依存サービスが利用不可",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3096,6 +3128,14 @@ expression: json
           }
         }
       },
+      "CheckStatus": {
+        "type": "string",
+        "description": "個別チェックの結果ステータス",
+        "enum": [
+          "ok",
+          "error"
+        ]
+      },
       "CreateDefinitionRequest": {
         "type": "object",
         "description": "定義作成リクエスト（BFF 公開 API）",
@@ -3482,6 +3522,38 @@ expression: json
             "description": "楽観的ロック用バージョン"
           }
         }
+      },
+      "ReadinessResponse": {
+        "type": "object",
+        "description": "Readiness Check レスポンス\n\n依存サービスへの接続状態を含むレスポンス型。\n`status` は全体のステータス、`checks` は個別チェック結果を示す。\n\n## 使用例\n\n```\nuse std::collections::HashMap;\n\nuse ringiflow_shared::{CheckStatus, ReadinessResponse, ReadinessStatus};\n\nlet mut checks = HashMap::new();\nchecks.insert(\"database\".to_string(), CheckStatus::Ok);\nlet response = ReadinessResponse {\n    status: ReadinessStatus::Ready,\n    checks,\n};\nassert_eq!(response.status, ReadinessStatus::Ready);\n```",
+        "required": [
+          "status",
+          "checks"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ReadinessStatus",
+            "description": "全体のステータス"
+          },
+          "checks": {
+            "type": "object",
+            "description": "個別チェック結果（キー: チェック名、値: ステータス）",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CheckStatus"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ReadinessStatus": {
+        "type": "string",
+        "description": "Readiness 全体のステータス",
+        "enum": [
+          "ready",
+          "not_ready"
+        ]
       },
       "ResubmitWorkflowRequest": {
         "type": "object",
@@ -4255,6 +4327,10 @@ expression: json
     }
   },
   "tags": [
+    {
+      "name": "health",
+      "description": "ヘルスチェック"
+    },
     {
       "name": "auth",
       "description": "認証"

@@ -17,11 +17,12 @@ fn test_全パスが含まれている() {
     let doc = ApiDoc::openapi();
     let paths: Vec<&str> = doc.paths.paths.keys().map(|k| k.as_str()).collect();
 
-    // 26 パス（35 ハンドラ、同一パスに複数メソッドがあるため 26 パス）
-    // /health はインフラ用のため OpenAPI 仕様には含めない
-    assert_eq!(paths.len(), 26, "パス数が 26 であること: {paths:?}");
+    // 27 パス（36 ハンドラ、同一パスに複数メソッドがあるため 27 パス）
+    // /health はインフラ用のため OpenAPI 仕様には含めない、/health/ready は含める
+    assert_eq!(paths.len(), 27, "パス数が 27 であること: {paths:?}");
 
     // 全パスの存在確認
+    assert!(paths.contains(&"/health/ready"));
     assert!(paths.contains(&"/api/v1/auth/login"));
     assert!(paths.contains(&"/api/v1/auth/logout"));
     assert!(paths.contains(&"/api/v1/auth/me"));
@@ -77,6 +78,7 @@ fn test_全タグが含まれている() {
         .map(|t| t.name.as_str())
         .collect();
 
+    assert!(tags.contains(&"health"));
     assert!(tags.contains(&"auth"));
     assert!(tags.contains(&"workflows"));
     assert!(tags.contains(&"workflow-definitions"));

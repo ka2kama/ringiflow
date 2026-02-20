@@ -19,5 +19,5 @@ pub mod paginated_response;
 
 pub use api_response::ApiResponse;
 pub use error_response::ErrorResponse;
-pub use health::HealthResponse;
+pub use health::{CheckStatus, HealthResponse, ReadinessResponse, ReadinessStatus};
 pub use paginated_response::PaginatedResponse;

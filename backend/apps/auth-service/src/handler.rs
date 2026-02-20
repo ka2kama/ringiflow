@@ -17,4 +17,4 @@ pub mod auth;
 pub mod health;
 
 pub use auth::{AuthState, create_credentials, delete_credentials, verify};
-pub use health::health_check;
+pub use health::{ReadinessState, health_check, readiness_check};
