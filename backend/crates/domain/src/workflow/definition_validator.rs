@@ -150,14 +150,14 @@ fn validate_step_ids_unique(definition: &JsonValue, errors: &mut Vec<ValidationE
     };
     let mut seen = HashSet::new();
     for step in steps {
-        if let Some(id) = step_id(step) {
-            if !seen.insert(id) {
-                errors.push(ValidationError::with_step_id(
-                    "duplicate_step_id",
-                    format!("ステップ ID '{}' が重複しています", id),
-                    id,
-                ));
-            }
+        if let Some(id) = step_id(step)
+            && !seen.insert(id)
+        {
+            errors.push(ValidationError::with_step_id(
+                "duplicate_step_id",
+                format!("ステップ ID '{}' が重複しています", id),
+                id,
+            ));
         }
     }
 }
@@ -174,23 +174,23 @@ fn validate_transition_references(definition: &JsonValue, errors: &mut Vec<Valid
     let step_ids: HashSet<&str> = steps.iter().filter_map(step_id).collect();
 
     for transition in transitions {
-        if let Some(from) = transition.get("from").and_then(|v| v.as_str()) {
-            if !step_ids.contains(from) {
-                errors.push(ValidationError::with_step_id(
-                    "invalid_transition_ref",
-                    format!("遷移元 '{}' は存在しないステップです", from),
-                    from,
-                ));
-            }
+        if let Some(from) = transition.get("from").and_then(|v| v.as_str())
+            && !step_ids.contains(from)
+        {
+            errors.push(ValidationError::with_step_id(
+                "invalid_transition_ref",
+                format!("遷移元 '{}' は存在しないステップです", from),
+                from,
+            ));
         }
-        if let Some(to) = transition.get("to").and_then(|v| v.as_str()) {
-            if !step_ids.contains(to) {
-                errors.push(ValidationError::with_step_id(
-                    "invalid_transition_ref",
-                    format!("遷移先 '{}' は存在しないステップです", to),
-                    to,
-                ));
-            }
+        if let Some(to) = transition.get("to").and_then(|v| v.as_str())
+            && !step_ids.contains(to)
+        {
+            errors.push(ValidationError::with_step_id(
+                "invalid_transition_ref",
+                format!("遷移先 '{}' は存在しないステップです", to),
+                to,
+            ));
         }
     }
 }
@@ -704,7 +704,7 @@ mod tests {
     // --- ルール 8: duplicate_step_id ---
 
     #[test]
-    fn test_ステップIDが重複している場合エラー() {
+    fn test_ステップidが重複している場合エラー() {
         let definition = json!({
             "steps": [
                 {"id": "start", "type": "start", "name": "開始"},
@@ -726,7 +726,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ステップIDが一意なら正常() {
+    fn test_ステップidが一意なら正常() {
         let result = validate_definition(&valid_definition());
 
         assert!(!has_error(&result, "duplicate_step_id"));
@@ -838,7 +838,7 @@ mod tests {
     }
 
     #[test]
-    fn test_フォームフィールドIDが重複している場合エラー() {
+    fn test_フォームフィールドidが重複している場合エラー() {
         let definition = json!({
             "form": {
                 "fields": [

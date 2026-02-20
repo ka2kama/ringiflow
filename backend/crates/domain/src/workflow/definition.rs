@@ -455,7 +455,7 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Archived定義の公開はエラー(
+        fn test_archived定義の公開はエラー(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
@@ -496,7 +496,7 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Draft定義のアーカイブはエラー(
+        fn test_draft定義のアーカイブはエラー(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
@@ -506,7 +506,7 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Archived定義の再アーカイブはエラー(
+        fn test_archived定義の再アーカイブはエラー(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
@@ -522,7 +522,7 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Draft定義を更新できる(
+        fn test_draft定義を更新できる(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
@@ -546,7 +546,7 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Published定義の更新はエラー(
+        fn test_published定義の更新はエラー(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
@@ -558,7 +558,7 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Archived定義の更新はエラー(
+        fn test_archived定義の更新はエラー(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
@@ -574,12 +574,12 @@ mod tests {
         }
 
         #[rstest]
-        fn test_Draft定義の削除チェックが成功(test_definition: WorkflowDefinition) {
+        fn test_draft定義の削除チェックが成功(test_definition: WorkflowDefinition) {
             assert!(test_definition.can_delete().is_ok());
         }
 
         #[rstest]
-        fn test_Published定義の削除チェックはエラー(
+        fn test_published定義の削除チェックはエラー(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
         ) {
