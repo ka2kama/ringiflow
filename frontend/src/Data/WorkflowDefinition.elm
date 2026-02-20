@@ -2,10 +2,17 @@ module Data.WorkflowDefinition exposing
     ( ApprovalStepInfo
     , WorkflowDefinition
     , WorkflowDefinitionId
+    , WorkflowDefinitionStatus(..)
     , approvalStepInfos
     , decoder
+    , definitionStatus
     , detailDecoder
+    , encodeCreateRequest
+    , encodeVersionRequest
     , listDecoder
+    , statusFromString
+    , statusToBadge
+    , statusToJapanese
     )
 
 {-| ワークフロー定義のデータ型
@@ -17,11 +24,14 @@ module Data.WorkflowDefinition exposing
 
   - 申請フォームでユーザーが選択可能なワークフロー定義の表示
   - 選択されたワークフロー定義に基づく動的フォーム生成
+  - ワークフロー定義管理画面でのステータス管理・CRUD 操作
 
 -}
 
+import Data.AdminUser exposing (BadgeConfig)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (optional, required)
+import Json.Encode as Encode
 
 
 
@@ -54,6 +64,174 @@ type alias WorkflowDefinition =
     , createdAt : String
     , updatedAt : String
     }
+
+
+{-| ワークフロー定義のステータス
+
+バックエンドの `WorkflowDefinitionStatus` enum に対応。
+Draft → Published → Archived のライフサイクルを表す。
+
+-}
+type WorkflowDefinitionStatus
+    = Draft
+    | Published
+    | Archived
+
+
+{-| 文字列からステータスに変換
+
+バックエンドは PascalCase（"Draft", "Published", "Archived"）で返す。
+不明な値は Draft にフォールバックする（新規作成直後のデフォルト）。
+
+-}
+statusFromString : String -> WorkflowDefinitionStatus
+statusFromString str =
+    case str of
+        "Draft" ->
+            Draft
+
+        "Published" ->
+            Published
+
+        "Archived" ->
+            Archived
+
+        _ ->
+            Draft
+
+
+{-| ステータスを日本語に変換（UI 表示用）
+-}
+statusToJapanese : WorkflowDefinitionStatus -> String
+statusToJapanese status =
+    case status of
+        Draft ->
+            "下書き"
+
+        Published ->
+            "公開済み"
+
+        Archived ->
+            "アーカイブ済み"
+
+
+{-| ステータスに応じた Badge 設定を返す
+
+`Data.AdminUser.BadgeConfig` 型を再利用。
+
+-}
+statusToBadge : WorkflowDefinitionStatus -> BadgeConfig
+statusToBadge status =
+    case status of
+        Draft ->
+            { colorClass = "bg-secondary-100 text-secondary-600 border-secondary-200"
+            , label = "下書き"
+            }
+
+        Published ->
+            { colorClass = "bg-success-50 text-success-600 border-success-200"
+            , label = "公開済み"
+            }
+
+        Archived ->
+            { colorClass = "bg-secondary-100 text-secondary-500 border-secondary-200"
+            , label = "アーカイブ済み"
+            }
+
+
+{-| WorkflowDefinition の status フィールド（String）を型に変換する
+-}
+definitionStatus : WorkflowDefinition -> WorkflowDefinitionStatus
+definitionStatus def =
+    statusFromString def.status
+
+
+
+-- ENCODERS
+
+
+{-| ワークフロー定義作成リクエストの JSON を生成
+
+最小限のデフォルト definition（開始ステップのみ）を含む。
+実質的な定義編集はデザイナー（#725/#726）で行う。
+
+-}
+encodeCreateRequest : { name : String, description : String } -> Encode.Value
+encodeCreateRequest { name, description } =
+    Encode.object
+        [ ( "name", Encode.string name )
+        , ( "description", Encode.string description )
+        , ( "definition", defaultDefinition )
+        ]
+
+
+{-| バージョン指定リクエストの JSON を生成
+
+公開・アーカイブ操作で楽観的ロック用の version を送信する。
+
+-}
+encodeVersionRequest : { version : Int } -> Encode.Value
+encodeVersionRequest { version } =
+    Encode.object
+        [ ( "version", Encode.int version )
+        ]
+
+
+{-| 最小限の有効なデフォルト定義
+
+公開バリデーションを通過するために、開始・承認・終了ステップと遷移を含む。
+デザイナー（#725/#726）でカスタマイズする前提の雛形。
+
+-}
+defaultDefinition : Encode.Value
+defaultDefinition =
+    Encode.object
+        [ ( "steps"
+          , Encode.list identity
+                [ Encode.object
+                    [ ( "id", Encode.string "start" )
+                    , ( "type", Encode.string "start" )
+                    , ( "name", Encode.string "開始" )
+                    ]
+                , Encode.object
+                    [ ( "id", Encode.string "approval" )
+                    , ( "type", Encode.string "approval" )
+                    , ( "name", Encode.string "承認" )
+                    , ( "assignee", Encode.object [ ( "type", Encode.string "user" ) ] )
+                    ]
+                , Encode.object
+                    [ ( "id", Encode.string "end_approved" )
+                    , ( "type", Encode.string "end" )
+                    , ( "name", Encode.string "承認完了" )
+                    , ( "status", Encode.string "approved" )
+                    ]
+                , Encode.object
+                    [ ( "id", Encode.string "end_rejected" )
+                    , ( "type", Encode.string "end" )
+                    , ( "name", Encode.string "却下" )
+                    , ( "status", Encode.string "rejected" )
+                    ]
+                ]
+          )
+        , ( "transitions"
+          , Encode.list identity
+                [ Encode.object
+                    [ ( "from", Encode.string "start" )
+                    , ( "to", Encode.string "approval" )
+                    ]
+                , Encode.object
+                    [ ( "from", Encode.string "approval" )
+                    , ( "to", Encode.string "end_approved" )
+                    , ( "trigger", Encode.string "approve" )
+                    ]
+                , Encode.object
+                    [ ( "from", Encode.string "approval" )
+                    , ( "to", Encode.string "end_rejected" )
+                    , ( "trigger", Encode.string "reject" )
+                    ]
+                ]
+          )
+        ]
 
 
 

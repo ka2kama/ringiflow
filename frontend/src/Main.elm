@@ -34,6 +34,7 @@ import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Page.WorkflowDefinition.Designer as Designer
+import Page.WorkflowDefinition.List as WorkflowDefinitionList
 import Ports
 import Route exposing (Route)
 import Shared exposing (Shared)
@@ -96,6 +97,7 @@ type Page
     | RoleNewPage RoleNew.Model
     | RoleEditPage RoleEdit.Model
     | AuditLogsPage AuditLogList.Model
+    | WorkflowDefinitionsPage WorkflowDefinitionList.Model
     | DesignerPage Designer.Model
     | NotFoundPage
 
@@ -286,6 +288,13 @@ initPage key route shared =
             in
             ( AuditLogsPage model, Cmd.map AuditLogsMsg cmd )
 
+        Route.WorkflowDefinitions ->
+            let
+                ( model, cmd ) =
+                    WorkflowDefinitionList.init shared
+            in
+            ( WorkflowDefinitionsPage model, Cmd.map WorkflowDefinitionsMsg cmd )
+
         Route.WorkflowDefinitionDesignerNew ->
             let
                 ( model, cmd ) =
@@ -348,6 +357,9 @@ updatePageShared shared page =
         AuditLogsPage subModel ->
             AuditLogsPage (AuditLogList.updateShared shared subModel)
 
+        WorkflowDefinitionsPage subModel ->
+            WorkflowDefinitionsPage (WorkflowDefinitionList.updateShared shared subModel)
+
         DesignerPage subModel ->
             DesignerPage (Designer.updateShared shared subModel)
 
@@ -387,6 +399,7 @@ type Msg
     | RoleNewMsg RoleNew.Msg
     | RoleEditMsg RoleEdit.Msg
     | AuditLogsMsg AuditLogList.Msg
+    | WorkflowDefinitionsMsg WorkflowDefinitionList.Msg
     | DesignerMsg Designer.Msg
 
 
@@ -705,6 +718,20 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        WorkflowDefinitionsMsg subMsg ->
+            case model.page of
+                WorkflowDefinitionsPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            WorkflowDefinitionList.update subMsg subModel
+                    in
+                    ( { model | page = WorkflowDefinitionsPage newSubModel }
+                    , Cmd.map WorkflowDefinitionsMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
         DesignerMsg subMsg ->
             case model.page of
                 DesignerPage subModel ->
@@ -889,9 +916,10 @@ viewAdminSection currentRoute shared =
     if Shared.isAdmin shared then
         [ div [ class "mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-secondary-500" ]
             [ text "管理" ]
+        , viewNavItem currentRoute Route.WorkflowDefinitions "ワークフロー定義" Icons.workflowDefinitions
         , viewNavItem currentRoute Route.Users "ユーザー管理" Icons.users
         , viewNavItem currentRoute Route.Roles "ロール管理" Icons.roles
-        , viewNavItem currentRoute Route.WorkflowDefinitionDesignerNew "ワークフロー定義" Icons.workflowDesigner
+        , viewNavItem currentRoute Route.WorkflowDefinitionDesignerNew "ワークフローデザイナー" Icons.workflowDesigner
         , viewNavItem currentRoute Route.AuditLogs "監査ログ" Icons.auditLog
         ]
 
@@ -1016,6 +1044,10 @@ viewPage model =
         AuditLogsPage subModel ->
             AuditLogList.view subModel
                 |> Html.map AuditLogsMsg
+
+        WorkflowDefinitionsPage subModel ->
+            WorkflowDefinitionList.view subModel
+                |> Html.map WorkflowDefinitionsMsg
 
         DesignerPage subModel ->
             Designer.view subModel
