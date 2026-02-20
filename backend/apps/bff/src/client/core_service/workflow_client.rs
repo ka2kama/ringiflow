@@ -10,10 +10,15 @@ use super::{
     response::handle_response,
     types::{
         ApproveRejectRequest,
+        CreateDefinitionCoreRequest,
         CreateWorkflowRequest,
         PostCommentCoreRequest,
+        PublishArchiveCoreRequest,
         ResubmitWorkflowRequest,
         SubmitWorkflowRequest,
+        UpdateDefinitionCoreRequest,
+        ValidateDefinitionCoreRequest,
+        ValidationResultDto,
         WorkflowCommentDto,
         WorkflowDefinitionDto,
         WorkflowInstanceDto,
@@ -186,6 +191,63 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         display_number: i64,
         tenant_id: Uuid,
     ) -> Result<ApiResponse<Vec<WorkflowCommentDto>>, CoreServiceError>;
+
+    // ===== ワークフロー定義管理 =====
+
+    /// ワークフロー定義を作成する
+    ///
+    /// Core Service の `POST /internal/workflow-definitions` を呼び出す。
+    async fn create_workflow_definition(
+        &self,
+        req: &CreateDefinitionCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+
+    /// ワークフロー定義を更新する
+    ///
+    /// Core Service の `PUT /internal/workflow-definitions/{id}` を呼び出す。
+    async fn update_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        req: &UpdateDefinitionCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+
+    /// ワークフロー定義を削除する
+    ///
+    /// Core Service の `DELETE /internal/workflow-definitions/{id}` を呼び出す。
+    async fn delete_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        tenant_id: Uuid,
+    ) -> Result<(), CoreServiceError>;
+
+    /// ワークフロー定義を公開する
+    ///
+    /// Core Service の `POST /internal/workflow-definitions/{id}/publish`
+    /// を呼び出す。
+    async fn publish_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        req: &PublishArchiveCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+
+    /// ワークフロー定義をアーカイブする
+    ///
+    /// Core Service の `POST /internal/workflow-definitions/{id}/archive`
+    /// を呼び出す。
+    async fn archive_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        req: &PublishArchiveCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+
+    /// ワークフロー定義をバリデーションする
+    ///
+    /// Core Service の `POST /internal/workflow-definitions/validate`
+    /// を呼び出す。
+    async fn validate_workflow_definition(
+        &self,
+        req: &ValidateDefinitionCoreRequest,
+    ) -> Result<ApiResponse<ValidationResultDto>, CoreServiceError>;
 }
 
 #[async_trait]
@@ -470,5 +532,118 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
 
         let response = inject_request_id(self.client.get(&url)).send().await?;
         handle_response(response, Some(CoreServiceError::WorkflowInstanceNotFound)).await
+    }
+
+    // ===== ワークフロー定義管理 =====
+
+    #[tracing::instrument(skip_all, level = "debug")]
+    async fn create_workflow_definition(
+        &self,
+        req: &CreateDefinitionCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+        let url = format!("{}/internal/workflow-definitions", self.base_url);
+
+        let response = inject_request_id(self.client.post(&url))
+            .json(req)
+            .send()
+            .await?;
+        handle_response(response, None).await
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%definition_id))]
+    async fn update_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        req: &UpdateDefinitionCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+        let url = format!(
+            "{}/internal/workflow-definitions/{}",
+            self.base_url, definition_id
+        );
+
+        let response = inject_request_id(self.client.put(&url))
+            .json(req)
+            .send()
+            .await?;
+        handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%definition_id, %tenant_id))]
+    async fn delete_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        tenant_id: Uuid,
+    ) -> Result<(), CoreServiceError> {
+        let url = format!(
+            "{}/internal/workflow-definitions/{}?tenant_id={}",
+            self.base_url, definition_id, tenant_id
+        );
+
+        let response = inject_request_id(self.client.delete(&url)).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            return Ok(());
+        }
+
+        let body = response.text().await.unwrap_or_default();
+
+        let error = match status {
+            reqwest::StatusCode::NOT_FOUND => CoreServiceError::WorkflowDefinitionNotFound,
+            reqwest::StatusCode::BAD_REQUEST => CoreServiceError::ValidationError(body),
+            _ => CoreServiceError::Unexpected(format!("予期しないステータス {}: {}", status, body)),
+        };
+
+        Err(error)
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%definition_id))]
+    async fn publish_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        req: &PublishArchiveCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+        let url = format!(
+            "{}/internal/workflow-definitions/{}/publish",
+            self.base_url, definition_id
+        );
+
+        let response = inject_request_id(self.client.post(&url))
+            .json(req)
+            .send()
+            .await?;
+        handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%definition_id))]
+    async fn archive_workflow_definition(
+        &self,
+        definition_id: Uuid,
+        req: &PublishArchiveCoreRequest,
+    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+        let url = format!(
+            "{}/internal/workflow-definitions/{}/archive",
+            self.base_url, definition_id
+        );
+
+        let response = inject_request_id(self.client.post(&url))
+            .json(req)
+            .send()
+            .await?;
+        handle_response(response, Some(CoreServiceError::WorkflowDefinitionNotFound)).await
+    }
+
+    #[tracing::instrument(skip_all, level = "debug")]
+    async fn validate_workflow_definition(
+        &self,
+        req: &ValidateDefinitionCoreRequest,
+    ) -> Result<ApiResponse<ValidationResultDto>, CoreServiceError> {
+        let url = format!("{}/internal/workflow-definitions/validate", self.base_url);
+
+        let response = inject_request_id(self.client.post(&url))
+            .json(req)
+            .send()
+            .await?;
+        handle_response(response, None).await
     }
 }

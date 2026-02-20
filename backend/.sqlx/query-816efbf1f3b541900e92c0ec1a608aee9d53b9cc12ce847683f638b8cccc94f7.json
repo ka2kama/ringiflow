@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE workflow_definitions SET\n                name = $1,\n                description = $2,\n                version = $3,\n                definition = $4,\n                status = $5,\n                updated_at = $6\n            WHERE id = $7 AND version = $8 AND tenant_id = $9\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Text",
+        "Int4",
+        "Jsonb",
+        "Varchar",
+        "Timestamptz",
+        "Uuid",
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "816efbf1f3b541900e92c0ec1a608aee9d53b9cc12ce847683f638b8cccc94f7"
+}

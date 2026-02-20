@@ -181,6 +181,56 @@ pub struct WorkflowDefinitionDto {
     pub updated_at:  String,
 }
 
+// --- ワークフロー定義管理リクエスト型 ---
+
+/// ワークフロー定義作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateDefinitionCoreRequest {
+    pub name:        String,
+    pub description: Option<String>,
+    pub definition:  serde_json::Value,
+    pub tenant_id:   Uuid,
+    pub user_id:     Uuid,
+}
+
+/// ワークフロー定義更新リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateDefinitionCoreRequest {
+    pub name:        String,
+    pub description: Option<String>,
+    pub definition:  serde_json::Value,
+    pub version:     i32,
+    pub tenant_id:   Uuid,
+}
+
+/// ワークフロー定義公開/アーカイブリクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct PublishArchiveCoreRequest {
+    pub version:   i32,
+    pub tenant_id: Uuid,
+}
+
+/// ワークフロー定義バリデーションリクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct ValidateDefinitionCoreRequest {
+    pub definition: serde_json::Value,
+}
+
+/// バリデーション結果 DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct ValidationResultDto {
+    pub valid:  bool,
+    pub errors: Vec<ValidationErrorDto>,
+}
+
+/// バリデーションエラー DTO
+#[derive(Debug, Clone, Deserialize)]
+pub struct ValidationErrorDto {
+    pub code:    String,
+    pub message: String,
+    pub step_id: Option<String>,
+}
+
 // --- タスク関連の型 ---
 
 /// ワークフロー概要 DTO（タスク一覧用）

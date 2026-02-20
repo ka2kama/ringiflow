@@ -94,6 +94,53 @@ impl WorkflowDefinitionRepository for MockWorkflowDefinitionRepository {
             .find(|d| d.id() == id && d.tenant_id() == tenant_id)
             .cloned())
     }
+
+    async fn find_all_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<WorkflowDefinition>, InfraError> {
+        Ok(self
+            .definitions
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|d| d.tenant_id() == tenant_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn insert(&self, definition: &WorkflowDefinition) -> Result<(), InfraError> {
+        self.definitions.lock().unwrap().push(definition.clone());
+        Ok(())
+    }
+
+    async fn update_with_version_check(
+        &self,
+        definition: &WorkflowDefinition,
+        expected_version: Version,
+    ) -> Result<(), InfraError> {
+        let mut definitions = self.definitions.lock().unwrap();
+        if let Some(pos) = definitions.iter().position(|d| d.id() == definition.id()) {
+            if definitions[pos].version() != expected_version {
+                return Err(InfraError::Conflict {
+                    entity: "WorkflowDefinition".to_string(),
+                    id:     definition.id().as_uuid().to_string(),
+                });
+            }
+            definitions[pos] = definition.clone();
+        }
+        Ok(())
+    }
+
+    async fn delete(
+        &self,
+        id: &WorkflowDefinitionId,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
+        let mut definitions = self.definitions.lock().unwrap();
+        definitions.retain(|d| !(d.id() == id && d.tenant_id() == tenant_id));
+        Ok(())
+    }
 }
 
 // ===== MockWorkflowInstanceRepository =====

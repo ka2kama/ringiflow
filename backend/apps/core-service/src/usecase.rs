@@ -18,6 +18,7 @@ pub mod role;
 pub mod task;
 pub mod user;
 pub mod workflow;
+pub mod workflow_definition;
 
 use std::collections::HashMap;
 
@@ -37,6 +38,7 @@ pub use workflow::{
     WorkflowUseCaseImpl,
     WorkflowWithSteps,
 };
+pub use workflow_definition::WorkflowDefinitionUseCaseImpl;
 
 use crate::error::CoreError;
 

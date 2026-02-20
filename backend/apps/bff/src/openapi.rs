@@ -9,7 +9,7 @@ use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
 };
 
-use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow};
+use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow, workflow_definition};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -37,6 +37,13 @@ use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow};
       workflow::resubmit_workflow,
       workflow::post_comment,
       workflow::list_comments,
+      // workflow-definitions (管理)
+      workflow_definition::create_definition,
+      workflow_definition::update_definition,
+      workflow_definition::delete_definition,
+      workflow_definition::publish_definition,
+      workflow_definition::archive_definition,
+      workflow_definition::validate_definition,
       // tasks
       task::list_my_tasks,
       workflow::get_task_by_display_numbers,
@@ -63,6 +70,7 @@ use crate::handler::{audit_log, auth, dashboard, role, task, user, workflow};
    tags(
       (name = "auth", description = "認証"),
       (name = "workflows", description = "ワークフロー管理"),
+      (name = "workflow-definitions", description = "ワークフロー定義管理"),
       (name = "tasks", description = "タスク管理"),
       (name = "users", description = "ユーザー管理"),
       (name = "roles", description = "ロール管理"),

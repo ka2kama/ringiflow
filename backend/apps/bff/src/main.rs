@@ -58,7 +58,7 @@ use std::{net::SocketAddr, sync::Arc};
 use axum::{
     Router,
     middleware::{from_fn, from_fn_with_state},
-    routing::{get, patch, post},
+    routing::{get, patch, post, put},
 };
 use client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl};
 use config::BffConfig;
@@ -67,12 +67,16 @@ use handler::{
     AuthState,
     RoleState,
     UserState,
+    WorkflowDefinitionState,
     WorkflowState,
     approve_step,
+    archive_definition,
+    create_definition,
     create_role,
     create_user,
     create_workflow,
     csrf,
+    delete_definition,
     delete_role,
     get_dashboard_stats,
     get_role,
@@ -92,13 +96,16 @@ use handler::{
     logout,
     me,
     post_comment,
+    publish_definition,
     reject_step,
     request_changes_step,
     resubmit_workflow,
     submit_workflow,
+    update_definition,
     update_role,
     update_user,
     update_user_status,
+    validate_definition,
 };
 use middleware::{
     AuthzState,
@@ -219,6 +226,12 @@ async fn main() -> anyhow::Result<()> {
         audit_log_repository: audit_log_repository.clone(),
     });
 
+    // WorkflowDefinitionState はワークフロー定義管理の CRUD に必要
+    let workflow_definition_state = Arc::new(WorkflowDefinitionState {
+        core_service_client: core_service_client.clone(),
+        session_manager:     session_manager.clone(),
+    });
+
     // RoleState はロール管理の CRUD に必要
     let role_state = Arc::new(RoleState {
         core_service_client,
@@ -253,6 +266,12 @@ async fn main() -> anyhow::Result<()> {
     let role_update_authz = AuthzState {
         session_manager:     session_manager.clone(),
         required_permission: "user:update".to_string(),
+    };
+
+    // ワークフロー定義管理 API 用の認可状態
+    let definition_manage_authz = AuthzState {
+        session_manager:     session_manager.clone(),
+        required_permission: "workflow_definition:manage".to_string(),
     };
 
     // 監査ログ閲覧 API 用の状態と認可
@@ -370,6 +389,32 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .layer(from_fn_with_state(role_update_authz, require_permission))
                 .with_state(role_state),
+        )
+        // ワークフロー定義管理 API（認可ミドルウェア適用、workflow_definition:manage 権限）
+        .merge(
+            Router::new()
+                .route(
+                    "/api/v1/workflow-definitions",
+                    post(create_definition),
+                )
+                .route(
+                    "/api/v1/workflow-definitions/{id}",
+                    put(update_definition).delete(delete_definition),
+                )
+                .route(
+                    "/api/v1/workflow-definitions/{id}/publish",
+                    post(publish_definition),
+                )
+                .route(
+                    "/api/v1/workflow-definitions/{id}/archive",
+                    post(archive_definition),
+                )
+                .route(
+                    "/api/v1/workflow-definitions/validate",
+                    post(validate_definition),
+                )
+                .layer(from_fn_with_state(definition_manage_authz, require_permission))
+                .with_state(workflow_definition_state),
         )
         // 監査ログ閲覧 API（認可ミドルウェア適用、user:read 権限）
         .merge(

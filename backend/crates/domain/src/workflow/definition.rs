@@ -169,19 +169,65 @@ impl WorkflowDefinition {
 
     // ビジネスロジックメソッド
 
-    /// 定義が公開可能かチェックする
+    /// 定義が公開可能かチェックする（Draft のみ公開可能）
     pub fn can_publish(&self) -> Result<(), DomainError> {
-        if self.status == WorkflowDefinitionStatus::Published {
-            return Err(DomainError::Validation("既に公開済みです".to_string()));
+        if self.status != WorkflowDefinitionStatus::Draft {
+            return Err(DomainError::Validation(
+                "下書き状態の定義のみ公開できます".to_string(),
+            ));
         }
         Ok(())
     }
 
-    /// 定義を公開した新しいインスタンスを返す
+    /// 定義がアーカイブ可能かチェックする（Published のみアーカイブ可能）
+    pub fn can_archive(&self) -> Result<(), DomainError> {
+        if self.status != WorkflowDefinitionStatus::Published {
+            return Err(DomainError::Validation(
+                "公開済みの定義のみアーカイブできます".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// 定義が削除可能かチェックする（Draft のみ削除可能）
+    pub fn can_delete(&self) -> Result<(), DomainError> {
+        if self.status != WorkflowDefinitionStatus::Draft {
+            return Err(DomainError::Validation(
+                "下書き状態の定義のみ削除できます".to_string(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// 定義を更新した新しいインスタンスを返す（Draft のみ更新可能）
+    pub fn update(
+        self,
+        name: WorkflowName,
+        description: Option<String>,
+        definition: JsonValue,
+        now: DateTime<Utc>,
+    ) -> Result<Self, DomainError> {
+        if self.status != WorkflowDefinitionStatus::Draft {
+            return Err(DomainError::Validation(
+                "下書き状態の定義のみ更新できます".to_string(),
+            ));
+        }
+        Ok(Self {
+            name,
+            description,
+            definition,
+            version: self.version.next(),
+            updated_at: now,
+            ..self
+        })
+    }
+
+    /// 定義を公開した新しいインスタンスを返す（Draft のみ公開可能）
     pub fn published(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
         self.can_publish()?;
         Ok(Self {
             status: WorkflowDefinitionStatus::Published,
+            version: self.version.next(),
             updated_at: now,
             ..self
         })
@@ -200,13 +246,15 @@ impl WorkflowDefinition {
         extract_approval_steps(&self.definition)
     }
 
-    /// 定義をアーカイブした新しいインスタンスを返す
-    pub fn archived(self, now: DateTime<Utc>) -> Self {
-        Self {
+    /// 定義をアーカイブした新しいインスタンスを返す（Published のみアーカイブ可能）
+    pub fn archived(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
+        self.can_archive()?;
+        Ok(Self {
             status: WorkflowDefinitionStatus::Archived,
+            version: self.version.next(),
             updated_at: now,
             ..self
-        }
+        })
     }
 }
 
@@ -384,7 +432,7 @@ mod tests {
                 tenant_id:   before.tenant_id().clone(),
                 name:        before.name().clone(),
                 description: before.description().map(|s| s.to_string()),
-                version:     before.version(),
+                version:     before.version().next(),
                 definition:  before.definition().clone(),
                 status:      WorkflowDefinitionStatus::Published,
                 created_by:  before.created_by().clone(),
@@ -407,6 +455,22 @@ mod tests {
         }
 
         #[rstest]
+        fn test_archived定義の公開はエラー(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let archived = test_definition
+                .published(now)
+                .unwrap()
+                .archived(now)
+                .unwrap();
+
+            let result = archived.published(now);
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
         fn test_アーカイブ後の状態(
             test_definition: WorkflowDefinition,
             now: DateTime<Utc>,
@@ -414,14 +478,14 @@ mod tests {
             let published = test_definition.published(now).unwrap();
             let before = published.clone();
 
-            let sut = published.archived(now);
+            let sut = published.archived(now).unwrap();
 
             let expected = WorkflowDefinition::from_db(WorkflowDefinitionRecord {
                 id:          before.id().clone(),
                 tenant_id:   before.tenant_id().clone(),
                 name:        before.name().clone(),
                 description: before.description().map(|s| s.to_string()),
-                version:     before.version(),
+                version:     before.version().next(),
                 definition:  before.definition().clone(),
                 status:      WorkflowDefinitionStatus::Archived,
                 created_by:  before.created_by().clone(),
@@ -429,6 +493,99 @@ mod tests {
                 updated_at:  now,
             });
             assert_eq!(sut, expected);
+        }
+
+        #[rstest]
+        fn test_draft定義のアーカイブはエラー(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let result = test_definition.archived(now);
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_archived定義の再アーカイブはエラー(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let archived = test_definition
+                .published(now)
+                .unwrap()
+                .archived(now)
+                .unwrap();
+
+            let result = archived.archived(now);
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_draft定義を更新できる(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let before = test_definition.clone();
+            let new_name = WorkflowName::new("更新後の名前").unwrap();
+
+            let sut = test_definition
+                .update(
+                    new_name.clone(),
+                    Some("更新後の説明".to_string()),
+                    json!({"steps": [{"id": "s1"}]}),
+                    now,
+                )
+                .unwrap();
+
+            assert_eq!(sut.name(), &new_name);
+            assert_eq!(sut.description(), Some("更新後の説明"));
+            assert_eq!(sut.version(), before.version().next());
+            assert_eq!(sut.updated_at(), now);
+            assert_eq!(sut.status(), WorkflowDefinitionStatus::Draft);
+        }
+
+        #[rstest]
+        fn test_published定義の更新はエラー(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let published = test_definition.published(now).unwrap();
+
+            let result = published.update(WorkflowName::new("更新").unwrap(), None, json!({}), now);
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_archived定義の更新はエラー(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let archived = test_definition
+                .published(now)
+                .unwrap()
+                .archived(now)
+                .unwrap();
+
+            let result = archived.update(WorkflowName::new("更新").unwrap(), None, json!({}), now);
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_draft定義の削除チェックが成功(test_definition: WorkflowDefinition) {
+            assert!(test_definition.can_delete().is_ok());
+        }
+
+        #[rstest]
+        fn test_published定義の削除チェックはエラー(
+            test_definition: WorkflowDefinition,
+            now: DateTime<Utc>,
+        ) {
+            let published = test_definition.published(now).unwrap();
+
+            assert!(published.can_delete().is_err());
         }
     }
 }

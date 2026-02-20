@@ -65,6 +65,32 @@ pub trait WorkflowDefinitionRepository: Send + Sync {
         id: &WorkflowDefinitionId,
         tenant_id: &TenantId,
     ) -> Result<Option<WorkflowDefinition>, InfraError>;
+
+    /// テナント内の全定義を取得（ステータス問わず）
+    async fn find_all_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<WorkflowDefinition>, InfraError>;
+
+    /// 定義を新規作成
+    async fn insert(&self, definition: &WorkflowDefinition) -> Result<(), InfraError>;
+
+    /// 楽観的ロック付き更新
+    ///
+    /// `expected_version` と DB 上のバージョンが一致する場合のみ更新する。
+    /// 不一致時は `InfraError::Conflict` を返す。
+    async fn update_with_version_check(
+        &self,
+        definition: &WorkflowDefinition,
+        expected_version: Version,
+    ) -> Result<(), InfraError>;
+
+    /// 定義を削除
+    async fn delete(
+        &self,
+        id: &WorkflowDefinitionId,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError>;
 }
 
 /// DB の workflow_definitions テーブルの行を表す中間構造体
@@ -144,7 +170,7 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
                 updated_at
             FROM workflow_definitions
             WHERE tenant_id = $1 AND status = 'published'
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id ASC
             "#,
             tenant_id.as_uuid()
         )
@@ -184,6 +210,126 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
         .await?;
 
         row.map(WorkflowDefinition::try_from).transpose()
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
+    async fn find_all_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<WorkflowDefinition>, InfraError> {
+        let rows = sqlx::query_as!(
+            WorkflowDefinitionRow,
+            r#"
+            SELECT
+                id,
+                tenant_id,
+                name,
+                description,
+                version,
+                definition,
+                status,
+                created_by,
+                created_at,
+                updated_at
+            FROM workflow_definitions
+            WHERE tenant_id = $1
+            ORDER BY created_at DESC, id ASC
+            "#,
+            tenant_id.as_uuid()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter().map(WorkflowDefinition::try_from).collect()
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(id = %definition.id(), tenant_id = %definition.tenant_id()))]
+    async fn insert(&self, definition: &WorkflowDefinition) -> Result<(), InfraError> {
+        let status: &str = definition.status().into();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO workflow_definitions
+                (id, tenant_id, name, description, version, definition, status, created_by, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            "#,
+            definition.id().as_uuid(),
+            definition.tenant_id().as_uuid(),
+            definition.name().as_str(),
+            definition.description(),
+            definition.version().as_i32(),
+            definition.definition(),
+            status,
+            definition.created_by().as_uuid(),
+            definition.created_at(),
+            definition.updated_at()
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(id = %definition.id(), %expected_version))]
+    async fn update_with_version_check(
+        &self,
+        definition: &WorkflowDefinition,
+        expected_version: Version,
+    ) -> Result<(), InfraError> {
+        let status: &str = definition.status().into();
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE workflow_definitions SET
+                name = $1,
+                description = $2,
+                version = $3,
+                definition = $4,
+                status = $5,
+                updated_at = $6
+            WHERE id = $7 AND version = $8 AND tenant_id = $9
+            "#,
+            definition.name().as_str(),
+            definition.description(),
+            definition.version().as_i32(),
+            definition.definition(),
+            status,
+            definition.updated_at(),
+            definition.id().as_uuid(),
+            expected_version.as_i32(),
+            definition.tenant_id().as_uuid()
+        )
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(InfraError::Conflict {
+                entity: "WorkflowDefinition".to_string(),
+                id:     definition.id().as_uuid().to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]
+    async fn delete(
+        &self,
+        id: &WorkflowDefinitionId,
+        tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
+        sqlx::query!(
+            r#"
+            DELETE FROM workflow_definitions
+            WHERE id = $1 AND tenant_id = $2
+            "#,
+            id.as_uuid(),
+            tenant_id.as_uuid()
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
     }
 }
 

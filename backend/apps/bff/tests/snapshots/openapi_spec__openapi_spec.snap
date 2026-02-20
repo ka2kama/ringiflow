@@ -1,6 +1,5 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 101
 expression: json
 ---
 {
@@ -919,6 +918,98 @@ expression: json
             "session_auth": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "workflow-definitions"
+        ],
+        "summary": "POST /api/v1/workflow-definitions",
+        "description": "ワークフロー定義を新規作成する（Draft 状態）。",
+        "operationId": "create_definition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "定義作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkflowDefinitionData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-definitions/validate": {
+      "post": {
+        "tags": [
+          "workflow-definitions"
+        ],
+        "summary": "POST /api/v1/workflow-definitions/validate",
+        "description": "ワークフロー定義 JSON のバリデーションのみ実行する。保存は行わない。",
+        "operationId": "validate_definition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "バリデーション結果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ValidationResultData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "リクエスト不正",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
       }
     },
     "/api/v1/workflow-definitions/{id}": {
@@ -954,6 +1045,291 @@ expression: json
           },
           "404": {
             "description": "定義が見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "workflow-definitions"
+        ],
+        "summary": "PUT /api/v1/workflow-definitions/{id}",
+        "description": "ワークフロー定義を更新する（Draft のみ）。",
+        "operationId": "update_definition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ワークフロー定義 ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "定義更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkflowDefinitionData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "定義が見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "バージョン競合",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "workflow-definitions"
+        ],
+        "summary": "DELETE /api/v1/workflow-definitions/{id}",
+        "description": "ワークフロー定義を削除する（Draft のみ）。",
+        "operationId": "delete_definition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ワークフロー定義 ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          },
+          "400": {
+            "description": "Draft 以外の削除",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "定義が見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-definitions/{id}/archive": {
+      "post": {
+        "tags": [
+          "workflow-definitions"
+        ],
+        "summary": "POST /api/v1/workflow-definitions/{id}/archive",
+        "description": "ワークフロー定義をアーカイブする（Published → Archived）。",
+        "operationId": "archive_definition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ワークフロー定義 ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishArchiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "アーカイブ成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkflowDefinitionData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Published 以外",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "定義が見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "バージョン競合",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workflow-definitions/{id}/publish": {
+      "post": {
+        "tags": [
+          "workflow-definitions"
+        ],
+        "summary": "POST /api/v1/workflow-definitions/{id}/publish",
+        "description": "ワークフロー定義を公開する（Draft → Published）。",
+        "operationId": "publish_definition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ワークフロー定義 ID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishArchiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "公開成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WorkflowDefinitionData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーション失敗 or Draft 以外",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "定義が見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "バージョン競合",
             "content": {
               "application/json": {
                 "schema": {
@@ -2095,6 +2471,34 @@ expression: json
           }
         }
       },
+      "ApiResponse_ValidationResultData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "バリデーション結果データ",
+            "required": [
+              "valid",
+              "errors"
+            ],
+            "properties": {
+              "valid": {
+                "type": "boolean"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ValidationErrorData"
+                }
+              }
+            }
+          }
+        }
+      },
       "ApiResponse_Vec_RoleItemData": {
         "type": "object",
         "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
@@ -2692,6 +3096,30 @@ expression: json
           }
         }
       },
+      "CreateDefinitionRequest": {
+        "type": "object",
+        "description": "定義作成リクエスト（BFF 公開 API）",
+        "required": [
+          "name",
+          "definition"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "ワークフロー定義名"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "説明（任意）"
+          },
+          "definition": {
+            "description": "定義 JSON"
+          }
+        }
+      },
       "CreateRoleRequest": {
         "type": "object",
         "description": "ロール作成リクエスト",
@@ -3041,6 +3469,20 @@ expression: json
           }
         }
       },
+      "PublishArchiveRequest": {
+        "type": "object",
+        "description": "公開/アーカイブリクエスト（BFF 公開 API）",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "楽観的ロック用バージョン"
+          }
+        }
+      },
       "ResubmitWorkflowRequest": {
         "type": "object",
         "description": "ワークフロー再申請リクエスト（BFF 公開 API）",
@@ -3296,6 +3738,36 @@ expression: json
           }
         }
       },
+      "UpdateDefinitionRequest": {
+        "type": "object",
+        "description": "定義更新リクエスト（BFF 公開 API）",
+        "required": [
+          "name",
+          "definition",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "ワークフロー定義名"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "説明（任意）"
+          },
+          "definition": {
+            "description": "定義 JSON"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "楽観的ロック用バージョン"
+          }
+        }
+      },
       "UpdateRoleRequest": {
         "type": "object",
         "description": "ロール更新リクエスト",
@@ -3481,6 +3953,59 @@ expression: json
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "ValidateDefinitionRequest": {
+        "type": "object",
+        "description": "バリデーションリクエスト（BFF 公開 API）",
+        "required": [
+          "definition"
+        ],
+        "properties": {
+          "definition": {
+            "description": "検証対象の定義 JSON"
+          }
+        }
+      },
+      "ValidationErrorData": {
+        "type": "object",
+        "description": "バリデーションエラーデータ",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "step_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ValidationResultData": {
+        "type": "object",
+        "description": "バリデーション結果データ",
+        "required": [
+          "valid",
+          "errors"
+        ],
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationErrorData"
+            }
           }
         }
       },
@@ -3737,6 +4262,10 @@ expression: json
     {
       "name": "workflows",
       "description": "ワークフロー管理"
+    },
+    {
+      "name": "workflow-definitions",
+      "description": "ワークフロー定義管理"
     },
     {
       "name": "tasks",

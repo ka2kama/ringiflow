@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                tenant_id,\n                name,\n                description,\n                version,\n                definition,\n                status,\n                created_by,\n                created_at,\n                updated_at\n            FROM workflow_definitions\n            WHERE tenant_id = $1 AND status = 'published'\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT\n                id,\n                tenant_id,\n                name,\n                description,\n                version,\n                definition,\n                status,\n                created_by,\n                created_at,\n                updated_at\n            FROM workflow_definitions\n            WHERE tenant_id = $1\n            ORDER BY created_at DESC, id ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -72,5 +72,5 @@
       false
     ]
   },
-  "hash": "6e6a5c0481414f67153c0f909365182981fd27e169411562b609ccbbf87e436d"
+  "hash": "5a8a3d6d0637232cb7b665ff1b66ae7edfab5994c00db6fb0f9bf97220d8425b"
 }
