@@ -5,6 +5,7 @@ module Component.Icons exposing
     , roles
     , tasks
     , users
+    , workflowDefinitions
     , workflowDesigner
     , workflows
     )
@@ -121,6 +122,25 @@ auditLog =
         , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "10", SvgAttr.x2 "16", SvgAttr.y2 "10" ] []
         , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "14", SvgAttr.x2 "16", SvgAttr.y2 "14" ] []
         , Svg.line [ SvgAttr.x1 "8", SvgAttr.y1 "18", SvgAttr.x2 "12", SvgAttr.y2 "18" ] []
+        ]
+
+
+{-| ワークフロー定義（フロー図 / 設計図モチーフ）
+-}
+workflowDefinitions : Html msg
+workflowDefinitions =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.rect [ SvgAttr.x "2", SvgAttr.y "3", SvgAttr.width "6", SvgAttr.height "5", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "16", SvgAttr.y "3", SvgAttr.width "6", SvgAttr.height "5", SvgAttr.rx "1" ] []
+        , Svg.rect [ SvgAttr.x "9", SvgAttr.y "16", SvgAttr.width "6", SvgAttr.height "5", SvgAttr.rx "1" ] []
+        , Svg.path [ SvgAttr.d "M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" ] []
+        , Svg.line [ SvgAttr.x1 "12", SvgAttr.y1 "13", SvgAttr.x2 "12", SvgAttr.y2 "16" ] []
         ]
 
 

@@ -93,6 +93,7 @@ type Route
     | RoleNew
     | RoleEdit String
     | AuditLogs
+    | WorkflowDefinitions
     | WorkflowDefinitionDesignerNew
     | NotFound
 
@@ -171,6 +172,7 @@ parser =
         , Parser.map Roles (s "roles")
         , Parser.map AuditLogs (s "audit-logs")
         , Parser.map WorkflowDefinitionDesignerNew (s "workflow-definitions" </> s "new")
+        , Parser.map WorkflowDefinitions (s "workflow-definitions")
         ]
 
 
@@ -317,6 +319,9 @@ toString route =
         AuditLogs ->
             "/audit-logs"
 
+        WorkflowDefinitions ->
+            "/workflow-definitions"
+
         WorkflowDefinitionDesignerNew ->
             "/workflow-definitions/new"
 
@@ -404,6 +409,12 @@ isRouteActive navRoute currentRoute =
         ( AuditLogs, AuditLogs ) ->
             True
 
+        ( WorkflowDefinitions, WorkflowDefinitions ) ->
+            True
+
+        ( WorkflowDefinitions, WorkflowDefinitionDesignerNew ) ->
+            True
+
         ( WorkflowDefinitionDesignerNew, WorkflowDefinitionDesignerNew ) ->
             True
 
@@ -457,6 +468,9 @@ pageTitle route =
 
         AuditLogs ->
             "監査ログ"
+
+        WorkflowDefinitions ->
+            "ワークフロー定義"
 
         WorkflowDefinitionDesignerNew ->
             "ワークフローデザイナー"

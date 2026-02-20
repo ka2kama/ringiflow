@@ -92,6 +92,10 @@ fromUrlTests =
                 \_ ->
                     parseUrl "/audit-logs"
                         |> Expect.equal AuditLogs
+            , test "/workflow-definitions → WorkflowDefinitions" <|
+                \_ ->
+                    parseUrl "/workflow-definitions"
+                        |> Expect.equal WorkflowDefinitions
             ]
         , describe "ワークフロー定義ルート"
             [ test "/workflow-definitions/new → WorkflowDefinitionDesignerNew" <|
@@ -201,6 +205,10 @@ toStringTests =
                 \_ ->
                     Route.toString AuditLogs
                         |> Expect.equal "/audit-logs"
+            , test "WorkflowDefinitions → /workflow-definitions" <|
+                \_ ->
+                    Route.toString WorkflowDefinitions
+                        |> Expect.equal "/workflow-definitions"
             ]
         , describe "ワークフロー定義ルート"
             [ test "WorkflowDefinitionDesignerNew → /workflow-definitions/new" <|
@@ -312,6 +320,10 @@ isRouteActiveTests =
         , test "Roles ナビは RoleEdit でもアクティブ" <|
             \_ ->
                 Route.isRouteActive Roles (RoleEdit "some-uuid")
+                    |> Expect.equal True
+        , test "WorkflowDefinitions ナビは WorkflowDefinitions でアクティブ" <|
+            \_ ->
+                Route.isRouteActive WorkflowDefinitions WorkflowDefinitions
                     |> Expect.equal True
         ]
 
