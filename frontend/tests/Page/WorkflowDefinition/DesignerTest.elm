@@ -64,6 +64,8 @@ modelWithOneStep =
             , stepType = Approval
             , name = "承認"
             , position = { x = 200, y = 100 }
+            , assignee = Nothing
+            , endStatus = Nothing
             }
     in
     { modelWithBounds

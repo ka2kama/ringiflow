@@ -3,11 +3,14 @@ module Data.DesignerCanvasTest exposing (suite)
 {-| DesignerCanvas データ型のテスト
 
 ステップ型の文字列変換、グリッドスナップ、デフォルト名の検証。
+定義のエンコード/デコード（JSON ↔ Dict/List 変換）の検証。
 
 -}
 
 import Data.DesignerCanvas as DesignerCanvas exposing (StepType(..))
+import Dict
 import Expect
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Test exposing (..)
 
@@ -24,6 +27,9 @@ suite =
         , generateStepIdTests
         , createStepFromDropTests
         , boundsDecoderTests
+        , encodeDefinitionTests
+        , loadStepsFromDefinitionTests
+        , loadTransitionsFromDefinitionTests
         ]
 
 
@@ -241,6 +247,8 @@ createStepFromDropTests =
                     , \s -> s.name |> Expect.equal "開始"
                     , \s -> s.position.x |> Expect.within (Expect.Absolute 0.001) 160
                     , \s -> s.position.y |> Expect.within (Expect.Absolute 0.001) 80
+                    , \s -> s.assignee |> Expect.equal Nothing
+                    , \s -> s.endStatus |> Expect.equal Nothing
                     ]
                     step
         ]
@@ -279,4 +287,306 @@ boundsDecoderTests =
 
                     Err _ ->
                         Expect.fail "Expected Ok Bounds, got Err"
+        ]
+
+
+
+-- encodeDefinition
+
+
+encodeDefinitionTests : Test
+encodeDefinitionTests =
+    describe "encodeDefinition"
+        [ test "steps と transitions から正しい JSON を生成する" <|
+            \_ ->
+                let
+                    steps =
+                        Dict.fromList
+                            [ ( "start_1"
+                              , { id = "start_1"
+                                , stepType = Start
+                                , name = "開始"
+                                , position = { x = 100, y = 100 }
+                                , assignee = Nothing
+                                , endStatus = Nothing
+                                }
+                              )
+                            , ( "approval_1"
+                              , { id = "approval_1"
+                                , stepType = Approval
+                                , name = "承認"
+                                , position = { x = 300, y = 100 }
+                                , assignee = Just { type_ = "user" }
+                                , endStatus = Nothing
+                                }
+                              )
+                            , ( "end_1"
+                              , { id = "end_1"
+                                , stepType = End
+                                , name = "承認完了"
+                                , position = { x = 500, y = 100 }
+                                , assignee = Nothing
+                                , endStatus = Just "approved"
+                                }
+                              )
+                            ]
+
+                    transitions =
+                        [ { from = "start_1", to = "approval_1", trigger = Nothing }
+                        , { from = "approval_1", to = "end_1", trigger = Just "approve" }
+                        ]
+
+                    encoded =
+                        DesignerCanvas.encodeDefinition steps transitions
+
+                    -- steps 配列の要素数
+                    stepsCount =
+                        Decode.decodeValue
+                            (Decode.field "steps" (Decode.list Decode.value)
+                                |> Decode.map List.length
+                            )
+                            encoded
+
+                    -- transitions 配列の要素数
+                    transitionsCount =
+                        Decode.decodeValue
+                            (Decode.field "transitions" (Decode.list Decode.value)
+                                |> Decode.map List.length
+                            )
+                            encoded
+
+                    -- steps 内の approval ステップに assignee が含まれるか確認
+                    approvalHasAssignee =
+                        Decode.decodeValue
+                            (Decode.field "steps"
+                                (Decode.list
+                                    (Decode.map2 Tuple.pair
+                                        (Decode.field "id" Decode.string)
+                                        (Decode.maybe (Decode.field "assignee" Decode.value))
+                                    )
+                                )
+                                |> Decode.map
+                                    (List.filterMap
+                                        (\( id, maybeAssignee ) ->
+                                            if id == "approval_1" then
+                                                Just (maybeAssignee /= Nothing)
+
+                                            else
+                                                Nothing
+                                        )
+                                    )
+                            )
+                            encoded
+
+                    -- transitions 内の trigger フィールド確認
+                    triggerValues =
+                        Decode.decodeValue
+                            (Decode.field "transitions"
+                                (Decode.list
+                                    (Decode.maybe (Decode.field "trigger" Decode.string))
+                                )
+                            )
+                            encoded
+                in
+                Expect.all
+                    [ \_ -> stepsCount |> Expect.equal (Ok 3)
+                    , \_ -> transitionsCount |> Expect.equal (Ok 2)
+                    , \_ -> approvalHasAssignee |> Expect.equal (Ok [ True ])
+                    , \_ -> triggerValues |> Expect.equal (Ok [ Nothing, Just "approve" ])
+                    ]
+                    ()
+        ]
+
+
+
+-- loadStepsFromDefinition
+
+
+loadStepsFromDefinitionTests : Test
+loadStepsFromDefinitionTests =
+    describe "loadStepsFromDefinition"
+        [ test "position あり JSON から StepNode Dict を生成する" <|
+            \_ ->
+                let
+                    json =
+                        Encode.object
+                            [ ( "steps"
+                              , Encode.list identity
+                                    [ Encode.object
+                                        [ ( "id", Encode.string "start_1" )
+                                        , ( "type", Encode.string "start" )
+                                        , ( "name", Encode.string "開始" )
+                                        , ( "position"
+                                          , Encode.object
+                                                [ ( "x", Encode.float 100 )
+                                                , ( "y", Encode.float 200 )
+                                                ]
+                                          )
+                                        ]
+                                    , Encode.object
+                                        [ ( "id", Encode.string "approval_1" )
+                                        , ( "type", Encode.string "approval" )
+                                        , ( "name", Encode.string "部長承認" )
+                                        , ( "assignee"
+                                          , Encode.object [ ( "type", Encode.string "user" ) ]
+                                          )
+                                        , ( "position"
+                                          , Encode.object
+                                                [ ( "x", Encode.float 300 )
+                                                , ( "y", Encode.float 200 )
+                                                ]
+                                          )
+                                        ]
+                                    , Encode.object
+                                        [ ( "id", Encode.string "end_1" )
+                                        , ( "type", Encode.string "end" )
+                                        , ( "name", Encode.string "承認完了" )
+                                        , ( "status", Encode.string "approved" )
+                                        , ( "position"
+                                          , Encode.object
+                                                [ ( "x", Encode.float 500 )
+                                                , ( "y", Encode.float 200 )
+                                                ]
+                                          )
+                                        ]
+                                    ]
+                              )
+                            , ( "transitions", Encode.list identity [] )
+                            ]
+                in
+                case DesignerCanvas.loadStepsFromDefinition json of
+                    Ok dict ->
+                        Expect.all
+                            [ \_ -> Dict.size dict |> Expect.equal 3
+                            , \_ ->
+                                Dict.get "start_1" dict
+                                    |> Maybe.map .stepType
+                                    |> Expect.equal (Just Start)
+                            , \_ ->
+                                Dict.get "start_1" dict
+                                    |> Maybe.map .name
+                                    |> Expect.equal (Just "開始")
+                            , \_ ->
+                                Dict.get "start_1" dict
+                                    |> Maybe.map (\s -> ( s.position.x, s.position.y ))
+                                    |> Expect.equal (Just ( 100, 200 ))
+                            , \_ ->
+                                Dict.get "approval_1" dict
+                                    |> Maybe.map (\s -> s.assignee |> Maybe.map .type_)
+                                    |> Expect.equal (Just (Just "user"))
+                            , \_ ->
+                                Dict.get "end_1" dict
+                                    |> Maybe.map .endStatus
+                                    |> Expect.equal (Just (Just "approved"))
+                            ]
+                            ()
+
+                    Err err ->
+                        Expect.fail ("Expected Ok, got Err: " ++ Decode.errorToString err)
+        , test "position なし JSON から自動配置で StepNode Dict を生成する" <|
+            \_ ->
+                let
+                    json =
+                        Encode.object
+                            [ ( "steps"
+                              , Encode.list identity
+                                    [ Encode.object
+                                        [ ( "id", Encode.string "start" )
+                                        , ( "type", Encode.string "start" )
+                                        , ( "name", Encode.string "開始" )
+                                        ]
+                                    , Encode.object
+                                        [ ( "id", Encode.string "approval" )
+                                        , ( "type", Encode.string "approval" )
+                                        , ( "name", Encode.string "承認" )
+                                        ]
+                                    , Encode.object
+                                        [ ( "id", Encode.string "end" )
+                                        , ( "type", Encode.string "end" )
+                                        , ( "name", Encode.string "終了" )
+                                        ]
+                                    ]
+                              )
+                            , ( "transitions", Encode.list identity [] )
+                            ]
+                in
+                case DesignerCanvas.loadStepsFromDefinition json of
+                    Ok dict ->
+                        let
+                            -- 自動配置: 縦一列、等間隔
+                            -- x = viewBoxWidth / 2 - stepWidth / 2 = 540
+                            -- y = 60 + index * 100
+                            positions =
+                                Dict.toList dict
+                                    |> List.sortBy (\( _, s ) -> s.position.y)
+                                    |> List.map (\( _, s ) -> ( s.position.x, s.position.y ))
+                        in
+                        Expect.all
+                            [ \_ -> Dict.size dict |> Expect.equal 3
+                            , \_ ->
+                                -- すべての x 座標が同じ（縦一列）
+                                positions
+                                    |> List.map Tuple.first
+                                    |> List.all (\x -> x == 540)
+                                    |> Expect.equal True
+                            , \_ ->
+                                -- y 座標が等間隔で増加
+                                positions
+                                    |> List.map Tuple.second
+                                    |> Expect.equal [ 60, 160, 260 ]
+                            ]
+                            ()
+
+                    Err err ->
+                        Expect.fail ("Expected Ok, got Err: " ++ Decode.errorToString err)
+        ]
+
+
+
+-- loadTransitionsFromDefinition
+
+
+loadTransitionsFromDefinitionTests : Test
+loadTransitionsFromDefinitionTests =
+    describe "loadTransitionsFromDefinition"
+        [ test "transitions を正しくデコードする" <|
+            \_ ->
+                let
+                    json =
+                        Encode.object
+                            [ ( "steps", Encode.list identity [] )
+                            , ( "transitions"
+                              , Encode.list identity
+                                    [ Encode.object
+                                        [ ( "from", Encode.string "start_1" )
+                                        , ( "to", Encode.string "approval_1" )
+                                        ]
+                                    , Encode.object
+                                        [ ( "from", Encode.string "approval_1" )
+                                        , ( "to", Encode.string "end_1" )
+                                        , ( "trigger", Encode.string "approve" )
+                                        ]
+                                    ]
+                              )
+                            ]
+                in
+                case DesignerCanvas.loadTransitionsFromDefinition json of
+                    Ok transitions ->
+                        Expect.all
+                            [ \_ -> List.length transitions |> Expect.equal 2
+                            , \_ ->
+                                List.head transitions
+                                    |> Maybe.map (\t -> ( t.from, t.to, t.trigger ))
+                                    |> Expect.equal (Just ( "start_1", "approval_1", Nothing ))
+                            , \_ ->
+                                transitions
+                                    |> List.drop 1
+                                    |> List.head
+                                    |> Maybe.map (\t -> ( t.from, t.to, t.trigger ))
+                                    |> Expect.equal (Just ( "approval_1", "end_1", Just "approve" ))
+                            ]
+                            ()
+
+                    Err err ->
+                        Expect.fail ("Expected Ok, got Err: " ++ Decode.errorToString err)
         ]

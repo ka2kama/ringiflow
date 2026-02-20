@@ -125,6 +125,17 @@ update msg model =
                         Nothing ->
                             ( model, Cmd.none )
 
+                Just (DraggingConnection sourceId _) ->
+                    -- Phase 2 で接続線プレビュー更新を実装
+                    case DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY of
+                        Just canvasPos ->
+                            ( { model | dragging = Just (DraggingConnection sourceId canvasPos) }
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
                 Nothing ->
                     ( model, Cmd.none )
 
@@ -145,6 +156,12 @@ update msg model =
                     )
 
                 Just (DraggingExistingStep _ _) ->
+                    ( { model | dragging = Nothing }
+                    , Cmd.none
+                    )
+
+                Just (DraggingConnection _ _) ->
+                    -- Phase 2 で接続ドロップ判定を実装
                     ( { model | dragging = Nothing }
                     , Cmd.none
                     )

@@ -16,6 +16,8 @@ suite =
         [ decoderTests
         , listDecoderTests
         , approvalStepInfosTests
+        , encodeUpdateRequestTests
+        , validationResultDecoderTests
         ]
 
 
@@ -256,6 +258,125 @@ approvalStepInfosTests =
                 WorkflowDefinition.approvalStepInfos definition
                     |> List.map .id
                     |> Expect.equal [ "step-1" ]
+        ]
+
+
+
+-- encodeUpdateRequest
+
+
+encodeUpdateRequestTests : Test
+encodeUpdateRequestTests =
+    describe "encodeUpdateRequest"
+        [ test "name/description/definition/version を正しくエンコードする" <|
+            \_ ->
+                let
+                    definition =
+                        Encode.object [ ( "steps", Encode.list identity [] ) ]
+
+                    encoded =
+                        WorkflowDefinition.encodeUpdateRequest
+                            { name = "経費精算フロー"
+                            , description = "経費精算の申請フロー"
+                            , definition = definition
+                            , version = 3
+                            }
+
+                    decodedName =
+                        Decode.decodeValue (Decode.field "name" Decode.string) encoded
+
+                    decodedDescription =
+                        Decode.decodeValue (Decode.field "description" Decode.string) encoded
+
+                    decodedVersion =
+                        Decode.decodeValue (Decode.field "version" Decode.int) encoded
+
+                    decodedDefinition =
+                        Decode.decodeValue (Decode.field "definition" Decode.value) encoded
+                in
+                Expect.all
+                    [ \_ -> decodedName |> Expect.equal (Ok "経費精算フロー")
+                    , \_ -> decodedDescription |> Expect.equal (Ok "経費精算の申請フロー")
+                    , \_ -> decodedVersion |> Expect.equal (Ok 3)
+                    , \_ -> decodedDefinition |> Result.map (\_ -> True) |> Expect.equal (Ok True)
+                    ]
+                    ()
+        ]
+
+
+
+-- validationResultDecoder
+
+
+validationResultDecoderTests : Test
+validationResultDecoderTests =
+    describe "validationResultDecoder"
+        [ test "valid: true, errors: [] をデコードする" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "data": {
+                                "valid": true,
+                                "errors": []
+                            }
+                        }
+                        """
+                in
+                case Decode.decodeString WorkflowDefinition.validationResultDecoder json of
+                    Ok result ->
+                        Expect.all
+                            [ \r -> r.valid |> Expect.equal True
+                            , \r -> r.errors |> Expect.equal []
+                            ]
+                            result
+
+                    Err err ->
+                        Expect.fail ("Expected Ok, got Err: " ++ Decode.errorToString err)
+        , test "valid: false, errors: [{code, message, step_id}] をデコードする" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "data": {
+                                "valid": false,
+                                "errors": [
+                                    {
+                                        "code": "missing_start_step",
+                                        "message": "開始ステップが必要です"
+                                    },
+                                    {
+                                        "code": "orphaned_step",
+                                        "message": "ステップ 'approval_1' が接続されていません",
+                                        "step_id": "approval_1"
+                                    }
+                                ]
+                            }
+                        }
+                        """
+                in
+                case Decode.decodeString WorkflowDefinition.validationResultDecoder json of
+                    Ok result ->
+                        Expect.all
+                            [ \r -> r.valid |> Expect.equal False
+                            , \r -> List.length r.errors |> Expect.equal 2
+                            , \r ->
+                                List.head r.errors
+                                    |> Maybe.map (\e -> ( e.code, e.stepId ))
+                                    |> Expect.equal (Just ( "missing_start_step", Nothing ))
+                            , \r ->
+                                r.errors
+                                    |> List.drop 1
+                                    |> List.head
+                                    |> Maybe.map (\e -> ( e.code, e.stepId ))
+                                    |> Expect.equal (Just ( "orphaned_step", Just "approval_1" ))
+                            ]
+                            result
+
+                    Err err ->
+                        Expect.fail ("Expected Ok, got Err: " ++ Decode.errorToString err)
         ]
 
 
