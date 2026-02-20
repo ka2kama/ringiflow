@@ -71,14 +71,19 @@ use handler::{
     RoleState,
     TaskState,
     UserState,
+    WorkflowDefinitionState,
     WorkflowState,
     approve_step,
     approve_step_by_display_number,
+    archive_definition,
+    create_definition,
     create_role,
     create_user,
     create_workflow,
+    delete_definition,
     delete_role,
     get_dashboard_stats,
+    get_definition,
     get_role,
     get_task,
     get_task_by_display_numbers,
@@ -87,15 +92,15 @@ use handler::{
     get_user_by_email,
     get_workflow,
     get_workflow_by_display_number,
-    get_workflow_definition,
     health_check,
     list_comments,
+    list_definitions,
     list_my_tasks,
     list_my_workflows,
     list_roles,
     list_users,
-    list_workflow_definitions,
     post_comment,
+    publish_definition,
     reject_step,
     reject_step_by_display_number,
     request_changes_step,
@@ -104,9 +109,11 @@ use handler::{
     resubmit_workflow_by_display_number,
     submit_workflow,
     submit_workflow_by_display_number,
+    update_definition,
     update_role,
     update_user,
     update_user_status,
+    validate_definition,
 };
 use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
@@ -139,6 +146,7 @@ use usecase::{
     RoleUseCaseImpl,
     TaskUseCaseImpl,
     UserUseCaseImpl,
+    WorkflowDefinitionUseCaseImpl,
     WorkflowUseCaseImpl,
 };
 
@@ -211,6 +219,13 @@ async fn main() -> anyhow::Result<()> {
         usecase:         role_usecase,
     });
 
+    // ワークフロー定義管理 UseCase + State
+    let definition_usecase =
+        WorkflowDefinitionUseCaseImpl::new(definition_repo.clone(), clock.clone());
+    let definition_state = Arc::new(WorkflowDefinitionState {
+        usecase: definition_usecase,
+    });
+
     // ワークフロー UseCase
     let tx_manager = Arc::new(PgTransactionManager::new(pool.clone()));
     let workflow_usecase = WorkflowUseCaseImpl::new(
@@ -267,12 +282,28 @@ async fn main() -> anyhow::Result<()> {
          get(get_role).patch(update_role).delete(delete_role),
       )
       .with_state(role_state)
-      // ワークフロー定義 API
-      .route("/internal/workflow-definitions", get(list_workflow_definitions))
+      // ワークフロー定義管理 API
+      .route(
+         "/internal/workflow-definitions",
+         get(list_definitions).post(create_definition),
+      )
       .route(
          "/internal/workflow-definitions/{id}",
-         get(get_workflow_definition),
+         get(get_definition).put(update_definition).delete(delete_definition),
       )
+      .route(
+         "/internal/workflow-definitions/{id}/publish",
+         post(publish_definition),
+      )
+      .route(
+         "/internal/workflow-definitions/{id}/archive",
+         post(archive_definition),
+      )
+      .route(
+         "/internal/workflow-definitions/validate",
+         post(validate_definition),
+      )
+      .with_state(definition_state)
       // ワークフローインスタンス API
       .route(
          "/internal/workflows",

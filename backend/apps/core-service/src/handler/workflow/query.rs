@@ -8,11 +8,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use ringiflow_domain::{
-    tenant::TenantId,
-    user::UserId,
-    workflow::{WorkflowDefinitionId, WorkflowInstanceId},
-};
+use ringiflow_domain::{tenant::TenantId, user::UserId, workflow::WorkflowInstanceId};
 use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
@@ -20,69 +16,11 @@ use super::{
     TenantQuery,
     UserQuery,
     WorkflowCommentDto,
-    WorkflowDefinitionDto,
     WorkflowInstanceDto,
     WorkflowState,
     parse_display_number,
 };
 use crate::error::CoreError;
-
-/// ワークフロー定義一覧を取得する
-///
-/// ## エンドポイント
-/// GET /internal/workflow-definitions?tenant_id={tenant_id}
-///
-/// ## 処理フロー
-/// 1. クエリパラメータからテナント ID を取得
-/// 2. ユースケースを呼び出し
-/// 3. レスポンスを返す
-#[tracing::instrument(skip_all)]
-pub async fn list_workflow_definitions(
-    State(state): State<Arc<WorkflowState>>,
-    Query(query): Query<TenantQuery>,
-) -> Result<Response, CoreError> {
-    let tenant_id = TenantId::from_uuid(query.tenant_id);
-
-    let definitions = state.usecase.list_workflow_definitions(tenant_id).await?;
-
-    let response = ApiResponse::new(
-        definitions
-            .into_iter()
-            .map(WorkflowDefinitionDto::from)
-            .collect::<Vec<_>>(),
-    );
-
-    Ok((StatusCode::OK, Json(response)).into_response())
-}
-
-/// ワークフロー定義の詳細を取得する
-///
-/// ## エンドポイント
-/// GET /internal/workflow-definitions/{id}?tenant_id={tenant_id}
-///
-/// ## 処理フロー
-/// 1. パスパラメータから ID を取得
-/// 2. クエリパラメータからテナント ID を取得
-/// 3. ユースケースを呼び出し
-/// 4. レスポンスを返す
-#[tracing::instrument(skip_all, fields(%id))]
-pub async fn get_workflow_definition(
-    State(state): State<Arc<WorkflowState>>,
-    Path(id): Path<Uuid>,
-    Query(query): Query<TenantQuery>,
-) -> Result<Response, CoreError> {
-    let definition_id = WorkflowDefinitionId::from_uuid(id);
-    let tenant_id = TenantId::from_uuid(query.tenant_id);
-
-    let definition = state
-        .usecase
-        .get_workflow_definition(definition_id, tenant_id)
-        .await?;
-
-    let response = ApiResponse::new(WorkflowDefinitionDto::from(definition));
-
-    Ok((StatusCode::OK, Json(response)).into_response())
-}
 
 /// 自分のワークフロー一覧を取得する
 ///

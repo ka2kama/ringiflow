@@ -4,7 +4,7 @@ use ringiflow_domain::{
     tenant::TenantId,
     user::UserId,
     value_objects::DisplayNumber,
-    workflow::{WorkflowComment, WorkflowDefinition, WorkflowDefinitionId, WorkflowInstanceId},
+    workflow::{WorkflowComment, WorkflowInstanceId},
 };
 
 use super::{WorkflowUseCaseImpl, WorkflowWithSteps};
@@ -12,56 +12,6 @@ use crate::{error::CoreError, usecase::helpers::FindResultExt};
 
 impl WorkflowUseCaseImpl {
     // ===== GET 系メソッド =====
-
-    /// 公開済みワークフロー定義一覧を取得する
-    ///
-    /// フロントエンドのワークフロー申請フォームで、ユーザーが選択可能な
-    /// ワークフロー定義の一覧を返す。
-    ///
-    /// ## 引数
-    ///
-    /// - `tenant_id`: テナント ID
-    ///
-    /// ## 戻り値
-    ///
-    /// - `Ok(Vec<WorkflowDefinition>)`: 公開済み定義の一覧
-    /// - `Err(_)`: データベースエラー
-    pub async fn list_workflow_definitions(
-        &self,
-        tenant_id: TenantId,
-    ) -> Result<Vec<WorkflowDefinition>, CoreError> {
-        self.definition_repo
-            .find_published_by_tenant(&tenant_id)
-            .await
-            .map_err(|e| CoreError::Internal(format!("定義一覧の取得に失敗: {}", e)))
-    }
-
-    /// ワークフロー定義の詳細を取得する
-    ///
-    /// 指定された ID のワークフロー定義を取得する。
-    /// 公開済み（published）でない定義も取得可能だが、
-    /// フロントエンドでの利用を想定している。
-    ///
-    /// ## 引数
-    ///
-    /// - `id`: ワークフロー定義 ID
-    /// - `tenant_id`: テナント ID
-    ///
-    /// ## 戻り値
-    ///
-    /// - `Ok(definition)`: ワークフロー定義
-    /// - `Err(NotFound)`: 定義が見つからない場合
-    /// - `Err(_)`: データベースエラー
-    pub async fn get_workflow_definition(
-        &self,
-        id: WorkflowDefinitionId,
-        tenant_id: TenantId,
-    ) -> Result<WorkflowDefinition, CoreError> {
-        self.definition_repo
-            .find_by_id(&id, &tenant_id)
-            .await
-            .or_not_found("ワークフロー定義")
-    }
 
     /// 自分の申請一覧を取得する
     ///

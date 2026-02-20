@@ -18,6 +18,7 @@ pub mod health;
 pub mod role;
 pub mod task;
 pub mod workflow;
+pub mod workflow_definition;
 
 pub use auth::{
     UserState,
@@ -40,10 +41,8 @@ pub use workflow::{
     create_workflow,
     get_workflow,
     get_workflow_by_display_number,
-    get_workflow_definition,
     list_comments,
     list_my_workflows,
-    list_workflow_definitions,
     post_comment,
     reject_step,
     reject_step_by_display_number,
@@ -53,4 +52,15 @@ pub use workflow::{
     resubmit_workflow_by_display_number,
     submit_workflow,
     submit_workflow_by_display_number,
+};
+pub use workflow_definition::{
+    WorkflowDefinitionState,
+    archive_definition,
+    create_definition,
+    delete_definition,
+    get_definition,
+    list_definitions,
+    publish_definition,
+    update_definition,
+    validate_definition,
 };
