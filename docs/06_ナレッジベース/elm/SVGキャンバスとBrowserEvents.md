@@ -182,4 +182,4 @@ Svg.g
 - [Browser.Events](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Events)
 - [MDN: SVG viewBox](https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/viewBox)
 - [MDN: getBoundingClientRect](https://developer.mozilla.org/en-US/docs/Web/API/Element/getBoundingClientRect)
-- [ADR-053: ワークフローデザイナーの技術方式](../../05_ADR/053_ワークフローデザイナーの技術方式.md)
+- [ADR-053: ワークフローデザイナー技術選定](../../05_ADR/053_ワークフローデザイナー技術選定.md)
