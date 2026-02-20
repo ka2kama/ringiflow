@@ -1,6 +1,7 @@
 module Data.WorkflowComment exposing
     ( WorkflowComment
     , decoder
+    , detailDecoder
     , listDecoder
     )
 
@@ -51,6 +52,16 @@ decoder =
         |> required "posted_by" Data.UserRef.decoder
         |> required "body" Decode.string
         |> required "created_at" Decode.string
+
+
+{-| 単一のコメントレスポンスをデコード
+
+API レスポンスの `{ data: {...} }` 形式に対応。
+
+-}
+detailDecoder : Decoder WorkflowComment
+detailDecoder =
+    Decode.field "data" decoder
 
 
 {-| コメント一覧をデコード

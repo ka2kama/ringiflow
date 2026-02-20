@@ -9,6 +9,7 @@ module Data.WorkflowInstance exposing
     , decisionToJapanese
     , decisionToString
     , decoder
+    , detailDecoder
     , listDecoder
     , statusFromString
     , statusToCssClass
@@ -421,6 +422,16 @@ decoder =
         |> optional "submitted_at" (Decode.nullable Decode.string) Nothing
         |> required "created_at" Decode.string
         |> required "updated_at" Decode.string
+
+
+{-| 単一のワークフローインスタンスレスポンスをデコード
+
+API レスポンスの `{ data: {...} }` 形式に対応。
+
+-}
+detailDecoder : Decoder WorkflowInstance
+detailDecoder =
+    Decode.field "data" decoder
 
 
 {-| ワークフローインスタンス一覧をデコード
