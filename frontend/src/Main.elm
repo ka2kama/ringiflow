@@ -33,6 +33,7 @@ import Page.User.New as UserNew
 import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
+import Page.WorkflowDefinition.Designer as Designer
 import Ports
 import Route exposing (Route)
 import Shared exposing (Shared)
@@ -95,6 +96,7 @@ type Page
     | RoleNewPage RoleNew.Model
     | RoleEditPage RoleEdit.Model
     | AuditLogsPage AuditLogList.Model
+    | DesignerPage Designer.Model
     | NotFoundPage
 
 
@@ -284,6 +286,13 @@ initPage key route shared =
             in
             ( AuditLogsPage model, Cmd.map AuditLogsMsg cmd )
 
+        Route.WorkflowDefinitionDesignerNew ->
+            let
+                ( model, cmd ) =
+                    Designer.init shared
+            in
+            ( DesignerPage model, Cmd.map DesignerMsg cmd )
+
         Route.NotFound ->
             ( NotFoundPage, Cmd.none )
 
@@ -339,6 +348,9 @@ updatePageShared shared page =
         AuditLogsPage subModel ->
             AuditLogsPage (AuditLogList.updateShared shared subModel)
 
+        DesignerPage subModel ->
+            DesignerPage (Designer.updateShared shared subModel)
+
         NotFoundPage ->
             NotFoundPage
 
@@ -375,6 +387,7 @@ type Msg
     | RoleNewMsg RoleNew.Msg
     | RoleEditMsg RoleEdit.Msg
     | AuditLogsMsg AuditLogList.Msg
+    | DesignerMsg Designer.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -692,6 +705,20 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        DesignerMsg subMsg ->
+            case model.page of
+                DesignerPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            Designer.update subMsg subModel
+                    in
+                    ( { model | page = DesignerPage newSubModel }
+                    , Cmd.map DesignerMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 {-| 現在のページに未保存の変更があるかを判定
 -}
@@ -735,6 +762,9 @@ subscriptions model =
 
         WorkflowDetailPage _ ->
             Sub.map WorkflowDetailMsg WorkflowDetail.subscriptions
+
+        DesignerPage subModel ->
+            Sub.map DesignerMsg (Designer.subscriptions subModel)
 
         _ ->
             Sub.none
@@ -861,6 +891,7 @@ viewAdminSection currentRoute shared =
             [ text "管理" ]
         , viewNavItem currentRoute Route.Users "ユーザー管理" Icons.users
         , viewNavItem currentRoute Route.Roles "ロール管理" Icons.roles
+        , viewNavItem currentRoute Route.WorkflowDefinitionDesignerNew "ワークフロー定義" Icons.workflowDesigner
         , viewNavItem currentRoute Route.AuditLogs "監査ログ" Icons.auditLog
         ]
 
@@ -985,6 +1016,10 @@ viewPage model =
         AuditLogsPage subModel ->
             AuditLogList.view subModel
                 |> Html.map AuditLogsMsg
+
+        DesignerPage subModel ->
+            Designer.view subModel
+                |> Html.map DesignerMsg
 
         NotFoundPage ->
             Page.NotFound.view

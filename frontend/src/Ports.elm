@@ -1,5 +1,7 @@
 port module Ports exposing
-    ( receiveMessage
+    ( receiveCanvasBounds
+    , receiveMessage
+    , requestCanvasBounds
     , sendMessage
     , setBeforeUnloadEnabled
     , showModalDialog
@@ -63,3 +65,20 @@ port setBeforeUnloadEnabled : Bool -> Cmd msg
 
 -}
 port showModalDialog : String -> Cmd msg
+
+
+{-| キャンバス SVG 要素の境界情報をリクエスト
+
+getBoundingClientRect の結果を receiveCanvasBounds で受け取る。
+引数は SVG 要素の HTML id。
+
+-}
+port requestCanvasBounds : String -> Cmd msg
+
+
+{-| キャンバス SVG 要素の境界情報を受信
+
+JSON 形式: { x, y, width, height }
+
+-}
+port receiveCanvasBounds : (Encode.Value -> msg) -> Sub msg
