@@ -170,7 +170,7 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
                 updated_at
             FROM workflow_definitions
             WHERE tenant_id = $1 AND status = 'published'
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id ASC
             "#,
             tenant_id.as_uuid()
         )
@@ -233,7 +233,7 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
                 updated_at
             FROM workflow_definitions
             WHERE tenant_id = $1
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id ASC
             "#,
             tenant_id.as_uuid()
         )

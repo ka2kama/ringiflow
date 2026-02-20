@@ -319,7 +319,8 @@ pub async fn archive_definition(
    security(("session_auth" = [])),
    request_body = ValidateDefinitionRequest,
    responses(
-      (status = 200, description = "バリデーション結果", body = ApiResponse<ValidationResultData>)
+      (status = 200, description = "バリデーション結果", body = ApiResponse<ValidationResultData>),
+      (status = 400, description = "リクエスト不正", body = ringiflow_shared::ErrorResponse)
    )
 )]
 #[tracing::instrument(skip_all)]
