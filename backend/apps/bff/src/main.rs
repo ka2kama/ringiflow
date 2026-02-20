@@ -111,6 +111,7 @@ use middleware::{
     AuthzState,
     CsrfState,
     csrf_middleware,
+    no_cache,
     request_id::store_request_id,
     require_permission,
 };
@@ -424,6 +425,8 @@ async fn main() -> anyhow::Result<()> {
                 .with_state(audit_log_state),
         )
         .layer(from_fn_with_state(csrf_state, csrf_middleware))
+        // キャッシュ制御: 動的 API レスポンスがブラウザにキャッシュされないようにする
+        .layer(from_fn(no_cache))
         // Request ID レイヤー（レイヤー順序が重要: 下に書いたものが外側）
         // 1. SetRequestIdLayer（最外）: リクエスト受信時に UUID v7 を生成（またはクライアント提供値を使用）
         // 2. TraceLayer: カスタムスパンに request_id を含め、全ログに自動注入
