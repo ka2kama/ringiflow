@@ -273,19 +273,19 @@ view = div [...]
 ```
 
 #### 確認事項
-- [ ] パターン: `FormField.viewTextField` シグネチャ → `Component/FormField.elm` L54-62
-- [ ] パターン: `FormField.viewSelectField` シグネチャ → `Component/FormField.elm` L103-111
-- [ ] パターン: `FormField.viewReadOnlyField` シグネチャ → `Component/FormField.elm` L133-134
+- [x] パターン: `FormField.viewTextField` シグネチャ → `Component/FormField.elm` L54-62: `{ label, value, onInput, error, inputType, placeholder }`
+- [x] パターン: `FormField.viewSelectField` シグネチャ → `Component/FormField.elm` L103-111: `{ label, value, onInput, error, options : List { value, label }, placeholder }`
+- [x] パターン: `FormField.viewReadOnlyField` シグネチャ → `Component/FormField.elm` L133-134: `String -> String -> Html msg`
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] update: `StepClicked` 後に propertyName がステップの name に同期される
-- [ ] update: `StepClicked` 後に propertyEndStatus が endStatus の値に同期される
-- [ ] update: `UpdatePropertyName` でステップの name がリアルタイム更新される
-- [ ] update: `UpdatePropertyEndStatus "approved"` で endStatus が Just "approved" になる
-- [ ] update: `UpdatePropertyEndStatus ""` で endStatus が Nothing になる
-- [ ] update: `CanvasBackgroundClicked` で propertyName がクリアされる
+- [x] update: `StepClicked` 後に propertyName がステップの name に同期される
+- [x] update: `StepClicked` 後に propertyEndStatus が endStatus の値に同期される
+- [x] update: `UpdatePropertyName` でステップの name がリアルタイム更新される
+- [x] update: `UpdatePropertyEndStatus "approved"` で endStatus が Just "approved" になる
+- [x] update: `UpdatePropertyEndStatus ""` で endStatus が Nothing になる
+- [x] update: `CanvasBackgroundClicked` で propertyName がクリアされる
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）

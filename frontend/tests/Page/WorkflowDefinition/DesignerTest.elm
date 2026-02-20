@@ -27,6 +27,7 @@ suite =
         , connectionPortMouseDownTests
         , transitionClickedTests
         , connectionKeyDownTests
+        , propertyPanelTests
         ]
 
 
@@ -455,6 +456,127 @@ connectionKeyDownTests =
                             |> Maybe.map .from
                             |> Expect.equal (Just "approval_1")
                     , \m -> m.selectedTransitionIndex |> Expect.equal Nothing
+                    ]
+                    newModel
+        ]
+
+
+
+-- Property Panel
+
+
+{-| End ステップ付きのモデル
+-}
+modelWithEndStep : Model
+modelWithEndStep =
+    let
+        endStep =
+            { id = "end_1"
+            , stepType = End
+            , name = "終了"
+            , position = { x = 400, y = 100 }
+            , assignee = Nothing
+            , endStatus = Just "approved"
+            }
+    in
+    { modelWithBounds
+        | steps = Dict.singleton "end_1" endStep
+        , nextStepNumber = 2
+    }
+
+
+propertyPanelTests : Test
+propertyPanelTests =
+    describe "Property Panel"
+        [ test "StepClicked 後に propertyName がステップの name に同期される" <|
+            \_ ->
+                let
+                    ( newModel, _ ) =
+                        Designer.update (StepClicked "approval_1") modelWithOneStep
+                in
+                newModel.propertyName |> Expect.equal "承認"
+        , test "StepClicked 後に propertyEndStatus が endStatus の値に同期される" <|
+            \_ ->
+                let
+                    ( newModel, _ ) =
+                        Designer.update (StepClicked "end_1") modelWithEndStep
+                in
+                newModel.propertyEndStatus |> Expect.equal "approved"
+        , test "UpdatePropertyName でステップの name がリアルタイム更新される" <|
+            \_ ->
+                let
+                    selectedModel =
+                        { modelWithOneStep
+                            | selectedStepId = Just "approval_1"
+                            , propertyName = "承認"
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update (UpdatePropertyName "レビュー") selectedModel
+                in
+                Expect.all
+                    [ \m -> m.propertyName |> Expect.equal "レビュー"
+                    , \m ->
+                        Dict.get "approval_1" m.steps
+                            |> Maybe.map .name
+                            |> Expect.equal (Just "レビュー")
+                    ]
+                    newModel
+        , test "UpdatePropertyEndStatus \"approved\" で endStatus が Just \"approved\" になる" <|
+            \_ ->
+                let
+                    selectedModel =
+                        { modelWithEndStep
+                            | selectedStepId = Just "end_1"
+                            , propertyEndStatus = ""
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update (UpdatePropertyEndStatus "approved") selectedModel
+                in
+                Expect.all
+                    [ \m -> m.propertyEndStatus |> Expect.equal "approved"
+                    , \m ->
+                        Dict.get "end_1" m.steps
+                            |> Maybe.andThen .endStatus
+                            |> Expect.equal (Just "approved")
+                    ]
+                    newModel
+        , test "UpdatePropertyEndStatus \"\" で endStatus が Nothing になる" <|
+            \_ ->
+                let
+                    selectedModel =
+                        { modelWithEndStep
+                            | selectedStepId = Just "end_1"
+                            , propertyEndStatus = "approved"
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update (UpdatePropertyEndStatus "") selectedModel
+                in
+                Expect.all
+                    [ \m -> m.propertyEndStatus |> Expect.equal ""
+                    , \m ->
+                        Dict.get "end_1" m.steps
+                            |> Maybe.andThen .endStatus
+                            |> Expect.equal Nothing
+                    ]
+                    newModel
+        , test "CanvasBackgroundClicked で propertyName がクリアされる" <|
+            \_ ->
+                let
+                    selectedModel =
+                        { modelWithOneStep
+                            | selectedStepId = Just "approval_1"
+                            , propertyName = "承認"
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update CanvasBackgroundClicked selectedModel
+                in
+                Expect.all
+                    [ \m -> m.propertyName |> Expect.equal ""
+                    , \m -> m.selectedStepId |> Expect.equal Nothing
                     ]
                     newModel
         ]

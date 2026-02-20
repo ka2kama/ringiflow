@@ -8,6 +8,7 @@ ADR-053 で決定した SVG + Elm 直接レンダリング方式に基づく。
 -}
 
 import Browser.Events
+import Component.FormField as FormField
 import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
 import Dict exposing (Dict)
 import Html exposing (..)
@@ -46,6 +47,8 @@ type alias Model =
     , dragging : Maybe DraggingState
     , canvasBounds : Maybe Bounds
     , nextStepNumber : Int
+    , propertyName : String
+    , propertyEndStatus : String
     }
 
 
@@ -59,6 +62,8 @@ init shared =
       , dragging = Nothing
       , canvasBounds = Nothing
       , nextStepNumber = 1
+      , propertyName = ""
+      , propertyEndStatus = ""
       }
     , Ports.requestCanvasBounds canvasElementId
     )
@@ -82,6 +87,8 @@ type Msg
     | StepMouseDown String Float Float -- stepId, clientX, clientY
     | ConnectionPortMouseDown String Float Float -- sourceStepId, clientX, clientY
     | TransitionClicked Int
+    | UpdatePropertyName String
+    | UpdatePropertyEndStatus String
     | KeyDown String
     | GotCanvasBounds Encode.Value
 
@@ -209,12 +216,12 @@ update msg model =
                     ( model, Cmd.none )
 
         StepClicked stepId ->
-            ( { model | selectedStepId = Just stepId, selectedTransitionIndex = Nothing }
+            ( syncPropertyFields stepId { model | selectedStepId = Just stepId, selectedTransitionIndex = Nothing }
             , Cmd.none
             )
 
         CanvasBackgroundClicked ->
-            ( { model | selectedStepId = Nothing, selectedTransitionIndex = Nothing }
+            ( { model | selectedStepId = Nothing, selectedTransitionIndex = Nothing, propertyName = "", propertyEndStatus = "" }
             , Cmd.none
             )
 
@@ -229,9 +236,49 @@ update msg model =
                     ( model, Cmd.none )
 
         TransitionClicked index ->
-            ( { model | selectedTransitionIndex = Just index, selectedStepId = Nothing }
+            ( { model | selectedTransitionIndex = Just index, selectedStepId = Nothing, propertyName = "", propertyEndStatus = "" }
             , Cmd.none
             )
+
+        UpdatePropertyName newName ->
+            case model.selectedStepId of
+                Just stepId ->
+                    ( { model
+                        | propertyName = newName
+                        , steps =
+                            Dict.update stepId
+                                (Maybe.map (\step -> { step | name = newName }))
+                                model.steps
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        UpdatePropertyEndStatus newStatus ->
+            case model.selectedStepId of
+                Just stepId ->
+                    let
+                        endStatus =
+                            if newStatus == "" then
+                                Nothing
+
+                            else
+                                Just newStatus
+                    in
+                    ( { model
+                        | propertyEndStatus = newStatus
+                        , steps =
+                            Dict.update stepId
+                                (Maybe.map (\step -> { step | endStatus = endStatus }))
+                                model.steps
+                      }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         StepMouseDown stepId clientX clientY ->
             case ( Dict.get stepId model.steps, DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY ) of
@@ -242,15 +289,16 @@ update msg model =
                             , y = canvasPos.y - step.position.y
                             }
                     in
-                    ( { model
-                        | dragging = Just (DraggingExistingStep stepId offset)
-                        , selectedStepId = Just stepId
-                      }
+                    ( syncPropertyFields stepId
+                        { model
+                            | dragging = Just (DraggingExistingStep stepId offset)
+                            , selectedStepId = Just stepId
+                        }
                     , Cmd.none
                     )
 
                 _ ->
-                    ( { model | selectedStepId = Just stepId }
+                    ( syncPropertyFields stepId { model | selectedStepId = Just stepId }
                     , Cmd.none
                     )
 
@@ -294,6 +342,21 @@ update msg model =
 
                 Err _ ->
                     ( model, Cmd.none )
+
+
+{-| 選択されたステップのプロパティをフォームフィールドに同期する
+-}
+syncPropertyFields : String -> Model -> Model
+syncPropertyFields stepId model =
+    case Dict.get stepId model.steps of
+        Just step ->
+            { model
+                | propertyName = step.name
+                , propertyEndStatus = step.endStatus |> Maybe.withDefault ""
+            }
+
+        Nothing ->
+            model
 
 
 {-| リストの指定インデックスの要素を除去する
@@ -342,6 +405,7 @@ view model =
         , div [ class "flex flex-1 overflow-hidden" ]
             [ viewPalette
             , viewCanvasArea model
+            , viewPropertyPanel model
             ]
         , viewStatusBar model
         ]
@@ -929,6 +993,92 @@ viewDragPreview model =
 
         _ ->
             Svg.text ""
+
+
+{-| プロパティパネル（右サイドバー）
+
+選択中のステップの属性を編集するパネル。
+ステップ種別に応じて表示するフィールドが変わる:
+
+  - Start: ステップ名
+  - Approval: ステップ名 + 承認者指定方式（読み取り専用）
+  - End: ステップ名 + 終了ステータス
+
+-}
+viewPropertyPanel : Model -> Html Msg
+viewPropertyPanel model =
+    div [ class "w-64 shrink-0 border-l border-secondary-200 bg-white p-4 overflow-y-auto" ]
+        [ h2 [ class "mb-3 text-xs font-semibold uppercase tracking-wider text-secondary-500" ]
+            [ text "プロパティ" ]
+        , case model.selectedStepId of
+            Nothing ->
+                p [ class "text-sm text-secondary-400" ]
+                    [ text "ステップを選択してください" ]
+
+            Just stepId ->
+                case Dict.get stepId model.steps of
+                    Just step ->
+                        viewStepProperties model step
+
+                    Nothing ->
+                        p [ class "text-sm text-secondary-400" ]
+                            [ text "ステップを選択してください" ]
+        ]
+
+
+{-| ステップ種別に応じたプロパティフィールド
+-}
+viewStepProperties : Model -> StepNode -> Html Msg
+viewStepProperties model step =
+    div [ class "space-y-4" ]
+        ([ -- 種別ラベル
+           div [ class "mb-2" ]
+            [ span
+                [ class "inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                , style "background-color" (DesignerCanvas.stepColors step.stepType).fill
+                , style "color" (DesignerCanvas.stepColors step.stepType).stroke
+                ]
+                [ text (DesignerCanvas.defaultStepName step.stepType) ]
+            ]
+
+         -- ステップ名（全種別共通）
+         , FormField.viewTextField
+            { label = "ステップ名"
+            , value = model.propertyName
+            , onInput = UpdatePropertyName
+            , error = Nothing
+            , inputType = "text"
+            , placeholder = "ステップ名を入力"
+            }
+         ]
+            ++ viewStepTypeSpecificFields model step
+        )
+
+
+{-| ステップ種別固有のフィールド
+-}
+viewStepTypeSpecificFields : Model -> StepNode -> List (Html Msg)
+viewStepTypeSpecificFields model step =
+    case step.stepType of
+        Start ->
+            []
+
+        Approval ->
+            [ FormField.viewReadOnlyField "承認者指定" "申請時にユーザーを選択" ]
+
+        End ->
+            [ FormField.viewSelectField
+                { label = "終了ステータス"
+                , value = model.propertyEndStatus
+                , onInput = UpdatePropertyEndStatus
+                , error = Nothing
+                , options =
+                    [ { value = "approved", label = "承認" }
+                    , { value = "rejected", label = "却下" }
+                    ]
+                , placeholder = "選択してください"
+                }
+            ]
 
 
 {-| ステータスバー
