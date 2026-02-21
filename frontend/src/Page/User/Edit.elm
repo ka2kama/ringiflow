@@ -174,7 +174,7 @@ update msg model =
                     body =
                         Encode.object
                             [ ( "name", Encode.string model.name )
-                            , ( "role_id", Encode.string model.selectedRoleId )
+                            , ( "role_name", Encode.string model.selectedRoleId )
                             ]
                 in
                 ( { model | submitting = True, validationErrors = Dict.empty }
@@ -322,7 +322,7 @@ viewFormContent model userDetail roles =
             , value = model.selectedRoleId
             , onInput = UpdateRole
             , error = Dict.get "role" model.validationErrors
-            , options = List.map (\role -> { value = role.id, label = role.name }) roles
+            , options = List.map (\role -> { value = role.name, label = role.name }) roles
             , placeholder = "-- ロールを選択 --"
             }
         , div [ class "flex gap-3" ]
