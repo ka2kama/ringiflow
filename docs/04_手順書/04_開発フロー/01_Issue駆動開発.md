@@ -439,8 +439,7 @@ just check-all  # lint + test
   - CI ワークフロー変更 → GitHub Actions ナレッジベース
 
 Issue との整合:
-- [ ] Issue の完了基準チェックリストが全て `[x]` に更新されているか
-- [ ] Issue の実装計画（Phase、テストリスト）のチェックボックスが全て `[x]` に更新されているか
+- [ ] `just check-issue` が正常終了するか（全チェックボックスが `[x]` に更新されていること）
 - [ ] PR の変更が Issue の Want/To-Be を過不足なく満たしているか: Issue の Want を再確認し、変更の欠落（削りすぎ）・過剰な変更（やりすぎ）がないことを検証
 
 テスト:
@@ -901,25 +900,19 @@ EOF
 
 #### Story PR マージ時
 
-Story PR をマージしたら、Epic 本文のタスクリストで該当 Story のチェックボックスを `[x]` に更新する。
+Story PR をマージしたら、`just sync-epic` で Epic のタスクリストを自動更新する。
 
 ```bash
-# Epic の現在の本文を確認
-gh issue view <Epic番号>
-
-# Epic 本文を更新（チェックボックスを更新）
-gh issue edit <Epic番号> --body "$(cat <<'EOF'
-## タスク
-
-- [x] Story 1: 〇〇を実装する #<Story番号>
-- [ ] Story 2: △△を実装する #<Story番号>
-EOF
-)"
+just sync-epic <Story番号>
 ```
+
+スクリプトは Story Issue の body から親 Epic 番号（`Epic: #NNN`）を検出し、Epic のタスクリストで該当 Story のチェックボックスを `[x]` に更新する。Epic に属さない Issue の場合は何もしない。
 
 全 Story のチェックボックスが `[x]` になったら、Epic をクローズする。
 
-改善の経緯: [Epic の Story 進捗が未記録](../../../process/improvements/2026-02/2026-02-14_2230_EpicのStory進捗が未記録.md)
+改善の経緯:
+- [Epic の Story 進捗が未記録](../../../process/improvements/2026-02/2026-02-14_2230_EpicのStory進捗が未記録.md)
+- Epic #747 Story 3 で `just sync-epic` を導入し、手動更新を自動化
 
 ### 進捗の可視化
 
@@ -983,6 +976,7 @@ gh api repos/ka2kama/ringiflow/milestones
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-21 | 6.2「Issue との整合」を `just check-issue` に置換、Epic 管理を `just sync-epic` に自動化（#751） |
 | 2026-02-21 | 6.3 Self-review をチェックボックスから検証レポート形式（根拠付きリスト）に変更（#749） |
 | 2026-02-21 | 6.3 Self-review をカテゴリ別チェックボックス形式に構造化（#745） |
 | 2026-02-21 | 6.2「Issue との整合」に Want/To-Be 突合ステップを追加（#742） |

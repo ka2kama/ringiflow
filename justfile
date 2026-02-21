@@ -597,3 +597,19 @@ worktree-list:
     @echo ""
     @echo "=== Docker プロジェクト一覧 ==="
     @docker compose ls --filter "name=ringiflow" 2>/dev/null || echo "（実行中のプロジェクトなし）"
+
+# =============================================================================
+# Issue/Epic 状態管理
+# =============================================================================
+
+# Issue のチェックボックス状態を検証する
+# 使い方: just check-issue [ISSUE_NUMBER]
+# ISSUE_NUMBER を省略した場合、ブランチ名から自動検出
+check-issue *args:
+    ./scripts/issue/check-issue-state.sh {{args}}
+
+# Story 完了後に Epic タスクリストを自動更新する
+# 使い方: just sync-epic ISSUE_NUMBER
+# 例: just sync-epic 749
+sync-epic issue_number:
+    ./scripts/issue/sync-epic.sh {{issue_number}}
