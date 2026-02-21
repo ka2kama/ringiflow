@@ -2446,14 +2446,15 @@ components:
       required:
       - email
       - name
-      - role_name
+      - role_id
       properties:
         email:
           type: string
         name:
           type: string
-        role_name:
+        role_id:
           type: string
+          format: uuid
     CreateWorkflowRequest:
       type: object
       description: ワークフロー作成リクエスト（BFF 公開 API）
@@ -2772,10 +2773,11 @@ components:
           type:
           - string
           - 'null'
-        role_name:
+        role_id:
           type:
           - string
           - 'null'
+          format: uuid
     UpdateUserStatusRequest:
       type: object
       description: ユーザーステータス変更リクエスト

@@ -19,7 +19,7 @@ use axum::{
     response::IntoResponse,
 };
 use ringiflow_domain::{
-    role::Role,
+    role::{Role, RoleId},
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
     value_objects::{DisplayId, DisplayNumber, UserName, display_prefix},
@@ -144,14 +144,14 @@ pub struct CreateUserRequest {
     pub tenant_id: Uuid,
     pub email:     String,
     pub name:      String,
-    pub role_name: String,
+    pub role_id:   Uuid,
 }
 
 /// ユーザー更新リクエスト
 #[derive(Debug, Deserialize)]
 pub struct UpdateUserRequest {
-    pub name:      Option<String>,
-    pub role_name: Option<String>,
+    pub name:    Option<String>,
+    pub role_id: Option<Uuid>,
 }
 
 /// ユーザーステータス変更リクエスト
@@ -387,7 +387,7 @@ pub async fn get_user(
 /// - `tenant_id`: テナント ID
 /// - `email`: メールアドレス
 /// - `name`: ユーザー名
-/// - `role_name`: 割り当てるロール名
+/// - `role_id`: 割り当てるロール ID
 ///
 /// ## レスポンス
 ///
@@ -406,10 +406,10 @@ pub async fn create_user(
         tenant_id: TenantId::from_uuid(req.tenant_id),
         email,
         name,
-        role_name: req.role_name.clone(),
+        role_id: RoleId::from_uuid(req.role_id),
     };
 
-    let user = state.usecase.create_user(input).await?;
+    let (user, role) = state.usecase.create_user(input).await?;
 
     let response = ApiResponse::new(CreateUserResponseDto {
         id: *user.id().as_uuid(),
@@ -417,7 +417,7 @@ pub async fn create_user(
         display_number: user.display_number().as_i64(),
         name: user.name().as_str().to_string(),
         email: user.email().as_str().to_string(),
-        role: req.role_name,
+        role: role.name().to_string(),
     });
 
     Ok((StatusCode::CREATED, Json(response)))
@@ -486,7 +486,7 @@ pub async fn get_user_by_display_number(
 /// ## リクエストボディ
 ///
 /// - `name`: 新しいユーザー名（省略可）
-/// - `role_name`: 新しいロール名（省略可）
+/// - `role_id`: 新しいロール ID（省略可）
 ///
 /// ## レスポンス
 ///
@@ -508,7 +508,7 @@ pub async fn update_user(
     let input = UpdateUserInput {
         user_id: UserId::from_uuid(user_id),
         name,
-        role_name: req.role_name,
+        role_id: req.role_id.map(RoleId::from_uuid),
     };
 
     let user = state.usecase.update_user(input).await?;

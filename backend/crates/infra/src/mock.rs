@@ -463,6 +463,10 @@ impl UserRepository for MockUserRepository {
         Ok(())
     }
 
+    async fn find_role_by_id(&self, _id: &RoleId) -> Result<Option<Role>, InfraError> {
+        Ok(None)
+    }
+
     async fn find_role_by_name(&self, _name: &str) -> Result<Option<Role>, InfraError> {
         Ok(None)
     }

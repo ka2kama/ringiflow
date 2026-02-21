@@ -1,5 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
+assertion_line: 107
 expression: json
 ---
 {
@@ -3191,7 +3192,7 @@ expression: json
         "required": [
           "email",
           "name",
-          "role_name"
+          "role_id"
         ],
         "properties": {
           "email": {
@@ -3200,8 +3201,9 @@ expression: json
           "name": {
             "type": "string"
           },
-          "role_name": {
-            "type": "string"
+          "role_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -3877,11 +3879,12 @@ expression: json
               "null"
             ]
           },
-          "role_name": {
+          "role_id": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "uuid"
           }
         }
       },

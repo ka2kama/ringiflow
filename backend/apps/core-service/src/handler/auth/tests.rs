@@ -121,6 +121,13 @@ impl UserRepository for StubUserRepository {
         todo!()
     }
 
+    async fn find_role_by_id(
+        &self,
+        _id: &RoleId,
+    ) -> Result<Option<ringiflow_domain::role::Role>, InfraError> {
+        todo!()
+    }
+
     async fn find_role_by_name(
         &self,
         _name: &str,

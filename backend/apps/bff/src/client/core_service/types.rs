@@ -42,7 +42,7 @@ pub struct CreateUserCoreRequest {
     pub tenant_id: Uuid,
     pub email:     String,
     pub name:      String,
-    pub role_name: String,
+    pub role_id:   Uuid,
 }
 
 /// ユーザー作成レスポンス（Core Service 内部 API 用）
@@ -59,8 +59,8 @@ pub struct CreateUserCoreResponse {
 /// ユーザー更新リクエスト（Core Service 内部 API 用）
 #[derive(Debug, Serialize)]
 pub struct UpdateUserCoreRequest {
-    pub name:      Option<String>,
-    pub role_name: Option<String>,
+    pub name:    Option<String>,
+    pub role_id: Option<Uuid>,
 }
 
 /// ユーザーステータス変更リクエスト（Core Service 内部 API 用）

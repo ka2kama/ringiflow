@@ -110,14 +110,18 @@ update msg model =
             case result of
                 Ok userDetail ->
                     let
-                        firstRoleName =
-                            List.head userDetail.roles
-                                |> Maybe.withDefault ""
+                        resolvedRoleId =
+                            case model.roles of
+                                Success roles ->
+                                    resolveRoleId userDetail.roles roles
+
+                                _ ->
+                                    ""
                     in
                     ( { model
                         | user = Success userDetail
                         , name = userDetail.name
-                        , selectedRoleId = firstRoleName
+                        , selectedRoleId = resolvedRoleId
                       }
                     , Cmd.none
                     )
@@ -132,15 +136,10 @@ update msg model =
                         newModel =
                             { model | roles = Success roles }
                     in
-                    -- ユーザー詳細が先に読み込まれていた場合、ロール名を設定する
+                    -- ユーザー詳細が先に読み込まれていた場合、ロール名から ID を解決する
                     case model.user of
                         Success userDetail ->
-                            let
-                                firstRoleName =
-                                    List.head userDetail.roles
-                                        |> Maybe.withDefault ""
-                            in
-                            ( { newModel | selectedRoleId = firstRoleName }, Cmd.none )
+                            ( { newModel | selectedRoleId = resolveRoleId userDetail.roles roles }, Cmd.none )
 
                         _ ->
                             ( newModel, Cmd.none )
@@ -172,7 +171,7 @@ update msg model =
                     body =
                         Encode.object
                             [ ( "name", Encode.string model.name )
-                            , ( "role_name", Encode.string model.selectedRoleId )
+                            , ( "role_id", Encode.string model.selectedRoleId )
                             ]
                 in
                 ( { model | submitting = True, validationErrors = Dict.empty }
@@ -212,6 +211,30 @@ update msg model =
 
         DismissMessage ->
             ( { model | errorMessage = Nothing }, Cmd.none )
+
+
+
+-- HELPERS
+
+
+{-| ユーザーのロール名リストとロール一覧から、最初のロールの ID を解決する。
+
+ユーザー詳細 API は `roles: Vec<String>`（ロール名配列）を返すため、
+ロール一覧 API の `RoleItem` と名前でマッチして ID を解決する。
+
+-}
+resolveRoleId : List String -> List RoleItem -> String
+resolveRoleId roleNames roles =
+    case roleNames of
+        firstName :: _ ->
+            roles
+                |> List.filter (\role -> role.name == firstName)
+                |> List.head
+                |> Maybe.map .id
+                |> Maybe.withDefault ""
+
+        [] ->
+            ""
 
 
 
@@ -305,7 +328,7 @@ viewFormContent model userDetail roles =
             , value = model.selectedRoleId
             , onInput = UpdateRole
             , error = Dict.get "role" model.validationErrors
-            , options = List.map (\role -> { value = role.name, label = role.name }) roles
+            , options = List.map (\role -> { value = role.id, label = role.name }) roles
             , placeholder = "-- ロールを選択 --"
             }
         , div [ class "flex gap-3" ]

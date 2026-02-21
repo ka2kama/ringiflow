@@ -534,6 +534,35 @@ async fn test_replace_user_rolesでロールが置き換わる(pool: PgPool) {
     assert_eq!(roles[0].name(), "tenant_admin");
 }
 
+// ===== find_role_by_id テスト =====
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_role_by_idでシステムロールを検索できる(pool: PgPool) {
+    let sut = PostgresUserRepository::new(pool.clone());
+
+    // まず名前で検索して ID を取得
+    let role = sut.find_role_by_name("user").await.unwrap().unwrap();
+
+    let result = sut.find_role_by_id(role.id()).await;
+
+    assert!(result.is_ok());
+    let found = result.unwrap().unwrap();
+    assert_eq!(found.id(), role.id());
+    assert_eq!(found.name(), "user");
+    assert!(found.is_system());
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_find_role_by_id存在しないロールidはnoneを返す(pool: PgPool) {
+    let sut = PostgresUserRepository::new(pool);
+    let nonexistent_id = ringiflow_domain::role::RoleId::from_uuid(Uuid::now_v7());
+
+    let result = sut.find_role_by_id(&nonexistent_id).await;
+
+    assert!(result.is_ok());
+    assert!(result.unwrap().is_none());
+}
+
 // ===== find_role_by_name テスト =====
 
 #[sqlx::test(migrations = "../../migrations")]
