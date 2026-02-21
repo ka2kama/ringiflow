@@ -475,7 +475,7 @@ update msg model =
             ( { model | isValidating = True, validationResult = Nothing, errorMessage = Nothing }
             , WorkflowDefinitionApi.validateDefinition
                 { config = Shared.toRequestConfig model.shared
-                , body = definition
+                , body = WorkflowDefinition.encodeValidationRequest { definition = definition }
                 , toMsg = GotValidationResult
                 }
             )
@@ -519,7 +519,7 @@ update msg model =
 
         PublishClicked ->
             ( { model | pendingPublish = True, successMessage = Nothing, errorMessage = Nothing }
-            , Ports.showModalDialog "designer-publish-dialog"
+            , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ConfirmPublish ->
@@ -555,7 +555,7 @@ update msg model =
                 ( { model | isValidating = True, validationResult = Nothing }
                 , WorkflowDefinitionApi.validateDefinition
                     { config = Shared.toRequestConfig model.shared
-                    , body = definition
+                    , body = WorkflowDefinition.encodeValidationRequest { definition = definition }
                     , toMsg = GotValidationResult
                     }
                 )

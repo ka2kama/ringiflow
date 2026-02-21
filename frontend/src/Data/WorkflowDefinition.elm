@@ -11,6 +11,7 @@ module Data.WorkflowDefinition exposing
     , detailDecoder
     , encodeCreateRequest
     , encodeUpdateRequest
+    , encodeValidationRequest
     , encodeVersionRequest
     , listDecoder
     , statusFromString
@@ -178,6 +179,19 @@ encodeVersionRequest : { version : Int } -> Encode.Value
 encodeVersionRequest { version } =
     Encode.object
         [ ( "version", Encode.int version )
+        ]
+
+
+{-| ワークフロー定義検証リクエストの JSON を生成
+
+デザイナーからバリデーション API を呼び出す際に使用。
+バックエンドの `ValidateDefinitionRequest` は `{ "definition": ... }` 形式を期待する。
+
+-}
+encodeValidationRequest : { definition : Encode.Value } -> Encode.Value
+encodeValidationRequest { definition } =
+    Encode.object
+        [ ( "definition", definition )
         ]
 
 
