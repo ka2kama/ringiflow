@@ -94,7 +94,7 @@ sequenceDiagram
     participant Route as Route.elm
     participant Nav as Browser.Navigation
 
-    User->>Browser: リンクをクリック<br/><a href="/workflows/new">
+    User->>Browser: リンクをクリック<br/>&lt;a href="/workflows/new"&gt;
     Browser->>Elm: onUrlRequest イベント
     Elm->>Elm: Msg = LinkClicked (Internal url)
 
