@@ -38,7 +38,7 @@ body:
   - type: textarea
     id: done-criteria
     attributes:
-      label: 完了基準
+      label: 完了条件
       description: |
         何をもって完了とするか。具体的・検証可能に記述してください。
         チェックリスト形式で記載します。
