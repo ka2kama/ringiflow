@@ -382,21 +382,21 @@ a [ href (Route.toString (Route.WorkflowDefinitionDesignerEdit def.id)) ]
 ```
 
 #### 確認事項
-- [ ] パターン: Route の string パーサー → `Route.elm` L171 `Parser.map RoleEdit (s "roles" </> string </> s "edit")`
-- [ ] パターン: Main.elm の initPage → `Main.elm` での `RoleEdit` のパターン
-- [ ] パターン: RemoteData Loading/Success/Failure → `Page/Role/Edit.elm` L60,290-299
-- [ ] パターン: Nav.Key の init 受け渡し → `Page/Role/Edit.elm` L55-56
-- [ ] パターン: DirtyState の使い方 → `Form/DirtyState.elm`
+- [x] パターン: Route の string パーサー → `Route.elm` L171: `Parser.map RoleEdit (s "roles" </> string </> s "edit")`
+- [x] パターン: Main.elm の initPage → `Main.elm` L277-282: `RoleEdit.init shared key roleId`, `(RoleEditPage model, Cmd.map RoleEditMsg cmd)`
+- [x] パターン: RemoteData Loading/Success/Failure → `Page/Role/Edit.elm` L29,44,60: `RemoteData ApiError RoleDetail`, `Loading` 初期値
+- [x] パターン: Nav.Key の init 受け渡し → `Page/Role/Edit.elm` L55-56: `init shared key roleId`
+- [x] パターン: DirtyState の使い方 → `Form/DirtyState.elm`: `markDirty` は `(model, Cmd)` を返し、`clearDirty` も同様
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] Route: `/workflow-definitions/{id}/edit` が `WorkflowDefinitionDesignerEdit id` にマッチ
-- [ ] Route: `toString (WorkflowDefinitionDesignerEdit "abc")` が正しいパスを返す
-- [ ] update: `GotDefinition (Ok def)` でステップと transitions がロードされる
-- [ ] update: `GotDefinition (Err err)` で loadState が Failure になる
-- [ ] update: `SaveClicked` で isSaving が True になる
-- [ ] update: `GotSaveResult (Ok def)` で successMessage + version 更新
+- [x] Route: `/workflow-definitions/{id}/edit` が `WorkflowDefinitionDesignerEdit id` にマッチ
+- [x] Route: `toString (WorkflowDefinitionDesignerEdit "abc")` が正しいパスを返す
+- [x] update: `GotDefinition (Ok def)` でステップと transitions がロードされる
+- [x] update: `GotDefinition (Err err)` で loadState が Failure になる
+- [x] update: `SaveClicked` で isSaving が True になる
+- [x] update: `GotSaveResult (Ok def)` で successMessage + version 更新
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）

@@ -6,10 +6,14 @@ module Page.WorkflowDefinition.DesignerTest exposing (suite)
 
 -}
 
+import Api exposing (ApiError(..))
 import Data.DesignerCanvas exposing (DraggingState(..), StepType(..))
+import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Dict
 import Expect
+import Json.Encode as Encode
 import Page.WorkflowDefinition.Designer as Designer exposing (Model, Msg(..))
+import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 import Test exposing (..)
 
@@ -28,6 +32,7 @@ suite =
         , transitionClickedTests
         , connectionKeyDownTests
         , propertyPanelTests
+        , apiIntegrationTests
         ]
 
 
@@ -44,7 +49,7 @@ initModel : Model
 initModel =
     let
         ( model, _ ) =
-            Designer.init testShared
+            Designer.init testShared "test-def-id"
     in
     model
 
@@ -579,4 +584,141 @@ propertyPanelTests =
                     , \m -> m.selectedStepId |> Expect.equal Nothing
                     ]
                     newModel
+        ]
+
+
+
+-- API Integration
+
+
+{-| テスト用のワークフロー定義データ
+-}
+testDefinition : WorkflowDefinition
+testDefinition =
+    { id = "test-def-id"
+    , name = "テスト定義"
+    , description = Just "テスト説明"
+    , version = 1
+    , definition = Encode.object [ ( "steps", Encode.list identity [] ), ( "transitions", Encode.list identity [] ) ]
+    , status = "draft"
+    , createdBy = "user-1"
+    , createdAt = "2026-01-01T00:00:00"
+    , updatedAt = "2026-01-01T00:00:00"
+    }
+
+
+{-| ロード完了済みモデル（API テストの基盤）
+-}
+loadedModel : Model
+loadedModel =
+    let
+        ( model, _ ) =
+            Designer.update (GotDefinition (Ok testDefinition)) initModel
+    in
+    model
+
+
+apiIntegrationTests : Test
+apiIntegrationTests =
+    describe "API Integration"
+        [ test "GotDefinition Ok でロード状態が Success になる" <|
+            \_ ->
+                case loadedModel.loadState of
+                    Success _ ->
+                        Expect.pass
+
+                    _ ->
+                        Expect.fail "Expected Success"
+        , test "GotDefinition Ok で name と version が設定される" <|
+            \_ ->
+                Expect.all
+                    [ \m -> m.name |> Expect.equal "テスト定義"
+                    , \m -> m.description |> Expect.equal "テスト説明"
+                    , \m -> m.version |> Expect.equal 1
+                    ]
+                    loadedModel
+        , test "GotDefinition Err でロード状態が Failure になる" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        Designer.update
+                            (GotDefinition (Err NetworkError))
+                            initModel
+                in
+                case model.loadState of
+                    Failure _ ->
+                        Expect.pass
+
+                    _ ->
+                        Expect.fail "Expected Failure"
+        , test "SaveClicked で isSaving が True になる" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        Designer.update SaveClicked loadedModel
+                in
+                model.isSaving |> Expect.equal True
+        , test "GotSaveResult Ok で isSaving が False になり version が更新される" <|
+            \_ ->
+                let
+                    savingModel =
+                        { loadedModel | isSaving = True, isDirty_ = True }
+
+                    updatedDef =
+                        { testDefinition | version = 2 }
+
+                    ( model, _ ) =
+                        Designer.update (GotSaveResult (Ok updatedDef)) savingModel
+                in
+                Expect.all
+                    [ \m -> m.isSaving |> Expect.equal False
+                    , \m -> m.version |> Expect.equal 2
+                    , \m -> m.successMessage |> Expect.equal (Just "保存しました")
+                    , \m -> m.isDirty_ |> Expect.equal False
+                    ]
+                    model
+        , test "GotSaveResult Err で errorMessage が設定される" <|
+            \_ ->
+                let
+                    savingModel =
+                        { loadedModel | isSaving = True }
+
+                    ( model, _ ) =
+                        Designer.update
+                            (GotSaveResult (Err NetworkError))
+                            savingModel
+                in
+                Expect.all
+                    [ \m -> m.isSaving |> Expect.equal False
+                    , \m -> m.errorMessage |> Expect.notEqual Nothing
+                    ]
+                    model
+        , test "DismissMessage で successMessage と errorMessage がクリアされる" <|
+            \_ ->
+                let
+                    modelWithMessages =
+                        { loadedModel
+                            | successMessage = Just "保存しました"
+                            , errorMessage = Just "エラー"
+                        }
+
+                    ( model, _ ) =
+                        Designer.update DismissMessage modelWithMessages
+                in
+                Expect.all
+                    [ \m -> m.successMessage |> Expect.equal Nothing
+                    , \m -> m.errorMessage |> Expect.equal Nothing
+                    ]
+                    model
+        , test "UpdateDefinitionName で name が更新され isDirty_ が True になる" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        Designer.update (UpdateDefinitionName "新しい名前") loadedModel
+                in
+                Expect.all
+                    [ \m -> m.name |> Expect.equal "新しい名前"
+                    , \m -> m.isDirty_ |> Expect.equal True
+                    ]
+                    model
         ]

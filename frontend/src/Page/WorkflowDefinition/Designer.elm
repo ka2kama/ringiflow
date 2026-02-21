@@ -1,4 +1,4 @@
-module Page.WorkflowDefinition.Designer exposing (Model, Msg(..), init, subscriptions, update, updateShared, view)
+module Page.WorkflowDefinition.Designer exposing (Model, Msg(..), init, isDirty, subscriptions, update, updateShared, view)
 
 {-| ワークフローデザイナー画面
 
@@ -7,16 +7,26 @@ ADR-053 で決定した SVG + Elm 直接レンダリング方式に基づく。
 
 -}
 
+import Api exposing (ApiError)
+import Api.ErrorMessage as ErrorMessage
+import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Browser.Events
+import Component.Button as Button
+import Component.ErrorState as ErrorState
 import Component.FormField as FormField
+import Component.LoadingSpinner as LoadingSpinner
+import Component.MessageAlert as MessageAlert
 import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
+import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Dict exposing (Dict)
+import Form.DirtyState as DirtyState
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onMouseDown)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Ports
+import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 import Svg exposing (svg)
 import Svg.Attributes as SvgAttr
@@ -40,6 +50,8 @@ canvasElementId =
 
 type alias Model =
     { shared : Shared
+    , definitionId : String
+    , loadState : RemoteData ApiError WorkflowDefinition
     , steps : Dict String StepNode
     , transitions : List Transition
     , selectedStepId : Maybe String
@@ -49,12 +61,21 @@ type alias Model =
     , nextStepNumber : Int
     , propertyName : String
     , propertyEndStatus : String
+    , name : String
+    , description : String
+    , version : Int
+    , isSaving : Bool
+    , successMessage : Maybe String
+    , errorMessage : Maybe String
+    , isDirty_ : Bool
     }
 
 
-init : Shared -> ( Model, Cmd Msg )
-init shared =
+init : Shared -> String -> ( Model, Cmd Msg )
+init shared definitionId =
     ( { shared = shared
+      , definitionId = definitionId
+      , loadState = Loading
       , steps = Dict.empty
       , transitions = []
       , selectedStepId = Nothing
@@ -64,9 +85,28 @@ init shared =
       , nextStepNumber = 1
       , propertyName = ""
       , propertyEndStatus = ""
+      , name = ""
+      , description = ""
+      , version = 0
+      , isSaving = False
+      , successMessage = Nothing
+      , errorMessage = Nothing
+      , isDirty_ = False
       }
-    , Ports.requestCanvasBounds canvasElementId
+    , Cmd.batch
+        [ Ports.requestCanvasBounds canvasElementId
+        , WorkflowDefinitionApi.getDefinition
+            { config = Shared.toRequestConfig shared
+            , id = definitionId
+            , toMsg = GotDefinition
+            }
+        ]
     )
+
+
+isDirty : Model -> Bool
+isDirty =
+    DirtyState.isDirty
 
 
 updateShared : Shared -> Model -> Model
@@ -89,6 +129,11 @@ type Msg
     | TransitionClicked Int
     | UpdatePropertyName String
     | UpdatePropertyEndStatus String
+    | UpdateDefinitionName String
+    | SaveClicked
+    | GotDefinition (Result ApiError WorkflowDefinition)
+    | GotSaveResult (Result ApiError WorkflowDefinition)
+    | DismissMessage
     | KeyDown String
     | GotCanvasBounds Encode.Value
 
@@ -158,19 +203,26 @@ update msg model =
                     let
                         newStep =
                             DesignerCanvas.createStepFromDrop stepType model.nextStepNumber dropPos
+
+                        ( dirtyModel, dirtyCmd ) =
+                            DirtyState.markDirty model
                     in
-                    ( { model
-                        | steps = Dict.insert newStep.id newStep model.steps
+                    ( { dirtyModel
+                        | steps = Dict.insert newStep.id newStep dirtyModel.steps
                         , dragging = Nothing
-                        , nextStepNumber = model.nextStepNumber + 1
+                        , nextStepNumber = dirtyModel.nextStepNumber + 1
                         , selectedStepId = Just newStep.id
                       }
-                    , Cmd.none
+                    , dirtyCmd
                     )
 
                 Just (DraggingExistingStep _ _) ->
-                    ( { model | dragging = Nothing }
-                    , Cmd.none
+                    let
+                        ( dirtyModel, dirtyCmd ) =
+                            DirtyState.markDirty model
+                    in
+                    ( { dirtyModel | dragging = Nothing }
+                    , dirtyCmd
                     )
 
                 Just (DraggingConnection sourceId mousePos) ->
@@ -199,12 +251,15 @@ update msg model =
 
                                 newTransition =
                                     { from = sourceId, to = target.id, trigger = trigger }
+
+                                ( dirtyModel, dirtyCmd ) =
+                                    DirtyState.markDirty model
                             in
-                            ( { model
-                                | transitions = model.transitions ++ [ newTransition ]
+                            ( { dirtyModel
+                                | transitions = dirtyModel.transitions ++ [ newTransition ]
                                 , dragging = Nothing
                               }
-                            , Cmd.none
+                            , dirtyCmd
                             )
 
                         Nothing ->
@@ -243,14 +298,18 @@ update msg model =
         UpdatePropertyName newName ->
             case model.selectedStepId of
                 Just stepId ->
-                    ( { model
+                    let
+                        ( dirtyModel, dirtyCmd ) =
+                            DirtyState.markDirty model
+                    in
+                    ( { dirtyModel
                         | propertyName = newName
                         , steps =
                             Dict.update stepId
                                 (Maybe.map (\step -> { step | name = newName }))
-                                model.steps
+                                dirtyModel.steps
                       }
-                    , Cmd.none
+                    , dirtyCmd
                     )
 
                 Nothing ->
@@ -266,19 +325,113 @@ update msg model =
 
                             else
                                 Just newStatus
+
+                        ( dirtyModel, dirtyCmd ) =
+                            DirtyState.markDirty model
                     in
-                    ( { model
+                    ( { dirtyModel
                         | propertyEndStatus = newStatus
                         , steps =
                             Dict.update stepId
                                 (Maybe.map (\step -> { step | endStatus = endStatus }))
-                                model.steps
+                                dirtyModel.steps
                       }
-                    , Cmd.none
+                    , dirtyCmd
                     )
 
                 Nothing ->
                     ( model, Cmd.none )
+
+        UpdateDefinitionName newName ->
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    DirtyState.markDirty model
+            in
+            ( { dirtyModel | name = newName }, dirtyCmd )
+
+        SaveClicked ->
+            let
+                definition =
+                    DesignerCanvas.encodeDefinition model.steps model.transitions
+
+                body =
+                    WorkflowDefinition.encodeUpdateRequest
+                        { name = model.name
+                        , description = model.description
+                        , definition = definition
+                        , version = model.version
+                        }
+            in
+            ( { model | isSaving = True, successMessage = Nothing, errorMessage = Nothing }
+            , WorkflowDefinitionApi.updateDefinition
+                { config = Shared.toRequestConfig model.shared
+                , id = model.definitionId
+                , body = body
+                , toMsg = GotSaveResult
+                }
+            )
+
+        GotDefinition result ->
+            case result of
+                Ok def ->
+                    let
+                        steps =
+                            DesignerCanvas.loadStepsFromDefinition def.definition
+                                |> Result.withDefault Dict.empty
+
+                        transitions =
+                            DesignerCanvas.loadTransitionsFromDefinition def.definition
+                                |> Result.withDefault []
+
+                        nextNumber =
+                            Dict.size steps + 1
+                    in
+                    ( { model
+                        | loadState = Success def
+                        , steps = steps
+                        , transitions = transitions
+                        , nextStepNumber = nextNumber
+                        , name = def.name
+                        , description = def.description |> Maybe.withDefault ""
+                        , version = def.version
+                      }
+                    , Cmd.none
+                    )
+
+                Err err ->
+                    ( { model | loadState = Failure err }
+                    , Cmd.none
+                    )
+
+        GotSaveResult result ->
+            case result of
+                Ok def ->
+                    let
+                        ( cleanModel, cleanCmd ) =
+                            DirtyState.clearDirty model
+                    in
+                    ( { cleanModel
+                        | isSaving = False
+                        , version = def.version
+                        , successMessage = Just "保存しました"
+                        , errorMessage = Nothing
+                      }
+                    , cleanCmd
+                    )
+
+                Err err ->
+                    ( { model
+                        | isSaving = False
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
+                        , successMessage = Nothing
+                      }
+                    , Cmd.none
+                    )
+
+        DismissMessage ->
+            ( { model | successMessage = Nothing, errorMessage = Nothing }
+            , Cmd.none
+            )
 
         StepMouseDown stepId clientX clientY ->
             case ( Dict.get stepId model.steps, DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY ) of
@@ -307,24 +460,32 @@ update msg model =
                 case ( model.selectedTransitionIndex, model.selectedStepId ) of
                     ( Just index, _ ) ->
                         -- 選択中の接続線を削除
-                        ( { model
-                            | transitions = removeAt index model.transitions
+                        let
+                            ( dirtyModel, dirtyCmd ) =
+                                DirtyState.markDirty model
+                        in
+                        ( { dirtyModel
+                            | transitions = removeAt index dirtyModel.transitions
                             , selectedTransitionIndex = Nothing
                           }
-                        , Cmd.none
+                        , dirtyCmd
                         )
 
                     ( Nothing, Just stepId ) ->
                         -- 選択中のステップと関連 transitions を削除
-                        ( { model
-                            | steps = Dict.remove stepId model.steps
+                        let
+                            ( dirtyModel, dirtyCmd ) =
+                                DirtyState.markDirty model
+                        in
+                        ( { dirtyModel
+                            | steps = Dict.remove stepId dirtyModel.steps
                             , transitions =
                                 List.filter
                                     (\t -> t.from /= stepId && t.to /= stepId)
-                                    model.transitions
+                                    dirtyModel.transitions
                             , selectedStepId = Nothing
                           }
-                        , Cmd.none
+                        , dirtyCmd
                         )
 
                     _ ->
@@ -400,25 +561,70 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [ class "flex flex-col", style "height" "calc(100vh - 8rem)" ]
-        [ viewToolbar
-        , div [ class "flex flex-1 overflow-hidden" ]
-            [ viewPalette
-            , viewCanvasArea model
-            , viewPropertyPanel model
-            ]
-        , viewStatusBar model
-        ]
+    case model.loadState of
+        Loading ->
+            div [ class "flex items-center justify-center", style "height" "calc(100vh - 8rem)" ]
+                [ LoadingSpinner.view ]
+
+        Failure err ->
+            div [ class "flex items-center justify-center", style "height" "calc(100vh - 8rem)" ]
+                [ ErrorState.viewSimple (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err) ]
+
+        _ ->
+            div [ class "flex flex-col", style "height" "calc(100vh - 8rem)" ]
+                [ viewToolbar model
+                , viewMessages model
+                , div [ class "flex flex-1 overflow-hidden" ]
+                    [ viewPalette
+                    , viewCanvasArea model
+                    , viewPropertyPanel model
+                    ]
+                , viewStatusBar model
+                ]
 
 
-{-| ミニマルツールバー
+{-| ツールバー（定義名 + 保存ボタン）
 -}
-viewToolbar : Html Msg
-viewToolbar =
-    div [ class "flex items-center border-b border-secondary-200 bg-white px-4 py-2" ]
-        [ h1 [ class "text-base font-semibold text-secondary-800" ]
+viewToolbar : Model -> Html Msg
+viewToolbar model =
+    div [ class "flex items-center gap-4 border-b border-secondary-200 bg-white px-4 py-2" ]
+        [ h1 [ class "shrink-0 text-base font-semibold text-secondary-800" ]
             [ text "ワークフローデザイナー" ]
+        , input
+            [ type_ "text"
+            , class "min-w-0 flex-1 rounded border border-secondary-300 px-3 py-1 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            , value model.name
+            , Html.Events.onInput UpdateDefinitionName
+            , placeholder "定義名を入力"
+            ]
+            []
+        , div [ class "shrink-0" ]
+            [ Button.view
+                { variant = Button.Primary
+                , disabled = model.isSaving || not model.isDirty_
+                , onClick = SaveClicked
+                }
+                [ text
+                    (if model.isSaving then
+                        "保存中..."
+
+                     else
+                        "保存"
+                    )
+                ]
+            ]
         ]
+
+
+{-| 成功・エラーメッセージ表示
+-}
+viewMessages : Model -> Html Msg
+viewMessages model =
+    MessageAlert.view
+        { onDismiss = DismissMessage
+        , successMessage = model.successMessage
+        , errorMessage = model.errorMessage
+        }
 
 
 {-| ステップパレット
