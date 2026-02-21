@@ -295,13 +295,6 @@ initPage key route shared =
             in
             ( WorkflowDefinitionsPage model, Cmd.map WorkflowDefinitionsMsg cmd )
 
-        Route.WorkflowDefinitionDesignerNew ->
-            let
-                ( model, cmd ) =
-                    Designer.init shared ""
-            in
-            ( DesignerPage model, Cmd.map DesignerMsg cmd )
-
         Route.WorkflowDefinitionDesignerEdit defId ->
             let
                 ( model, cmd ) =
@@ -929,7 +922,6 @@ viewAdminSection currentRoute shared =
         , viewNavItem currentRoute Route.WorkflowDefinitions "ワークフロー定義" Icons.workflowDefinitions
         , viewNavItem currentRoute Route.Users "ユーザー管理" Icons.users
         , viewNavItem currentRoute Route.Roles "ロール管理" Icons.roles
-        , viewNavItem currentRoute Route.WorkflowDefinitionDesignerNew "ワークフローデザイナー" Icons.workflowDesigner
         , viewNavItem currentRoute Route.AuditLogs "監査ログ" Icons.auditLog
         ]
 
