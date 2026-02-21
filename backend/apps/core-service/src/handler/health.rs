@@ -30,6 +30,7 @@ pub struct ReadinessState {
 ///
 /// PostgreSQL への接続を確認し、結果を返す。
 /// 全チェック OK → 200、1 つでも失敗 → 503。
+#[tracing::instrument(skip_all)]
 pub async fn readiness_check(State(state): State<Arc<ReadinessState>>) -> impl IntoResponse {
     let db_check = check_database(&state.pool).await;
 
@@ -60,6 +61,13 @@ async fn check_database(pool: &PgPool) -> CheckStatus {
     .await
     {
         Ok(Ok(_)) => CheckStatus::Ok,
-        _ => CheckStatus::Error,
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "readiness check: database connection failed");
+            CheckStatus::Error
+        }
+        Err(_) => {
+            tracing::warn!("readiness check: database check timed out");
+            CheckStatus::Error
+        }
     }
 }

@@ -49,6 +49,7 @@ pub struct ReadinessState {
       (status = 503, description = "一部の依存サービスが利用不可", body = ReadinessResponse)
    )
 )]
+#[tracing::instrument(skip_all)]
 pub async fn readiness_check(State(state): State<Arc<ReadinessState>>) -> impl IntoResponse {
     // Redis と Core Service を並行チェック
     let (redis_result, core_result) = tokio::join!(
@@ -85,7 +86,14 @@ async fn check_redis(mut conn: ConnectionManager) -> CheckStatus {
     .await
     {
         Ok(Ok(_)) => CheckStatus::Ok,
-        _ => CheckStatus::Error,
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "readiness check: redis ping failed");
+            CheckStatus::Error
+        }
+        Err(_) => {
+            tracing::warn!("readiness check: redis check timed out");
+            CheckStatus::Error
+        }
     }
 }
 
@@ -113,15 +121,28 @@ async fn check_core_service(client: &reqwest::Client, base_url: &str) -> CoreChe
                         .cloned()
                         .unwrap_or(CheckStatus::Error),
                 },
-                Err(_) => CoreCheckResult {
-                    core_api: CheckStatus::Error,
-                    database: CheckStatus::Error,
-                },
+                Err(e) => {
+                    tracing::warn!(error = %e, "readiness check: core service response parse failed");
+                    CoreCheckResult {
+                        core_api: CheckStatus::Error,
+                        database: CheckStatus::Error,
+                    }
+                }
             }
         }
-        _ => CoreCheckResult {
-            core_api: CheckStatus::Error,
-            database: CheckStatus::Error,
-        },
+        Ok(Err(e)) => {
+            tracing::warn!(error = %e, "readiness check: core service request failed");
+            CoreCheckResult {
+                core_api: CheckStatus::Error,
+                database: CheckStatus::Error,
+            }
+        }
+        Err(_) => {
+            tracing::warn!("readiness check: core service check timed out");
+            CoreCheckResult {
+                core_api: CheckStatus::Error,
+                database: CheckStatus::Error,
+            }
+        }
     }
 }
