@@ -1,0 +1,71 @@
+name: Epic
+description: 複数の Story をまとめる大きな機能
+labels: ["type:epic"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Epic Issue テンプレート
+
+        複数の Story に分解される大きな機能を管理します。
+        タスクリストの形式は `sync-epic` スクリプトの自動更新に使用されます。
+
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要
+      description: この Epic で実現する機能の全体像
+      placeholder: |
+        例: ユーザー認証基盤を構築し、セキュアなログイン機能を提供する
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: タスク
+      description: |
+        Story のタスクリスト。`- [ ] Story N: 説明 #Issue番号` 形式で記載します。
+        Story Issue 作成後に追記してください。`just sync-epic` による自動更新の対象です。
+      placeholder: |
+        - [ ] Story 1: 〇〇を実装する #123
+        - [ ] Story 2: △△を実装する #124
+      value: |
+        - [ ] Story 1:
+    validations:
+      required: true
+
+  - type: textarea
+    id: done-criteria
+    attributes:
+      label: 完了基準
+      description: |
+        何をもって完了とするか。具体的・検証可能に記述してください。
+        チェックリスト形式で記載します。
+      placeholder: |
+        - [ ] 全 Story が完了している
+        - [ ] E2E でユーザーが操作を完了できる
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-docs
+    attributes:
+      label: 関連ドキュメント
+      description: 要件定義書、設計書、ADR へのリンク
+      placeholder: |
+        - 要件: docs/01_要件定義書/xxx
+        - 設計: docs/02_基本設計書/xxx
+        - ADR: docs/05_ADR/xxx
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 備考
+      description: その他の情報、ブロッカー、検討事項など
+    validations:
+      required: false

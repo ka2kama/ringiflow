@@ -13,7 +13,7 @@
 #
 # 例:
 #   ./scripts/issue/sync-epic.sh 749
-#   → Issue #749 の body から「Epic: #747」を検出
+#   → Issue #749 の body から「Epic: #747」または「### Epic\n\n#747」を検出
 #   → Epic #747 のタスクリストで「- [ ] ... #749」を「- [x] ... #749」に更新
 # =============================================================================
 
@@ -33,8 +33,13 @@ if [[ -z "$issue_body" ]]; then
     exit 1
 fi
 
-# Epic 番号を抽出（「Epic: #NNN」パターン）
-epic_number=$(echo "$issue_body" | grep -oP 'Epic:\s*#\K[0-9]+' | head -1 || true)
+# Epic 番号を抽出
+# フォーマット 1: インライン「Epic: #NNN」（手動記載）
+# フォーマット 2: テンプレートレンダリング「### Epic\n\n#NNN」（Issue Form Template）
+epic_number=$(printf '%s' "$issue_body" | perl -0777 -ne '
+    if (/Epic:\s*#(\d+)/) { print $1 }
+    elsif (/###\s+Epic\s+#(\d+)/) { print $1 }
+' || true)
 if [[ -z "$epic_number" ]]; then
     echo "ℹ️ Issue #$ISSUE_NUMBER に親 Epic が設定されていません（スキップ）"
     exit 0
