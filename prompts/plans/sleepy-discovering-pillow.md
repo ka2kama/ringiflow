@@ -105,9 +105,9 @@ E2E テスト（該当なし）
 
 ### 確認事項
 
-- [ ] zoom-rhythm.md のギャップ発見の観点テーブルが他ファイルで参照されているか → 参照がなければ圧縮可能
-- [ ] troubleshooting.md の仮説追跡テーブルが investigations/ のテンプレートと整合しているか
-- [ ] problem-solving.md の Issue 精査フォーマットが 01_Issue駆動開発.md のフォーマットと整合しているか
+- [x] zoom-rhythm.md のギャップ発見の観点テーブル → 12 ファイルから参照あり。テーブルは維持、形式を圧縮
+- [x] troubleshooting.md の仮説追跡テーブル → investigations/README.md と整合確認済み
+- [x] problem-solving.md の Issue 精査フォーマット → 01_Issue駆動開発.md と整合確認済み
 
 ### テストリスト
 
@@ -117,9 +117,9 @@ API テスト（該当なし）
 E2E テスト（該当なし）
 
 検証:
-- [ ] 圧縮後の各ファイルが rule-skill-writing.md に準拠していること
-- [ ] クロスリファレンスの整合性（リンク先が存在すること）
-- [ ] Always-loaded ファイルの合計バイト数が削減されていること（現状: 39.6 KB）
+- [x] 圧縮後の各ファイルが rule-skill-writing.md に準拠していること → 語りかけ調・背景散文ゼロ
+- [x] クロスリファレンスの整合性 → 15 リンク全件 OK
+- [x] Always-loaded ファイルの合計バイト数が削減 → 40,142 B → 33,487 B（16.6% 削減）
 
 ## 検証方法
 
