@@ -596,6 +596,12 @@ worktree-remove name:
     # worktree を削除
     git worktree remove "$WORKTREE_PATH" --force
 
+    # Docker がバインドマウントで作成した root 所有ディレクトリが残る場合があるため削除
+    if [ -d "$WORKTREE_PATH" ]; then
+        echo "  残存ディレクトリを削除中..."
+        rm -rf "$WORKTREE_PATH"
+    fi
+
     echo "✓ worktree を削除しました: {{name}}"
 
 # worktree 一覧を表示
