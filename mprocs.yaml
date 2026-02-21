@@ -1,9 +1,11 @@
 procs:
+  build:
+    shell: "just dev-build"
   bff:
-    shell: "just dev-bff"
+    shell: "just dev-run bff"
   core-service:
-    shell: "just dev-core-service"
+    shell: "just dev-run core-service"
   auth-service:
-    shell: "just dev-auth-service"
+    shell: "just dev-run auth-service"
   web:
     shell: "just dev-web"

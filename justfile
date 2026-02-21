@@ -165,6 +165,21 @@ dev-auth-service:
 dev-web:
     cd frontend && pnpm run dev
 
+# バックエンド全体を監視・ビルド（dev-all で使用）
+dev-build:
+    cd backend && cargo watch -x 'build --workspace'
+
+# ビルド済みバイナリを監視して起動（dev-all で使用）
+dev-run service:
+    #!/usr/bin/env bash
+    cd backend
+    BINARY="target/debug/ringiflow-{{service}}"
+    while [ ! -f "$BINARY" ]; do
+        echo "Waiting for $BINARY to be built..."
+        sleep 2
+    done
+    exec cargo watch --no-vcs-ignores -w "$BINARY" -s "./$BINARY"
+
 # 全開発サーバーを一括起動（依存サービス + mprocs）
 dev-all: dev-deps
     mprocs
