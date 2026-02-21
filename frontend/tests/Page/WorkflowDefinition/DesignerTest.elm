@@ -8,7 +8,7 @@ module Page.WorkflowDefinition.DesignerTest exposing (suite)
 
 import Api exposing (ApiError(..))
 import Data.DesignerCanvas exposing (DraggingState(..), StepType(..))
-import Data.WorkflowDefinition exposing (WorkflowDefinition)
+import Data.WorkflowDefinition exposing (ValidationResult, WorkflowDefinition)
 import Dict
 import Expect
 import Json.Encode as Encode
@@ -33,6 +33,7 @@ suite =
         , connectionKeyDownTests
         , propertyPanelTests
         , apiIntegrationTests
+        , validationAndPublishTests
         ]
 
 
@@ -719,6 +720,113 @@ apiIntegrationTests =
                 Expect.all
                     [ \m -> m.name |> Expect.equal "新しい名前"
                     , \m -> m.isDirty_ |> Expect.equal True
+                    ]
+                    model
+        ]
+
+
+
+-- Validation & Publish
+
+
+validationAndPublishTests : Test
+validationAndPublishTests =
+    describe "Validation & Publish"
+        [ test "ValidateClicked で isValidating が True になる" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        Designer.update ValidateClicked loadedModel
+                in
+                model.isValidating |> Expect.equal True
+        , test "GotValidationResult Ok (valid=true) で validationResult が設定される" <|
+            \_ ->
+                let
+                    validatingModel =
+                        { loadedModel | isValidating = True }
+
+                    validResult : ValidationResult
+                    validResult =
+                        { valid = True, errors = [] }
+
+                    ( model, _ ) =
+                        Designer.update (GotValidationResult (Ok validResult)) validatingModel
+                in
+                Expect.all
+                    [ \m -> m.isValidating |> Expect.equal False
+                    , \m -> m.validationResult |> Expect.equal (Just validResult)
+                    ]
+                    model
+        , test "GotValidationResult Ok (valid=false) でエラー情報が設定される" <|
+            \_ ->
+                let
+                    validatingModel =
+                        { loadedModel | isValidating = True }
+
+                    invalidResult : ValidationResult
+                    invalidResult =
+                        { valid = False
+                        , errors =
+                            [ { code = "missing_start"
+                              , message = "開始ステップが必要です"
+                              , stepId = Nothing
+                              }
+                            ]
+                        }
+
+                    ( model, _ ) =
+                        Designer.update (GotValidationResult (Ok invalidResult)) validatingModel
+                in
+                Expect.all
+                    [ \m -> m.isValidating |> Expect.equal False
+                    , \m ->
+                        m.validationResult
+                            |> Maybe.map .valid
+                            |> Expect.equal (Just False)
+                    , \m ->
+                        m.validationResult
+                            |> Maybe.map .errors
+                            |> Maybe.map List.length
+                            |> Expect.equal (Just 1)
+                    ]
+                    model
+        , test "GotValidationResult Err で errorMessage が設定される" <|
+            \_ ->
+                let
+                    validatingModel =
+                        { loadedModel | isValidating = True }
+
+                    ( model, _ ) =
+                        Designer.update (GotValidationResult (Err NetworkError)) validatingModel
+                in
+                Expect.all
+                    [ \m -> m.isValidating |> Expect.equal False
+                    , \m -> m.errorMessage |> Expect.notEqual Nothing
+                    ]
+                    model
+        , test "PublishClicked で pendingPublish が True になる" <|
+            \_ ->
+                let
+                    ( model, _ ) =
+                        Designer.update PublishClicked loadedModel
+                in
+                model.pendingPublish |> Expect.equal True
+        , test "GotPublishResult Ok で successMessage が設定される" <|
+            \_ ->
+                let
+                    publishingModel =
+                        { loadedModel | isPublishing = True }
+
+                    publishedDef =
+                        { testDefinition | status = "published", version = 2 }
+
+                    ( model, _ ) =
+                        Designer.update (GotPublishResult (Ok publishedDef)) publishingModel
+                in
+                Expect.all
+                    [ \m -> m.isPublishing |> Expect.equal False
+                    , \m -> m.successMessage |> Expect.equal (Just "公開しました")
+                    , \m -> m.version |> Expect.equal 2
                     ]
                     model
         ]

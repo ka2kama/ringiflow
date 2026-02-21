@@ -449,19 +449,21 @@ type alias Model =
 PublishClicked → ConfirmDialog 表示 → ConfirmPublish → 保存（dirty なら）→ バリデーション → 公開 API 呼び出し。
 
 #### 確認事項
-- [ ] パターン: `Button.view` のシグネチャ → `Component/Button.elm`
-- [ ] パターン: `ConfirmDialog.view` → `Component/ConfirmDialog.elm` と `Ports.showModalDialog`
-- [ ] 型: Phase 1 で実装した `ValidationResult` と `validationResultDecoder`
+- [x] パターン: `Button.view` のシグネチャ → `{ variant, disabled, onClick } -> List (Html msg) -> Html msg`
+- [x] パターン: `ConfirmDialog.view` → `{ title, message, confirmLabel, cancelLabel, onConfirm, onCancel, actionStyle }`, `Ports.showModalDialog ConfirmDialog.dialogId` で表示
+- [x] 型: `ValidationResult = { valid : Bool, errors : List ValidationError }`, `ValidationError = { code, message, stepId }`
+- [x] API: `validateDefinition { config, body, toMsg }` — body は定義の JSON
+- [x] API: `publishDefinition { config, id, body, toMsg }` — body は `encodeVersionRequest { version }`
 
 #### テストリスト
 
 ユニットテスト:
-- [ ] update: `ValidateClicked` で isValidating が True になる
-- [ ] update: `GotValidationResult (Ok { valid: true })` で validationResult が設定される
-- [ ] update: `GotValidationResult (Ok { valid: false })` でエラー情報が設定される
-- [ ] update: `GotValidationResult (Err err)` で errorMessage が設定される
-- [ ] update: `PublishClicked` で確認ダイアログ表示
-- [ ] update: `GotPublishResult (Ok def)` で successMessage + ステータス更新
+- [x] update: `ValidateClicked` で isValidating が True になる
+- [x] update: `GotValidationResult (Ok { valid: true })` で validationResult が設定される
+- [x] update: `GotValidationResult (Ok { valid: false })` でエラー情報が設定される
+- [x] update: `GotValidationResult (Err err)` で errorMessage が設定される
+- [x] update: `PublishClicked` で確認ダイアログ表示
+- [x] update: `GotPublishResult (Ok def)` で successMessage + ステータス更新
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）

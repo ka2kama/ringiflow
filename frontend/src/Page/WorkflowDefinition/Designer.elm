@@ -12,12 +12,13 @@ import Api.ErrorMessage as ErrorMessage
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Browser.Events
 import Component.Button as Button
+import Component.ConfirmDialog as ConfirmDialog
 import Component.ErrorState as ErrorState
 import Component.FormField as FormField
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
-import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
+import Data.WorkflowDefinition as WorkflowDefinition exposing (ValidationError, ValidationResult, WorkflowDefinition)
 import Dict exposing (Dict)
 import Form.DirtyState as DirtyState
 import Html exposing (..)
@@ -68,6 +69,10 @@ type alias Model =
     , successMessage : Maybe String
     , errorMessage : Maybe String
     , isDirty_ : Bool
+    , validationResult : Maybe ValidationResult
+    , isValidating : Bool
+    , isPublishing : Bool
+    , pendingPublish : Bool
     }
 
 
@@ -92,6 +97,10 @@ init shared definitionId =
       , successMessage = Nothing
       , errorMessage = Nothing
       , isDirty_ = False
+      , validationResult = Nothing
+      , isValidating = False
+      , isPublishing = False
+      , pendingPublish = False
       }
     , Cmd.batch
         [ Ports.requestCanvasBounds canvasElementId
@@ -133,6 +142,12 @@ type Msg
     | SaveClicked
     | GotDefinition (Result ApiError WorkflowDefinition)
     | GotSaveResult (Result ApiError WorkflowDefinition)
+    | ValidateClicked
+    | GotValidationResult (Result ApiError ValidationResult)
+    | PublishClicked
+    | ConfirmPublish
+    | CancelPublish
+    | GotPublishResult (Result ApiError WorkflowDefinition)
     | DismissMessage
     | KeyDown String
     | GotCanvasBounds Encode.Value
@@ -410,10 +425,158 @@ update msg model =
                         ( cleanModel, cleanCmd ) =
                             DirtyState.clearDirty model
                     in
-                    ( { cleanModel
+                    if model.pendingPublish then
+                        -- 公開チェーン: 保存成功 → バリデーション
+                        let
+                            definition =
+                                DesignerCanvas.encodeDefinition cleanModel.steps cleanModel.transitions
+                        in
+                        ( { cleanModel
+                            | isSaving = False
+                            , version = def.version
+                            , isValidating = True
+                            , validationResult = Nothing
+                          }
+                        , Cmd.batch
+                            [ cleanCmd
+                            , WorkflowDefinitionApi.validateDefinition
+                                { config = Shared.toRequestConfig cleanModel.shared
+                                , body = definition
+                                , toMsg = GotValidationResult
+                                }
+                            ]
+                        )
+
+                    else
+                        ( { cleanModel
+                            | isSaving = False
+                            , version = def.version
+                            , successMessage = Just "保存しました"
+                            , errorMessage = Nothing
+                          }
+                        , cleanCmd
+                        )
+
+                Err err ->
+                    ( { model
                         | isSaving = False
+                        , pendingPublish = False
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
+                        , successMessage = Nothing
+                      }
+                    , Cmd.none
+                    )
+
+        ValidateClicked ->
+            let
+                definition =
+                    DesignerCanvas.encodeDefinition model.steps model.transitions
+            in
+            ( { model | isValidating = True, validationResult = Nothing, errorMessage = Nothing }
+            , WorkflowDefinitionApi.validateDefinition
+                { config = Shared.toRequestConfig model.shared
+                , body = definition
+                , toMsg = GotValidationResult
+                }
+            )
+
+        GotValidationResult result ->
+            case result of
+                Ok validResult ->
+                    if model.pendingPublish && validResult.valid then
+                        -- 公開チェーン: バリデーション成功 → 公開 API 呼び出し
+                        ( { model
+                            | isValidating = False
+                            , validationResult = Just validResult
+                            , isPublishing = True
+                          }
+                        , WorkflowDefinitionApi.publishDefinition
+                            { config = Shared.toRequestConfig model.shared
+                            , id = model.definitionId
+                            , body = WorkflowDefinition.encodeVersionRequest { version = model.version }
+                            , toMsg = GotPublishResult
+                            }
+                        )
+
+                    else
+                        -- 通常バリデーション結果、または公開チェーンでバリデーション失敗
+                        ( { model
+                            | isValidating = False
+                            , validationResult = Just validResult
+                            , pendingPublish = False
+                          }
+                        , Cmd.none
+                        )
+
+                Err err ->
+                    ( { model
+                        | isValidating = False
+                        , pendingPublish = False
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
+                      }
+                    , Cmd.none
+                    )
+
+        PublishClicked ->
+            ( { model | pendingPublish = True, successMessage = Nothing, errorMessage = Nothing }
+            , Ports.showModalDialog "designer-publish-dialog"
+            )
+
+        ConfirmPublish ->
+            if model.isDirty_ then
+                -- dirty なら先に保存
+                let
+                    definition =
+                        DesignerCanvas.encodeDefinition model.steps model.transitions
+
+                    body =
+                        WorkflowDefinition.encodeUpdateRequest
+                            { name = model.name
+                            , description = model.description
+                            , definition = definition
+                            , version = model.version
+                            }
+                in
+                ( { model | isSaving = True }
+                , WorkflowDefinitionApi.updateDefinition
+                    { config = Shared.toRequestConfig model.shared
+                    , id = model.definitionId
+                    , body = body
+                    , toMsg = GotSaveResult
+                    }
+                )
+
+            else
+                -- dirty でなければ直接バリデーション
+                let
+                    definition =
+                        DesignerCanvas.encodeDefinition model.steps model.transitions
+                in
+                ( { model | isValidating = True, validationResult = Nothing }
+                , WorkflowDefinitionApi.validateDefinition
+                    { config = Shared.toRequestConfig model.shared
+                    , body = definition
+                    , toMsg = GotValidationResult
+                    }
+                )
+
+        CancelPublish ->
+            ( { model | pendingPublish = False }
+            , Cmd.none
+            )
+
+        GotPublishResult result ->
+            case result of
+                Ok def ->
+                    let
+                        ( cleanModel, cleanCmd ) =
+                            DirtyState.clearDirty model
+                    in
+                    ( { cleanModel
+                        | isPublishing = False
+                        , pendingPublish = False
                         , version = def.version
-                        , successMessage = Just "保存しました"
+                        , successMessage = Just "公開しました"
                         , errorMessage = Nothing
                       }
                     , cleanCmd
@@ -421,7 +584,8 @@ update msg model =
 
                 Err err ->
                     ( { model
-                        | isSaving = False
+                        | isPublishing = False
+                        , pendingPublish = False
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
                         , successMessage = Nothing
                       }
@@ -579,11 +743,13 @@ view model =
                     , viewCanvasArea model
                     , viewPropertyPanel model
                     ]
+                , viewValidationPanel model
                 , viewStatusBar model
+                , viewPublishDialog model
                 ]
 
 
-{-| ツールバー（定義名 + 保存ボタン）
+{-| ツールバー（定義名 + バリデーション・保存・公開ボタン）
 -}
 viewToolbar : Model -> Html Msg
 viewToolbar model =
@@ -598,8 +764,21 @@ viewToolbar model =
             , placeholder "定義名を入力"
             ]
             []
-        , div [ class "shrink-0" ]
+        , div [ class "flex shrink-0 gap-2" ]
             [ Button.view
+                { variant = Button.Outline
+                , disabled = model.isValidating
+                , onClick = ValidateClicked
+                }
+                [ text
+                    (if model.isValidating then
+                        "検証中..."
+
+                     else
+                        "検証"
+                    )
+                ]
+            , Button.view
                 { variant = Button.Primary
                 , disabled = model.isSaving || not model.isDirty_
                 , onClick = SaveClicked
@@ -610,6 +789,19 @@ viewToolbar model =
 
                      else
                         "保存"
+                    )
+                ]
+            , Button.view
+                { variant = Button.Success
+                , disabled = model.isPublishing || model.isSaving || model.isValidating
+                , onClick = PublishClicked
+                }
+                [ text
+                    (if model.isPublishing then
+                        "公開中..."
+
+                     else
+                        "公開"
                     )
                 ]
             ]
@@ -811,17 +1003,24 @@ viewGrid =
 -}
 viewSteps : Model -> Svg.Svg Msg
 viewSteps model =
+    let
+        errorStepIds =
+            model.validationResult
+                |> Maybe.map .errors
+                |> Maybe.withDefault []
+                |> List.filterMap .stepId
+    in
     Svg.g []
         (model.steps
             |> Dict.values
-            |> List.map (viewStepNode model.selectedStepId)
+            |> List.map (viewStepNode model.selectedStepId errorStepIds)
         )
 
 
 {-| 個別のステップノード描画
 -}
-viewStepNode : Maybe String -> StepNode -> Svg.Svg Msg
-viewStepNode selectedStepId step =
+viewStepNode : Maybe String -> List String -> StepNode -> Svg.Svg Msg
+viewStepNode selectedStepId errorStepIds step =
     let
         colors =
             DesignerCanvas.stepColors step.stepType
@@ -832,8 +1031,21 @@ viewStepNode selectedStepId step =
         isSelected =
             selectedStepId == Just step.id
 
+        hasError =
+            List.member step.id errorStepIds
+
+        strokeColor =
+            if hasError then
+                "#dc2626"
+
+            else
+                colors.stroke
+
         strokeWidth =
             if isSelected then
+                "3"
+
+            else if hasError then
                 "3"
 
             else
@@ -860,7 +1072,7 @@ viewStepNode selectedStepId step =
             , SvgAttr.height (String.fromFloat dim.height)
             , SvgAttr.rx "8"
             , SvgAttr.fill colors.fill
-            , SvgAttr.stroke colors.stroke
+            , SvgAttr.stroke strokeColor
             , SvgAttr.strokeWidth strokeWidth
             ]
             []
@@ -1287,6 +1499,53 @@ viewStepTypeSpecificFields model step =
             ]
 
 
+{-| バリデーション結果パネル
+
+キャンバス下部に表示。valid なら緑、invalid ならエラー一覧。
+
+-}
+viewValidationPanel : Model -> Html Msg
+viewValidationPanel model =
+    case model.validationResult of
+        Just result ->
+            if result.valid then
+                div [ class "border-t border-success-200 bg-success-50 px-4 py-2 text-sm text-success-700" ]
+                    [ text "フロー定義は有効です" ]
+
+            else
+                div [ class "border-t border-error-200 bg-error-50 px-4 py-2" ]
+                    [ p [ class "text-sm font-medium text-error-700" ]
+                        [ text ("バリデーションエラー（" ++ String.fromInt (List.length result.errors) ++ " 件）") ]
+                    , ul [ class "mt-1 space-y-1" ]
+                        (List.map viewValidationError result.errors)
+                    ]
+
+        Nothing ->
+            text ""
+
+
+{-| 個別のバリデーションエラー行
+
+stepId がある場合、クリックで該当ステップを選択する。
+
+-}
+viewValidationError : ValidationError -> Html Msg
+viewValidationError error =
+    li
+        (class "text-sm text-error-600"
+            :: (case error.stepId of
+                    Just stepId ->
+                        [ class "cursor-pointer hover:underline"
+                        , Html.Events.onClick (StepClicked stepId)
+                        ]
+
+                    Nothing ->
+                        []
+               )
+        )
+        [ text error.message ]
+
+
 {-| ステータスバー
 -}
 viewStatusBar : Model -> Html Msg
@@ -1299,3 +1558,22 @@ viewStatusBar model =
                 ++ " 接続"
             )
         ]
+
+
+{-| 公開確認ダイアログ
+-}
+viewPublishDialog : Model -> Html Msg
+viewPublishDialog model =
+    if model.pendingPublish then
+        ConfirmDialog.view
+            { title = "ワークフロー定義を公開"
+            , message = "「" ++ model.name ++ "」を公開しますか？公開後はユーザーが申請に使用できるようになります。"
+            , confirmLabel = "公開する"
+            , cancelLabel = "キャンセル"
+            , onConfirm = ConfirmPublish
+            , onCancel = CancelPublish
+            , actionStyle = ConfirmDialog.Positive
+            }
+
+    else
+        text ""
