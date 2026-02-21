@@ -714,7 +714,18 @@ subscriptions model =
             Sub.none
         , Browser.Events.onKeyDown
             (Decode.field "key" Decode.string
-                |> Decode.map KeyDown
+                |> Decode.andThen
+                    (\key ->
+                        Decode.at [ "target", "tagName" ] Decode.string
+                            |> Decode.andThen
+                                (\tagName ->
+                                    if List.member tagName [ "INPUT", "TEXTAREA", "SELECT" ] then
+                                        Decode.fail "ignore input element"
+
+                                    else
+                                        Decode.succeed (KeyDown key)
+                                )
+                    )
             )
         ]
 
