@@ -171,14 +171,7 @@ dev-build:
 
 # ビルド済みバイナリを監視して起動（dev-all で使用）
 dev-run service:
-    #!/usr/bin/env bash
-    cd backend
-    BINARY="target/debug/ringiflow-{{service}}"
-    while [ ! -f "$BINARY" ]; do
-        echo "Waiting for $BINARY to be built..."
-        sleep 2
-    done
-    exec cargo watch --no-vcs-ignores -w "$BINARY" -s "./$BINARY"
+    ./scripts/dev/run-service.sh {{service}}
 
 # 全開発サーバーを一括起動（依存サービス + mprocs）
 dev-all: dev-deps
