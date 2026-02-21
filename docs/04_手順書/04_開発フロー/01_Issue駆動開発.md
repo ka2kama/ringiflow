@@ -560,6 +560,17 @@ gh pr ready
 
 注意: CI が失敗している状態で Ready にしない。CI 失敗時は原因を修正してから再度プッシュする。
 
+### 6.8 Draft に戻した後、再度 Ready にする場合
+
+Draft に戻した = 品質保証がリセットされた状態。コミットの作成者（AI / ユーザー）に関わらず、品質ゲートを再度通過する必要がある。
+
+1. 修正・追加コミットを実施
+2. `just check-all` で品質ゲート通過
+3. base branch 同期確認（差分があれば rebase + `just check-all` で再確認）
+4. `gh pr ready` で Ready にする
+
+**禁止:** 品質ゲートを通過せずに Ready for Review に戻すこと
+
 ### 7. レビュー確認
 
 Claude Code Action による自動レビューが実行される。
