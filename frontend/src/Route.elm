@@ -94,7 +94,6 @@ type Route
     | RoleEdit String
     | AuditLogs
     | WorkflowDefinitions
-    | WorkflowDefinitionDesignerNew
     | WorkflowDefinitionDesignerEdit String
     | NotFound
 
@@ -172,7 +171,6 @@ parser =
         , Parser.map RoleEdit (s "roles" </> string </> s "edit")
         , Parser.map Roles (s "roles")
         , Parser.map AuditLogs (s "audit-logs")
-        , Parser.map WorkflowDefinitionDesignerNew (s "workflow-definitions" </> s "new")
         , Parser.map WorkflowDefinitionDesignerEdit (s "workflow-definitions" </> string </> s "edit")
         , Parser.map WorkflowDefinitions (s "workflow-definitions")
         ]
@@ -324,9 +322,6 @@ toString route =
         WorkflowDefinitions ->
             "/workflow-definitions"
 
-        WorkflowDefinitionDesignerNew ->
-            "/workflow-definitions/new"
-
         WorkflowDefinitionDesignerEdit defId ->
             "/workflow-definitions/" ++ defId ++ "/edit"
 
@@ -417,13 +412,7 @@ isRouteActive navRoute currentRoute =
         ( WorkflowDefinitions, WorkflowDefinitions ) ->
             True
 
-        ( WorkflowDefinitions, WorkflowDefinitionDesignerNew ) ->
-            True
-
         ( WorkflowDefinitions, WorkflowDefinitionDesignerEdit _ ) ->
-            True
-
-        ( WorkflowDefinitionDesignerNew, WorkflowDefinitionDesignerNew ) ->
             True
 
         _ ->
@@ -479,9 +468,6 @@ pageTitle route =
 
         WorkflowDefinitions ->
             "ワークフロー定義"
-
-        WorkflowDefinitionDesignerNew ->
-            "ワークフローデザイナー"
 
         WorkflowDefinitionDesignerEdit _ ->
             "ワークフローデザイナー"

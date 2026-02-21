@@ -98,11 +98,7 @@ fromUrlTests =
                         |> Expect.equal WorkflowDefinitions
             ]
         , describe "ワークフロー定義ルート"
-            [ test "/workflow-definitions/new → WorkflowDefinitionDesignerNew" <|
-                \_ ->
-                    parseUrl "/workflow-definitions/new"
-                        |> Expect.equal WorkflowDefinitionDesignerNew
-            , test "/workflow-definitions/{uuid}/edit → WorkflowDefinitionDesignerEdit uuid" <|
+            [ test "/workflow-definitions/{uuid}/edit → WorkflowDefinitionDesignerEdit uuid" <|
                 \_ ->
                     parseUrl "/workflow-definitions/550e8400-e29b-41d4-a716-446655440000/edit"
                         |> Expect.equal (WorkflowDefinitionDesignerEdit "550e8400-e29b-41d4-a716-446655440000")
@@ -215,11 +211,7 @@ toStringTests =
                         |> Expect.equal "/workflow-definitions"
             ]
         , describe "ワークフロー定義ルート"
-            [ test "WorkflowDefinitionDesignerNew → /workflow-definitions/new" <|
-                \_ ->
-                    Route.toString WorkflowDefinitionDesignerNew
-                        |> Expect.equal "/workflow-definitions/new"
-            , test "WorkflowDefinitionDesignerEdit uuid → /workflow-definitions/{uuid}/edit" <|
+            [ test "WorkflowDefinitionDesignerEdit uuid → /workflow-definitions/{uuid}/edit" <|
                 \_ ->
                     Route.toString (WorkflowDefinitionDesignerEdit "abc-123")
                         |> Expect.equal "/workflow-definitions/abc-123/edit"
