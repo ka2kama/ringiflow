@@ -134,7 +134,7 @@ toRequestConfig shared =
 
 {-| 現在のユーザーが管理者かどうかを判定
 
-roles に "admin" が含まれているかで判定する。
+roles に "tenant\_admin" が含まれているかで判定する。
 未ログイン時は False を返す。
 
 -}
@@ -142,7 +142,7 @@ isAdmin : Shared -> Bool
 isAdmin shared =
     case shared.user of
         Just user ->
-            List.member "admin" user.roles
+            List.member "tenant_admin" user.roles
 
         Nothing ->
             False

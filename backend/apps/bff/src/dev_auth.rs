@@ -48,7 +48,13 @@ pub const DEV_USER_NAME: &str = "管理者";
 pub const DEV_USER_ROLES: &[&str] = &["tenant_admin"];
 
 /// 開発用ユーザーの権限（tenant_admin 相当）
-pub const DEV_USER_PERMISSIONS: &[&str] = &["tenant:*", "user:*", "workflow:*", "task:*"];
+pub const DEV_USER_PERMISSIONS: &[&str] = &[
+    "tenant:*",
+    "user:*",
+    "workflow:*",
+    "workflow_definition:manage",
+    "task:*",
+];
 
 /// 開発用セッションをセットアップする
 ///

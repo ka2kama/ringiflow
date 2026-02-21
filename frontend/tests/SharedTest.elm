@@ -22,7 +22,7 @@ suite =
 isAdminTests : Test
 isAdminTests =
     describe "isAdmin"
-        [ test "admin ロールを持つユーザー → True" <|
+        [ test "tenant_admin ロールを持つユーザー → True" <|
             \_ ->
                 let
                     shared =
@@ -32,12 +32,12 @@ isAdminTests =
                                 , email = "admin@example.com"
                                 , name = "管理者"
                                 , tenantId = "tenant-1"
-                                , roles = [ "admin", "user" ]
+                                , roles = [ "tenant_admin", "user" ]
                                 }
                 in
                 Shared.isAdmin shared
                     |> Expect.equal True
-        , test "admin ロールを持たないユーザー → False" <|
+        , test "tenant_admin ロールを持たないユーザー → False" <|
             \_ ->
                 let
                     shared =
