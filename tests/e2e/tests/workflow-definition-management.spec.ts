@@ -89,4 +89,64 @@ test.describe("ワークフロー定義管理", () => {
     const archivedRow = page.locator("tr").filter({ hasText: uniqueName });
     await expect(archivedRow.getByText("アーカイブ済み")).toBeVisible();
   });
+
+  test("デザイナー画面で定義を検証できる", async ({ page }) => {
+    const uniqueName = `E2E 検証テスト ${Date.now()}`;
+
+    // Given: 新しい定義を作成する
+    await page.goto("/workflow-definitions");
+    await expect(page.getByRole("table")).toBeVisible();
+    await page.getByRole("button", { name: "新規作成" }).click();
+    await page.getByLabel("名前").fill(uniqueName);
+    await page.getByRole("button", { name: "作成", exact: true }).click();
+    await expect(
+      page.getByText("ワークフロー定義を作成しました"),
+    ).toBeVisible();
+
+    // Given: デザイナー画面を開く
+    const row = page.locator("tr").filter({ hasText: uniqueName });
+    await row.getByRole("link", { name: "編集" }).click();
+    await expect(
+      page.getByRole("heading", { name: "ワークフローデザイナー" }),
+    ).toBeVisible();
+
+    // When: 検証ボタンをクリックする
+    await page.getByRole("button", { name: "検証" }).click();
+
+    // Then: 検証結果が表示される（デフォルト定義は有効）
+    await expect(page.getByText("フロー定義は有効です")).toBeVisible();
+  });
+
+  test("デザイナー画面から定義を公開できる", async ({ page }) => {
+    const uniqueName = `E2E デザイナー公開テスト ${Date.now()}`;
+
+    // Given: 新しい定義を作成する
+    await page.goto("/workflow-definitions");
+    await expect(page.getByRole("table")).toBeVisible();
+    await page.getByRole("button", { name: "新規作成" }).click();
+    await page.getByLabel("名前").fill(uniqueName);
+    await page.getByRole("button", { name: "作成", exact: true }).click();
+    await expect(
+      page.getByText("ワークフロー定義を作成しました"),
+    ).toBeVisible();
+
+    // Given: デザイナー画面を開く
+    const row = page.locator("tr").filter({ hasText: uniqueName });
+    await row.getByRole("link", { name: "編集" }).click();
+    await expect(
+      page.getByRole("heading", { name: "ワークフローデザイナー" }),
+    ).toBeVisible();
+
+    // When: 公開ボタンをクリックする
+    await page.getByRole("button", { name: "公開" }).click();
+
+    // Then: 確認ダイアログが表示される
+    await expect(page.getByText("を公開しますか？")).toBeVisible();
+
+    // When: 公開を確定する
+    await page.getByRole("button", { name: "公開する" }).click();
+
+    // Then: 公開成功メッセージが表示される
+    await expect(page.getByText("公開しました")).toBeVisible();
+  });
 });

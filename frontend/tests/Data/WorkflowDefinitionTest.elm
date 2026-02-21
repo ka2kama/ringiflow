@@ -16,6 +16,7 @@ suite =
         [ decoderTests
         , listDecoderTests
         , approvalStepInfosTests
+        , encodeValidationRequestTests
         , encodeUpdateRequestTests
         , validationResultDecoderTests
         ]
@@ -258,6 +259,35 @@ approvalStepInfosTests =
                 WorkflowDefinition.approvalStepInfos definition
                     |> List.map .id
                     |> Expect.equal [ "step-1" ]
+        ]
+
+
+
+-- encodeValidationRequest
+
+
+encodeValidationRequestTests : Test
+encodeValidationRequestTests =
+    describe "encodeValidationRequest"
+        [ test "definition フィールドでラップしてエンコードする" <|
+            \_ ->
+                let
+                    definition =
+                        Encode.object
+                            [ ( "steps", Encode.list identity [] )
+                            , ( "transitions", Encode.list identity [] )
+                            ]
+
+                    encoded =
+                        WorkflowDefinition.encodeValidationRequest
+                            { definition = definition }
+
+                    decodedDefinition =
+                        Decode.decodeValue (Decode.field "definition" Decode.value) encoded
+                in
+                decodedDefinition
+                    |> Result.map (\_ -> True)
+                    |> Expect.equal (Ok True)
         ]
 
 
