@@ -366,7 +366,10 @@ gh pr checks
 ```bash
 gh pr merge --squash
 just clean-branches
+just sync-epic <Issue番号>
 ```
+
+`just sync-epic` は Story Issue の親 Epic タスクリストを自動更新する。Epic に属さない Issue の場合は何もしない。
 
 マージ完了後、PR の URL を表示して終了する。
 
