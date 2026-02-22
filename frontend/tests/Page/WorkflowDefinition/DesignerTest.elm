@@ -7,7 +7,7 @@ module Page.WorkflowDefinition.DesignerTest exposing (suite)
 -}
 
 import Api exposing (ApiError(..))
-import Data.DesignerCanvas exposing (DraggingState(..), StepType(..))
+import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), StepType(..))
 import Data.WorkflowDefinition exposing (ValidationResult, WorkflowDefinition)
 import Dict
 import Expect
@@ -32,6 +32,8 @@ suite =
         , transitionClickedTests
         , connectionKeyDownTests
         , propertyPanelTests
+        , dragBoundsTests
+        , deleteSelectedStepTests
         , apiIntegrationTests
         , validationAndPublishTests
         ]
@@ -585,6 +587,144 @@ propertyPanelTests =
                     , \m -> m.selectedStepId |> Expect.equal Nothing
                     ]
                     newModel
+        ]
+
+
+
+-- Drag Bounds
+
+
+dragBoundsTests : Test
+dragBoundsTests =
+    describe "Drag Bounds"
+        [ test "DraggingExistingStep でドラッグ中の位置が viewBox 内に制約される" <|
+            \_ ->
+                let
+                    -- ステップ (200, 100)、offset (10, 10) でドラッグ中
+                    draggingModel =
+                        { modelWithOneStep
+                            | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 })
+                        }
+
+                    -- clientX=750, clientY=550 → canvas (750, 550)（1:1 変換）
+                    -- snap(750-10, 550-10) = snap(740, 540) = (740, 540)
+                    -- clamp: x=620 (740>620), y=510 (540>510)
+                    ( newModel, _ ) =
+                        Designer.update (CanvasMouseMove 750 550) draggingModel
+                in
+                case Dict.get "approval_1" newModel.steps of
+                    Just step ->
+                        Expect.all
+                            [ \s ->
+                                s.position.x
+                                    |> Expect.within (Expect.Absolute 0.1)
+                                        (DesignerCanvas.viewBoxWidth - DesignerCanvas.stepDimensions.width)
+                            , \s ->
+                                s.position.y
+                                    |> Expect.within (Expect.Absolute 0.1)
+                                        (DesignerCanvas.viewBoxHeight - DesignerCanvas.stepDimensions.height)
+                            ]
+                            step
+
+                    Nothing ->
+                        Expect.fail "Step not found"
+        , test "DraggingNewStep のドロップ位置が viewBox 内に制約される" <|
+            \_ ->
+                let
+                    -- viewBox 外にドラッグ
+                    draggingModel =
+                        { modelWithBounds
+                            | dragging = Just (DraggingNewStep Approval { x = 750, y = 550 })
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update CanvasMouseUp draggingModel
+                in
+                case Dict.values newModel.steps |> List.head of
+                    Just step ->
+                        Expect.all
+                            [ \s ->
+                                s.position.x
+                                    |> Expect.atMost (DesignerCanvas.viewBoxWidth - DesignerCanvas.stepDimensions.width)
+                            , \s ->
+                                s.position.y
+                                    |> Expect.atMost (DesignerCanvas.viewBoxHeight - DesignerCanvas.stepDimensions.height)
+                            ]
+                            step
+
+                    Nothing ->
+                        Expect.fail "No step created"
+        ]
+
+
+
+-- DeleteSelectedStep
+
+
+deleteSelectedStepTests : Test
+deleteSelectedStepTests =
+    describe "DeleteSelectedStep"
+        [ test "選択中のステップが削除される" <|
+            \_ ->
+                let
+                    selectedModel =
+                        { modelWithOneStep | selectedStepId = Just "approval_1" }
+
+                    ( newModel, _ ) =
+                        Designer.update DeleteSelectedStep selectedModel
+                in
+                Expect.all
+                    [ \m -> Dict.size m.steps |> Expect.equal 0
+                    , \m -> m.selectedStepId |> Expect.equal Nothing
+                    ]
+                    newModel
+        , test "関連する接続線も削除される" <|
+            \_ ->
+                let
+                    startStep =
+                        { id = "start_1"
+                        , stepType = Start
+                        , name = "開始"
+                        , position = { x = 100, y = 100 }
+                        , assignee = Nothing
+                        , endStatus = Nothing
+                        }
+
+                    modelWithTransitions =
+                        { modelWithOneStep
+                            | steps =
+                                Dict.fromList
+                                    [ ( "start_1", startStep )
+                                    , ( "approval_1"
+                                      , { id = "approval_1"
+                                        , stepType = Approval
+                                        , name = "承認"
+                                        , position = { x = 300, y = 100 }
+                                        , assignee = Nothing
+                                        , endStatus = Nothing
+                                        }
+                                      )
+                                    ]
+                            , transitions =
+                                [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                            , selectedStepId = Just "approval_1"
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update DeleteSelectedStep modelWithTransitions
+                in
+                Expect.all
+                    [ \m -> Dict.member "approval_1" m.steps |> Expect.equal False
+                    , \m -> List.length m.transitions |> Expect.equal 0
+                    ]
+                    newModel
+        , test "ステップ未選択時は何もしない" <|
+            \_ ->
+                let
+                    ( newModel, _ ) =
+                        Designer.update DeleteSelectedStep modelWithOneStep
+                in
+                Dict.size newModel.steps |> Expect.equal 1
         ]
 
 

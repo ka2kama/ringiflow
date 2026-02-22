@@ -9,6 +9,7 @@ module Data.DesignerCanvas exposing
     , StepType(..)
     , Transition
     , autoTrigger
+    , clampToViewBox
     , clientToCanvas
     , createStepFromDrop
     , decodeBounds
@@ -133,6 +134,18 @@ viewBoxHeight =
 snapToGrid : Float -> Float
 snapToGrid value =
     toFloat (round (value / gridSize)) * gridSize
+
+
+{-| 座標を viewBox 内に制約する
+
+ステップサイズを考慮し、ステップ全体が viewBox 内に収まるよう制限する。
+
+-}
+clampToViewBox : Position -> Position
+clampToViewBox pos =
+    { x = pos.x |> max 0 |> min (viewBoxWidth - stepDimensions.width)
+    , y = pos.y |> max 0 |> min (viewBoxHeight - stepDimensions.height)
+    }
 
 
 {-| StepType を文字列に変換（ID 生成用）
