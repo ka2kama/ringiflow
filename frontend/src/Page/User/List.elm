@@ -205,20 +205,29 @@ viewUserTable users =
 
 
 {-| ユーザー行
+
+行全体をクリック可能にするため、各セルの内容を <a> で囲んでいる。
+<tr> に onClick を付ける方法は右クリックや Cmd+クリックが効かなくなるため不採用。
+
 -}
 viewUserRow : AdminUserItem -> Html Msg
 viewUserRow user =
-    tr [ class "hover:bg-secondary-50 transition-colors" ]
-        [ td [ class "px-4 py-3 text-sm" ]
-            [ a
-                [ href (Route.toString (Route.UserDetail user.displayNumber))
-                , class "font-medium text-primary-600 hover:text-primary-800 transition-colors"
-                ]
-                [ text (String.fromInt user.displayNumber) ]
-            ]
-        , td [ class "px-4 py-3 text-sm text-secondary-900" ] [ text user.name ]
-        , td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text user.email ]
-        , td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text (String.join ", " user.roles) ]
-        , td [ class "px-4 py-3 text-sm" ]
-            [ Badge.view (AdminUser.statusToBadge user.status) ]
+    let
+        detailUrl =
+            Route.toString (Route.UserDetail user.displayNumber)
+
+        cellLink attrs children =
+            a (href detailUrl :: class "block px-4 py-3" :: attrs) children
+    in
+    tr [ class "hover:bg-secondary-50 transition-colors cursor-pointer" ]
+        [ td [ class "text-sm" ]
+            [ cellLink [ class "font-medium text-primary-600" ] [ text (String.fromInt user.displayNumber) ] ]
+        , td [ class "text-sm text-secondary-900" ]
+            [ cellLink [] [ text user.name ] ]
+        , td [ class "text-sm text-secondary-500" ]
+            [ cellLink [] [ text user.email ] ]
+        , td [ class "text-sm text-secondary-500" ]
+            [ cellLink [] [ text (String.join ", " user.roles) ] ]
+        , td [ class "text-sm" ]
+            [ cellLink [] [ Badge.view (AdminUser.statusToBadge user.status) ] ]
         ]
