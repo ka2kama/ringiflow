@@ -205,6 +205,10 @@ viewUserTable users =
 
 
 {-| ユーザー行
+
+行全体をクリック可能にするため、各セルの内容を <a> で囲んでいる。
+<tr> に onClick を付ける方法は右クリックや Cmd+クリックが効かなくなるため不採用。
+
 -}
 viewUserRow : AdminUserItem -> Html Msg
 viewUserRow user =
