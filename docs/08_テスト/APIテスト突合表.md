@@ -29,11 +29,11 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 
 | # | エンドポイント | メソッド | operationId | Hurl テスト | 状態 |
 |---|---------------|---------|-------------|------------|------|
-| 10 | /api/v1/roles | GET | list_roles | — | ギャップ |
-| 11 | /api/v1/roles | POST | create_role | — | ギャップ |
-| 12 | /api/v1/roles/{role_id} | GET | get_role | — | ギャップ |
-| 13 | /api/v1/roles/{role_id} | PATCH | update_role | — | ギャップ |
-| 14 | /api/v1/roles/{role_id} | DELETE | delete_role | — | ギャップ |
+| 10 | /api/v1/roles | GET | list_roles | role/list_roles.hurl | カバー済み |
+| 11 | /api/v1/roles | POST | create_role | role/create_role.hurl | カバー済み |
+| 12 | /api/v1/roles/{role_id} | GET | get_role | role/get_role.hurl | カバー済み |
+| 13 | /api/v1/roles/{role_id} | PATCH | update_role | role/update_role.hurl | カバー済み |
+| 14 | /api/v1/roles/{role_id} | DELETE | delete_role | role/delete_role.hurl | カバー済み |
 
 ### ワークフロー
 
@@ -95,9 +95,9 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 | 指標 | 値 |
 |------|-----|
 | 全エンドポイント数（OpenAPI） | 37 |
-| カバー済み | 25 (31 テストファイル) |
-| ギャップ | 12 |
-| カバー率 | 67.6% |
+| カバー済み | 30 (36 テストファイル) |
+| ギャップ | 7 |
+| カバー率 | 81.1% |
 
 ### カテゴリ別カバレッジ
 
@@ -105,7 +105,7 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 |---------|-------|-----------|---------|
 | 認証 | 4 | 4 | 100% |
 | ユーザー管理 | 5 | 5 | 100% |
-| ロール管理 | 5 | 0 | 0% |
+| ロール管理 | 5 | 5 | 100% |
 | ワークフロー | 10 | 10 | 100% |
 | ワークフロー定義 | 8 | 2 | 25% |
 | タスク | 2 | 2 | 100% |
@@ -120,7 +120,7 @@ Epic #774 で対応中。
 | Story | カテゴリ | ギャップ数 |
 |-------|---------|-----------|
 | #776 | ユーザー管理 | ~~4~~ 完了 |
-| #777 | ロール管理 | 5 |
+| #777 | ロール管理 | ~~5~~ 完了 |
 | #778 | ワークフロー定義（書込系） | 6 |
 | #779 | 監査ログ | 1 |
 
@@ -128,6 +128,7 @@ Epic #774 で対応中。
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-22 | ロール管理 5 EP のテスト追加を反映（#777）。ギャップ 12→7、カバー率 67.6%→81.1% |
 | 2026-02-22 | ユーザー管理 4 EP のテスト追加を反映（#776）。ギャップ 16→12、カバー率 56.8%→67.6% |
 | 2026-02-22 | OpenAPI 全 37 EP に同期（#775）。16 ギャップを明示。カテゴリ別セクションに再構成 |
 | 2026-02-09 | 全ギャップ解消（#321）。9 テストファイル追加で 100% 達成 |
