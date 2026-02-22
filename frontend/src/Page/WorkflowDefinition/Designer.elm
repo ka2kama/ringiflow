@@ -1081,7 +1081,7 @@ viewStepNode selectedStepId errorStepIds step =
           Svg.rect
             [ SvgAttr.width (String.fromFloat dim.width)
             , SvgAttr.height (String.fromFloat dim.height)
-            , SvgAttr.rx "8"
+            , SvgAttr.rx "12"
             , SvgAttr.fill colors.fill
             , SvgAttr.stroke strokeColor
             , SvgAttr.strokeWidth strokeWidth
@@ -1091,11 +1091,11 @@ viewStepNode selectedStepId errorStepIds step =
         -- 選択ハイライト（外枠リング）
         , if isSelected then
             Svg.rect
-                [ SvgAttr.x "-4"
-                , SvgAttr.y "-4"
-                , SvgAttr.width (String.fromFloat (dim.width + 8))
-                , SvgAttr.height (String.fromFloat (dim.height + 8))
-                , SvgAttr.rx "12"
+                [ SvgAttr.x "-5"
+                , SvgAttr.y "-5"
+                , SvgAttr.width (String.fromFloat (dim.width + 10))
+                , SvgAttr.height (String.fromFloat (dim.height + 10))
+                , SvgAttr.rx "17"
                 , SvgAttr.fill "none"
                 , SvgAttr.stroke "#6366f1"
                 , SvgAttr.strokeWidth "2"
@@ -1114,7 +1114,7 @@ viewStepNode selectedStepId errorStepIds step =
             , SvgAttr.textAnchor "middle"
             , SvgAttr.dominantBaseline "central"
             , SvgAttr.fill colors.stroke
-            , SvgAttr.fontSize "13"
+            , SvgAttr.fontSize "18"
             , SvgAttr.fontWeight "500"
             , SvgAttr.class "pointer-events-none select-none"
             ]
@@ -1124,10 +1124,10 @@ viewStepNode selectedStepId errorStepIds step =
         , Svg.circle
             [ SvgAttr.cx (String.fromFloat dim.width)
             , SvgAttr.cy (String.fromFloat (dim.height / 2))
-            , SvgAttr.r "5"
+            , SvgAttr.r "7"
             , SvgAttr.fill colors.stroke
             , SvgAttr.stroke "white"
-            , SvgAttr.strokeWidth "1.5"
+            , SvgAttr.strokeWidth "2"
             , SvgAttr.class "cursor-crosshair"
             , Html.Events.stopPropagationOn "mousedown"
                 (Decode.map2 (\cx cy -> ( ConnectionPortMouseDown step.id cx cy, True ))
@@ -1141,10 +1141,10 @@ viewStepNode selectedStepId errorStepIds step =
         , Svg.circle
             [ SvgAttr.cx "0"
             , SvgAttr.cy (String.fromFloat (dim.height / 2))
-            , SvgAttr.r "5"
+            , SvgAttr.r "7"
             , SvgAttr.fill colors.stroke
             , SvgAttr.stroke "white"
-            , SvgAttr.strokeWidth "1.5"
+            , SvgAttr.strokeWidth "2"
             , SvgAttr.class "pointer-events-none"
             ]
             []
@@ -1178,8 +1178,8 @@ viewArrowMarker markerId color =
         , SvgAttr.viewBox "0 0 10 10"
         , SvgAttr.refX "10"
         , SvgAttr.refY "5"
-        , SvgAttr.markerWidth "8"
-        , SvgAttr.markerHeight "8"
+        , SvgAttr.markerWidth "10"
+        , SvgAttr.markerHeight "10"
         , SvgAttr.orient "auto"
         ]
         [ Svg.path
@@ -1401,7 +1401,7 @@ viewDragPreview model =
                 [ Svg.rect
                     [ SvgAttr.width (String.fromFloat dim.width)
                     , SvgAttr.height (String.fromFloat dim.height)
-                    , SvgAttr.rx "8"
+                    , SvgAttr.rx "12"
                     , SvgAttr.fill colors.fill
                     , SvgAttr.stroke colors.stroke
                     , SvgAttr.strokeWidth "2"
@@ -1414,7 +1414,7 @@ viewDragPreview model =
                     , SvgAttr.textAnchor "middle"
                     , SvgAttr.dominantBaseline "central"
                     , SvgAttr.fill colors.stroke
-                    , SvgAttr.fontSize "13"
+                    , SvgAttr.fontSize "18"
                     , SvgAttr.fontWeight "500"
                     ]
                     [ Svg.text (DesignerCanvas.defaultStepName stepType) ]
