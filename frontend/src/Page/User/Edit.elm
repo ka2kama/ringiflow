@@ -110,15 +110,14 @@ update msg model =
             case result of
                 Ok userDetail ->
                     let
-                        firstRoleId =
+                        firstRoleName =
                             List.head userDetail.roles
-                                |> Maybe.andThen (\roleName -> findRoleIdByName roleName model.roles)
                                 |> Maybe.withDefault ""
                     in
                     ( { model
                         | user = Success userDetail
                         , name = userDetail.name
-                        , selectedRoleId = firstRoleId
+                        , selectedRoleId = firstRoleName
                       }
                     , Cmd.none
                     )
@@ -133,16 +132,15 @@ update msg model =
                         newModel =
                             { model | roles = Success roles }
                     in
-                    -- ユーザー詳細が先に読み込まれていた場合、ロール ID を解決する
+                    -- ユーザー詳細が先に読み込まれていた場合、ロール名を設定する
                     case model.user of
                         Success userDetail ->
                             let
-                                firstRoleId =
+                                firstRoleName =
                                     List.head userDetail.roles
-                                        |> Maybe.andThen (\roleName -> findRoleIdByName roleName (Success roles))
                                         |> Maybe.withDefault ""
                             in
-                            ( { newModel | selectedRoleId = firstRoleId }, Cmd.none )
+                            ( { newModel | selectedRoleId = firstRoleName }, Cmd.none )
 
                         _ ->
                             ( newModel, Cmd.none )
@@ -214,21 +212,6 @@ update msg model =
 
         DismissMessage ->
             ( { model | errorMessage = Nothing }, Cmd.none )
-
-
-{-| ロール名から一覧内のロール ID を検索する
--}
-findRoleIdByName : String -> RemoteData ApiError (List RoleItem) -> Maybe String
-findRoleIdByName roleName rolesData =
-    case rolesData of
-        Success roles ->
-            roles
-                |> List.filter (\r -> r.name == roleName)
-                |> List.head
-                |> Maybe.map .id
-
-        _ ->
-            Nothing
 
 
 
