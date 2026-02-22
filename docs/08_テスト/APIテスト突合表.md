@@ -20,10 +20,10 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 | # | エンドポイント | メソッド | operationId | Hurl テスト | 状態 |
 |---|---------------|---------|-------------|------------|------|
 | 5 | /api/v1/users | GET | list_users | user/list_users.hurl | カバー済み |
-| 6 | /api/v1/users | POST | create_user | — | ギャップ |
-| 7 | /api/v1/users/{display_number} | GET | get_user_detail | — | ギャップ |
-| 8 | /api/v1/users/{display_number} | PATCH | update_user | — | ギャップ |
-| 9 | /api/v1/users/{display_number}/status | PATCH | update_user_status | — | ギャップ |
+| 6 | /api/v1/users | POST | create_user | user/create_user.hurl | カバー済み |
+| 7 | /api/v1/users/{display_number} | GET | get_user_detail | user/get_user_detail.hurl | カバー済み |
+| 8 | /api/v1/users/{display_number} | PATCH | update_user | user/update_user.hurl | カバー済み |
+| 9 | /api/v1/users/{display_number}/status | PATCH | update_user_status | user/update_user_status.hurl | カバー済み |
 
 ### ロール管理
 
@@ -95,16 +95,16 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 | 指標 | 値 |
 |------|-----|
 | 全エンドポイント数（OpenAPI） | 37 |
-| カバー済み | 21 (27 テストファイル) |
-| ギャップ | 16 |
-| カバー率 | 56.8% |
+| カバー済み | 25 (31 テストファイル) |
+| ギャップ | 12 |
+| カバー率 | 67.6% |
 
 ### カテゴリ別カバレッジ
 
 | カテゴリ | 全 EP | カバー済み | カバー率 |
 |---------|-------|-----------|---------|
 | 認証 | 4 | 4 | 100% |
-| ユーザー管理 | 5 | 1 | 20% |
+| ユーザー管理 | 5 | 5 | 100% |
 | ロール管理 | 5 | 0 | 0% |
 | ワークフロー | 10 | 10 | 100% |
 | ワークフロー定義 | 8 | 2 | 25% |
@@ -119,7 +119,7 @@ Epic #774 で対応中。
 
 | Story | カテゴリ | ギャップ数 |
 |-------|---------|-----------|
-| #776 | ユーザー管理 | 4 |
+| #776 | ユーザー管理 | ~~4~~ 完了 |
 | #777 | ロール管理 | 5 |
 | #778 | ワークフロー定義（書込系） | 6 |
 | #779 | 監査ログ | 1 |
@@ -128,6 +128,7 @@ Epic #774 で対応中。
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-22 | ユーザー管理 4 EP のテスト追加を反映（#776）。ギャップ 16→12、カバー率 56.8%→67.6% |
 | 2026-02-22 | OpenAPI 全 37 EP に同期（#775）。16 ギャップを明示。カテゴリ別セクションに再構成 |
 | 2026-02-09 | 全ギャップ解消（#321）。9 テストファイル追加で 100% 達成 |
 | 2026-02-08 | 初版作成（#291） |
