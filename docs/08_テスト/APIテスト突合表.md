@@ -55,13 +55,13 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 | # | エンドポイント | メソッド | operationId | Hurl テスト | 状態 |
 |---|---------------|---------|-------------|------------|------|
 | 25 | /api/v1/workflow-definitions | GET | list_workflow_definitions | workflow_definition/list_workflow_definitions.hurl | カバー済み |
-| 26 | /api/v1/workflow-definitions | POST | create_definition | — | ギャップ |
-| 27 | /api/v1/workflow-definitions/validate | POST | validate_definition | — | ギャップ |
+| 26 | /api/v1/workflow-definitions | POST | create_definition | workflow_definition/create_definition.hurl | カバー済み |
+| 27 | /api/v1/workflow-definitions/validate | POST | validate_definition | workflow_definition/validate_definition.hurl | カバー済み |
 | 28 | /api/v1/workflow-definitions/{id} | GET | get_workflow_definition | workflow_definition/get_workflow_definition.hurl | カバー済み |
-| 29 | /api/v1/workflow-definitions/{id} | PUT | update_definition | — | ギャップ |
-| 30 | /api/v1/workflow-definitions/{id} | DELETE | delete_definition | — | ギャップ |
-| 31 | /api/v1/workflow-definitions/{id}/publish | POST | publish_definition | — | ギャップ |
-| 32 | /api/v1/workflow-definitions/{id}/archive | POST | archive_definition | — | ギャップ |
+| 29 | /api/v1/workflow-definitions/{id} | PUT | update_definition | workflow_definition/update_definition.hurl | カバー済み |
+| 30 | /api/v1/workflow-definitions/{id} | DELETE | delete_definition | workflow_definition/delete_definition.hurl | カバー済み |
+| 31 | /api/v1/workflow-definitions/{id}/publish | POST | publish_definition | workflow_definition/publish_definition.hurl | カバー済み |
+| 32 | /api/v1/workflow-definitions/{id}/archive | POST | archive_definition | workflow_definition/archive_definition.hurl | カバー済み |
 
 ### タスク
 
@@ -95,9 +95,9 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 | 指標 | 値 |
 |------|-----|
 | 全エンドポイント数（OpenAPI） | 37 |
-| カバー済み | 30 (36 テストファイル) |
-| ギャップ | 7 |
-| カバー率 | 81.1% |
+| カバー済み | 36 (42 テストファイル) |
+| ギャップ | 1 |
+| カバー率 | 97.3% |
 
 ### カテゴリ別カバレッジ
 
@@ -107,7 +107,7 @@ OpenAPI 仕様（`openapi/openapi.yaml`）と API テスト（Hurl: `tests/api/h
 | ユーザー管理 | 5 | 5 | 100% |
 | ロール管理 | 5 | 5 | 100% |
 | ワークフロー | 10 | 10 | 100% |
-| ワークフロー定義 | 8 | 2 | 25% |
+| ワークフロー定義 | 8 | 8 | 100% |
 | タスク | 2 | 2 | 100% |
 | ダッシュボード | 1 | 1 | 100% |
 | 監査ログ | 1 | 0 | 0% |
@@ -121,13 +121,14 @@ Epic #774 で対応中。
 |-------|---------|-----------|
 | #776 | ユーザー管理 | ~~4~~ 完了 |
 | #777 | ロール管理 | ~~5~~ 完了 |
-| #778 | ワークフロー定義（書込系） | 6 |
+| #778 | ワークフロー定義（書込系） | ~~6~~ 完了 |
 | #779 | 監査ログ | 1 |
 
 ## 更新履歴
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-22 | ワークフロー定義（書込系）6 EP のテスト追加を反映（#778）。ギャップ 7→1、カバー率 81.1%→97.3% |
 | 2026-02-22 | ロール管理 5 EP のテスト追加を反映（#777）。ギャップ 12→7、カバー率 67.6%→81.1% |
 | 2026-02-22 | ユーザー管理 4 EP のテスト追加を反映（#776）。ギャップ 16→12、カバー率 56.8%→67.6% |
 | 2026-02-22 | OpenAPI 全 37 EP に同期（#775）。16 ギャップを明示。カテゴリ別セクションに再構成 |
