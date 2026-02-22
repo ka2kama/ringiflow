@@ -165,15 +165,15 @@ stepColorsTests =
 stepDimensionsTests : Test
 stepDimensionsTests =
     describe "stepDimensions"
-        [ test "幅 120, 高さ 60 を返す" <|
+        [ test "幅 180, 高さ 90 を返す" <|
             \_ ->
                 let
                     dim =
                         DesignerCanvas.stepDimensions
                 in
                 Expect.all
-                    [ \d -> d.width |> Expect.within (Expect.Absolute 0.001) 120
-                    , \d -> d.height |> Expect.within (Expect.Absolute 0.001) 60
+                    [ \d -> d.width |> Expect.within (Expect.Absolute 0.001) 180
+                    , \d -> d.height |> Expect.within (Expect.Absolute 0.001) 90
                     ]
                     dim
         ]
@@ -192,16 +192,16 @@ clientToCanvasTests =
                     bounds =
                         { x = 100, y = 50, width = 600, height = 400 }
 
-                    -- clientX=400 → (400-100)/600 * 1200 = 600
-                    -- clientY=250 → (250-50)/400 * 800 = 400
+                    -- clientX=400 → (400-100)/600 * 800 = 400
+                    -- clientY=250 → (250-50)/400 * 600 = 300
                     result =
                         DesignerCanvas.clientToCanvas (Just bounds) 400 250
                 in
                 case result of
                     Just pos ->
                         Expect.all
-                            [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 600
-                            , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 400
+                            [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 400
+                            , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 300
                             ]
                             pos
 
@@ -518,8 +518,8 @@ loadStepsFromDefinitionTests =
                     Ok dict ->
                         let
                             -- 自動配置: 縦一列、等間隔
-                            -- x = viewBoxWidth / 2 - stepWidth / 2 = 540
-                            -- y = 60 + index * 100
+                            -- x = viewBoxWidth / 2 - stepWidth / 2 = 310
+                            -- y = 60 + index * 150
                             positions =
                                 Dict.toList dict
                                     |> List.sortBy (\( _, s ) -> s.position.y)
@@ -531,13 +531,13 @@ loadStepsFromDefinitionTests =
                                 -- すべての x 座標が同じ（縦一列）
                                 positions
                                     |> List.map Tuple.first
-                                    |> List.all (\x -> x == 540)
+                                    |> List.all (\x -> x == 310)
                                     |> Expect.equal True
                             , \_ ->
                                 -- y 座標が等間隔で増加
                                 positions
                                     |> List.map Tuple.second
-                                    |> Expect.equal [ 60, 160, 260 ]
+                                    |> Expect.equal [ 60, 210, 360 ]
                             ]
                             ()
 
@@ -612,11 +612,11 @@ stepOutputPortPositionTests =
                     pos =
                         DesignerCanvas.stepOutputPortPosition step
                 in
-                -- stepDimensions: width=120, height=60
-                -- 右端中央: (100+120, 200+60/2) = (220, 230)
+                -- stepDimensions: width=180, height=90
+                -- 右端中央: (100+180, 200+90/2) = (280, 245)
                 Expect.all
-                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 220
-                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 230
+                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 280
+                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 245
                     ]
                     pos
         ]
@@ -638,10 +638,10 @@ stepInputPortPositionTests =
                     pos =
                         DesignerCanvas.stepInputPortPosition step
                 in
-                -- 左端中央: (300, 200+60/2) = (300, 230)
+                -- 左端中央: (300, 200+90/2) = (300, 245)
                 Expect.all
                     [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 300
-                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 230
+                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 245
                     ]
                     pos
         ]
@@ -660,8 +660,8 @@ stepContainsPointTests =
                     step =
                         makeStep "step_1" Start { x = 100, y = 200 }
                 in
-                -- 矩形: x=[100,220], y=[200,260]
-                DesignerCanvas.stepContainsPoint { x = 150, y = 230 } step
+                -- 矩形: x=[100,280], y=[200,290]
+                DesignerCanvas.stepContainsPoint { x = 150, y = 245 } step
                     |> Expect.equal True
         , test "矩形の境界で True を返す" <|
             \_ ->
@@ -674,7 +674,7 @@ stepContainsPointTests =
                         DesignerCanvas.stepContainsPoint { x = 100, y = 200 } step
                             |> Expect.equal True
                     , \_ ->
-                        DesignerCanvas.stepContainsPoint { x = 220, y = 260 } step
+                        DesignerCanvas.stepContainsPoint { x = 280, y = 290 } step
                             |> Expect.equal True
                     ]
                     ()
@@ -686,10 +686,10 @@ stepContainsPointTests =
                 in
                 Expect.all
                     [ \_ ->
-                        DesignerCanvas.stepContainsPoint { x = 99, y = 230 } step
+                        DesignerCanvas.stepContainsPoint { x = 99, y = 245 } step
                             |> Expect.equal False
                     , \_ ->
-                        DesignerCanvas.stepContainsPoint { x = 221, y = 230 } step
+                        DesignerCanvas.stepContainsPoint { x = 281, y = 245 } step
                             |> Expect.equal False
                     , \_ ->
                         DesignerCanvas.stepContainsPoint { x = 150, y = 199 } step
