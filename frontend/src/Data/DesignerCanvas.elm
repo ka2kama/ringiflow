@@ -115,14 +115,14 @@ gridSize =
 -}
 viewBoxWidth : Float
 viewBoxWidth =
-    1200
+    800
 
 
 {-| SVG viewBox の高さ
 -}
 viewBoxHeight : Float
 viewBoxHeight =
-    800
+    600
 
 
 {-| 座標をグリッドにスナップする
@@ -217,7 +217,7 @@ type alias Dimensions =
 
 stepDimensions : Dimensions
 stepDimensions =
-    { width = 120, height = 60 }
+    { width = 180, height = 90 }
 
 
 {-| マウスの clientX/clientY を SVG viewBox 座標に変換する
@@ -489,7 +489,7 @@ autoLayoutIfNeeded steps =
         in
         List.indexedMap
             (\i step ->
-                { step | position = { x = autoLayoutX, y = 60 + toFloat i * 100 } }
+                { step | position = { x = autoLayoutX, y = 60 + toFloat i * 150 } }
             )
             steps
 

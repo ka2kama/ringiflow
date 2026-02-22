@@ -60,7 +60,7 @@ initModel =
 modelWithBounds : Model
 modelWithBounds =
     { initModel
-        | canvasBounds = Just { x = 0, y = 0, width = 1200, height = 800 }
+        | canvasBounds = Just { x = 0, y = 0, width = 800, height = 600 }
     }
 
 
