@@ -92,4 +92,4 @@ HTTP 200
 jsonpath "$.data.valid" == false
 jsonpath "$.data.errors" count >= 1
 jsonpath "$.data.errors[0].code" == "missing_approval_step"
-jsonpath "$.data.errors[0].message" isString
+jsonpath "$.data.errors[0].message" == "承認ステップが必要です"
