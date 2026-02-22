@@ -116,6 +116,9 @@ pub trait UserRepository: Send + Sync {
         tenant_id: &TenantId,
     ) -> Result<(), InfraError>;
 
+    /// ロール ID でロールを検索する
+    async fn find_role_by_id(&self, id: &RoleId) -> Result<Option<Role>, InfraError>;
+
     /// ロール名でロールを検索する
     async fn find_role_by_name(&self, name: &str) -> Result<Option<Role>, InfraError>;
 
@@ -562,6 +565,37 @@ impl UserRepository for PostgresUserRepository {
         .await?;
 
         Ok(())
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
+    async fn find_role_by_id(&self, id: &RoleId) -> Result<Option<Role>, InfraError> {
+        let row = sqlx::query!(
+            r#"
+            SELECT
+                id, tenant_id, name, description, permissions,
+                is_system, created_at, updated_at
+            FROM roles
+            WHERE id = $1
+            "#,
+            id.as_uuid()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let Some(row) = row else {
+            return Ok(None);
+        };
+
+        Ok(Some(Role::from_db(
+            RoleId::from_uuid(row.id),
+            row.tenant_id.map(TenantId::from_uuid),
+            row.name,
+            row.description,
+            parse_permissions(row.permissions),
+            row.is_system,
+            row.created_at,
+            row.updated_at,
+        )))
     }
 
     #[tracing::instrument(skip_all, level = "debug")]

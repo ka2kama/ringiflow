@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use ringiflow_domain::{
     clock::Clock,
+    role::{Role, RoleId},
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
     value_objects::{DisplayIdEntityType, UserName},
@@ -17,14 +18,14 @@ pub struct CreateUserInput {
     pub tenant_id: TenantId,
     pub email:     Email,
     pub name:      UserName,
-    pub role_name: String,
+    pub role_id:   RoleId,
 }
 
 /// ユーザー更新の入力
 pub struct UpdateUserInput {
-    pub user_id:   UserId,
-    pub name:      Option<UserName>,
-    pub role_name: Option<String>,
+    pub user_id: UserId,
+    pub name:    Option<UserName>,
+    pub role_id: Option<RoleId>,
 }
 
 /// ユーザーステータス変更の入力
@@ -63,7 +64,7 @@ impl UserUseCaseImpl {
     /// 4. User ドメインオブジェクト作成
     /// 5. users テーブルに挿入
     /// 6. user_roles テーブルにロール割り当て
-    pub async fn create_user(&self, input: CreateUserInput) -> Result<User, CoreError> {
+    pub async fn create_user(&self, input: CreateUserInput) -> Result<(User, Role), CoreError> {
         // メールアドレスの重複チェック
         if let Some(_existing) = self
             .user_repository
@@ -78,10 +79,10 @@ impl UserUseCaseImpl {
         // ロールの存在確認
         let role = self
             .user_repository
-            .find_role_by_name(&input.role_name)
+            .find_role_by_id(&input.role_id)
             .await?
             .ok_or_else(|| {
-                CoreError::BadRequest(format!("ロール '{}' が見つかりません", input.role_name))
+                CoreError::BadRequest(format!("ロール ID '{}' が見つかりません", input.role_id))
             })?;
 
         // display_number 採番
@@ -110,7 +111,7 @@ impl UserUseCaseImpl {
             .insert_user_role(user.id(), role.id(), &input.tenant_id)
             .await?;
 
-        Ok(user)
+        Ok((user, role))
     }
 
     /// ユーザー情報を更新する（名前、ロール）
@@ -133,13 +134,13 @@ impl UserUseCaseImpl {
         };
 
         // ロールの更新
-        if let Some(role_name) = input.role_name {
+        if let Some(role_id) = input.role_id {
             let role = self
                 .user_repository
-                .find_role_by_name(&role_name)
+                .find_role_by_id(&role_id)
                 .await?
                 .ok_or_else(|| {
-                    CoreError::BadRequest(format!("ロール '{}' が見つかりません", role_name))
+                    CoreError::BadRequest(format!("ロール ID '{}' が見つかりません", role_id))
                 })?;
 
             self.user_repository

@@ -56,16 +56,18 @@ pub struct ListUsersQuery {
 /// ユーザー作成リクエスト
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateUserRequest {
-    pub email:     String,
-    pub name:      String,
-    pub role_name: String,
+    pub email:   String,
+    pub name:    String,
+    #[schema(format = "uuid")]
+    pub role_id: String,
 }
 
 /// ユーザー更新リクエスト
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateUserRequest {
-    pub name:      Option<String>,
-    pub role_name: Option<String>,
+    pub name:    Option<String>,
+    #[schema(format = "uuid")]
+    pub role_id: Option<String>,
 }
 
 /// ユーザーステータス変更リクエスト
@@ -229,12 +231,21 @@ pub async fn create_user(
     // 初期パスワード生成
     let initial_password = generate_initial_password();
 
+    // role_id の UUID パース
+    let role_id = uuid::Uuid::parse_str(&req.role_id).map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse::validation_error("role_id の形式が不正です")),
+        )
+            .into_response()
+    })?;
+
     // Core Service でユーザー作成
     let core_request = CreateUserCoreRequest {
         tenant_id: *session_data.tenant_id().as_uuid(),
-        email:     req.email,
-        name:      req.name,
-        role_name: req.role_name,
+        email: req.email,
+        name: req.name,
+        role_id,
     };
 
     let core_response = state
@@ -370,9 +381,22 @@ pub async fn update_user(
         .map_err(|e| log_and_convert_core_error("ユーザー取得", e))?
         .data;
 
+    // role_id の UUID パース
+    let role_id = req
+        .role_id
+        .map(|id| uuid::Uuid::parse_str(&id))
+        .transpose()
+        .map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse::validation_error("role_id の形式が不正です")),
+            )
+                .into_response()
+        })?;
+
     let core_request = UpdateUserCoreRequest {
-        name:      req.name,
-        role_name: req.role_name,
+        name: req.name,
+        role_id,
     };
 
     match state
