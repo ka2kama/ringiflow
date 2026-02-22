@@ -149,6 +149,7 @@ type Msg
     | CancelPublish
     | GotPublishResult (Result ApiError WorkflowDefinition)
     | DismissMessage
+    | DeleteSelectedStep
     | KeyDown String
     | GotCanvasBounds Encode.Value
 
@@ -185,6 +186,7 @@ update msg model =
                                     { x = DesignerCanvas.snapToGrid (canvasPos.x - offset.x)
                                     , y = DesignerCanvas.snapToGrid (canvasPos.y - offset.y)
                                     }
+                                        |> DesignerCanvas.clampToViewBox
 
                                 updatedSteps =
                                     Dict.update stepId
@@ -218,6 +220,7 @@ update msg model =
                     let
                         newStep =
                             DesignerCanvas.createStepFromDrop stepType model.nextStepNumber dropPos
+                                |> (\s -> { s | position = DesignerCanvas.clampToViewBox s.position })
 
                         ( dirtyModel, dirtyCmd ) =
                             DirtyState.markDirty model
@@ -619,6 +622,9 @@ update msg model =
                     , Cmd.none
                     )
 
+        DeleteSelectedStep ->
+            deleteSelectedStep model
+
         KeyDown key ->
             if key == "Delete" || key == "Backspace" then
                 case ( model.selectedTransitionIndex, model.selectedStepId ) of
@@ -635,25 +641,8 @@ update msg model =
                         , dirtyCmd
                         )
 
-                    ( Nothing, Just stepId ) ->
-                        -- 選択中のステップと関連 transitions を削除
-                        let
-                            ( dirtyModel, dirtyCmd ) =
-                                DirtyState.markDirty model
-                        in
-                        ( { dirtyModel
-                            | steps = Dict.remove stepId dirtyModel.steps
-                            , transitions =
-                                List.filter
-                                    (\t -> t.from /= stepId && t.to /= stepId)
-                                    dirtyModel.transitions
-                            , selectedStepId = Nothing
-                          }
-                        , dirtyCmd
-                        )
-
-                    _ ->
-                        ( model, Cmd.none )
+                    ( Nothing, _ ) ->
+                        deleteSelectedStep model
 
             else
                 ( model, Cmd.none )
@@ -682,6 +671,31 @@ syncPropertyFields stepId model =
 
         Nothing ->
             model
+
+
+{-| 選択中のステップと関連する接続線を削除する
+-}
+deleteSelectedStep : Model -> ( Model, Cmd Msg )
+deleteSelectedStep model =
+    case model.selectedStepId of
+        Just stepId ->
+            let
+                ( dirtyModel, dirtyCmd ) =
+                    DirtyState.markDirty model
+            in
+            ( { dirtyModel
+                | steps = Dict.remove stepId dirtyModel.steps
+                , transitions =
+                    List.filter
+                        (\t -> t.from /= stepId && t.to /= stepId)
+                        dirtyModel.transitions
+                , selectedStepId = Nothing
+              }
+            , dirtyCmd
+            )
+
+        Nothing ->
+            ( model, Cmd.none )
 
 
 {-| リストの指定インデックスの要素を除去する
@@ -1381,18 +1395,18 @@ viewDragPreview model =
                 dim =
                     DesignerCanvas.stepDimensions
 
-                snappedX =
-                    DesignerCanvas.snapToGrid pos.x
-
-                snappedY =
-                    DesignerCanvas.snapToGrid pos.y
+                clampedPos =
+                    DesignerCanvas.clampToViewBox
+                        { x = DesignerCanvas.snapToGrid pos.x
+                        , y = DesignerCanvas.snapToGrid pos.y
+                        }
             in
             Svg.g
                 [ SvgAttr.transform
                     ("translate("
-                        ++ String.fromFloat snappedX
+                        ++ String.fromFloat clampedPos.x
                         ++ ","
-                        ++ String.fromFloat snappedY
+                        ++ String.fromFloat clampedPos.y
                         ++ ")"
                     )
                 , SvgAttr.opacity "0.6"
@@ -1481,6 +1495,17 @@ viewStepProperties model step =
             }
          ]
             ++ viewStepTypeSpecificFields model step
+            ++ [ div [ class "mt-6 border-t border-secondary-200 pt-4" ]
+                    [ Button.view
+                        { variant = Button.Error
+                        , disabled = False
+                        , onClick = DeleteSelectedStep
+                        }
+                        [ text "ステップを削除" ]
+                    , p [ class "mt-1 text-xs text-secondary-400" ]
+                        [ text "Delete キーでも削除できます" ]
+                    ]
+               ]
         )
 
 

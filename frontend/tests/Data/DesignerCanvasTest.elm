@@ -34,6 +34,7 @@ suite =
         , stepInputPortPositionTests
         , stepContainsPointTests
         , autoTriggerTests
+        , clampToViewBoxTests
         ]
 
 
@@ -736,6 +737,43 @@ autoTriggerTests =
             \_ ->
                 DesignerCanvas.autoTrigger End "end_1" []
                     |> Expect.equal Nothing
+        ]
+
+
+
+-- clampToViewBox
+
+
+clampToViewBoxTests : Test
+clampToViewBoxTests =
+    describe "clampToViewBox"
+        [ test "viewBox 内の座標はそのまま返す" <|
+            \_ ->
+                DesignerCanvas.clampToViewBox { x = 100, y = 200 }
+                    |> Expect.all
+                        [ \p -> p.x |> Expect.within (Expect.Absolute 0.001) 100
+                        , \p -> p.y |> Expect.within (Expect.Absolute 0.001) 200
+                        ]
+        , test "右端を超える x は 620 に制約される" <|
+            \_ ->
+                DesignerCanvas.clampToViewBox { x = 700, y = 200 }
+                    |> .x
+                    |> Expect.within (Expect.Absolute 0.001) 620
+        , test "下端を超える y は 510 に制約される" <|
+            \_ ->
+                DesignerCanvas.clampToViewBox { x = 100, y = 550 }
+                    |> .y
+                    |> Expect.within (Expect.Absolute 0.001) 510
+        , test "負の x は 0 に制約される" <|
+            \_ ->
+                DesignerCanvas.clampToViewBox { x = -50, y = 200 }
+                    |> .x
+                    |> Expect.within (Expect.Absolute 0.001) 0
+        , test "負の y は 0 に制約される" <|
+            \_ ->
+                DesignerCanvas.clampToViewBox { x = 100, y = -30 }
+                    |> .y
+                    |> Expect.within (Expect.Absolute 0.001) 0
         ]
 
 
