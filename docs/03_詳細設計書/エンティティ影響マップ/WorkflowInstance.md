@@ -42,18 +42,29 @@ stateDiagram-v2
     InProgress --> Rejected: reject_step
     InProgress --> ChangesRequested: request_changes_step
     ChangesRequested --> InProgress: resubmit_workflow
+    Draft --> Cancelled: cancelled
+    Pending --> Cancelled: cancelled
+    InProgress --> Cancelled: cancelled
+    ChangesRequested --> Cancelled: cancelled
 ```
 
-注: `submit_workflow` では内部的に Draft → Pending → InProgress の2段階遷移が行われるが、外部からは Draft → InProgress として観測される。Cancelled 状態への遷移は現時点で未実装。
+注: `submit_workflow` では内部的に Draft → Pending → InProgress の2段階遷移が行われるが、外部からは Draft → InProgress として観測される。Cancelled は Draft/Pending/InProgress/ChangesRequested から遷移可能で、前状態に応じて保持するフィールドが異なる。
 
 ## 不変条件
 
-| ID | 条件 | 検証タイミング |
-|----|------|--------------|
-| INV-I1 | status=Approved ⇒ completed_at IS NOT NULL | approve_step（最終ステップ）完了後 |
-| INV-I2 | status=Rejected ⇒ completed_at IS NOT NULL | reject_step 完了後 |
-| INV-I3 | status=InProgress ⇒ current_step_id IS NOT NULL | submit_workflow / approve_step / resubmit_workflow 完了後 |
-| INV-I4 | status=Draft ⇒ submitted_at IS NULL | create_workflow 完了後 |
+ADT ベースステートマシン（[ADR-054](../../05_ADR/054_ADTベースステートマシンパターンの標準化.md)）により、INV-I1〜I9 は型レベルで強制される。`from_db()` で DB のフラット構造から ADT に変換する際にも検証される。
+
+| ID | 条件 | 強制方法 |
+|----|------|---------|
+| INV-I1 | status=Approved ⇒ completed_at IS NOT NULL | `CompletedState.completed_at: DateTime<Utc>` |
+| INV-I2 | status=Rejected ⇒ completed_at IS NOT NULL | `CompletedState.completed_at: DateTime<Utc>` |
+| INV-I3 | status=InProgress ⇒ current_step_id IS NOT NULL | `InProgressState.current_step_id: String` |
+| INV-I4 | status=Draft ⇒ submitted_at IS NULL | `Draft` バリアントにフィールドなし |
+| INV-I5 | status=Pending ⇒ submitted_at IS NOT NULL | `PendingState.submitted_at: DateTime<Utc>` |
+| INV-I6 | status=InProgress ⇒ submitted_at IS NOT NULL | `InProgressState.submitted_at: DateTime<Utc>` |
+| INV-I7 | status=Approved/Rejected ⇒ current_step_id IS NOT NULL, submitted_at IS NOT NULL | `CompletedState.current_step_id: String`, `.submitted_at: DateTime<Utc>` |
+| INV-I8 | status=ChangesRequested ⇒ current_step_id IS NOT NULL, submitted_at IS NOT NULL | `ChangesRequestedState.current_step_id: String`, `.submitted_at: DateTime<Utc>` |
+| INV-I9 | status=Cancelled ⇒ completed_at IS NOT NULL | `CancelledState.completed_at: DateTime<Utc>` |
 
 クロスエンティティ不変条件: → [WorkflowStep 影響マップ > クロスエンティティ不変条件](WorkflowStep.md#クロスエンティティ不変条件)
 

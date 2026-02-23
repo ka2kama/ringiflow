@@ -249,7 +249,9 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .approved(now);
+        .with_current_step("step_1".to_string(), now)
+        .complete_with_approval(now)
+        .unwrap();
         instance_repo.insert_for_test(&approved).await.unwrap();
 
         let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
