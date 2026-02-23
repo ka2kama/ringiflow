@@ -3,7 +3,7 @@
 //! [dependencies]
 //! syn = { version = "2", features = ["full", "parsing"] }
 //! proc-macro2 = { version = "1", features = ["span-locations"] }
-//! tempfile = "3"
+//! pretty_assertions = "1"
 //! ```
 
 // ハンドラとリポジトリ実装に #[tracing::instrument] が付与されているかチェックする。
@@ -208,6 +208,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     // --- has_instrument_attr ---
 
