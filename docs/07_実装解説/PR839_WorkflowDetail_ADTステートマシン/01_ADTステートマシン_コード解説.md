@@ -334,7 +334,7 @@ just check-all    # lint + テスト + API テスト + E2E テスト
 
 | 案 | メリット | デメリット | 判断 |
 |----|---------|-----------|------|
-| **衝突する `Loading` のみ修飾（採用）** | 非衝突コンストラクタ（NotAsked, Success, Failure）はそのまま使える | 修飾が必要な箇所を見落とすとコンパイルエラー | 採用 |
+| 衝突する `Loading` のみ修飾（採用） | 非衝突コンストラクタ（NotAsked, Success, Failure）はそのまま使える | 修飾が必要な箇所を見落とすとコンパイルエラー | 採用 |
 | `RemoteData exposing (RemoteData)` に変更して全修飾 | 一貫性がある | `NotAsked`, `Success`, `Failure` まで冗長になる | 見送り |
 | `PageState` のコンストラクタ名を変更（`PageLoading` 等） | RemoteData は無修飾のまま | Workflow/New.elm, Task/Detail.elm のパターンと不一致 | 見送り |
 
@@ -380,7 +380,7 @@ updateLoaded : Msg -> Shared -> Int -> LoadedState -> ( LoadedState, Cmd Msg )
 
 | 案 | メリット | デメリット | 判断 |
 |----|---------|-----------|------|
-| **引数で渡す（採用）** | LoadedState が純粋な状態に留まる | 引数が多い | 採用 |
+| 引数で渡す（採用） | LoadedState が純粋な状態に留まる | 引数が多い | 採用 |
 | Model を引数で渡す | 引数が少ない | Model の全フィールドにアクセス可能になり、型の制約が弱まる | 見送り |
 | LoadedState に shared を含める | 引数が少ない | 共通フィールドと状態固有フィールドの境界が曖昧になる | 見送り |
 

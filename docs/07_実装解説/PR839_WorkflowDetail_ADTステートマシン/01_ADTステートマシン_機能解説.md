@@ -275,7 +275,7 @@ ADT 分離により、Loading 状態に `LoadedState` が存在しなくなっ�
 
 | 案 | UX 影響 | コード複雑度 | Task/Detail との一貫性 |
 |----|---------|------------|---------------------|
-| **handleGotWorkflow で並列発行（採用）** | コメント表示がわずかに遅延 | 低 | 一致 |
+| handleGotWorkflow で並列発行（採用） | コメント表示がわずかに遅延 | 低 | 一致 |
 | init で並列発行 + Loading 中のバッファリング | なし | 高（バッファ機構が必要） | 不一致 |
 | init で逐次発行（getWorkflow → getComments） | コメント表示が遅延 | 低 | 不一致 |
 
@@ -287,7 +287,7 @@ ADT 分離により、Loading 状態に `LoadedState` が存在しなくなっ�
 
 | 案 | 操作フィールドの保持 | 副作用の再発行 |
 |----|-------|--------|
-| **Loaded 時は workflow フィールドのみ更新（採用）** | 保持される | なし |
+| Loaded 時は workflow フィールドのみ更新（採用） | 保持される | なし |
 | initLoaded で完全再構築 | リセットされる | definition + comments を再 fetch |
 
 **採用理由**: 承認後はフォーム状態やコメントを維持すべき。部分更新により不要な再 fetch を避ける。
