@@ -2,19 +2,20 @@ module Page.Workflow.NewTest exposing (suite)
 
 {-| Page.Workflow.New の update ロジックテスト
 
-init → update の Model 変更を検証する。
-バリデーション、キーボード操作、dirty 状態管理をカバー。
+メッセージ経由のモデル構築（行動的アプローチ）で検証する。
+ADT ステートマシン化により、状態遷移・バリデーション・dirty 管理をカバー。
 
 -}
 
-import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
+import Api exposing (ApiError(..))
+import Component.ApproverSelector exposing (ApproverSelection(..))
 import Data.UserItem exposing (UserItem)
+import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance exposing (Status(..))
 import Dict
-import Expect
+import Expect exposing (Expectation)
 import Json.Encode as Encode
-import Page.Workflow.New as New exposing (Msg(..), SaveMessage(..))
-import RemoteData exposing (RemoteData(..))
+import Page.Workflow.New as New exposing (FormState(..), Msg(..), PageState(..))
 import Shared
 import Test exposing (..)
 
@@ -22,7 +23,8 @@ import Test exposing (..)
 suite : Test
 suite =
     describe "Page.Workflow.New"
-        [ saveDraftTests
+        [ stateTransitionTests
+        , saveDraftTests
         , submitTests
         , approverKeyboardTests
         , dirtyStateTests
@@ -35,6 +37,13 @@ suite =
 -- ────────────────────────────────────
 
 
+{-| メッセージを送信し、結果の Model を返す（Cmd は破棄）
+-}
+sendMsg : Msg -> New.Model -> New.Model
+sendMsg msg model =
+    New.update msg model |> Tuple.first
+
+
 {-| テスト用の初期 Model を生成（Cmd は破棄）
 -}
 initialModel : New.Model
@@ -44,6 +53,33 @@ initialModel =
             Shared.init { apiBaseUrl = "", timezoneOffsetMinutes = 540 }
     in
     New.init shared |> Tuple.first
+
+
+{-| テスト用ワークフロー定義（承認ステップ付き）
+-}
+testDefinition : WorkflowDefinition
+testDefinition =
+    { id = "def-001"
+    , name = "テスト定義"
+    , description = Nothing
+    , version = 1
+    , definition =
+        Encode.object
+            [ ( "steps"
+              , Encode.list identity
+                    [ Encode.object
+                        [ ( "id", Encode.string "step-1" )
+                        , ( "name", Encode.string "承認" )
+                        , ( "type", Encode.string "approval" )
+                        ]
+                    ]
+              )
+            ]
+    , status = "published"
+    , createdBy = "u-001"
+    , createdAt = "2026-01-01T00:00:00Z"
+    , updatedAt = "2026-01-01T00:00:00Z"
+    }
 
 
 {-| テスト用ユーザー
@@ -96,13 +132,87 @@ testStepId =
     "step-1"
 
 
-{-| 承認者ステップが1つある Model を構築するヘルパー
+{-| ロード完了モデル（定義一覧表示、定義未選択）
 -}
-modelWithStep : New.Model -> New.Model
-modelWithStep model =
-    { model
-        | approvers = Dict.singleton testStepId ApproverSelector.init
-    }
+loadedModel : New.Model
+loadedModel =
+    initialModel |> sendMsg (GotDefinitions (Ok [ testDefinition ]))
+
+
+{-| 編集中モデル（定義選択済み、承認ステップ初期化済み）
+-}
+editingModel : New.Model
+editingModel =
+    loadedModel |> sendMsg (SelectDefinition "def-001")
+
+
+{-| Editing 状態を検証するアサーションヘルパー
+-}
+expectEditing : (New.EditingState -> Expectation) -> New.Model -> Expectation
+expectEditing check model =
+    case model.state of
+        Loaded loaded ->
+            case loaded.formState of
+                Editing editing ->
+                    check editing
+
+                SelectingDefinition ->
+                    Expect.fail "Expected Editing state, got SelectingDefinition"
+
+        Failed _ ->
+            Expect.fail "Expected Loaded state, got Failed"
+
+        Loading ->
+            Expect.fail "Expected Loaded state, got Loading"
+
+
+
+-- ────────────────────────────────────
+-- 状態遷移
+-- ────────────────────────────────────
+
+
+stateTransitionTests : Test
+stateTransitionTests =
+    describe "状態遷移"
+        [ test "GotDefinitions Ok で Loaded.SelectingDefinition になる" <|
+            \_ ->
+                case loadedModel.state of
+                    Loaded loaded ->
+                        case loaded.formState of
+                            SelectingDefinition ->
+                                Expect.pass
+
+                            Editing _ ->
+                                Expect.fail "Expected SelectingDefinition, got Editing"
+
+                    _ ->
+                        Expect.fail "Expected Loaded state"
+        , test "GotDefinitions Err で Failed になる" <|
+            \_ ->
+                let
+                    sut =
+                        initialModel
+                            |> sendMsg (GotDefinitions (Err NetworkError))
+                in
+                case sut.state of
+                    Failed _ ->
+                        Expect.pass
+
+                    _ ->
+                        Expect.fail "Expected Failed state"
+        , test "SelectDefinition で Editing になり approvers が初期化される" <|
+            \_ ->
+                editingModel
+                    |> expectEditing
+                        (\editing ->
+                            Expect.all
+                                [ \e -> e.selectedDefinition.id |> Expect.equal "def-001"
+                                , \e -> Dict.member testStepId e.approvers |> Expect.equal True
+                                ]
+                                editing
+                        )
+        ]
 
 
 
@@ -114,39 +224,25 @@ modelWithStep model =
 saveDraftTests : Test
 saveDraftTests =
     describe "SaveDraft"
-        [ test "定義未選択でエラーメッセージ" <|
+        [ test "タイトル空でバリデーションエラー" <|
             \_ ->
-                let
-                    sut =
-                        New.update SaveDraft initialModel |> Tuple.first
-                in
-                sut.saveMessage
-                    |> Expect.equal (Just (SaveError "ワークフロー種類を選択してください"))
-        , test "タイトル空でバリデーションエラー" <|
+                editingModel
+                    |> sendMsg SaveDraft
+                    |> expectEditing
+                        (\editing ->
+                            Dict.member "title" editing.validationErrors
+                                |> Expect.equal True
+                        )
+        , test "タイトル入力済みで submitting = True" <|
             \_ ->
-                let
-                    model =
-                        { initialModel | selectedDefinitionId = Just "def-001" }
-
-                    sut =
-                        New.update SaveDraft model |> Tuple.first
-                in
-                Dict.member "title" sut.validationErrors
-                    |> Expect.equal True
-        , test "定義選択済み + タイトル入力済みで submitting = True" <|
-            \_ ->
-                let
-                    model =
-                        { initialModel
-                            | selectedDefinitionId = Just "def-001"
-                            , title = "テスト申請"
-                        }
-
-                    sut =
-                        New.update SaveDraft model |> Tuple.first
-                in
-                sut.submitting
-                    |> Expect.equal True
+                editingModel
+                    |> sendMsg (UpdateTitle "テスト申請")
+                    |> sendMsg SaveDraft
+                    |> expectEditing
+                        (\editing ->
+                            editing.submitting
+                                |> Expect.equal True
+                        )
         ]
 
 
@@ -161,36 +257,26 @@ submitTests =
     describe "Submit"
         [ test "承認者未選択でバリデーションエラー" <|
             \_ ->
-                let
-                    model =
-                        { initialModel
-                            | selectedDefinitionId = Just "def-001"
-                            , title = "テスト申請"
-                        }
-                            |> modelWithStep
-
-                    sut =
-                        New.update Submit model |> Tuple.first
-                in
-                Dict.member ("approver_" ++ testStepId) sut.validationErrors
-                    |> Expect.equal True
+                editingModel
+                    |> sendMsg (UpdateTitle "テスト申請")
+                    |> sendMsg Submit
+                    |> expectEditing
+                        (\editing ->
+                            Dict.member ("approver_" ++ testStepId) editing.validationErrors
+                                |> Expect.equal True
+                        )
         , test "タイトル空 + 承認者未選択で複数エラー" <|
             \_ ->
-                let
-                    model =
-                        { initialModel
-                            | selectedDefinitionId = Just "def-001"
-                        }
-                            |> modelWithStep
-
-                    sut =
-                        New.update Submit model |> Tuple.first
-                in
-                Expect.all
-                    [ \m -> Dict.member "title" m.validationErrors |> Expect.equal True
-                    , \m -> Dict.member ("approver_" ++ testStepId) m.validationErrors |> Expect.equal True
-                    ]
-                    sut
+                editingModel
+                    |> sendMsg Submit
+                    |> expectEditing
+                        (\editing ->
+                            Expect.all
+                                [ \e -> Dict.member "title" e.validationErrors |> Expect.equal True
+                                , \e -> Dict.member ("approver_" ++ testStepId) e.validationErrors |> Expect.equal True
+                                ]
+                                editing
+                        )
         ]
 
 
@@ -203,61 +289,66 @@ submitTests =
 approverKeyboardTests : Test
 approverKeyboardTests =
     let
-        approverState =
-            let
-                s =
-                    ApproverSelector.init
-            in
-            { s
-                | search = "山田"
-                , dropdownOpen = True
-                , highlightIndex = 0
-            }
+        -- ユーザー読み込み + 定義選択 + 承認者検索で準備完了
+        modelForKeyboard =
+            initialModel
+                |> sendMsg (GotUsers (Ok [ testUser1, testUser2 ]))
+                |> sendMsg (GotDefinitions (Ok [ testDefinition ]))
+                |> sendMsg (SelectDefinition "def-001")
+                |> sendMsg (UpdateApproverSearch testStepId "山田")
 
-        modelWithUsers =
-            { initialModel
-                | users = Success [ testUser1, testUser2 ]
-                , approvers = Dict.singleton testStepId approverState
-            }
+        getHighlightIndex editing =
+            Dict.get testStepId editing.approvers
+                |> Maybe.map .highlightIndex
+                |> Maybe.withDefault -1
 
-        getApproverState model =
-            Dict.get testStepId model.approvers
-                |> Maybe.withDefault ApproverSelector.init
+        getSelection editing =
+            Dict.get testStepId editing.approvers
+                |> Maybe.map .selection
+
+        getDropdownOpen editing =
+            Dict.get testStepId editing.approvers
+                |> Maybe.map .dropdownOpen
+                |> Maybe.withDefault False
     in
     describe "ApproverKeyDown"
         [ test "ArrowDown でインデックス増加" <|
             \_ ->
-                let
-                    sut =
-                        New.update (ApproverKeyDown testStepId "ArrowDown") modelWithUsers |> Tuple.first
-                in
-                (getApproverState sut).highlightIndex
-                    |> Expect.equal 1
+                modelForKeyboard
+                    |> sendMsg (ApproverKeyDown testStepId "ArrowDown")
+                    |> expectEditing
+                        (\editing ->
+                            getHighlightIndex editing
+                                |> Expect.equal 1
+                        )
         , test "ArrowUp でインデックス循環（0 → 末尾）" <|
             \_ ->
-                let
-                    sut =
-                        New.update (ApproverKeyDown testStepId "ArrowUp") modelWithUsers |> Tuple.first
-                in
-                -- index 0 → modBy 2 (0 - 1 + 2) = 1（末尾に循環）
-                (getApproverState sut).highlightIndex
-                    |> Expect.equal 1
+                modelForKeyboard
+                    |> sendMsg (ApproverKeyDown testStepId "ArrowUp")
+                    |> expectEditing
+                        (\editing ->
+                            -- index 0 → modBy 2 (0 - 1 + 2) = 1（末尾に循環）
+                            getHighlightIndex editing
+                                |> Expect.equal 1
+                        )
         , test "Enter で候補選択" <|
             \_ ->
-                let
-                    sut =
-                        New.update (ApproverKeyDown testStepId "Enter") modelWithUsers |> Tuple.first
-                in
-                (getApproverState sut).selection
-                    |> Expect.equal (Selected testUser1)
+                modelForKeyboard
+                    |> sendMsg (ApproverKeyDown testStepId "Enter")
+                    |> expectEditing
+                        (\editing ->
+                            getSelection editing
+                                |> Expect.equal (Just (Selected testUser1))
+                        )
         , test "Escape でドロップダウン閉じる" <|
             \_ ->
-                let
-                    sut =
-                        New.update (ApproverKeyDown testStepId "Escape") modelWithUsers |> Tuple.first
-                in
-                (getApproverState sut).dropdownOpen
-                    |> Expect.equal False
+                modelForKeyboard
+                    |> sendMsg (ApproverKeyDown testStepId "Escape")
+                    |> expectEditing
+                        (\editing ->
+                            getDropdownOpen editing
+                                |> Expect.equal False
+                        )
         ]
 
 
@@ -276,21 +367,15 @@ dirtyStateTests =
                     |> Expect.equal False
         , test "UpdateTitle で isDirty = True" <|
             \_ ->
-                let
-                    sut =
-                        New.update (UpdateTitle "テスト") initialModel |> Tuple.first
-                in
-                New.isDirty sut
+                editingModel
+                    |> sendMsg (GotSaveResult (Ok testWorkflowInstance))
+                    |> sendMsg (UpdateTitle "テスト")
+                    |> New.isDirty
                     |> Expect.equal True
         , test "GotSaveResult (Ok ...) で isDirty = False" <|
             \_ ->
-                let
-                    dirtyModel =
-                        New.update (UpdateTitle "テスト") initialModel |> Tuple.first
-
-                    sut =
-                        New.update (GotSaveResult (Ok testWorkflowInstance)) dirtyModel |> Tuple.first
-                in
-                New.isDirty sut
+                editingModel
+                    |> sendMsg (GotSaveResult (Ok testWorkflowInstance))
+                    |> New.isDirty
                     |> Expect.equal False
         ]

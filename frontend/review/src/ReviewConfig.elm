@@ -21,8 +21,6 @@ config =
       NoUnused.Variables.rule
     , -- 未使用のカスタム型コンストラクタ
       NoUnused.CustomTypeConstructors.rule []
-        -- RemoteData の NotAsked は標準パターン。一部ページでは使用しないが保持
-        |> Rule.ignoreErrorsForFiles [ "src/Page/Workflow/New.elm" ]
     , -- 未使用のコンストラクタ引数
       NoUnused.CustomTypeConstructorArgs.rule
         -- TODO: Api/Data モジュールの一部フィールドは Phase 3（申請一覧・詳細）で使用予定
@@ -31,8 +29,6 @@ config =
             , "src/Data/FormField.elm"
             , "src/Data/WorkflowInstance.elm"
             ]
-        -- RemoteData の Failure ApiError は将来エラー詳細表示で使用予定
-        |> Rule.ignoreErrorsForFiles [ "src/Page/Workflow/New.elm" ]
     , -- 未使用の依存関係
       NoUnused.Dependencies.rule
     , -- 未使用のエクスポート
