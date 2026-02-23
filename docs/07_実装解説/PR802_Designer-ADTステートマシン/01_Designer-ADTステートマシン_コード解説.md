@@ -1,4 +1,4 @@
-# Designer ADT 状態マシン - コード解説
+# Designer ADT ステートマシン - コード解説
 
 対応 PR: #802
 対応 Issue: #796
@@ -373,7 +373,7 @@ just elm-test
 
 ## 設計解説
 
-コード実装レベルの判断を記載する。機能・仕組みレベルの判断は[機能解説](./01_Designer-ADT状態マシン_機能解説.md#設計判断)を参照。
+コード実装レベルの判断を記載する。機能・仕組みレベルの判断は[機能解説](./01_Designer-ADTステートマシン_機能解説.md#設計判断)を参照。
 
 ### 1. update 関数の 2 層分割
 
@@ -466,6 +466,6 @@ modelWithBounds : Model     -- { baseModel | state = Loaded canvasWithBounds }
 
 ## 関連ドキュメント
 
-- [機能解説](./01_Designer-ADT状態マシン_機能解説.md)
-- [ADR-054: ADT ベース状態マシンパターンの標準化](../../05_ADR/054_ADTベース状態マシンパターンの標準化.md)
+- [機能解説](./01_Designer-ADTステートマシン_機能解説.md)
+- [ADR-054: ADT ベースステートマシンパターンの標準化](../../05_ADR/054_ADTベースステートマシンパターンの標準化.md)
 - [計画ファイル](../../../prompts/plans/796_designer-adt-state-machine.md)
