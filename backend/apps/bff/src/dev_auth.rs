@@ -17,9 +17,16 @@
 //! - 起動時に警告ログを出力
 //! - 本番環境では絶対に有効にしないこと
 
+use std::time::Duration;
+
 use ringiflow_domain::{tenant::TenantId, user::UserId};
 use ringiflow_infra::{SessionData, SessionManager};
 use uuid::Uuid;
+
+/// DevAuth セッションの更新間隔
+///
+/// セッション TTL（8時間）より十分短い間隔で更新し、セッション切れを防止する。
+const DEV_SESSION_REFRESH_INTERVAL: Duration = Duration::from_secs(4 * 3600);
 
 /// 開発用テナント ID
 ///
@@ -95,6 +102,26 @@ pub async fn setup_dev_session<S: SessionManager>(session_manager: &S) -> anyhow
         .await?;
 
     Ok(csrf_token)
+}
+
+/// DevAuth セッションの定期更新タスクを起動する
+///
+/// バックグラウンドで `DEV_SESSION_REFRESH_INTERVAL` ごとにセッションを再作成する。
+/// これにより、Redis のセッション TTL（8時間）経過後もデモ環境の認証状態が維持される。
+pub fn spawn_dev_session_refresh<S: SessionManager + 'static>(session_manager: S) {
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(DEV_SESSION_REFRESH_INTERVAL).await;
+            match setup_dev_session(&session_manager).await {
+                Ok(_) => {
+                    tracing::info!("DevAuth: 開発用セッションを更新しました");
+                }
+                Err(e) => {
+                    tracing::error!("DevAuth: セッション更新に失敗しました: {}", e);
+                }
+            }
+        }
+    });
 }
 
 #[cfg(test)]
