@@ -298,6 +298,32 @@ docker compose logs -f auth-service
 docker compose logs -f nginx
 ```
 
+### データリセット（初期シードに戻す）
+
+全データストアを初期シード状態にリセットする。デモ環境のデータが汚れた場合に使用する。
+
+```bash
+# ローカルから実行
+ssh ec2-user@<LIGHTSAIL_IP> 'cd ~/ringiflow && ./reset.sh'
+
+# Lightsail 上で直接実行
+cd ~/ringiflow
+./reset.sh
+```
+
+リセット前にバックアップを取ることを推奨:
+
+```bash
+./backup.sh && ./reset.sh
+```
+
+事前にマイグレーションファイルが最新であることを確認すること:
+
+```bash
+# ローカルから転送
+scp -r backend/migrations/ ec2-user@<LIGHTSAIL_IP>:~/ringiflow/migrations/
+```
+
 ### バックアップ
 
 手動実行:
