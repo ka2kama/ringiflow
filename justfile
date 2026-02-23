@@ -420,7 +420,7 @@ check-doc-links:
 # 実装解説のファイル命名規則をチェック
 # 警告のみ（exit 0）: 既存の違反がある場合にブロックしない
 check-impl-docs:
-    ./scripts/check/impl-docs.sh
+    rust-script ./scripts/check/impl-docs.rs
 
 # 計画ファイルの確認事項チェック漏れを検出
 lint-plans:

@@ -285,5 +285,5 @@ ERRORS=()
 
 - [機能解説](./01_Observability構造的担保_機能解説.md)
 - [Observability 設計書](../../03_詳細設計書/14_Observability設計.md)
-- [既存パターン参照: impl-docs.sh](../../../scripts/check/impl-docs.sh)
+- [既存パターン参照: impl-docs.rs](../../../scripts/check/impl-docs.rs)
 - [ルールファイル: observability.md](../../../.claude/rules/observability.md)
