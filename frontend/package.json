@@ -12,7 +12,7 @@
     "lint": "elm-format --validate src/ && elm-review"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.1.18",
+    "@tailwindcss/vite": "^4.2.1",
     "elm-review": "^2.13.5",
     "elm-test": "0.19.1-revision17",
     "tailwindcss": "^4.1.18",
