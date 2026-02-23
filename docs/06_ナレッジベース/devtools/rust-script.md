@@ -52,11 +52,17 @@ rust-script script.rs arg1 arg2
 
 選定理由: ADR-015（開発スクリプトの品質担保方針）の移行基準に基づき、複雑なロジック（glob パターンマッチング）を含むスクリプトを Rust に移行した。詳細は ADR-056 を参照。
 
+### 開発スクリプト
+
+`scripts/check/instrumentation.rs` — ハンドラとリポジトリ実装に `#[tracing::instrument]` が付与されているかチェックするスクリプト。`syn` クレートによる AST 解析で、Shell の sed/grep ヒューリスティクスを置き換えた。
+
+選定理由: ADR-015 の移行基準（複雑なロジック: Rust ソースコードの構文解析）に該当。ADR-056 のスコープ拡大により `scripts/` でも rust-script を許容。
+
 ### 使い分け
 
 | スコープ | 言語 | 根拠 |
 |---------|------|------|
-| `scripts/` | Shell | ローカル開発環境の依存を最小化（ADR-015） |
+| `scripts/` | Shell（デフォルト）/ Rust（rust-script） | シンプルなスクリプトは Shell、ADR-015 の移行基準に該当する場合は rust-script（ADR-056） |
 | `.github/scripts/` | Rust（rust-script）| 技術スタック一致、複雑なロジックに適する（ADR-056） |
 | ワークフロー内のインライン `run` | Shell | ワークフロー YAML 内は Shell が自然 |
 

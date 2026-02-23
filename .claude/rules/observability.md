@@ -60,7 +60,7 @@ pub async fn handler(...) -> ... { ... }
 
 ## CI チェック
 
-`scripts/check/instrumentation.sh` がハンドラとリポジトリ impl の計装漏れを検出する。`just check-instrumentation` で実行。
+`scripts/check/instrumentation.rs` が `syn` クレートの AST 解析でハンドラとリポジトリ impl の計装漏れを検出する。`just check-instrumentation` で実行。
 
 ## 参照
 
