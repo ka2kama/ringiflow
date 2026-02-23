@@ -111,10 +111,7 @@ jobs:
         env:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: sccache
-        run: |
-          if ! command -v rust-script &> /dev/null; then
-            cargo install rust-script
-          fi
+        run: ./scripts/ci/install-rust-script.sh
 
       - name: Fetch PR comments
         id: pr-comments
