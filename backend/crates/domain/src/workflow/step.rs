@@ -2,6 +2,9 @@
 //!
 //! ワークフローインスタンス内の個々の承認タスクを管理する。
 //! 担当者への割り当てと判断結果を保持し、承認・却下の状態遷移を持つ。
+//!
+//! 状態遷移は ADT（代数的データ型）で表現し、不正な状態を型レベルで防止する。
+//! → ADR-054: ADT ベースステートマシンパターンの標準化
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -82,10 +85,48 @@ impl std::str::FromStr for StepDecision {
     }
 }
 
+/// ワークフローステップの状態（ADT ベースステートマシン）
+///
+/// 各状態で有効なフィールドのみを持たせることで、不正な状態を型レベルで防止する。
+/// → ADR-054, エンティティ影響マップ INV-S2〜S4
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WorkflowStepState {
+    /// 待機中
+    Pending,
+    /// アクティブ（処理中）
+    Active(ActiveStepState),
+    /// 完了
+    Completed(CompletedStepState),
+    /// スキップ
+    Skipped,
+}
+
+/// Active 状態の固有フィールド
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveStepState {
+    /// 開始日時（INV-S4 を型で強制）
+    pub started_at: DateTime<Utc>,
+}
+
+/// Completed 状態の固有フィールド
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CompletedStepState {
+    /// 判断（INV-S2 を型で強制）
+    pub decision:     StepDecision,
+    /// コメント
+    pub comment:      Option<String>,
+    /// 開始日時（Active から引き継ぎ）
+    pub started_at:   DateTime<Utc>,
+    /// 完了日時（INV-S3 を型で強制）
+    pub completed_at: DateTime<Utc>,
+}
+
 /// ワークフローステップエンティティ
 ///
 /// ワークフローインスタンス内の個々の承認タスク。
 /// 担当者への割り当てと判断結果を保持する。
+///
+/// ADR-054 Pattern A: 共通フィールドを外側に、状態固有フィールドを `state` enum に分離。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowStep {
     id: WorkflowStepId,
@@ -94,16 +135,12 @@ pub struct WorkflowStep {
     step_id: String,
     step_name: String,
     step_type: String,
-    status: WorkflowStepStatus,
     version: Version,
     assigned_to: Option<UserId>,
-    decision: Option<StepDecision>,
-    comment: Option<String>,
     due_date: Option<DateTime<Utc>>,
-    started_at: Option<DateTime<Utc>>,
-    completed_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
+    state: WorkflowStepState,
 }
 
 /// ワークフローステップの新規作成パラメータ
@@ -119,6 +156,8 @@ pub struct NewWorkflowStep {
 }
 
 /// ワークフローステップの DB 復元パラメータ
+///
+/// DB スキーマのフラット構造を表現する。`from_db()` で不変条件を検証して ADT に変換する。
 pub struct WorkflowStepRecord {
     pub id: WorkflowStepId,
     pub instance_id: WorkflowInstanceId,
@@ -148,39 +187,71 @@ impl WorkflowStep {
             step_id: params.step_id,
             step_name: params.step_name,
             step_type: params.step_type,
-            status: WorkflowStepStatus::Pending,
             version: Version::initial(),
             assigned_to: params.assigned_to,
-            decision: None,
-            comment: None,
             due_date: None,
-            started_at: None,
-            completed_at: None,
             created_at: params.now,
             updated_at: params.now,
+            state: WorkflowStepState::Pending,
         }
     }
 
     /// 既存のデータから復元する
-    pub fn from_db(record: WorkflowStepRecord) -> Self {
-        Self {
+    ///
+    /// DB のフラット構造から ADT に変換し、不変条件（INV-S2〜S4）を検証する。
+    ///
+    /// # Errors
+    ///
+    /// - `DomainError::Validation`: 不変条件違反（例: Completed で decision が None）
+    pub fn from_db(record: WorkflowStepRecord) -> Result<Self, DomainError> {
+        let state = match record.status {
+            WorkflowStepStatus::Pending => WorkflowStepState::Pending,
+            WorkflowStepStatus::Active => {
+                let started_at = record.started_at.ok_or_else(|| {
+                    DomainError::Validation("Active ステップには started_at が必要です".to_string())
+                })?;
+                WorkflowStepState::Active(ActiveStepState { started_at })
+            }
+            WorkflowStepStatus::Completed => {
+                let decision = record.decision.ok_or_else(|| {
+                    DomainError::Validation(
+                        "Completed ステップには decision が必要です".to_string(),
+                    )
+                })?;
+                let started_at = record.started_at.ok_or_else(|| {
+                    DomainError::Validation(
+                        "Completed ステップには started_at が必要です".to_string(),
+                    )
+                })?;
+                let completed_at = record.completed_at.ok_or_else(|| {
+                    DomainError::Validation(
+                        "Completed ステップには completed_at が必要です".to_string(),
+                    )
+                })?;
+                WorkflowStepState::Completed(CompletedStepState {
+                    decision,
+                    comment: record.comment,
+                    started_at,
+                    completed_at,
+                })
+            }
+            WorkflowStepStatus::Skipped => WorkflowStepState::Skipped,
+        };
+
+        Ok(Self {
             id: record.id,
             instance_id: record.instance_id,
             display_number: record.display_number,
             step_id: record.step_id,
             step_name: record.step_name,
             step_type: record.step_type,
-            status: record.status,
             version: record.version,
             assigned_to: record.assigned_to,
-            decision: record.decision,
-            comment: record.comment,
             due_date: record.due_date,
-            started_at: record.started_at,
-            completed_at: record.completed_at,
             created_at: record.created_at,
             updated_at: record.updated_at,
-        }
+            state,
+        })
     }
 
     // Getter メソッド
@@ -210,7 +281,12 @@ impl WorkflowStep {
     }
 
     pub fn status(&self) -> WorkflowStepStatus {
-        self.status
+        match &self.state {
+            WorkflowStepState::Pending => WorkflowStepStatus::Pending,
+            WorkflowStepState::Active(_) => WorkflowStepStatus::Active,
+            WorkflowStepState::Completed(_) => WorkflowStepStatus::Completed,
+            WorkflowStepState::Skipped => WorkflowStepStatus::Skipped,
+        }
     }
 
     pub fn version(&self) -> Version {
@@ -222,11 +298,17 @@ impl WorkflowStep {
     }
 
     pub fn decision(&self) -> Option<StepDecision> {
-        self.decision
+        match &self.state {
+            WorkflowStepState::Completed(c) => Some(c.decision),
+            _ => None,
+        }
     }
 
     pub fn comment(&self) -> Option<&str> {
-        self.comment.as_deref()
+        match &self.state {
+            WorkflowStepState::Completed(c) => c.comment.as_deref(),
+            _ => None,
+        }
     }
 
     pub fn due_date(&self) -> Option<DateTime<Utc>> {
@@ -234,11 +316,18 @@ impl WorkflowStep {
     }
 
     pub fn started_at(&self) -> Option<DateTime<Utc>> {
-        self.started_at
+        match &self.state {
+            WorkflowStepState::Active(a) => Some(a.started_at),
+            WorkflowStepState::Completed(c) => Some(c.started_at),
+            _ => None,
+        }
     }
 
     pub fn completed_at(&self) -> Option<DateTime<Utc>> {
-        self.completed_at
+        match &self.state {
+            WorkflowStepState::Completed(c) => Some(c.completed_at),
+            _ => None,
+        }
     }
 
     pub fn created_at(&self) -> DateTime<Utc> {
@@ -249,13 +338,17 @@ impl WorkflowStep {
         self.updated_at
     }
 
+    /// 状態への直接アクセス（パターンマッチ用）
+    pub fn state(&self) -> &WorkflowStepState {
+        &self.state
+    }
+
     // ビジネスロジックメソッド
 
     /// ステップをアクティブにした新しいインスタンスを返す
     pub fn activated(self, now: DateTime<Utc>) -> Self {
         Self {
-            status: WorkflowStepStatus::Active,
-            started_at: Some(now),
+            state: WorkflowStepState::Active(ActiveStepState { started_at: now }),
             updated_at: now,
             ..self
         }
@@ -268,20 +361,21 @@ impl WorkflowStep {
         comment: Option<String>,
         now: DateTime<Utc>,
     ) -> Result<Self, DomainError> {
-        if self.status != WorkflowStepStatus::Active {
-            return Err(DomainError::Validation(
+        match self.state {
+            WorkflowStepState::Active(active) => Ok(Self {
+                state: WorkflowStepState::Completed(CompletedStepState {
+                    decision,
+                    comment,
+                    started_at: active.started_at,
+                    completed_at: now,
+                }),
+                updated_at: now,
+                ..self
+            }),
+            _ => Err(DomainError::Validation(
                 "アクティブ状態でのみ完了できます".to_string(),
-            ));
+            )),
         }
-
-        Ok(Self {
-            status: WorkflowStepStatus::Completed,
-            decision: Some(decision),
-            comment,
-            completed_at: Some(now),
-            updated_at: now,
-            ..self
-        })
     }
 
     /// ステップをスキップした新しいインスタンスを返す
@@ -293,18 +387,17 @@ impl WorkflowStep {
     ///
     /// - `DomainError::Validation`: Pending 以外の状態で呼び出した場合
     pub fn skipped(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
-        if self.status != WorkflowStepStatus::Pending {
-            return Err(DomainError::Validation(format!(
+        match self.state {
+            WorkflowStepState::Pending => Ok(Self {
+                state: WorkflowStepState::Skipped,
+                updated_at: now,
+                ..self
+            }),
+            _ => Err(DomainError::Validation(format!(
                 "スキップは待機中状態でのみ可能です（現在: {}）",
-                self.status
-            )));
+                self.status()
+            ))),
         }
-
-        Ok(Self {
-            status: WorkflowStepStatus::Skipped,
-            updated_at: now,
-            ..self
-        })
     }
 
     /// ステップを承認する
@@ -316,22 +409,23 @@ impl WorkflowStep {
     ///
     /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
     pub fn approve(self, comment: Option<String>, now: DateTime<Utc>) -> Result<Self, DomainError> {
-        if self.status != WorkflowStepStatus::Active {
-            return Err(DomainError::Validation(format!(
+        match self.state {
+            WorkflowStepState::Active(active) => Ok(Self {
+                state: WorkflowStepState::Completed(CompletedStepState {
+                    decision: StepDecision::Approved,
+                    comment,
+                    started_at: active.started_at,
+                    completed_at: now,
+                }),
+                version: self.version.next(),
+                updated_at: now,
+                ..self
+            }),
+            _ => Err(DomainError::Validation(format!(
                 "承認はアクティブ状態でのみ可能です（現在: {}）",
-                self.status
-            )));
+                self.status()
+            ))),
         }
-
-        Ok(Self {
-            status: WorkflowStepStatus::Completed,
-            version: self.version.next(),
-            decision: Some(StepDecision::Approved),
-            comment,
-            completed_at: Some(now),
-            updated_at: now,
-            ..self
-        })
     }
 
     /// ステップを却下する
@@ -343,22 +437,23 @@ impl WorkflowStep {
     ///
     /// - `DomainError::Validation`: Active 以外の状態で呼び出した場合
     pub fn reject(self, comment: Option<String>, now: DateTime<Utc>) -> Result<Self, DomainError> {
-        if self.status != WorkflowStepStatus::Active {
-            return Err(DomainError::Validation(format!(
+        match self.state {
+            WorkflowStepState::Active(active) => Ok(Self {
+                state: WorkflowStepState::Completed(CompletedStepState {
+                    decision: StepDecision::Rejected,
+                    comment,
+                    started_at: active.started_at,
+                    completed_at: now,
+                }),
+                version: self.version.next(),
+                updated_at: now,
+                ..self
+            }),
+            _ => Err(DomainError::Validation(format!(
                 "却下はアクティブ状態でのみ可能です（現在: {}）",
-                self.status
-            )));
+                self.status()
+            ))),
         }
-
-        Ok(Self {
-            status: WorkflowStepStatus::Completed,
-            version: self.version.next(),
-            decision: Some(StepDecision::Rejected),
-            comment,
-            completed_at: Some(now),
-            updated_at: now,
-            ..self
-        })
     }
 
     /// ステップを差し戻す
@@ -374,28 +469,29 @@ impl WorkflowStep {
         comment: Option<String>,
         now: DateTime<Utc>,
     ) -> Result<Self, DomainError> {
-        if self.status != WorkflowStepStatus::Active {
-            return Err(DomainError::Validation(format!(
+        match self.state {
+            WorkflowStepState::Active(active) => Ok(Self {
+                state: WorkflowStepState::Completed(CompletedStepState {
+                    decision: StepDecision::RequestChanges,
+                    comment,
+                    started_at: active.started_at,
+                    completed_at: now,
+                }),
+                version: self.version.next(),
+                updated_at: now,
+                ..self
+            }),
+            _ => Err(DomainError::Validation(format!(
                 "差し戻しはアクティブ状態でのみ可能です（現在: {}）",
-                self.status
-            )));
+                self.status()
+            ))),
         }
-
-        Ok(Self {
-            status: WorkflowStepStatus::Completed,
-            version: self.version.next(),
-            decision: Some(StepDecision::RequestChanges),
-            comment,
-            completed_at: Some(now),
-            updated_at: now,
-            ..self
-        })
     }
 
     /// ステップが期限切れかチェックする
     pub fn is_overdue(&self, now: DateTime<Utc>) -> bool {
         if let Some(due) = self.due_date
-            && self.completed_at.is_none()
+            && self.completed_at().is_none()
         {
             return now > due;
         }
@@ -460,7 +556,7 @@ mod tests {
 
         #[rstest]
         fn test_新規作成の初期状態(test_step: WorkflowStep) {
-            let expected = WorkflowStep::from_db(record_from(&test_step));
+            let expected = WorkflowStep::from_db(record_from(&test_step)).unwrap();
             assert_eq!(test_step, expected);
         }
 
@@ -474,7 +570,8 @@ mod tests {
                 started_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -492,7 +589,8 @@ mod tests {
                 completed_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -511,7 +609,8 @@ mod tests {
                 completed_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -529,7 +628,8 @@ mod tests {
                 completed_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -546,7 +646,8 @@ mod tests {
                 created_at: past,
                 updated_at: past,
                 ..record_from(&test_step)
-            });
+            })
+            .unwrap();
             assert!(step.is_overdue(now));
         }
 
@@ -561,7 +662,8 @@ mod tests {
                 due_date: Some(future),
                 started_at: Some(now),
                 ..record_from(&test_step)
-            });
+            })
+            .unwrap();
             assert!(!step.is_overdue(now));
         }
 
@@ -597,7 +699,8 @@ mod tests {
                 status: WorkflowStepStatus::Skipped,
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -633,7 +736,8 @@ mod tests {
                 completed_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -653,7 +757,8 @@ mod tests {
                 completed_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -677,7 +782,8 @@ mod tests {
                 completed_at: Some(now),
                 updated_at: now,
                 ..record_from(&before)
-            });
+            })
+            .unwrap();
             assert_eq!(sut, expected);
         }
 
@@ -688,6 +794,67 @@ mod tests {
         ) {
             // Pending 状態からは差し戻し不可
             let result = test_step.request_changes(None, now);
+
+            assert!(result.is_err());
+        }
+
+        // --- from_db() 不変条件バリデーション ---
+
+        #[rstest]
+        fn test_from_db_completedでdecision欠損はエラー(
+            test_step: WorkflowStep,
+            now: DateTime<Utc>,
+        ) {
+            let step = test_step.activated(now);
+            let result = WorkflowStep::from_db(WorkflowStepRecord {
+                status: WorkflowStepStatus::Completed,
+                decision: None,
+                completed_at: Some(now),
+                ..record_from(&step)
+            });
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_from_db_completedでcompleted_at欠損はエラー(
+            test_step: WorkflowStep,
+            now: DateTime<Utc>,
+        ) {
+            let step = test_step.activated(now);
+            let result = WorkflowStep::from_db(WorkflowStepRecord {
+                status: WorkflowStepStatus::Completed,
+                decision: Some(StepDecision::Approved),
+                completed_at: None,
+                ..record_from(&step)
+            });
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_from_db_activeでstarted_at欠損はエラー(test_step: WorkflowStep) {
+            let result = WorkflowStep::from_db(WorkflowStepRecord {
+                status: WorkflowStepStatus::Active,
+                started_at: None,
+                ..record_from(&test_step)
+            });
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_from_db_completedでstarted_at欠損はエラー(
+            test_step: WorkflowStep,
+            now: DateTime<Utc>,
+        ) {
+            let result = WorkflowStep::from_db(WorkflowStepRecord {
+                status: WorkflowStepStatus::Completed,
+                decision: Some(StepDecision::Approved),
+                started_at: None,
+                completed_at: Some(now),
+                ..record_from(&test_step)
+            });
 
             assert!(result.is_err());
         }
