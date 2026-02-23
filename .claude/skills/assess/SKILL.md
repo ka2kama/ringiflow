@@ -111,6 +111,22 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 | 未実装マーカー | Grep `実装状態` in `docs/` | 未実装マーカーの一覧（Discovery の 1-2 と共有可） |
 | ADR 記録状況 | Glob `docs/05_ADR/*.md` の件数 | 情報提供 |
 | 改善記録の状況 | Glob `process/improvements/` 直近月の件数 | 情報提供 |
+| README 鮮度 | 下記の突合チェック | 乖離件数 |
+
+##### README 鮮度チェック
+
+README.md と README.ja.md のハードコードされた数値・バージョンを実データと突合する。
+
+| チェック項目 | 実データのソース | README の記載箇所 |
+|------------|----------------|------------------|
+| 改善記録件数 | Glob `process/improvements/**/*.md`（README.md 除く）のファイル数 | 「N improvement records」「N 件の改善記録」 |
+| ルールファイル数 | Glob `.claude/rules/*.md` のファイル数 | 「N rule files」「N のルールファイル」 |
+| Rust バージョン | Read `backend/rust-toolchain.toml` の channel | バッジ `Rust-N.NN` |
+| Elm バージョン | Read `frontend/elm.json` の elm-version | バッジ `Elm-N.NN` |
+| Phase 進捗 | Read `docs/03_詳細設計書/00_実装ロードマップ.md` | 開発状況テーブル |
+| EN/JA 整合 | README.md と README.ja.md の数値・構造比較 | 両ファイルの対応セクション |
+
+乖離が検出された場合、推奨アクションに修正を含める。優先度は Low（他に影響しないが、外部への情報提供が不正確になる）。
 
 #### 3c. 依存関係の鮮度
 
@@ -205,6 +221,7 @@ Step 1-3 の診断結果に対し、以下の観点でセルフレビューを�
 - 未実装マーカー: N 箇所
 - ADR 総数: N 件
 - 改善記録（今月）: N 件
+- README 鮮度: N 件の乖離（乖離がある場合は項目を列挙）
 
 #### 依存関係
 - Rust outdated: N 件

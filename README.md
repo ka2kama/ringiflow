@@ -196,7 +196,7 @@ Development is led by an AI agent (Claude Code), with guardrails to ensure quali
 
 ### AI Behavioral Rules
 
-[CLAUDE.md](CLAUDE.md) (~400 lines) and [22 rule files](.claude/rules/) structurally govern the AI's behavior. The AI doesn't write freely — it follows rules.
+[CLAUDE.md](CLAUDE.md) (~400 lines) and [23 rule files](.claude/rules/) structurally govern the AI's behavior. The AI doesn't write freely — it follows rules.
 
 Key rules:
 
@@ -218,7 +218,7 @@ flowchart LR
     E -.->|Next session| A
 ```
 
-Currently [79 improvement records](process/improvements/) exist. Examples:
+Currently [93 improvement records](process/improvements/) exist. Examples:
 
 | Case | Problem | Countermeasure |
 |------|---------|----------------|
