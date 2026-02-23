@@ -200,7 +200,7 @@ for migration_file in $(find "$MIGRATIONS_DIR" -name '*.sql' | sort); do
 done
 
 if [ "$FAILED" -gt 0 ]; then
-    warn "マイグレーション完了: ${APPLIED} 成功, ${FAILED} 失敗"
+    error "マイグレーション失敗: ${FAILED} 件。サービスの再起動を中断します。"
 else
     info "マイグレーション完了: ${APPLIED} 個適用"
 fi
