@@ -42,13 +42,13 @@ Issue #816 に基づき、`Page/Workflow/Detail.elm` の 18 フィールドの�
 
 ### コミット
 
-- `ade7cfa` #816 WIP: Refactor Workflow/Detail.elm Model to ADT state machine
-- `b731152` #816 Refactor Workflow/Detail.elm Model to ADT state machine
+- `eb4aec9` #816 WIP: Refactor Workflow/Detail.elm Model to ADT state machine
+- `d59d690` #816 Refactor Workflow/Detail.elm Model to ADT state machine
 
 ### 作成/更新ファイル
 
 - `frontend/src/Page/Workflow/Detail.elm` — ADT リファクタリング本体
-- `prompts/plans/imperative-napping-riddle.md` — 計画ファイル
+- `prompts/plans/816_workflow-detail-adt-state-machine.md` — 計画ファイル
 
 ### PR
 
