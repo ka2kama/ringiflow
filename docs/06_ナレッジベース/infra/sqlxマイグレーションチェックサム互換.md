@@ -78,4 +78,4 @@ done
 
 - [sqlx ソースコード（migrate モジュール）](https://github.com/launchbadge/sqlx/tree/main/sqlx-core/src/migrate)
 - [sqlx-cli ドキュメント](https://docs.rs/sqlx-cli/)
-- セッションログ: [Lightsail デモ環境リセットスクリプト](../../prompts/runs/2026-02/2026-02-23_2108_Lightsailデモ環境リセットスクリプト.md)
+- セッションログ: [Lightsail デモ環境リセットスクリプト](../../../prompts/runs/2026-02/2026-02-23_2108_Lightsailデモ環境リセットスクリプト.md)
