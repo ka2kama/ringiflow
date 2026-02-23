@@ -314,7 +314,7 @@ viewFormContent : Model -> UserDetail -> List RoleItem -> Html Msg
 viewFormContent model userDetail roles =
     Html.form [ onSubmit SubmitForm, class "mx-auto max-w-lg space-y-6" ]
         [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ユーザーを編集" ]
-        , FormField.viewReadOnlyField "メールアドレス" userDetail.email
+        , FormField.viewReadOnlyField "user-email" "メールアドレス" userDetail.email
         , FormField.viewTextField
             { label = "名前"
             , value = model.name
@@ -322,6 +322,7 @@ viewFormContent model userDetail roles =
             , error = Dict.get "name" model.validationErrors
             , inputType = "text"
             , placeholder = "山田 太郎"
+            , fieldId = "user-name"
             }
         , FormField.viewSelectField
             { label = "ロール"
@@ -330,6 +331,7 @@ viewFormContent model userDetail roles =
             , error = Dict.get "role" model.validationErrors
             , options = List.map (\role -> { value = role.id, label = role.name }) roles
             , placeholder = "-- ロールを選択 --"
+            , fieldId = "user-role"
             }
         , div [ class "flex gap-3" ]
             [ Button.view

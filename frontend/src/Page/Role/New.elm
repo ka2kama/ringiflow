@@ -255,12 +255,14 @@ viewFormContent model =
             , error = Dict.get "name" model.validationErrors
             , inputType = "text"
             , placeholder = "例: 編集者"
+            , fieldId = "role-name"
             }
         , FormField.viewTextArea
             { label = "説明（任意）"
             , value = model.description
             , onInput = UpdateDescription
             , placeholder = "ロールの説明を入力"
+            , fieldId = "role-description"
             }
         , div []
             [ label [ class "block text-sm font-medium text-secondary-700 mb-2" ] [ text "権限" ]

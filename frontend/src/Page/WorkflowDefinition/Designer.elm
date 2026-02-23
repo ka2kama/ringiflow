@@ -1560,6 +1560,7 @@ viewStepProperties canvas step =
             , error = Nothing
             , inputType = "text"
             , placeholder = "ステップ名を入力"
+            , fieldId = "step-name"
             }
          ]
             ++ viewStepTypeSpecificFields canvas step
@@ -1586,7 +1587,7 @@ viewStepTypeSpecificFields canvas step =
             []
 
         Approval ->
-            [ FormField.viewReadOnlyField "承認者指定" "申請時にユーザーを選択" ]
+            [ FormField.viewReadOnlyField "step-approver" "承認者指定" "申請時にユーザーを選択" ]
 
         End ->
             [ FormField.viewSelectField
@@ -1599,6 +1600,7 @@ viewStepTypeSpecificFields canvas step =
                     , { value = "rejected", label = "却下" }
                     ]
                 , placeholder = "選択してください"
+                , fieldId = "step-end-status"
                 }
             ]
 

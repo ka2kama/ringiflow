@@ -310,8 +310,9 @@ viewReadOnly : Model -> Html Msg
 viewReadOnly model =
     div [ class "mx-auto max-w-2xl space-y-6" ]
         [ h1 [ class "text-2xl font-bold text-secondary-900" ] [ text "ロール詳細" ]
-        , FormField.viewReadOnlyField "ロール名" model.name
-        , FormField.viewReadOnlyField "説明"
+        , FormField.viewReadOnlyField "role-name" "ロール名" model.name
+        , FormField.viewReadOnlyField "role-description"
+            "説明"
             (if String.isEmpty model.description then
                 "—"
 
@@ -350,12 +351,14 @@ viewEditForm model =
             , error = Dict.get "name" model.validationErrors
             , inputType = "text"
             , placeholder = "例: 編集者"
+            , fieldId = "role-name"
             }
         , FormField.viewTextArea
             { label = "説明（任意）"
             , value = model.description
             , onInput = UpdateDescription
             , placeholder = "ロールの説明を入力"
+            , fieldId = "role-description"
             }
         , div []
             [ label [ class "block text-sm font-medium text-secondary-700 mb-2" ] [ text "権限" ]

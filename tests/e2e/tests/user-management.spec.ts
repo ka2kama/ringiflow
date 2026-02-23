@@ -19,9 +19,9 @@ test.describe("ユーザー管理", () => {
     ).toBeVisible();
 
     // When: フォームに入力して送信する
-    await page.getByPlaceholder("user@example.com").fill(email);
-    await page.getByPlaceholder("山田 太郎").fill(name);
-    await page.locator("select").selectOption({ label: "user" });
+    await page.getByLabel("メールアドレス").fill(email);
+    await page.getByLabel("名前").fill(name);
+    await page.getByLabel("ロール").selectOption({ label: "user" });
     await page.getByRole("button", { name: "作成", exact: true }).click();
 
     // Then: 作成成功画面が表示される
@@ -46,9 +46,9 @@ test.describe("ユーザー管理", () => {
 
     // Given: テスト用ユーザーを作成する
     await page.goto("/users/new");
-    await page.getByPlaceholder("user@example.com").fill(email);
-    await page.getByPlaceholder("山田 太郎").fill(originalName);
-    await page.locator("select").selectOption({ label: "user" });
+    await page.getByLabel("メールアドレス").fill(email);
+    await page.getByLabel("名前").fill(originalName);
+    await page.getByLabel("ロール").selectOption({ label: "user" });
     await page.getByRole("button", { name: "作成", exact: true }).click();
     await expect(page.getByText("ユーザーを作成しました")).toBeVisible();
 
@@ -66,8 +66,8 @@ test.describe("ユーザー管理", () => {
     await expect(
       page.getByRole("heading", { name: "ユーザーを編集" }),
     ).toBeVisible();
-    await page.getByPlaceholder("山田 太郎").clear();
-    await page.getByPlaceholder("山田 太郎").fill(updatedName);
+    await page.getByLabel("名前").clear();
+    await page.getByLabel("名前").fill(updatedName);
     await page.getByRole("button", { name: "保存" }).click();
 
     // Then: 詳細画面に遷移し、変更後の名前が表示される
@@ -83,9 +83,9 @@ test.describe("ユーザー管理", () => {
 
     // Given: テスト用ユーザーを作成する
     await page.goto("/users/new");
-    await page.getByPlaceholder("user@example.com").fill(email);
-    await page.getByPlaceholder("山田 太郎").fill(name);
-    await page.locator("select").selectOption({ label: "user" });
+    await page.getByLabel("メールアドレス").fill(email);
+    await page.getByLabel("名前").fill(name);
+    await page.getByLabel("ロール").selectOption({ label: "user" });
     await page.getByRole("button", { name: "作成", exact: true }).click();
     await expect(page.getByText("ユーザーを作成しました")).toBeVisible();
 
