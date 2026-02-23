@@ -83,6 +83,39 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      - name: Setup Rust toolchain
+        if: steps.check-draft.outputs.is_draft == 'false'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.0
+
+      - name: Setup sccache
+        if: steps.check-draft.outputs.is_draft == 'false'
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Cache Cargo
+        if: steps.check-draft.outputs.is_draft == 'false'
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-rules-check-${{ hashFiles('.github/scripts/match-rules.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-rules-check-
+
+      - name: Install rust-script
+        if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: sccache
+        run: |
+          if ! command -v rust-script &> /dev/null; then
+            cargo install rust-script
+          fi
+
       - name: Fetch PR comments
         id: pr-comments
         if: steps.check-draft.outputs.is_draft == 'false'
@@ -163,10 +196,13 @@ jobs:
       - name: Match rules to changed files
         id: match-rules
         if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: sccache
         run: |
           {
             echo "MATCHED_RULES<<EOF_MATCHED_RULES"
-            python3 .github/scripts/match-rules.py /tmp/changed-files.txt
+            rust-script .github/scripts/match-rules.rs /tmp/changed-files.txt
             echo "EOF_MATCHED_RULES"
           } >> "$GITHUB_OUTPUT"
 
