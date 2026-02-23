@@ -1,9 +1,13 @@
-module Page.WorkflowDefinition.Designer exposing (Model, Msg(..), init, isDirty, subscriptions, update, updateShared, view)
+module Page.WorkflowDefinition.Designer exposing (CanvasState, Model, Msg(..), PageState(..), init, isDirty, subscriptions, update, updateShared, view)
 
 {-| ワークフローデザイナー画面
 
 SVG キャンバス上にワークフローのステップを配置・操作するビジュアルエディタ。
 ADR-053 で決定した SVG + Elm 直接レンダリング方式に基づく。
+
+Model は ADT ベース状態マシンで管理する（ADR-054）。
+Loading 中はキャンバス関連フィールドが型レベルで存在しないため、
+不正な状態（Loading 中のキャンバス操作）を表現不可能にしている。
 
 -}
 
@@ -27,7 +31,6 @@ import Html.Events exposing (onMouseDown)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Ports
-import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 import Svg exposing (svg)
 import Svg.Attributes as SvgAttr
@@ -49,11 +52,31 @@ canvasElementId =
 -- MODEL
 
 
+{-| 外側 Model: 共通フィールド + 状態 ADT
+-}
 type alias Model =
     { shared : Shared
     , definitionId : String
-    , loadState : RemoteData ApiError WorkflowDefinition
-    , steps : Dict String StepNode
+    , state : PageState
+    }
+
+
+{-| ページの状態を表す ADT
+
+Loading 中はキャンバス関連フィールドが存在しないため、
+キャンバス操作が型レベルで不可能になる。
+
+-}
+type PageState
+    = Loading
+    | Failed ApiError
+    | Loaded CanvasState
+
+
+{-| Loaded 時のみ存在するキャンバス状態
+-}
+type alias CanvasState =
+    { steps : Dict String StepNode
     , transitions : List Transition
     , selectedStepId : Maybe String
     , selectedTransitionIndex : Maybe Int
@@ -80,27 +103,7 @@ init : Shared -> String -> ( Model, Cmd Msg )
 init shared definitionId =
     ( { shared = shared
       , definitionId = definitionId
-      , loadState = Loading
-      , steps = Dict.empty
-      , transitions = []
-      , selectedStepId = Nothing
-      , selectedTransitionIndex = Nothing
-      , dragging = Nothing
-      , canvasBounds = Nothing
-      , nextStepNumber = 1
-      , propertyName = ""
-      , propertyEndStatus = ""
-      , name = ""
-      , description = ""
-      , version = 0
-      , isSaving = False
-      , successMessage = Nothing
-      , errorMessage = Nothing
-      , isDirty_ = False
-      , validationResult = Nothing
-      , isValidating = False
-      , isPublishing = False
-      , pendingPublish = False
+      , state = Loading
       }
     , WorkflowDefinitionApi.getDefinition
         { config = Shared.toRequestConfig shared
@@ -111,8 +114,13 @@ init shared definitionId =
 
 
 isDirty : Model -> Bool
-isDirty =
-    DirtyState.isDirty
+isDirty model =
+    case model.state of
+        Loaded canvas ->
+            DirtyState.isDirty canvas
+
+        _ ->
+            False
 
 
 updateShared : Shared -> Model -> Model
@@ -154,29 +162,106 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        PaletteMouseDown stepType ->
+        GotDefinition result ->
+            handleGotDefinition result model
+
+        _ ->
+            case model.state of
+                Loaded canvas ->
+                    let
+                        ( newCanvas, cmd ) =
+                            updateLoaded msg model.shared model.definitionId canvas
+                    in
+                    ( { model | state = Loaded newCanvas }, cmd )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+{-| GotDefinition メッセージを処理し、Loading → Loaded/Failed に遷移する
+-}
+handleGotDefinition : Result ApiError WorkflowDefinition -> Model -> ( Model, Cmd Msg )
+handleGotDefinition result model =
+    case result of
+        Ok def ->
+            let
+                steps =
+                    DesignerCanvas.loadStepsFromDefinition def.definition
+                        |> Result.withDefault Dict.empty
+
+                transitions =
+                    DesignerCanvas.loadTransitionsFromDefinition def.definition
+                        |> Result.withDefault []
+
+                nextNumber =
+                    Dict.size steps + 1
+            in
             ( { model
+                | state =
+                    Loaded
+                        { steps = steps
+                        , transitions = transitions
+                        , selectedStepId = Nothing
+                        , selectedTransitionIndex = Nothing
+                        , dragging = Nothing
+                        , canvasBounds = Nothing
+                        , nextStepNumber = nextNumber
+                        , propertyName = ""
+                        , propertyEndStatus = ""
+                        , name = def.name
+                        , description = def.description |> Maybe.withDefault ""
+                        , version = def.version
+                        , isSaving = False
+                        , successMessage = Nothing
+                        , errorMessage = Nothing
+                        , isDirty_ = False
+                        , validationResult = Nothing
+                        , isValidating = False
+                        , isPublishing = False
+                        , pendingPublish = False
+                        }
+              }
+            , Ports.requestCanvasBounds canvasElementId
+            )
+
+        Err err ->
+            ( { model | state = Failed err }
+            , Cmd.none
+            )
+
+
+{-| Loaded 状態でのメッセージ処理
+
+API 呼び出しに必要な shared / definitionId は外側 Model のフィールドを
+パラメータとして受け取る（CanvasState が API 接続情報を持たない責務分離）。
+
+-}
+updateLoaded : Msg -> Shared -> String -> CanvasState -> ( CanvasState, Cmd Msg )
+updateLoaded msg shared definitionId canvas =
+    case msg of
+        PaletteMouseDown stepType ->
+            ( { canvas
                 | dragging = Just (DraggingNewStep stepType { x = 0, y = 0 })
               }
             , Ports.requestCanvasBounds canvasElementId
             )
 
         CanvasMouseMove clientX clientY ->
-            case model.dragging of
+            case canvas.dragging of
                 Just (DraggingNewStep stepType _) ->
-                    case DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY of
+                    case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                         Just canvasPos ->
-                            ( { model
+                            ( { canvas
                                 | dragging = Just (DraggingNewStep stepType canvasPos)
                               }
                             , Cmd.none
                             )
 
                         Nothing ->
-                            ( model, Cmd.none )
+                            ( canvas, Cmd.none )
 
                 Just (DraggingExistingStep stepId offset) ->
-                    case DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY of
+                    case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                         Just canvasPos ->
                             let
                                 newPos =
@@ -188,44 +273,44 @@ update msg model =
                                 updatedSteps =
                                     Dict.update stepId
                                         (Maybe.map (\step -> { step | position = newPos }))
-                                        model.steps
+                                        canvas.steps
                             in
-                            ( { model | steps = updatedSteps }
+                            ( { canvas | steps = updatedSteps }
                             , Cmd.none
                             )
 
                         Nothing ->
-                            ( model, Cmd.none )
+                            ( canvas, Cmd.none )
 
                 Just (DraggingConnection sourceId _) ->
                     -- Phase 2 で接続線プレビュー更新を実装
-                    case DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY of
+                    case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                         Just canvasPos ->
-                            ( { model | dragging = Just (DraggingConnection sourceId canvasPos) }
+                            ( { canvas | dragging = Just (DraggingConnection sourceId canvasPos) }
                             , Cmd.none
                             )
 
                         Nothing ->
-                            ( model, Cmd.none )
+                            ( canvas, Cmd.none )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( canvas, Cmd.none )
 
         CanvasMouseUp ->
-            case model.dragging of
+            case canvas.dragging of
                 Just (DraggingNewStep stepType dropPos) ->
                     let
                         newStep =
-                            DesignerCanvas.createStepFromDrop stepType model.nextStepNumber dropPos
+                            DesignerCanvas.createStepFromDrop stepType canvas.nextStepNumber dropPos
                                 |> (\s -> { s | position = DesignerCanvas.clampToViewBox s.position })
 
-                        ( dirtyModel, dirtyCmd ) =
-                            DirtyState.markDirty model
+                        ( dirtyCanvas, dirtyCmd ) =
+                            DirtyState.markDirty canvas
                     in
-                    ( { dirtyModel
-                        | steps = Dict.insert newStep.id newStep dirtyModel.steps
+                    ( { dirtyCanvas
+                        | steps = Dict.insert newStep.id newStep dirtyCanvas.steps
                         , dragging = Nothing
-                        , nextStepNumber = dirtyModel.nextStepNumber + 1
+                        , nextStepNumber = dirtyCanvas.nextStepNumber + 1
                         , selectedStepId = Just newStep.id
                       }
                     , dirtyCmd
@@ -233,10 +318,10 @@ update msg model =
 
                 Just (DraggingExistingStep _ _) ->
                     let
-                        ( dirtyModel, dirtyCmd ) =
-                            DirtyState.markDirty model
+                        ( dirtyCanvas, dirtyCmd ) =
+                            DirtyState.markDirty canvas
                     in
-                    ( { dirtyModel | dragging = Nothing }
+                    ( { dirtyCanvas | dragging = Nothing }
                     , dirtyCmd
                     )
 
@@ -244,7 +329,7 @@ update msg model =
                     let
                         -- ドロップ先のステップを判定
                         targetStep =
-                            model.steps
+                            canvas.steps
                                 |> Dict.values
                                 |> List.filter (\s -> s.id /= sourceId)
                                 |> List.filter (DesignerCanvas.stepContainsPoint mousePos)
@@ -254,12 +339,12 @@ update msg model =
                         Just target ->
                             let
                                 sourceStep =
-                                    Dict.get sourceId model.steps
+                                    Dict.get sourceId canvas.steps
 
                                 trigger =
                                     case sourceStep of
                                         Just src ->
-                                            DesignerCanvas.autoTrigger src.stepType sourceId model.transitions
+                                            DesignerCanvas.autoTrigger src.stepType sourceId canvas.transitions
 
                                         Nothing ->
                                             Nothing
@@ -267,71 +352,71 @@ update msg model =
                                 newTransition =
                                     { from = sourceId, to = target.id, trigger = trigger }
 
-                                ( dirtyModel, dirtyCmd ) =
-                                    DirtyState.markDirty model
+                                ( dirtyCanvas, dirtyCmd ) =
+                                    DirtyState.markDirty canvas
                             in
-                            ( { dirtyModel
-                                | transitions = dirtyModel.transitions ++ [ newTransition ]
+                            ( { dirtyCanvas
+                                | transitions = dirtyCanvas.transitions ++ [ newTransition ]
                                 , dragging = Nothing
                               }
                             , dirtyCmd
                             )
 
                         Nothing ->
-                            ( { model | dragging = Nothing }
+                            ( { canvas | dragging = Nothing }
                             , Cmd.none
                             )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( canvas, Cmd.none )
 
         StepClicked stepId ->
-            ( syncPropertyFields stepId { model | selectedStepId = Just stepId, selectedTransitionIndex = Nothing }
+            ( syncPropertyFields stepId { canvas | selectedStepId = Just stepId, selectedTransitionIndex = Nothing }
             , Cmd.none
             )
 
         CanvasBackgroundClicked ->
-            ( { model | selectedStepId = Nothing, selectedTransitionIndex = Nothing, propertyName = "", propertyEndStatus = "" }
+            ( { canvas | selectedStepId = Nothing, selectedTransitionIndex = Nothing, propertyName = "", propertyEndStatus = "" }
             , Cmd.none
             )
 
         ConnectionPortMouseDown sourceStepId clientX clientY ->
-            case DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY of
+            case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                 Just canvasPos ->
-                    ( { model | dragging = Just (DraggingConnection sourceStepId canvasPos) }
+                    ( { canvas | dragging = Just (DraggingConnection sourceStepId canvasPos) }
                     , Cmd.none
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( canvas, Cmd.none )
 
         TransitionClicked index ->
-            ( { model | selectedTransitionIndex = Just index, selectedStepId = Nothing, propertyName = "", propertyEndStatus = "" }
+            ( { canvas | selectedTransitionIndex = Just index, selectedStepId = Nothing, propertyName = "", propertyEndStatus = "" }
             , Cmd.none
             )
 
         UpdatePropertyName newName ->
-            case model.selectedStepId of
+            case canvas.selectedStepId of
                 Just stepId ->
                     let
-                        ( dirtyModel, dirtyCmd ) =
-                            DirtyState.markDirty model
+                        ( dirtyCanvas, dirtyCmd ) =
+                            DirtyState.markDirty canvas
                     in
-                    ( { dirtyModel
+                    ( { dirtyCanvas
                         | propertyName = newName
                         , steps =
                             Dict.update stepId
                                 (Maybe.map (\step -> { step | name = newName }))
-                                dirtyModel.steps
+                                dirtyCanvas.steps
                       }
                     , dirtyCmd
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( canvas, Cmd.none )
 
         UpdatePropertyEndStatus newStatus ->
-            case model.selectedStepId of
+            case canvas.selectedStepId of
                 Just stepId ->
                     let
                         endStatus =
@@ -341,97 +426,65 @@ update msg model =
                             else
                                 Just newStatus
 
-                        ( dirtyModel, dirtyCmd ) =
-                            DirtyState.markDirty model
+                        ( dirtyCanvas, dirtyCmd ) =
+                            DirtyState.markDirty canvas
                     in
-                    ( { dirtyModel
+                    ( { dirtyCanvas
                         | propertyEndStatus = newStatus
                         , steps =
                             Dict.update stepId
                                 (Maybe.map (\step -> { step | endStatus = endStatus }))
-                                dirtyModel.steps
+                                dirtyCanvas.steps
                       }
                     , dirtyCmd
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( canvas, Cmd.none )
 
         UpdateDefinitionName newName ->
             let
-                ( dirtyModel, dirtyCmd ) =
-                    DirtyState.markDirty model
+                ( dirtyCanvas, dirtyCmd ) =
+                    DirtyState.markDirty canvas
             in
-            ( { dirtyModel | name = newName }, dirtyCmd )
+            ( { dirtyCanvas | name = newName }, dirtyCmd )
 
         SaveClicked ->
             let
                 definition =
-                    DesignerCanvas.encodeDefinition model.steps model.transitions
+                    DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
 
                 body =
                     WorkflowDefinition.encodeUpdateRequest
-                        { name = model.name
-                        , description = model.description
+                        { name = canvas.name
+                        , description = canvas.description
                         , definition = definition
-                        , version = model.version
+                        , version = canvas.version
                         }
             in
-            ( { model | isSaving = True, successMessage = Nothing, errorMessage = Nothing }
+            ( { canvas | isSaving = True, successMessage = Nothing, errorMessage = Nothing }
             , WorkflowDefinitionApi.updateDefinition
-                { config = Shared.toRequestConfig model.shared
-                , id = model.definitionId
+                { config = Shared.toRequestConfig shared
+                , id = definitionId
                 , body = body
                 , toMsg = GotSaveResult
                 }
             )
 
-        GotDefinition result ->
-            case result of
-                Ok def ->
-                    let
-                        steps =
-                            DesignerCanvas.loadStepsFromDefinition def.definition
-                                |> Result.withDefault Dict.empty
-
-                        transitions =
-                            DesignerCanvas.loadTransitionsFromDefinition def.definition
-                                |> Result.withDefault []
-
-                        nextNumber =
-                            Dict.size steps + 1
-                    in
-                    ( { model
-                        | loadState = Success def
-                        , steps = steps
-                        , transitions = transitions
-                        , nextStepNumber = nextNumber
-                        , name = def.name
-                        , description = def.description |> Maybe.withDefault ""
-                        , version = def.version
-                      }
-                    , Ports.requestCanvasBounds canvasElementId
-                    )
-
-                Err err ->
-                    ( { model | loadState = Failure err }
-                    , Cmd.none
-                    )
-
         GotSaveResult result ->
             case result of
                 Ok def ->
                     let
-                        ( cleanModel, cleanCmd ) =
-                            DirtyState.clearDirty model
+                        ( cleanCanvas, cleanCmd ) =
+                            DirtyState.clearDirty canvas
                     in
-                    if model.pendingPublish then
+                    if canvas.pendingPublish then
                         -- 公開チェーン: 保存成功 → バリデーション
                         let
                             definition =
-                                DesignerCanvas.encodeDefinition cleanModel.steps cleanModel.transitions
+                                DesignerCanvas.encodeDefinition cleanCanvas.steps cleanCanvas.transitions
                         in
-                        ( { cleanModel
+                        ( { cleanCanvas
                             | isSaving = False
                             , version = def.version
                             , isValidating = True
@@ -440,7 +493,7 @@ update msg model =
                         , Cmd.batch
                             [ cleanCmd
                             , WorkflowDefinitionApi.validateDefinition
-                                { config = Shared.toRequestConfig cleanModel.shared
+                                { config = Shared.toRequestConfig shared
                                 , body = definition
                                 , toMsg = GotValidationResult
                                 }
@@ -448,7 +501,7 @@ update msg model =
                         )
 
                     else
-                        ( { cleanModel
+                        ( { cleanCanvas
                             | isSaving = False
                             , version = def.version
                             , successMessage = Just "保存しました"
@@ -458,7 +511,7 @@ update msg model =
                         )
 
                 Err err ->
-                    ( { model
+                    ( { canvas
                         | isSaving = False
                         , pendingPublish = False
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
@@ -470,11 +523,11 @@ update msg model =
         ValidateClicked ->
             let
                 definition =
-                    DesignerCanvas.encodeDefinition model.steps model.transitions
+                    DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
             in
-            ( { model | isValidating = True, validationResult = Nothing, errorMessage = Nothing }
+            ( { canvas | isValidating = True, validationResult = Nothing, errorMessage = Nothing }
             , WorkflowDefinitionApi.validateDefinition
-                { config = Shared.toRequestConfig model.shared
+                { config = Shared.toRequestConfig shared
                 , body = WorkflowDefinition.encodeValidationRequest { definition = definition }
                 , toMsg = GotValidationResult
                 }
@@ -483,24 +536,24 @@ update msg model =
         GotValidationResult result ->
             case result of
                 Ok validResult ->
-                    if model.pendingPublish && validResult.valid then
+                    if canvas.pendingPublish && validResult.valid then
                         -- 公開チェーン: バリデーション成功 → 公開 API 呼び出し
-                        ( { model
+                        ( { canvas
                             | isValidating = False
                             , validationResult = Just validResult
                             , isPublishing = True
                           }
                         , WorkflowDefinitionApi.publishDefinition
-                            { config = Shared.toRequestConfig model.shared
-                            , id = model.definitionId
-                            , body = WorkflowDefinition.encodeVersionRequest { version = model.version }
+                            { config = Shared.toRequestConfig shared
+                            , id = definitionId
+                            , body = WorkflowDefinition.encodeVersionRequest { version = canvas.version }
                             , toMsg = GotPublishResult
                             }
                         )
 
                     else
                         -- 通常バリデーション結果、または公開チェーンでバリデーション失敗
-                        ( { model
+                        ( { canvas
                             | isValidating = False
                             , validationResult = Just validResult
                             , pendingPublish = False
@@ -509,7 +562,7 @@ update msg model =
                         )
 
                 Err err ->
-                    ( { model
+                    ( { canvas
                         | isValidating = False
                         , pendingPublish = False
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
@@ -518,29 +571,29 @@ update msg model =
                     )
 
         PublishClicked ->
-            ( { model | pendingPublish = True, successMessage = Nothing, errorMessage = Nothing }
+            ( { canvas | pendingPublish = True, successMessage = Nothing, errorMessage = Nothing }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ConfirmPublish ->
-            if model.isDirty_ then
+            if canvas.isDirty_ then
                 -- dirty なら先に保存
                 let
                     definition =
-                        DesignerCanvas.encodeDefinition model.steps model.transitions
+                        DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
 
                     body =
                         WorkflowDefinition.encodeUpdateRequest
-                            { name = model.name
-                            , description = model.description
+                            { name = canvas.name
+                            , description = canvas.description
                             , definition = definition
-                            , version = model.version
+                            , version = canvas.version
                             }
                 in
-                ( { model | isSaving = True }
+                ( { canvas | isSaving = True }
                 , WorkflowDefinitionApi.updateDefinition
-                    { config = Shared.toRequestConfig model.shared
-                    , id = model.definitionId
+                    { config = Shared.toRequestConfig shared
+                    , id = definitionId
                     , body = body
                     , toMsg = GotSaveResult
                     }
@@ -550,18 +603,18 @@ update msg model =
                 -- dirty でなければ直接バリデーション
                 let
                     definition =
-                        DesignerCanvas.encodeDefinition model.steps model.transitions
+                        DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
                 in
-                ( { model | isValidating = True, validationResult = Nothing }
+                ( { canvas | isValidating = True, validationResult = Nothing }
                 , WorkflowDefinitionApi.validateDefinition
-                    { config = Shared.toRequestConfig model.shared
+                    { config = Shared.toRequestConfig shared
                     , body = WorkflowDefinition.encodeValidationRequest { definition = definition }
                     , toMsg = GotValidationResult
                     }
                 )
 
         CancelPublish ->
-            ( { model | pendingPublish = False }
+            ( { canvas | pendingPublish = False }
             , Cmd.none
             )
 
@@ -569,10 +622,10 @@ update msg model =
             case result of
                 Ok def ->
                     let
-                        ( cleanModel, cleanCmd ) =
-                            DirtyState.clearDirty model
+                        ( cleanCanvas, cleanCmd ) =
+                            DirtyState.clearDirty canvas
                     in
-                    ( { cleanModel
+                    ( { cleanCanvas
                         | isPublishing = False
                         , pendingPublish = False
                         , version = def.version
@@ -583,7 +636,7 @@ update msg model =
                     )
 
                 Err err ->
-                    ( { model
+                    ( { canvas
                         | isPublishing = False
                         , pendingPublish = False
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
@@ -593,12 +646,12 @@ update msg model =
                     )
 
         DismissMessage ->
-            ( { model | successMessage = Nothing, errorMessage = Nothing }
+            ( { canvas | successMessage = Nothing, errorMessage = Nothing }
             , Cmd.none
             )
 
         StepMouseDown stepId clientX clientY ->
-            case ( Dict.get stepId model.steps, DesignerCanvas.clientToCanvas model.canvasBounds clientX clientY ) of
+            case ( Dict.get stepId canvas.steps, DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY ) of
                 ( Just step, Just canvasPos ) ->
                     let
                         offset =
@@ -607,7 +660,7 @@ update msg model =
                             }
                     in
                     ( syncPropertyFields stepId
-                        { model
+                        { canvas
                             | dragging = Just (DraggingExistingStep stepId offset)
                             , selectedStepId = Just stepId
                         }
@@ -615,84 +668,88 @@ update msg model =
                     )
 
                 _ ->
-                    ( syncPropertyFields stepId { model | selectedStepId = Just stepId }
+                    ( syncPropertyFields stepId { canvas | selectedStepId = Just stepId }
                     , Cmd.none
                     )
 
         DeleteSelectedStep ->
-            deleteSelectedStep model
+            deleteSelectedStep canvas
 
         KeyDown key ->
             if key == "Delete" || key == "Backspace" then
-                case ( model.selectedTransitionIndex, model.selectedStepId ) of
+                case ( canvas.selectedTransitionIndex, canvas.selectedStepId ) of
                     ( Just index, _ ) ->
                         -- 選択中の接続線を削除
                         let
-                            ( dirtyModel, dirtyCmd ) =
-                                DirtyState.markDirty model
+                            ( dirtyCanvas, dirtyCmd ) =
+                                DirtyState.markDirty canvas
                         in
-                        ( { dirtyModel
-                            | transitions = removeAt index dirtyModel.transitions
+                        ( { dirtyCanvas
+                            | transitions = removeAt index dirtyCanvas.transitions
                             , selectedTransitionIndex = Nothing
                           }
                         , dirtyCmd
                         )
 
                     ( Nothing, _ ) ->
-                        deleteSelectedStep model
+                        deleteSelectedStep canvas
 
             else
-                ( model, Cmd.none )
+                ( canvas, Cmd.none )
 
         GotCanvasBounds value ->
             case DesignerCanvas.decodeBounds value of
                 Ok bounds ->
-                    ( { model | canvasBounds = Just bounds }
+                    ( { canvas | canvasBounds = Just bounds }
                     , Cmd.none
                     )
 
                 Err _ ->
-                    ( model, Cmd.none )
+                    ( canvas, Cmd.none )
+
+        -- GotDefinition は外側の update で処理済み（ここには到達しない）
+        GotDefinition _ ->
+            ( canvas, Cmd.none )
 
 
 {-| 選択されたステップのプロパティをフォームフィールドに同期する
 -}
-syncPropertyFields : String -> Model -> Model
-syncPropertyFields stepId model =
-    case Dict.get stepId model.steps of
+syncPropertyFields : String -> CanvasState -> CanvasState
+syncPropertyFields stepId canvas =
+    case Dict.get stepId canvas.steps of
         Just step ->
-            { model
+            { canvas
                 | propertyName = step.name
                 , propertyEndStatus = step.endStatus |> Maybe.withDefault ""
             }
 
         Nothing ->
-            model
+            canvas
 
 
 {-| 選択中のステップと関連する接続線を削除する
 -}
-deleteSelectedStep : Model -> ( Model, Cmd Msg )
-deleteSelectedStep model =
-    case model.selectedStepId of
+deleteSelectedStep : CanvasState -> ( CanvasState, Cmd Msg )
+deleteSelectedStep canvas =
+    case canvas.selectedStepId of
         Just stepId ->
             let
-                ( dirtyModel, dirtyCmd ) =
-                    DirtyState.markDirty model
+                ( dirtyCanvas, dirtyCmd ) =
+                    DirtyState.markDirty canvas
             in
-            ( { dirtyModel
-                | steps = Dict.remove stepId dirtyModel.steps
+            ( { dirtyCanvas
+                | steps = Dict.remove stepId dirtyCanvas.steps
                 , transitions =
                     List.filter
                         (\t -> t.from /= stepId && t.to /= stepId)
-                        dirtyModel.transitions
+                        dirtyCanvas.transitions
                 , selectedStepId = Nothing
               }
             , dirtyCmd
             )
 
         Nothing ->
-            ( model, Cmd.none )
+            ( canvas, Cmd.none )
 
 
 {-| リストの指定インデックスの要素を除去する
@@ -710,34 +767,41 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
         [ Ports.receiveCanvasBounds GotCanvasBounds
-        , if model.dragging /= Nothing then
-            Sub.batch
-                [ Browser.Events.onMouseMove
-                    (Decode.map2 CanvasMouseMove
-                        (Decode.field "clientX" Decode.float)
-                        (Decode.field "clientY" Decode.float)
-                    )
-                , Browser.Events.onMouseUp
-                    (Decode.succeed CanvasMouseUp)
-                ]
-
-          else
-            Sub.none
-        , Browser.Events.onKeyDown
-            (Decode.field "key" Decode.string
-                |> Decode.andThen
-                    (\key ->
-                        Decode.at [ "target", "tagName" ] Decode.string
-                            |> Decode.andThen
-                                (\tagName ->
-                                    if List.member tagName [ "INPUT", "TEXTAREA", "SELECT" ] then
-                                        Decode.fail "ignore input element"
-
-                                    else
-                                        Decode.succeed (KeyDown key)
+        , case model.state of
+            Loaded canvas ->
+                Sub.batch
+                    [ if canvas.dragging /= Nothing then
+                        Sub.batch
+                            [ Browser.Events.onMouseMove
+                                (Decode.map2 CanvasMouseMove
+                                    (Decode.field "clientX" Decode.float)
+                                    (Decode.field "clientY" Decode.float)
                                 )
-                    )
-            )
+                            , Browser.Events.onMouseUp
+                                (Decode.succeed CanvasMouseUp)
+                            ]
+
+                      else
+                        Sub.none
+                    , Browser.Events.onKeyDown
+                        (Decode.field "key" Decode.string
+                            |> Decode.andThen
+                                (\key ->
+                                    Decode.at [ "target", "tagName" ] Decode.string
+                                        |> Decode.andThen
+                                            (\tagName ->
+                                                if List.member tagName [ "INPUT", "TEXTAREA", "SELECT" ] then
+                                                    Decode.fail "ignore input element"
+
+                                                else
+                                                    Decode.succeed (KeyDown key)
+                                            )
+                                )
+                        )
+                    ]
+
+            _ ->
+                Sub.none
         ]
 
 
@@ -747,41 +811,48 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    case model.loadState of
+    case model.state of
         Loading ->
             div [ class "flex items-center justify-center", style "height" "calc(100vh - 8rem)" ]
                 [ LoadingSpinner.view ]
 
-        Failure err ->
+        Failed err ->
             div [ class "flex items-center justify-center", style "height" "calc(100vh - 8rem)" ]
                 [ ErrorState.viewSimple (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err) ]
 
-        _ ->
-            div [ class "flex flex-col", style "height" "calc(100vh - 8rem)" ]
-                [ viewToolbar model
-                , viewMessages model
-                , div [ class "flex flex-1 overflow-hidden" ]
-                    [ viewPalette
-                    , viewCanvasArea model
-                    , viewPropertyPanel model
-                    ]
-                , viewValidationPanel model
-                , viewStatusBar model
-                , viewPublishDialog model
-                ]
+        Loaded canvas ->
+            viewLoaded canvas
+
+
+{-| Loaded 状態の view
+-}
+viewLoaded : CanvasState -> Html Msg
+viewLoaded canvas =
+    div [ class "flex flex-col", style "height" "calc(100vh - 8rem)" ]
+        [ viewToolbar canvas
+        , viewMessages canvas
+        , div [ class "flex flex-1 overflow-hidden" ]
+            [ viewPalette
+            , viewCanvasArea canvas
+            , viewPropertyPanel canvas
+            ]
+        , viewValidationPanel canvas
+        , viewStatusBar canvas
+        , viewPublishDialog canvas
+        ]
 
 
 {-| ツールバー（定義名 + バリデーション・保存・公開ボタン）
 -}
-viewToolbar : Model -> Html Msg
-viewToolbar model =
+viewToolbar : CanvasState -> Html Msg
+viewToolbar canvas =
     div [ class "flex items-center gap-4 border-b border-secondary-200 bg-white px-4 py-2" ]
         [ h1 [ class "shrink-0 text-base font-semibold text-secondary-800" ]
             [ text "ワークフローデザイナー" ]
         , input
             [ type_ "text"
             , class "min-w-0 flex-1 rounded border border-secondary-300 px-3 py-1 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-            , value model.name
+            , value canvas.name
             , Html.Events.onInput UpdateDefinitionName
             , placeholder "定義名を入力"
             ]
@@ -789,11 +860,11 @@ viewToolbar model =
         , div [ class "flex shrink-0 gap-2" ]
             [ Button.view
                 { variant = Button.Outline
-                , disabled = model.isValidating
+                , disabled = canvas.isValidating
                 , onClick = ValidateClicked
                 }
                 [ text
-                    (if model.isValidating then
+                    (if canvas.isValidating then
                         "検証中..."
 
                      else
@@ -802,11 +873,11 @@ viewToolbar model =
                 ]
             , Button.view
                 { variant = Button.Primary
-                , disabled = model.isSaving || not model.isDirty_
+                , disabled = canvas.isSaving || not canvas.isDirty_
                 , onClick = SaveClicked
                 }
                 [ text
-                    (if model.isSaving then
+                    (if canvas.isSaving then
                         "保存中..."
 
                      else
@@ -815,11 +886,11 @@ viewToolbar model =
                 ]
             , Button.view
                 { variant = Button.Success
-                , disabled = model.isPublishing || model.isSaving || model.isValidating
+                , disabled = canvas.isPublishing || canvas.isSaving || canvas.isValidating
                 , onClick = PublishClicked
                 }
                 [ text
-                    (if model.isPublishing then
+                    (if canvas.isPublishing then
                         "公開中..."
 
                      else
@@ -832,12 +903,12 @@ viewToolbar model =
 
 {-| 成功・エラーメッセージ表示
 -}
-viewMessages : Model -> Html Msg
-viewMessages model =
+viewMessages : CanvasState -> Html Msg
+viewMessages canvas =
     MessageAlert.view
         { onDismiss = DismissMessage
-        , successMessage = model.successMessage
-        , errorMessage = model.errorMessage
+        , successMessage = canvas.successMessage
+        , errorMessage = canvas.errorMessage
         }
 
 
@@ -925,8 +996,8 @@ viewStepIcon stepType =
 背景クリック選択解除用のイベントのみ SVG 要素に設定。
 
 -}
-viewCanvasArea : Model -> Html Msg
-viewCanvasArea model =
+viewCanvasArea : CanvasState -> Html Msg
+viewCanvasArea canvas =
     div [ class "flex-1 overflow-hidden bg-secondary-50" ]
         [ svg
             [ SvgAttr.id canvasElementId
@@ -944,10 +1015,10 @@ viewCanvasArea model =
               viewArrowDefs
             , viewCanvasBackground
             , viewGrid
-            , viewTransitions model
-            , viewConnectionDragPreview model
-            , viewSteps model
-            , viewDragPreview model
+            , viewTransitions canvas
+            , viewConnectionDragPreview canvas
+            , viewSteps canvas
+            , viewDragPreview canvas
             ]
         ]
 
@@ -1023,19 +1094,19 @@ viewGrid =
 
 {-| 配置済みステップの描画
 -}
-viewSteps : Model -> Svg.Svg Msg
-viewSteps model =
+viewSteps : CanvasState -> Svg.Svg Msg
+viewSteps canvas =
     let
         errorStepIds =
-            model.validationResult
+            canvas.validationResult
                 |> Maybe.map .errors
                 |> Maybe.withDefault []
                 |> List.filterMap .stepId
     in
     Svg.g []
-        (model.steps
+        (canvas.steps
             |> Dict.values
-            |> List.map (viewStepNode model.selectedStepId errorStepIds)
+            |> List.map (viewStepNode canvas.selectedStepId errorStepIds)
         )
 
 
@@ -1210,24 +1281,24 @@ viewArrowMarker markerId color =
   - none: 実線 + グレー矢印
 
 -}
-viewTransitions : Model -> Svg.Svg Msg
-viewTransitions model =
+viewTransitions : CanvasState -> Svg.Svg Msg
+viewTransitions canvas =
     Svg.g []
-        (model.transitions
-            |> List.indexedMap (viewTransitionLine model)
+        (canvas.transitions
+            |> List.indexedMap (viewTransitionLine canvas)
         )
 
 
 {-| 個別の接続線描画
 -}
-viewTransitionLine : Model -> Int -> Transition -> Svg.Svg Msg
-viewTransitionLine model index transition =
+viewTransitionLine : CanvasState -> Int -> Transition -> Svg.Svg Msg
+viewTransitionLine canvas index transition =
     let
         fromStep =
-            Dict.get transition.from model.steps
+            Dict.get transition.from canvas.steps
 
         toStep =
-            Dict.get transition.to model.steps
+            Dict.get transition.to canvas.steps
     in
     case ( fromStep, toStep ) of
         ( Just from, Just to ) ->
@@ -1272,7 +1343,7 @@ viewTransitionLine model index transition =
                             ( "#94a3b8", "arrow-none", "" )
 
                 isSelected =
-                    model.selectedTransitionIndex == Just index
+                    canvas.selectedTransitionIndex == Just index
 
                 strokeWidth =
                     if isSelected then
@@ -1327,11 +1398,11 @@ viewTransitionLine model index transition =
 DraggingConnection 中、接続元の出力ポートから現在のマウス位置まで破線を描画する。
 
 -}
-viewConnectionDragPreview : Model -> Svg.Svg Msg
-viewConnectionDragPreview model =
-    case model.dragging of
+viewConnectionDragPreview : CanvasState -> Svg.Svg Msg
+viewConnectionDragPreview canvas =
+    case canvas.dragging of
         Just (DraggingConnection sourceId mousePos) ->
-            case Dict.get sourceId model.steps of
+            case Dict.get sourceId canvas.steps of
                 Just sourceStep ->
                     let
                         startPos =
@@ -1381,9 +1452,9 @@ viewConnectionDragPreview model =
 パレットからの新規配置時、マウス位置にゴーストステップを表示する。
 
 -}
-viewDragPreview : Model -> Svg.Svg Msg
-viewDragPreview model =
-    case model.dragging of
+viewDragPreview : CanvasState -> Svg.Svg Msg
+viewDragPreview canvas =
+    case canvas.dragging of
         Just (DraggingNewStep stepType pos) ->
             let
                 colors =
@@ -1445,20 +1516,20 @@ viewDragPreview model =
   - End: ステップ名 + 終了ステータス
 
 -}
-viewPropertyPanel : Model -> Html Msg
-viewPropertyPanel model =
+viewPropertyPanel : CanvasState -> Html Msg
+viewPropertyPanel canvas =
     div [ class "w-64 shrink-0 border-l border-secondary-200 bg-white p-4 overflow-y-auto" ]
         [ h2 [ class "mb-3 text-xs font-semibold uppercase tracking-wider text-secondary-500" ]
             [ text "プロパティ" ]
-        , case model.selectedStepId of
+        , case canvas.selectedStepId of
             Nothing ->
                 p [ class "text-sm text-secondary-400" ]
                     [ text "ステップを選択してください" ]
 
             Just stepId ->
-                case Dict.get stepId model.steps of
+                case Dict.get stepId canvas.steps of
                     Just step ->
-                        viewStepProperties model step
+                        viewStepProperties canvas step
 
                     Nothing ->
                         p [ class "text-sm text-secondary-400" ]
@@ -1468,8 +1539,8 @@ viewPropertyPanel model =
 
 {-| ステップ種別に応じたプロパティフィールド
 -}
-viewStepProperties : Model -> StepNode -> Html Msg
-viewStepProperties model step =
+viewStepProperties : CanvasState -> StepNode -> Html Msg
+viewStepProperties canvas step =
     div [ class "space-y-4" ]
         ([ -- 種別ラベル
            div [ class "mb-2" ]
@@ -1484,14 +1555,14 @@ viewStepProperties model step =
          -- ステップ名（全種別共通）
          , FormField.viewTextField
             { label = "ステップ名"
-            , value = model.propertyName
+            , value = canvas.propertyName
             , onInput = UpdatePropertyName
             , error = Nothing
             , inputType = "text"
             , placeholder = "ステップ名を入力"
             }
          ]
-            ++ viewStepTypeSpecificFields model step
+            ++ viewStepTypeSpecificFields canvas step
             ++ [ div [ class "mt-6 border-t border-secondary-200 pt-4" ]
                     [ Button.view
                         { variant = Button.Error
@@ -1508,8 +1579,8 @@ viewStepProperties model step =
 
 {-| ステップ種別固有のフィールド
 -}
-viewStepTypeSpecificFields : Model -> StepNode -> List (Html Msg)
-viewStepTypeSpecificFields model step =
+viewStepTypeSpecificFields : CanvasState -> StepNode -> List (Html Msg)
+viewStepTypeSpecificFields canvas step =
     case step.stepType of
         Start ->
             []
@@ -1520,7 +1591,7 @@ viewStepTypeSpecificFields model step =
         End ->
             [ FormField.viewSelectField
                 { label = "終了ステータス"
-                , value = model.propertyEndStatus
+                , value = canvas.propertyEndStatus
                 , onInput = UpdatePropertyEndStatus
                 , error = Nothing
                 , options =
@@ -1537,9 +1608,9 @@ viewStepTypeSpecificFields model step =
 キャンバス下部に表示。valid なら緑、invalid ならエラー一覧。
 
 -}
-viewValidationPanel : Model -> Html Msg
-viewValidationPanel model =
-    case model.validationResult of
+viewValidationPanel : CanvasState -> Html Msg
+viewValidationPanel canvas =
+    case canvas.validationResult of
         Just result ->
             if result.valid then
                 div [ class "border-t border-success-200 bg-success-50 px-4 py-2 text-sm text-success-700" ]
@@ -1581,13 +1652,13 @@ viewValidationError error =
 
 {-| ステータスバー
 -}
-viewStatusBar : Model -> Html Msg
-viewStatusBar model =
+viewStatusBar : CanvasState -> Html Msg
+viewStatusBar canvas =
     div [ class "border-t border-secondary-200 bg-white px-4 py-1.5 text-xs text-secondary-500" ]
         [ text
-            (String.fromInt (Dict.size model.steps)
+            (String.fromInt (Dict.size canvas.steps)
                 ++ " ステップ / "
-                ++ String.fromInt (List.length model.transitions)
+                ++ String.fromInt (List.length canvas.transitions)
                 ++ " 接続"
             )
         ]
@@ -1595,12 +1666,12 @@ viewStatusBar model =
 
 {-| 公開確認ダイアログ
 -}
-viewPublishDialog : Model -> Html Msg
-viewPublishDialog model =
-    if model.pendingPublish then
+viewPublishDialog : CanvasState -> Html Msg
+viewPublishDialog canvas =
+    if canvas.pendingPublish then
         ConfirmDialog.view
             { title = "ワークフロー定義を公開"
-            , message = "「" ++ model.name ++ "」を公開しますか？公開後はユーザーが申請に使用できるようになります。"
+            , message = "「" ++ canvas.name ++ "」を公開しますか？公開後はユーザーが申請に使用できるようになります。"
             , confirmLabel = "公開する"
             , cancelLabel = "キャンセル"
             , onConfirm = ConfirmPublish
