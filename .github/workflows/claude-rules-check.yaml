@@ -151,9 +151,43 @@ jobs:
             echo "REVIEW_MODE_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Get changed files
+        id: changed-files
+        if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+          gh pr diff "$PR_NUMBER" --name-only > /tmp/changed-files.txt
+
+      - name: Match rules to changed files
+        id: match-rules
+        if: steps.check-draft.outputs.is_draft == 'false'
+        run: |
+          {
+            echo "MATCHED_RULES<<EOF_MATCHED_RULES"
+            python3 .github/scripts/match-rules.py /tmp/changed-files.txt
+            echo "EOF_MATCHED_RULES"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Report skipped status for no matching rules
+        if: >
+          steps.check-draft.outputs.is_draft == 'false' &&
+          contains(steps.match-rules.outputs.MATCHED_RULES, '<!-- no-matching-rules -->')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "$STATUS_URL" \
+            -f state=success \
+            -f context="Claude Rules Check" \
+            -f description="Skipped (no matching rules)" \
+            -f target_url="$RUN_URL" || true
+
       - name: Run Claude Rules Check
         id: check
-        if: steps.check-draft.outputs.is_draft == 'false'
+        if: >
+          steps.check-draft.outputs.is_draft == 'false' &&
+          !contains(steps.match-rules.outputs.MATCHED_RULES, '<!-- no-matching-rules -->')
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -192,11 +226,17 @@ jobs:
             この PR が `.claude/rules/` に定義されたルールに準拠しているかチェックする。
             コードの品質や設計に関する詳細なレビューは別のワークフロー（Code Review）で行う。
 
+            ## マッチしたルール
+
+            以下のルールが今回の PR の変更ファイルにマッチしました。
+            ルールファイルを自分で読む必要はありません。以下の内容のみに基づいてチェックしてください。
+
+            ${{ steps.match-rules.outputs.MATCHED_RULES }}
+
             ## 手順
 
-            1. `gh pr diff` で変更されたファイルパスを取得
-            2. `.claude/rules/` 内の各ルールファイルを読み、`paths:` パターンとマッチするか確認
-            3. マッチしたルールファイルの内容に基づいて、変更がルールに準拠しているかチェック
+            1. `gh pr diff` で変更内容を確認
+            2. 上記のマッチしたルールに基づいて、変更がルールに準拠しているかチェック
 
             ## チェック観点
 
@@ -316,8 +356,8 @@ jobs:
               ```
           claude_args: |
             --model claude-sonnet-4-6
-            --max-turns 40
-            --allowedTools "Read,Bash(cat:*),Bash(grep:*),Bash(find:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
+            --max-turns 20
+            --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
       - name: Check rules result
         id: rules-result
