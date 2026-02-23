@@ -108,5 +108,5 @@ assert!(m.is_match("main.rs"));      // true
 - [rust-script 公式サイト](https://rust-script.org/)
 - [globset ドキュメント (docs.rs)](https://docs.rs/globset/)
 - [RFC 3424: cargo script](https://rust-lang.github.io/rfcs/3424-cargo-script.html)
-- ADR: [ADR-015 開発スクリプトの品質担保方針](../../docs/05_ADR/015_開発スクリプトの品質担保方針.md)
-- ADR: [ADR-056 CI スクリプトの言語選定方針](../../docs/05_ADR/056_CIスクリプトの言語選定方針.md)
+- ADR: [ADR-015 開発スクリプトの品質担保方針](../../05_ADR/015_開発スクリプトの品質担保方針.md)
+- ADR: [ADR-056 CI スクリプトの言語選定方針](../../05_ADR/056_CIスクリプトの言語選定方針.md)
