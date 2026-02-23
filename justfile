@@ -55,6 +55,7 @@ check-tools:
     @which cargo-llvm-cov > /dev/null || (echo "ERROR: cargo-llvm-cov がインストールされていません" && exit 1)
     @which cargo-machete > /dev/null || (echo "ERROR: cargo-machete がインストールされていません" && exit 1)
     @which sccache > /dev/null || (echo "ERROR: sccache がインストールされていません" && exit 1)
+    @which rust-script > /dev/null || (echo "ERROR: rust-script がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
@@ -427,7 +428,7 @@ lint-plans:
 
 # 計装（tracing::instrument）の漏れを検出
 check-instrumentation:
-    ./scripts/check/instrumentation.sh
+    rust-script ./scripts/check/instrumentation.rs
 
 # =============================================================================
 # 未使用依存チェック

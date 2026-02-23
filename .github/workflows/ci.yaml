@@ -735,6 +735,32 @@ jobs:
       - name: Check code duplicates
         run: just check-duplicates
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.0
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Cache rust-script
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/rust-script
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-rust-script-v1
+          restore-keys: |
+            ${{ runner.os }}-rust-script-
+
+      - name: Install rust-script
+        env:
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: sccache
+        run: ./scripts/ci/install-rust-script.sh
+
       - name: Check instrumentation
         run: just check-instrumentation
 
