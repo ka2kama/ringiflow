@@ -12,8 +12,7 @@ import Data.WorkflowDefinition exposing (ValidationResult, WorkflowDefinition)
 import Dict
 import Expect
 import Json.Encode as Encode
-import Page.WorkflowDefinition.Designer as Designer exposing (Model, Msg(..))
-import RemoteData exposing (RemoteData(..))
+import Page.WorkflowDefinition.Designer as Designer exposing (CanvasState, Model, Msg(..), PageState(..))
 import Shared exposing (Shared)
 import Test exposing (..)
 
@@ -48,6 +47,8 @@ testShared =
     Shared.init { apiBaseUrl = "", timezoneOffsetMinutes = 540 }
 
 
+{-| Loading 状態の初期モデル
+-}
 initModel : Model
 initModel =
     let
@@ -57,19 +58,46 @@ initModel =
     model
 
 
-{-| Bounds を設定したモデル（座標変換が機能する状態）
+{-| 全フィールドデフォルト値の CanvasState
 -}
-modelWithBounds : Model
-modelWithBounds =
-    { initModel
+defaultCanvas : CanvasState
+defaultCanvas =
+    { steps = Dict.empty
+    , transitions = []
+    , selectedStepId = Nothing
+    , selectedTransitionIndex = Nothing
+    , dragging = Nothing
+    , canvasBounds = Nothing
+    , nextStepNumber = 1
+    , propertyName = ""
+    , propertyEndStatus = ""
+    , name = ""
+    , description = ""
+    , version = 0
+    , isSaving = False
+    , successMessage = Nothing
+    , errorMessage = Nothing
+    , isDirty_ = False
+    , validationResult = Nothing
+    , isValidating = False
+    , isPublishing = False
+    , pendingPublish = False
+    }
+
+
+{-| Bounds を設定した CanvasState（座標変換が機能する状態）
+-}
+canvasWithBounds : CanvasState
+canvasWithBounds =
+    { defaultCanvas
         | canvasBounds = Just { x = 0, y = 0, width = 800, height = 600 }
     }
 
 
-{-| ステップが1つ配置済みのモデル
+{-| ステップが1つ配置済みの CanvasState
 -}
-modelWithOneStep : Model
-modelWithOneStep =
+canvasWithOneStep : CanvasState
+canvasWithOneStep =
     let
         step =
             { id = "approval_1"
@@ -80,10 +108,73 @@ modelWithOneStep =
             , endStatus = Nothing
             }
     in
-    { modelWithBounds
+    { canvasWithBounds
         | steps = Dict.singleton "approval_1" step
         , nextStepNumber = 2
     }
+
+
+{-| End ステップ付きの CanvasState
+-}
+canvasWithEndStep : CanvasState
+canvasWithEndStep =
+    let
+        endStep =
+            { id = "end_1"
+            , stepType = End
+            , name = "終了"
+            , position = { x = 400, y = 100 }
+            , assignee = Nothing
+            , endStatus = Just "approved"
+            }
+    in
+    { canvasWithBounds
+        | steps = Dict.singleton "end_1" endStep
+        , nextStepNumber = 2
+    }
+
+
+{-| Loaded 状態の基本モデル
+-}
+baseModel : Model
+baseModel =
+    { shared = testShared
+    , definitionId = "test-def-id"
+    , state = Loaded defaultCanvas
+    }
+
+
+{-| Bounds を設定したモデル（座標変換が機能する状態）
+-}
+modelWithBounds : Model
+modelWithBounds =
+    { baseModel | state = Loaded canvasWithBounds }
+
+
+{-| ステップが1つ配置済みのモデル
+-}
+modelWithOneStep : Model
+modelWithOneStep =
+    { baseModel | state = Loaded canvasWithOneStep }
+
+
+{-| End ステップ付きのモデル
+-}
+modelWithEndStep : Model
+modelWithEndStep =
+    { baseModel | state = Loaded canvasWithEndStep }
+
+
+{-| Loaded 状態の CanvasState に対してアサーションを実行するヘルパー
+-}
+expectLoaded : (CanvasState -> Expect.Expectation) -> Model -> Expect.Expectation
+expectLoaded assertion model =
+    case model.state of
+        Loaded canvas ->
+            assertion canvas
+
+        _ ->
+            Expect.fail "Expected Loaded state"
 
 
 
@@ -99,12 +190,16 @@ paletteMouseDownTests =
                     ( newModel, _ ) =
                         Designer.update (PaletteMouseDown Start) modelWithBounds
                 in
-                case newModel.dragging of
-                    Just (DraggingNewStep Start _) ->
-                        Expect.pass
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case canvas.dragging of
+                                Just (DraggingNewStep Start _) ->
+                                    Expect.pass
 
-                    _ ->
-                        Expect.fail "Expected DraggingNewStep Start"
+                                _ ->
+                                    Expect.fail "Expected DraggingNewStep Start"
+                        )
         ]
 
 
@@ -119,47 +214,57 @@ canvasMouseUpTests =
             \_ ->
                 let
                     draggingModel =
-                        { modelWithBounds
-                            | dragging = Just (DraggingNewStep Approval { x = 200, y = 100 })
+                        { baseModel
+                            | state = Loaded { canvasWithBounds | dragging = Just (DraggingNewStep Approval { x = 200, y = 100 }) }
                         }
 
                     ( newModel, _ ) =
                         Designer.update CanvasMouseUp draggingModel
                 in
-                Expect.all
-                    [ \m -> Dict.size m.steps |> Expect.equal 1
-                    , \m -> m.dragging |> Expect.equal Nothing
-                    , \m -> m.nextStepNumber |> Expect.equal 2
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> Dict.size c.steps |> Expect.equal 1
+                                , \c -> c.dragging |> Expect.equal Nothing
+                                , \c -> c.nextStepNumber |> Expect.equal 2
+                                ]
+                                canvas
+                        )
         , test "dragging が Nothing にリセットされる" <|
             \_ ->
                 let
                     draggingModel =
-                        { modelWithBounds
-                            | dragging = Just (DraggingNewStep Start { x = 100, y = 100 })
+                        { baseModel
+                            | state = Loaded { canvasWithBounds | dragging = Just (DraggingNewStep Start { x = 100, y = 100 }) }
                         }
 
                     ( newModel, _ ) =
                         Designer.update CanvasMouseUp draggingModel
                 in
-                newModel.dragging |> Expect.equal Nothing
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.dragging |> Expect.equal Nothing)
         , test "DraggingExistingStep 時に dragging が Nothing になり位置が確定する" <|
             \_ ->
                 let
                     draggingModel =
-                        { modelWithOneStep
-                            | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 })
+                        { baseModel
+                            | state = Loaded { canvasWithOneStep | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 }) }
                         }
 
                     ( newModel, _ ) =
                         Designer.update CanvasMouseUp draggingModel
                 in
-                Expect.all
-                    [ \m -> m.dragging |> Expect.equal Nothing
-                    , \m -> Dict.size m.steps |> Expect.equal 1
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.dragging |> Expect.equal Nothing
+                                , \c -> Dict.size c.steps |> Expect.equal 1
+                                ]
+                                canvas
+                        )
         ]
 
 
@@ -174,46 +279,54 @@ canvasMouseMoveTests =
             \_ ->
                 let
                     draggingModel =
-                        { modelWithBounds
-                            | dragging = Just (DraggingNewStep Start { x = 100, y = 100 })
+                        { baseModel
+                            | state = Loaded { canvasWithBounds | dragging = Just (DraggingNewStep Start { x = 100, y = 100 }) }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (CanvasMouseMove 300 200) draggingModel
                 in
-                case newModel.dragging of
-                    Just (DraggingNewStep Start pos) ->
-                        Expect.all
-                            [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 300
-                            , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 200
-                            ]
-                            pos
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case canvas.dragging of
+                                Just (DraggingNewStep Start pos) ->
+                                    Expect.all
+                                        [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 300
+                                        , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 200
+                                        ]
+                                        pos
 
-                    _ ->
-                        Expect.fail "Expected DraggingNewStep with updated position"
+                                _ ->
+                                    Expect.fail "Expected DraggingNewStep with updated position"
+                        )
         , test "DraggingExistingStep 時にステップ位置がグリッドスナップで更新される" <|
             \_ ->
                 let
                     draggingModel =
-                        { modelWithOneStep
-                            | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 })
+                        { baseModel
+                            | state = Loaded { canvasWithOneStep | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 }) }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (CanvasMouseMove 400 300) draggingModel
                 in
-                case Dict.get "approval_1" newModel.steps of
-                    Just step ->
-                        -- clientX=400 → canvas 400, offset 10 → 390 → snap to 400
-                        -- clientY=300 → canvas 300, offset 10 → 290 → snap to 300
-                        Expect.all
-                            [ \s -> s.position.x |> Expect.within (Expect.Absolute 0.1) 400
-                            , \s -> s.position.y |> Expect.within (Expect.Absolute 0.1) 300
-                            ]
-                            step
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case Dict.get "approval_1" canvas.steps of
+                                Just step ->
+                                    -- clientX=400 → canvas 400, offset 10 → 390 → snap to 400
+                                    -- clientY=300 → canvas 300, offset 10 → 290 → snap to 300
+                                    Expect.all
+                                        [ \s -> s.position.x |> Expect.within (Expect.Absolute 0.1) 400
+                                        , \s -> s.position.y |> Expect.within (Expect.Absolute 0.1) 300
+                                        ]
+                                        step
 
-                    Nothing ->
-                        Expect.fail "Step not found"
+                                Nothing ->
+                                    Expect.fail "Step not found"
+                        )
         ]
 
 
@@ -230,7 +343,9 @@ stepClickedTests =
                     ( newModel, _ ) =
                         Designer.update (StepClicked "approval_1") modelWithOneStep
                 in
-                newModel.selectedStepId |> Expect.equal (Just "approval_1")
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.selectedStepId |> Expect.equal (Just "approval_1"))
         ]
 
 
@@ -245,12 +360,14 @@ canvasBackgroundClickedTests =
             \_ ->
                 let
                     selectedModel =
-                        { modelWithOneStep | selectedStepId = Just "approval_1" }
+                        { baseModel | state = Loaded { canvasWithOneStep | selectedStepId = Just "approval_1" } }
 
                     ( newModel, _ ) =
                         Designer.update CanvasBackgroundClicked selectedModel
                 in
-                newModel.selectedStepId |> Expect.equal Nothing
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.selectedStepId |> Expect.equal Nothing)
         ]
 
 
@@ -270,24 +387,30 @@ stepMouseDownTests =
                     ( newModel, _ ) =
                         Designer.update (StepMouseDown "approval_1" 230 120) modelWithOneStep
                 in
-                case newModel.dragging of
-                    Just (DraggingExistingStep stepId offset) ->
-                        Expect.all
-                            [ \_ -> stepId |> Expect.equal "approval_1"
-                            , \_ -> offset.x |> Expect.within (Expect.Absolute 0.1) 30
-                            , \_ -> offset.y |> Expect.within (Expect.Absolute 0.1) 20
-                            ]
-                            ()
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case canvas.dragging of
+                                Just (DraggingExistingStep stepId offset) ->
+                                    Expect.all
+                                        [ \_ -> stepId |> Expect.equal "approval_1"
+                                        , \_ -> offset.x |> Expect.within (Expect.Absolute 0.1) 30
+                                        , \_ -> offset.y |> Expect.within (Expect.Absolute 0.1) 20
+                                        ]
+                                        ()
 
-                    _ ->
-                        Expect.fail "Expected DraggingExistingStep"
+                                _ ->
+                                    Expect.fail "Expected DraggingExistingStep"
+                        )
         , test "selectedStepId も設定される" <|
             \_ ->
                 let
                     ( newModel, _ ) =
                         Designer.update (StepMouseDown "approval_1" 230 120) modelWithOneStep
                 in
-                newModel.selectedStepId |> Expect.equal (Just "approval_1")
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.selectedStepId |> Expect.equal (Just "approval_1"))
         ]
 
 
@@ -302,37 +425,47 @@ keyDownTests =
             \_ ->
                 let
                     selectedModel =
-                        { modelWithOneStep | selectedStepId = Just "approval_1" }
+                        { baseModel | state = Loaded { canvasWithOneStep | selectedStepId = Just "approval_1" } }
 
                     ( newModel, _ ) =
                         Designer.update (KeyDown "Delete") selectedModel
                 in
-                Expect.all
-                    [ \m -> Dict.size m.steps |> Expect.equal 0
-                    , \m -> m.selectedStepId |> Expect.equal Nothing
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> Dict.size c.steps |> Expect.equal 0
+                                , \c -> c.selectedStepId |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         , test "Delete で選択中ステップがない場合は何も起きない" <|
             \_ ->
                 let
                     ( newModel, _ ) =
                         Designer.update (KeyDown "Delete") modelWithOneStep
                 in
-                Dict.size newModel.steps |> Expect.equal 1
+                newModel
+                    |> expectLoaded
+                        (\canvas -> Dict.size canvas.steps |> Expect.equal 1)
         , test "Backspace でも選択中ステップが削除される" <|
             \_ ->
                 let
                     selectedModel =
-                        { modelWithOneStep | selectedStepId = Just "approval_1" }
+                        { baseModel | state = Loaded { canvasWithOneStep | selectedStepId = Just "approval_1" } }
 
                     ( newModel, _ ) =
                         Designer.update (KeyDown "Backspace") selectedModel
                 in
-                Expect.all
-                    [ \m -> Dict.size m.steps |> Expect.equal 0
-                    , \m -> m.selectedStepId |> Expect.equal Nothing
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> Dict.size c.steps |> Expect.equal 0
+                                , \c -> c.selectedStepId |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         ]
 
 
@@ -349,12 +482,16 @@ connectionPortMouseDownTests =
                     ( newModel, _ ) =
                         Designer.update (ConnectionPortMouseDown "approval_1" 320 130) modelWithOneStep
                 in
-                case newModel.dragging of
-                    Just (DraggingConnection sourceId _) ->
-                        sourceId |> Expect.equal "approval_1"
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case canvas.dragging of
+                                Just (DraggingConnection sourceId _) ->
+                                    sourceId |> Expect.equal "approval_1"
 
-                    _ ->
-                        Expect.fail "Expected DraggingConnection"
+                                _ ->
+                                    Expect.fail "Expected DraggingConnection"
+                        )
         ]
 
 
@@ -369,29 +506,41 @@ transitionClickedTests =
             \_ ->
                 let
                     modelWithTransitions =
-                        { modelWithOneStep
-                            | transitions =
-                                [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (TransitionClicked 0) modelWithTransitions
                 in
-                newModel.selectedTransitionIndex |> Expect.equal (Just 0)
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.selectedTransitionIndex |> Expect.equal (Just 0))
         , test "CanvasBackgroundClicked で selectedTransitionIndex が Nothing になる" <|
             \_ ->
                 let
                     modelWithSelection =
-                        { modelWithOneStep
-                            | transitions =
-                                [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
-                            , selectedTransitionIndex = Just 0
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                                        , selectedTransitionIndex = Just 0
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update CanvasBackgroundClicked modelWithSelection
                 in
-                newModel.selectedTransitionIndex |> Expect.equal Nothing
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.selectedTransitionIndex |> Expect.equal Nothing)
         ]
 
 
@@ -415,82 +564,78 @@ connectionKeyDownTests =
                         }
 
                     modelWithTransitions =
-                        { modelWithOneStep
-                            | steps =
-                                Dict.fromList
-                                    [ ( "start_1", startStep )
-                                    , ( "approval_1"
-                                      , { id = "approval_1"
-                                        , stepType = Approval
-                                        , name = "承認"
-                                        , position = { x = 300, y = 100 }
-                                        , assignee = Nothing
-                                        , endStatus = Nothing
-                                        }
-                                      )
-                                    ]
-                            , transitions =
-                                [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
-                            , selectedStepId = Just "start_1"
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | steps =
+                                            Dict.fromList
+                                                [ ( "start_1", startStep )
+                                                , ( "approval_1"
+                                                  , { id = "approval_1"
+                                                    , stepType = Approval
+                                                    , name = "承認"
+                                                    , position = { x = 300, y = 100 }
+                                                    , assignee = Nothing
+                                                    , endStatus = Nothing
+                                                    }
+                                                  )
+                                                ]
+                                        , transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                                        , selectedStepId = Just "start_1"
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (KeyDown "Delete") modelWithTransitions
                 in
-                Expect.all
-                    [ \m -> Dict.member "start_1" m.steps |> Expect.equal False
-                    , \m -> List.length m.transitions |> Expect.equal 0
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> Dict.member "start_1" c.steps |> Expect.equal False
+                                , \c -> List.length c.transitions |> Expect.equal 0
+                                ]
+                                canvas
+                        )
         , test "Delete で selectedTransitionIndex 時に該当 transition が削除される" <|
             \_ ->
                 let
                     modelWithTransitions =
-                        { modelWithOneStep
-                            | transitions =
-                                [ { from = "start_1", to = "approval_1", trigger = Nothing }
-                                , { from = "approval_1", to = "end_1", trigger = Just "approve" }
-                                ]
-                            , selectedTransitionIndex = Just 0
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing }
+                                            , { from = "approval_1", to = "end_1", trigger = Just "approve" }
+                                            ]
+                                        , selectedTransitionIndex = Just 0
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (KeyDown "Delete") modelWithTransitions
                 in
-                Expect.all
-                    [ \m -> List.length m.transitions |> Expect.equal 1
-                    , \m ->
-                        List.head m.transitions
-                            |> Maybe.map .from
-                            |> Expect.equal (Just "approval_1")
-                    , \m -> m.selectedTransitionIndex |> Expect.equal Nothing
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> List.length c.transitions |> Expect.equal 1
+                                , \c ->
+                                    List.head c.transitions
+                                        |> Maybe.map .from
+                                        |> Expect.equal (Just "approval_1")
+                                , \c -> c.selectedTransitionIndex |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         ]
 
 
 
 -- Property Panel
-
-
-{-| End ステップ付きのモデル
--}
-modelWithEndStep : Model
-modelWithEndStep =
-    let
-        endStep =
-            { id = "end_1"
-            , stepType = End
-            , name = "終了"
-            , position = { x = 400, y = 100 }
-            , assignee = Nothing
-            , endStatus = Just "approved"
-            }
-    in
-    { modelWithBounds
-        | steps = Dict.singleton "end_1" endStep
-        , nextStepNumber = 2
-    }
 
 
 propertyPanelTests : Test
@@ -502,91 +647,127 @@ propertyPanelTests =
                     ( newModel, _ ) =
                         Designer.update (StepClicked "approval_1") modelWithOneStep
                 in
-                newModel.propertyName |> Expect.equal "承認"
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.propertyName |> Expect.equal "承認")
         , test "StepClicked 後に propertyEndStatus が endStatus の値に同期される" <|
             \_ ->
                 let
                     ( newModel, _ ) =
                         Designer.update (StepClicked "end_1") modelWithEndStep
                 in
-                newModel.propertyEndStatus |> Expect.equal "approved"
+                newModel
+                    |> expectLoaded
+                        (\canvas -> canvas.propertyEndStatus |> Expect.equal "approved")
         , test "UpdatePropertyName でステップの name がリアルタイム更新される" <|
             \_ ->
                 let
                     selectedModel =
-                        { modelWithOneStep
-                            | selectedStepId = Just "approval_1"
-                            , propertyName = "承認"
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | selectedStepId = Just "approval_1"
+                                        , propertyName = "承認"
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (UpdatePropertyName "レビュー") selectedModel
                 in
-                Expect.all
-                    [ \m -> m.propertyName |> Expect.equal "レビュー"
-                    , \m ->
-                        Dict.get "approval_1" m.steps
-                            |> Maybe.map .name
-                            |> Expect.equal (Just "レビュー")
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.propertyName |> Expect.equal "レビュー"
+                                , \c ->
+                                    Dict.get "approval_1" c.steps
+                                        |> Maybe.map .name
+                                        |> Expect.equal (Just "レビュー")
+                                ]
+                                canvas
+                        )
         , test "UpdatePropertyEndStatus \"approved\" で endStatus が Just \"approved\" になる" <|
             \_ ->
                 let
                     selectedModel =
-                        { modelWithEndStep
-                            | selectedStepId = Just "end_1"
-                            , propertyEndStatus = ""
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithEndStep
+                                        | selectedStepId = Just "end_1"
+                                        , propertyEndStatus = ""
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (UpdatePropertyEndStatus "approved") selectedModel
                 in
-                Expect.all
-                    [ \m -> m.propertyEndStatus |> Expect.equal "approved"
-                    , \m ->
-                        Dict.get "end_1" m.steps
-                            |> Maybe.andThen .endStatus
-                            |> Expect.equal (Just "approved")
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.propertyEndStatus |> Expect.equal "approved"
+                                , \c ->
+                                    Dict.get "end_1" c.steps
+                                        |> Maybe.andThen .endStatus
+                                        |> Expect.equal (Just "approved")
+                                ]
+                                canvas
+                        )
         , test "UpdatePropertyEndStatus \"\" で endStatus が Nothing になる" <|
             \_ ->
                 let
                     selectedModel =
-                        { modelWithEndStep
-                            | selectedStepId = Just "end_1"
-                            , propertyEndStatus = "approved"
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithEndStep
+                                        | selectedStepId = Just "end_1"
+                                        , propertyEndStatus = "approved"
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update (UpdatePropertyEndStatus "") selectedModel
                 in
-                Expect.all
-                    [ \m -> m.propertyEndStatus |> Expect.equal ""
-                    , \m ->
-                        Dict.get "end_1" m.steps
-                            |> Maybe.andThen .endStatus
-                            |> Expect.equal Nothing
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.propertyEndStatus |> Expect.equal ""
+                                , \c ->
+                                    Dict.get "end_1" c.steps
+                                        |> Maybe.andThen .endStatus
+                                        |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         , test "CanvasBackgroundClicked で propertyName がクリアされる" <|
             \_ ->
                 let
                     selectedModel =
-                        { modelWithOneStep
-                            | selectedStepId = Just "approval_1"
-                            , propertyName = "承認"
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | selectedStepId = Just "approval_1"
+                                        , propertyName = "承認"
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update CanvasBackgroundClicked selectedModel
                 in
-                Expect.all
-                    [ \m -> m.propertyName |> Expect.equal ""
-                    , \m -> m.selectedStepId |> Expect.equal Nothing
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.propertyName |> Expect.equal ""
+                                , \c -> c.selectedStepId |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         ]
 
 
@@ -602,8 +783,12 @@ dragBoundsTests =
                 let
                     -- ステップ (200, 100)、offset (10, 10) でドラッグ中
                     draggingModel =
-                        { modelWithOneStep
-                            | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 })
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | dragging = Just (DraggingExistingStep "approval_1" { x = 10, y = 10 })
+                                    }
                         }
 
                     -- clientX=750, clientY=550 → canvas (750, 550)（1:1 変換）
@@ -612,48 +797,60 @@ dragBoundsTests =
                     ( newModel, _ ) =
                         Designer.update (CanvasMouseMove 750 550) draggingModel
                 in
-                case Dict.get "approval_1" newModel.steps of
-                    Just step ->
-                        Expect.all
-                            [ \s ->
-                                s.position.x
-                                    |> Expect.within (Expect.Absolute 0.1)
-                                        (DesignerCanvas.viewBoxWidth - DesignerCanvas.stepDimensions.width)
-                            , \s ->
-                                s.position.y
-                                    |> Expect.within (Expect.Absolute 0.1)
-                                        (DesignerCanvas.viewBoxHeight - DesignerCanvas.stepDimensions.height)
-                            ]
-                            step
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case Dict.get "approval_1" canvas.steps of
+                                Just step ->
+                                    Expect.all
+                                        [ \s ->
+                                            s.position.x
+                                                |> Expect.within (Expect.Absolute 0.1)
+                                                    (DesignerCanvas.viewBoxWidth - DesignerCanvas.stepDimensions.width)
+                                        , \s ->
+                                            s.position.y
+                                                |> Expect.within (Expect.Absolute 0.1)
+                                                    (DesignerCanvas.viewBoxHeight - DesignerCanvas.stepDimensions.height)
+                                        ]
+                                        step
 
-                    Nothing ->
-                        Expect.fail "Step not found"
+                                Nothing ->
+                                    Expect.fail "Step not found"
+                        )
         , test "DraggingNewStep のドロップ位置が viewBox 内に制約される" <|
             \_ ->
                 let
                     -- viewBox 外にドラッグ
                     draggingModel =
-                        { modelWithBounds
-                            | dragging = Just (DraggingNewStep Approval { x = 750, y = 550 })
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithBounds
+                                        | dragging = Just (DraggingNewStep Approval { x = 750, y = 550 })
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update CanvasMouseUp draggingModel
                 in
-                case Dict.values newModel.steps |> List.head of
-                    Just step ->
-                        Expect.all
-                            [ \s ->
-                                s.position.x
-                                    |> Expect.atMost (DesignerCanvas.viewBoxWidth - DesignerCanvas.stepDimensions.width)
-                            , \s ->
-                                s.position.y
-                                    |> Expect.atMost (DesignerCanvas.viewBoxHeight - DesignerCanvas.stepDimensions.height)
-                            ]
-                            step
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            case Dict.values canvas.steps |> List.head of
+                                Just step ->
+                                    Expect.all
+                                        [ \s ->
+                                            s.position.x
+                                                |> Expect.atMost (DesignerCanvas.viewBoxWidth - DesignerCanvas.stepDimensions.width)
+                                        , \s ->
+                                            s.position.y
+                                                |> Expect.atMost (DesignerCanvas.viewBoxHeight - DesignerCanvas.stepDimensions.height)
+                                        ]
+                                        step
 
-                    Nothing ->
-                        Expect.fail "No step created"
+                                Nothing ->
+                                    Expect.fail "No step created"
+                        )
         ]
 
 
@@ -668,16 +865,20 @@ deleteSelectedStepTests =
             \_ ->
                 let
                     selectedModel =
-                        { modelWithOneStep | selectedStepId = Just "approval_1" }
+                        { baseModel | state = Loaded { canvasWithOneStep | selectedStepId = Just "approval_1" } }
 
                     ( newModel, _ ) =
                         Designer.update DeleteSelectedStep selectedModel
                 in
-                Expect.all
-                    [ \m -> Dict.size m.steps |> Expect.equal 0
-                    , \m -> m.selectedStepId |> Expect.equal Nothing
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> Dict.size c.steps |> Expect.equal 0
+                                , \c -> c.selectedStepId |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         , test "関連する接続線も削除される" <|
             \_ ->
                 let
@@ -691,40 +892,50 @@ deleteSelectedStepTests =
                         }
 
                     modelWithTransitions =
-                        { modelWithOneStep
-                            | steps =
-                                Dict.fromList
-                                    [ ( "start_1", startStep )
-                                    , ( "approval_1"
-                                      , { id = "approval_1"
-                                        , stepType = Approval
-                                        , name = "承認"
-                                        , position = { x = 300, y = 100 }
-                                        , assignee = Nothing
-                                        , endStatus = Nothing
-                                        }
-                                      )
-                                    ]
-                            , transitions =
-                                [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
-                            , selectedStepId = Just "approval_1"
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithOneStep
+                                        | steps =
+                                            Dict.fromList
+                                                [ ( "start_1", startStep )
+                                                , ( "approval_1"
+                                                  , { id = "approval_1"
+                                                    , stepType = Approval
+                                                    , name = "承認"
+                                                    , position = { x = 300, y = 100 }
+                                                    , assignee = Nothing
+                                                    , endStatus = Nothing
+                                                    }
+                                                  )
+                                                ]
+                                        , transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                                        , selectedStepId = Just "approval_1"
+                                    }
                         }
 
                     ( newModel, _ ) =
                         Designer.update DeleteSelectedStep modelWithTransitions
                 in
-                Expect.all
-                    [ \m -> Dict.member "approval_1" m.steps |> Expect.equal False
-                    , \m -> List.length m.transitions |> Expect.equal 0
-                    ]
-                    newModel
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> Dict.member "approval_1" c.steps |> Expect.equal False
+                                , \c -> List.length c.transitions |> Expect.equal 0
+                                ]
+                                canvas
+                        )
         , test "ステップ未選択時は何もしない" <|
             \_ ->
                 let
                     ( newModel, _ ) =
                         Designer.update DeleteSelectedStep modelWithOneStep
                 in
-                Dict.size newModel.steps |> Expect.equal 1
+                newModel
+                    |> expectLoaded
+                        (\canvas -> Dict.size canvas.steps |> Expect.equal 1)
         ]
 
 
@@ -749,6 +960,9 @@ testDefinition =
 
 
 {-| ロード完了済みモデル（API テストの基盤）
+
+GotDefinition 経由で構築された canvas を持つ。
+
 -}
 loadedModel : Model
 loadedModel =
@@ -759,26 +973,42 @@ loadedModel =
     model
 
 
+{-| ロード完了済みの CanvasState
+-}
+loadedCanvas : CanvasState
+loadedCanvas =
+    case loadedModel.state of
+        Loaded canvas ->
+            canvas
+
+        _ ->
+            defaultCanvas
+
+
 apiIntegrationTests : Test
 apiIntegrationTests =
     describe "API Integration"
-        [ test "GotDefinition Ok でロード状態が Success になる" <|
+        [ test "GotDefinition Ok でロード状態が Loaded になる" <|
             \_ ->
-                case loadedModel.loadState of
-                    Success _ ->
+                case loadedModel.state of
+                    Loaded _ ->
                         Expect.pass
 
                     _ ->
-                        Expect.fail "Expected Success"
+                        Expect.fail "Expected Loaded"
         , test "GotDefinition Ok で name と version が設定される" <|
             \_ ->
-                Expect.all
-                    [ \m -> m.name |> Expect.equal "テスト定義"
-                    , \m -> m.description |> Expect.equal "テスト説明"
-                    , \m -> m.version |> Expect.equal 1
-                    ]
-                    loadedModel
-        , test "GotDefinition Err でロード状態が Failure になる" <|
+                loadedModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.name |> Expect.equal "テスト定義"
+                                , \c -> c.description |> Expect.equal "テスト説明"
+                                , \c -> c.version |> Expect.equal 1
+                                ]
+                                canvas
+                        )
+        , test "GotDefinition Err でロード状態が Failed になる" <|
             \_ ->
                 let
                     ( model, _ ) =
@@ -786,24 +1016,26 @@ apiIntegrationTests =
                             (GotDefinition (Err NetworkError))
                             initModel
                 in
-                case model.loadState of
-                    Failure _ ->
+                case model.state of
+                    Failed _ ->
                         Expect.pass
 
                     _ ->
-                        Expect.fail "Expected Failure"
+                        Expect.fail "Expected Failed"
         , test "SaveClicked で isSaving が True になる" <|
             \_ ->
                 let
                     ( model, _ ) =
                         Designer.update SaveClicked loadedModel
                 in
-                model.isSaving |> Expect.equal True
+                model
+                    |> expectLoaded
+                        (\canvas -> canvas.isSaving |> Expect.equal True)
         , test "GotSaveResult Ok で isSaving が False になり version が更新される" <|
             \_ ->
                 let
                     savingModel =
-                        { loadedModel | isSaving = True, isDirty_ = True }
+                        { baseModel | state = Loaded { loadedCanvas | isSaving = True, isDirty_ = True } }
 
                     updatedDef =
                         { testDefinition | version = 2 }
@@ -811,57 +1043,77 @@ apiIntegrationTests =
                     ( model, _ ) =
                         Designer.update (GotSaveResult (Ok updatedDef)) savingModel
                 in
-                Expect.all
-                    [ \m -> m.isSaving |> Expect.equal False
-                    , \m -> m.version |> Expect.equal 2
-                    , \m -> m.successMessage |> Expect.equal (Just "保存しました")
-                    , \m -> m.isDirty_ |> Expect.equal False
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.isSaving |> Expect.equal False
+                                , \c -> c.version |> Expect.equal 2
+                                , \c -> c.successMessage |> Expect.equal (Just "保存しました")
+                                , \c -> c.isDirty_ |> Expect.equal False
+                                ]
+                                canvas
+                        )
         , test "GotSaveResult Err で errorMessage が設定される" <|
             \_ ->
                 let
                     savingModel =
-                        { loadedModel | isSaving = True }
+                        { baseModel | state = Loaded { loadedCanvas | isSaving = True } }
 
                     ( model, _ ) =
                         Designer.update
                             (GotSaveResult (Err NetworkError))
                             savingModel
                 in
-                Expect.all
-                    [ \m -> m.isSaving |> Expect.equal False
-                    , \m -> m.errorMessage |> Expect.notEqual Nothing
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.isSaving |> Expect.equal False
+                                , \c -> c.errorMessage |> Expect.notEqual Nothing
+                                ]
+                                canvas
+                        )
         , test "DismissMessage で successMessage と errorMessage がクリアされる" <|
             \_ ->
                 let
                     modelWithMessages =
-                        { loadedModel
-                            | successMessage = Just "保存しました"
-                            , errorMessage = Just "エラー"
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { loadedCanvas
+                                        | successMessage = Just "保存しました"
+                                        , errorMessage = Just "エラー"
+                                    }
                         }
 
                     ( model, _ ) =
                         Designer.update DismissMessage modelWithMessages
                 in
-                Expect.all
-                    [ \m -> m.successMessage |> Expect.equal Nothing
-                    , \m -> m.errorMessage |> Expect.equal Nothing
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.successMessage |> Expect.equal Nothing
+                                , \c -> c.errorMessage |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         , test "UpdateDefinitionName で name が更新され isDirty_ が True になる" <|
             \_ ->
                 let
                     ( model, _ ) =
                         Designer.update (UpdateDefinitionName "新しい名前") loadedModel
                 in
-                Expect.all
-                    [ \m -> m.name |> Expect.equal "新しい名前"
-                    , \m -> m.isDirty_ |> Expect.equal True
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.name |> Expect.equal "新しい名前"
+                                , \c -> c.isDirty_ |> Expect.equal True
+                                ]
+                                canvas
+                        )
         ]
 
 
@@ -878,12 +1130,14 @@ validationAndPublishTests =
                     ( model, _ ) =
                         Designer.update ValidateClicked loadedModel
                 in
-                model.isValidating |> Expect.equal True
+                model
+                    |> expectLoaded
+                        (\canvas -> canvas.isValidating |> Expect.equal True)
         , test "GotValidationResult Ok (valid=true) で validationResult が設定される" <|
             \_ ->
                 let
                     validatingModel =
-                        { loadedModel | isValidating = True }
+                        { baseModel | state = Loaded { loadedCanvas | isValidating = True } }
 
                     validResult : ValidationResult
                     validResult =
@@ -892,16 +1146,20 @@ validationAndPublishTests =
                     ( model, _ ) =
                         Designer.update (GotValidationResult (Ok validResult)) validatingModel
                 in
-                Expect.all
-                    [ \m -> m.isValidating |> Expect.equal False
-                    , \m -> m.validationResult |> Expect.equal (Just validResult)
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.isValidating |> Expect.equal False
+                                , \c -> c.validationResult |> Expect.equal (Just validResult)
+                                ]
+                                canvas
+                        )
         , test "GotValidationResult Ok (valid=false) でエラー情報が設定される" <|
             \_ ->
                 let
                     validatingModel =
-                        { loadedModel | isValidating = True }
+                        { baseModel | state = Loaded { loadedCanvas | isValidating = True } }
 
                     invalidResult : ValidationResult
                     invalidResult =
@@ -917,45 +1175,55 @@ validationAndPublishTests =
                     ( model, _ ) =
                         Designer.update (GotValidationResult (Ok invalidResult)) validatingModel
                 in
-                Expect.all
-                    [ \m -> m.isValidating |> Expect.equal False
-                    , \m ->
-                        m.validationResult
-                            |> Maybe.map .valid
-                            |> Expect.equal (Just False)
-                    , \m ->
-                        m.validationResult
-                            |> Maybe.map .errors
-                            |> Maybe.map List.length
-                            |> Expect.equal (Just 1)
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.isValidating |> Expect.equal False
+                                , \c ->
+                                    c.validationResult
+                                        |> Maybe.map .valid
+                                        |> Expect.equal (Just False)
+                                , \c ->
+                                    c.validationResult
+                                        |> Maybe.map .errors
+                                        |> Maybe.map List.length
+                                        |> Expect.equal (Just 1)
+                                ]
+                                canvas
+                        )
         , test "GotValidationResult Err で errorMessage が設定される" <|
             \_ ->
                 let
                     validatingModel =
-                        { loadedModel | isValidating = True }
+                        { baseModel | state = Loaded { loadedCanvas | isValidating = True } }
 
                     ( model, _ ) =
                         Designer.update (GotValidationResult (Err NetworkError)) validatingModel
                 in
-                Expect.all
-                    [ \m -> m.isValidating |> Expect.equal False
-                    , \m -> m.errorMessage |> Expect.notEqual Nothing
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.isValidating |> Expect.equal False
+                                , \c -> c.errorMessage |> Expect.notEqual Nothing
+                                ]
+                                canvas
+                        )
         , test "PublishClicked で pendingPublish が True になる" <|
             \_ ->
                 let
                     ( model, _ ) =
                         Designer.update PublishClicked loadedModel
                 in
-                model.pendingPublish |> Expect.equal True
+                model
+                    |> expectLoaded
+                        (\canvas -> canvas.pendingPublish |> Expect.equal True)
         , test "GotPublishResult Ok で successMessage が設定される" <|
             \_ ->
                 let
                     publishingModel =
-                        { loadedModel | isPublishing = True }
+                        { baseModel | state = Loaded { loadedCanvas | isPublishing = True } }
 
                     publishedDef =
                         { testDefinition | status = "published", version = 2 }
@@ -963,10 +1231,14 @@ validationAndPublishTests =
                     ( model, _ ) =
                         Designer.update (GotPublishResult (Ok publishedDef)) publishingModel
                 in
-                Expect.all
-                    [ \m -> m.isPublishing |> Expect.equal False
-                    , \m -> m.successMessage |> Expect.equal (Just "公開しました")
-                    , \m -> m.version |> Expect.equal 2
-                    ]
-                    model
+                model
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> c.isPublishing |> Expect.equal False
+                                , \c -> c.successMessage |> Expect.equal (Just "公開しました")
+                                , \c -> c.version |> Expect.equal 2
+                                ]
+                                canvas
+                        )
         ]
