@@ -13,7 +13,7 @@ module Page.Task.Detail exposing
 タスク（承認ステップ）の詳細情報と、関連するワークフロー情報を表示する。
 承認/却下/差し戻し操作が可能。
 
-ADR-054 に基づき、Model を ADT ベースステートマシンで構造化している。
+[ADR-054](../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md) に基づき、Model を ADT ベースステートマシンで構造化している。
 Loading/Failed 状態では承認操作フィールドが型レベルで存在しない。
 
 
@@ -71,7 +71,7 @@ type PendingAction
     | ConfirmRequestChanges WorkflowStep
 
 
-{-| ページの状態（ADR-054 パターン A: 外側に共通フィールド）
+{-| ページの状態（[ADR-054](../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md) パターン A: 外側に共通フィールド）
 -}
 type alias Model =
     { shared : Shared
