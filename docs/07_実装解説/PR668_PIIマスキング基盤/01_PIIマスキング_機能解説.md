@@ -87,12 +87,12 @@ PII 型が `derive(Debug)` で平文出力していた。
 
 ```mermaid
 flowchart LR
-    Email["Email(\"user@example.com\")"]
+    Email["Email(#quot;user@example.com#quot;)"]
     Debug["Debug 出力"]
     Log["tracing ログ"]
 
     Email -->|"derive(Debug)"| Debug
-    Debug -->|"Email(\"user@example.com\")"| Log
+    Debug -->|"Email(#quot;user@example.com#quot;)"| Log
 ```
 
 制約・課題:
@@ -105,12 +105,12 @@ PII 型はカスタム `Debug` で `[REDACTED]` を出力し、`Display` は削�
 
 ```mermaid
 flowchart LR
-    Email["Email(\"user@example.com\")"]
+    Email["Email(#quot;user@example.com#quot;)"]
     Debug["カスタム Debug"]
     Log["tracing ログ"]
 
     Email -->|"カスタム Debug"| Debug
-    Debug -->|"Email(\"[REDACTED]\")"| Log
+    Debug -->|"Email(#quot;[REDACTED]#quot;)"| Log
 ```
 
 改善点:
