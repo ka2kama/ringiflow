@@ -17,7 +17,7 @@ module Page.Workflow.New exposing
 
 ワークフロー定義を選択し、フォームを入力して申請するページ。
 
-ADT ベースステートマシン（ADR-054）で構造化。
+ADT ベースステートマシンパターンの標準化（[ADR-054](../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md)）に基づき構造化。
 Loading/Failed/Loaded の PageState と、Loaded 内の SelectingDefinition/Editing の
 FormState で不正な状態を型レベルで排除する。
 
