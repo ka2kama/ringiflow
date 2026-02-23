@@ -11,6 +11,9 @@ module Component.FormField exposing
 ラベル + 入力 + エラー表示を統一したフォームフィールド群。
 User/Role の Edit/New ページで共通利用する。
 
+各関数は `fieldId` を受け取り、`<label for>` と `<input id>` で
+明示的に関連付ける（WCAG 2.1 AA 準拠）。
+
 
 ## 使用例
 
@@ -23,6 +26,7 @@ User/Role の Edit/New ページで共通利用する。
         , error = Dict.get "name" model.validationErrors
         , inputType = "text"
         , placeholder = "山田 太郎"
+        , fieldId = "user-name"
         }
 
 -}
@@ -58,13 +62,15 @@ viewTextField :
     , error : Maybe String
     , inputType : String
     , placeholder : String
+    , fieldId : String
     }
     -> Html msg
 viewTextField config =
     div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
+        [ label [ for config.fieldId, class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
         , input
-            [ type_ config.inputType
+            [ id config.fieldId
+            , type_ config.inputType
             , value config.value
             , onInput config.onInput
             , placeholder config.placeholder
@@ -82,13 +88,15 @@ viewTextArea :
     , value : String
     , onInput : String -> msg
     , placeholder : String
+    , fieldId : String
     }
     -> Html msg
 viewTextArea config =
     div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
+        [ label [ for config.fieldId, class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
         , textarea
-            [ value config.value
+            [ id config.fieldId
+            , value config.value
             , onInput config.onInput
             , placeholder config.placeholder
             , rows 3
@@ -107,13 +115,15 @@ viewSelectField :
     , error : Maybe String
     , options : List { value : String, label : String }
     , placeholder : String
+    , fieldId : String
     }
     -> Html msg
 viewSelectField config =
     div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
+        [ label [ for config.fieldId, class "block text-sm font-medium text-secondary-700 mb-1" ] [ text config.label ]
         , select
-            [ class (inputClass config.error)
+            [ id config.fieldId
+            , class (inputClass config.error)
             , onInput config.onInput
             , value config.value
             ]
@@ -130,11 +140,11 @@ viewSelectField config =
 
 {-| 読み取り専用フィールド
 -}
-viewReadOnlyField : String -> String -> Html msg
-viewReadOnlyField labelText fieldValue =
+viewReadOnlyField : String -> String -> String -> Html msg
+viewReadOnlyField fieldId labelText fieldValue =
     div []
-        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text labelText ]
-        , div [ class "w-full rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2 text-sm text-secondary-500" ]
+        [ label [ for fieldId, class "block text-sm font-medium text-secondary-700 mb-1" ] [ text labelText ]
+        , div [ id fieldId, class "w-full rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-2 text-sm text-secondary-500" ]
             [ text fieldValue ]
         ]
 

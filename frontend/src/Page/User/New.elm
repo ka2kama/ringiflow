@@ -315,6 +315,7 @@ viewFormContent model =
             , error = Dict.get "email" model.validationErrors
             , inputType = "email"
             , placeholder = "user@example.com"
+            , fieldId = "user-email"
             }
         , FormField.viewTextField
             { label = "名前"
@@ -323,6 +324,7 @@ viewFormContent model =
             , error = Dict.get "name" model.validationErrors
             , inputType = "text"
             , placeholder = "山田 太郎"
+            , fieldId = "user-name"
             }
         , FormField.viewSelectField
             { label = "ロール"
@@ -331,6 +333,7 @@ viewFormContent model =
             , error = Dict.get "role" model.validationErrors
             , options = List.map (\role -> { value = role.id, label = role.name }) roles
             , placeholder = "-- ロールを選択 --"
+            , fieldId = "user-role"
             }
         , div [ class "flex gap-3" ]
             [ Button.view
