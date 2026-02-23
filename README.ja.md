@@ -196,7 +196,7 @@ AI エージェント（Claude Code）に開発を主導させながら、品質
 
 ### AI の行動規範
 
-[CLAUDE.md](CLAUDE.md)（約400行）と [22 のルールファイル](.claude/rules/) が AI の行動を構造的に規定している。
+[CLAUDE.md](CLAUDE.md)（約400行）と [23 のルールファイル](.claude/rules/) が AI の行動を構造的に規定している。
 「AI が自由に書く」のではなく、「ルールに従って書く」体制。
 
 主要なルール:
@@ -219,7 +219,7 @@ flowchart LR
     E -.->|次のセッション| A
 ```
 
-現在 [79 件の改善記録](process/improvements/)がある。事例:
+現在 [93 件の改善記録](process/improvements/)がある。事例:
 
 | 事例 | 問題 | 対策 |
 |------|------|------|
