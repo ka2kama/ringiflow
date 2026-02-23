@@ -102,14 +102,11 @@ init shared definitionId =
       , isPublishing = False
       , pendingPublish = False
       }
-    , Cmd.batch
-        [ Ports.requestCanvasBounds canvasElementId
-        , WorkflowDefinitionApi.getDefinition
-            { config = Shared.toRequestConfig shared
-            , id = definitionId
-            , toMsg = GotDefinition
-            }
-        ]
+    , WorkflowDefinitionApi.getDefinition
+        { config = Shared.toRequestConfig shared
+        , id = definitionId
+        , toMsg = GotDefinition
+        }
     )
 
 
@@ -413,7 +410,7 @@ update msg model =
                         , description = def.description |> Maybe.withDefault ""
                         , version = def.version
                       }
-                    , Cmd.none
+                    , Ports.requestCanvasBounds canvasElementId
                     )
 
                 Err err ->
