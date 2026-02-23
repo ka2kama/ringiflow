@@ -1,8 +1,8 @@
-# 2026-02-23 Designer.elm ADT ベース状態マシンリファクタリング
+# 2026-02-23 Designer.elm ADT ベースステートマシンリファクタリング
 
 ## 概要
 
-#796: Designer.elm のフラットな Model（21 フィールド + `RemoteData`）を ADT ベース状態マシンパターン（ADR-054）にリファクタリングした。Loading 状態でキャンバス関連フィールドが型レベルで存在しない構造にし、不正な状態を表現不可能にした。
+#796: Designer.elm のフラットな Model（21 フィールド + `RemoteData`）を ADT ベースステートマシンパターン（ADR-054）にリファクタリングした。Loading 状態でキャンバス関連フィールドが型レベルで存在しない構造にし、不正な状態を表現不可能にした。
 
 ## 実施内容
 
@@ -62,7 +62,7 @@ type PageState
 - 本セッションで Designer.elm / DesignerTest.elm の実装を完了（未コミット）
 
 変更ファイル:
-- `frontend/src/Page/WorkflowDefinition/Designer.elm` — Model を ADT ベース状態マシンに変更
+- `frontend/src/Page/WorkflowDefinition/Designer.elm` — Model を ADT ベースステートマシンに変更
 - `frontend/tests/Page/WorkflowDefinition/DesignerTest.elm` — テストヘルパーと全テストを新構造に対応
 
 検証:

@@ -5,7 +5,7 @@ module Page.WorkflowDefinition.Designer exposing (CanvasState, Model, Msg(..), P
 SVG キャンバス上にワークフローのステップを配置・操作するビジュアルエディタ。
 ADR-053 で決定した SVG + Elm 直接レンダリング方式に基づく。
 
-Model は ADT ベース状態マシンで管理する（ADR-054）。
+Model は ADT ベースステートマシンで管理する（ADR-054）。
 Loading 中はキャンバス関連フィールドが型レベルで存在しないため、
 不正な状態（Loading 中のキャンバス操作）を表現不可能にしている。
 

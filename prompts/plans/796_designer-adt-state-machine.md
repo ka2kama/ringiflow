@@ -1,9 +1,9 @@
-# 実装計画: #796 Designer.elm の Model を ADT ベース状態マシンにリファクタリング
+# 実装計画: #796 Designer.elm の Model を ADT ベースステートマシンにリファクタリング
 
 ## Context
 
 #793 で発見された「Loading 中に `requestCanvasBounds` が発行され DOM 未存在で失敗する」バグの根本対策。
-ADR-054 で標準化した ADT ベース状態マシンパターンの初適用として、Designer.elm のフラットな Model（21 フィールド）を状態ごとに分離する。
+ADR-054 で標準化した ADT ベースステートマシンパターンの初適用として、Designer.elm のフラットな Model（21 フィールド）を状態ごとに分離する。
 
 目的: Loading 状態でキャンバス関連フィールドが**型レベルで存在しない**構造にし、不正な状態を表現不可能にする。
 
