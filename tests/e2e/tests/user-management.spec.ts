@@ -97,7 +97,12 @@ test.describe("ユーザー管理", () => {
       .getByRole("link")
       .first()
       .click();
-    await expect(page.getByText("アクティブ")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "基本情報" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("アクティブ", { exact: true }),
+    ).toBeVisible();
 
     // When: 無効化ボタンをクリックし、確認ダイアログで承認する
     await page.getByRole("button", { name: "無効化" }).click();
@@ -105,6 +110,8 @@ test.describe("ユーザー管理", () => {
 
     // Then: 成功メッセージとステータス変更が確認できる
     await expect(page.getByText("ユーザーを無効化しました。")).toBeVisible();
-    await expect(page.getByText("非アクティブ")).toBeVisible();
+    await expect(
+      page.getByText("非アクティブ", { exact: true }),
+    ).toBeVisible();
   });
 });
