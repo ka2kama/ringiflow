@@ -22,11 +22,13 @@ use std::path::Path;
 /// `literal_separator(true)` により `*` がパス区切りを超えない
 /// （Python 版の `[^/]*` と同等の挙動）。
 fn compile_glob(pattern: &str) -> Option<GlobMatcher> {
-    GlobBuilder::new(pattern)
-        .literal_separator(true)
-        .build()
-        .ok()
-        .map(|g| g.compile_matcher())
+    match GlobBuilder::new(pattern).literal_separator(true).build() {
+        Ok(g) => Some(g.compile_matcher()),
+        Err(e) => {
+            eprintln!("警告: glob パターンのコンパイルに失敗: {pattern}: {e}");
+            None
+        }
+    }
 }
 
 /// YAML フロントマターから paths パターンを抽出する。
@@ -106,7 +108,8 @@ fn strip_frontmatter(content: &str) -> &str {
     }
 
     // フロントマター以降の本文を返す（先頭の空行を除去）
-    content[end_offset..].trim_start_matches('\n')
+    // end_offset が content.len() を超える場合に備えて min で防御
+    content[end_offset.min(content.len())..].trim_start_matches('\n')
 }
 
 /// マッチしたルールの情報
