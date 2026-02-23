@@ -111,7 +111,7 @@ impl TryFrom<WorkflowStepRow> for WorkflowStep {
     type Error = InfraError;
 
     fn try_from(row: WorkflowStepRow) -> Result<Self, Self::Error> {
-        Ok(WorkflowStep::from_db(WorkflowStepRecord {
+        WorkflowStep::from_db(WorkflowStepRecord {
             id: WorkflowStepId::from_uuid(row.id),
             instance_id: WorkflowInstanceId::from_uuid(row.instance_id),
             display_number: DisplayNumber::new(row.display_number)
@@ -138,7 +138,8 @@ impl TryFrom<WorkflowStepRow> for WorkflowStep {
             completed_at: row.completed_at,
             created_at: row.created_at,
             updated_at: row.updated_at,
-        }))
+        })
+        .map_err(|e| InfraError::Unexpected(e.to_string()))
     }
 }
 
