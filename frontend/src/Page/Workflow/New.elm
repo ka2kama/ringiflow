@@ -1,7 +1,11 @@
 module Page.Workflow.New exposing
-    ( Model
+    ( EditingState
+    , FormState(..)
+    , LoadedState
+    , Model
     , Msg(..)
-    , SaveMessage(..)
+    , PageState(..)
+    , SaveMessage
     , init
     , isDirty
     , update
@@ -12,6 +16,10 @@ module Page.Workflow.New exposing
 {-| 新規申請フォームページ
 
 ワークフロー定義を選択し、フォームを入力して申請するページ。
+
+ADT ベースステートマシンパターンの標準化（[ADR-054](../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md)）に基づき構造化。
+Loading/Failed/Loaded の PageState と、Loaded 内の SelectingDefinition/Editing の
+FormState で不正な状態を型レベルで排除する。
 
 
 ## 画面フロー
@@ -30,11 +38,13 @@ module Page.Workflow.New exposing
 -}
 
 import Api exposing (ApiError)
+import Api.ErrorMessage as ErrorMessage
 import Api.User as UserApi
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
 import Component.Button as Button
+import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Data.UserItem as UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
@@ -59,30 +69,56 @@ import Shared exposing (Shared)
 {-| ページの状態
 -}
 type alias Model =
-    { -- 共有状態（API 呼び出しに必要）
-      shared : Shared
-
-    -- API データ
-    , definitions : RemoteData ApiError (List WorkflowDefinition)
-    , selectedDefinitionId : Maybe String
+    { shared : Shared
     , users : RemoteData ApiError (List UserItem)
+    , state : PageState
+    }
 
-    -- フォーム状態
+
+{-| ページの状態遷移
+
+    Loading → Loaded（定義取得成功）
+    Loading → Failed（定義取得失敗）
+
+-}
+type PageState
+    = Loading
+    | Failed ApiError
+    | Loaded LoadedState
+
+
+{-| 定義ロード完了後の状態
+-}
+type alias LoadedState =
+    { definitions : List WorkflowDefinition
+    , formState : FormState
+    }
+
+
+{-| フォームの状態遷移
+
+    SelectingDefinition → Editing（定義選択）
+
+-}
+type FormState
+    = SelectingDefinition
+    | Editing EditingState
+
+
+{-| フォーム編集中の状態
+
+定義が選択済みであることが型で保証される。
+
+-}
+type alias EditingState =
+    { selectedDefinition : WorkflowDefinition
     , title : String
     , formValues : Dict String String
     , validationErrors : Dict String String
-
-    -- 承認者選択（キー: ステップ ID）
     , approvers : Dict String ApproverSelector.State
-
-    -- 保存状態
     , savedWorkflow : Maybe WorkflowInstance
     , saveMessage : Maybe SaveMessage
-
-    -- 操作状態
     , submitting : Bool
-
-    -- dirty 状態（未保存の変更があるか）
     , isDirty_ : Bool
     }
 
@@ -96,29 +132,43 @@ type SaveMessage
 
 {-| 初期化
 
-ページ表示時にワークフロー定義一覧を取得する。
+ページ表示時にワークフロー定義一覧とユーザー一覧を並行取得する。
 
 -}
 init : Shared -> ( Model, Cmd Msg )
 init shared =
     ( { shared = shared
-      , definitions = Loading
-      , selectedDefinitionId = Nothing
-      , users = Loading
-      , title = ""
-      , formValues = Dict.empty
-      , validationErrors = Dict.empty
-      , approvers = Dict.empty
-      , savedWorkflow = Nothing
-      , saveMessage = Nothing
-      , submitting = False
-      , isDirty_ = False
+      , users = RemoteData.Loading
+      , state = Loading
       }
     , Cmd.batch
         [ fetchDefinitions shared
         , fetchUsers shared
         ]
     )
+
+
+{-| 編集状態の初期化
+
+定義選択時に新しい EditingState を構築する。
+承認ステップ情報から ApproverSelector の初期状態を生成する。
+
+-}
+initEditing : WorkflowDefinition -> EditingState
+initEditing definition =
+    { selectedDefinition = definition
+    , title = ""
+    , formValues = Dict.empty
+    , validationErrors = Dict.empty
+    , approvers =
+        WorkflowDefinition.approvalStepInfos definition
+            |> List.map (\info -> ( info.id, ApproverSelector.init ))
+            |> Dict.fromList
+    , savedWorkflow = Nothing
+    , saveMessage = Nothing
+    , submitting = False
+    , isDirty_ = False
+    }
 
 
 {-| ワークフロー定義一覧を取得
@@ -155,7 +205,17 @@ updateShared shared model =
 -}
 isDirty : Model -> Bool
 isDirty model =
-    model.isDirty_
+    case model.state of
+        Loaded loaded ->
+            case loaded.formState of
+                Editing editing ->
+                    editing.isDirty_
+
+                SelectingDefinition ->
+                    False
+
+        _ ->
+            False
 
 
 {-| フォーム入力時の dirty 状態更新
@@ -164,13 +224,13 @@ isDirty が False → True に変わるときのみ beforeunload を有効にす
 既に dirty な場合は余分な Port 通信を避ける。
 
 -}
-markDirty : Model -> ( Model, Cmd Msg )
-markDirty model =
-    if model.isDirty_ then
-        ( model, Cmd.none )
+markDirty : EditingState -> ( EditingState, Cmd Msg )
+markDirty editing =
+    if editing.isDirty_ then
+        ( editing, Cmd.none )
 
     else
-        ( { model | isDirty_ = True }
+        ( { editing | isDirty_ = True }
         , Ports.setBeforeUnloadEnabled True
         )
 
@@ -180,15 +240,15 @@ markDirty model =
 isDirty が True → False に変わるときのみ beforeunload を無効にする。
 
 -}
-clearDirty : Model -> ( Model, Cmd Msg )
-clearDirty model =
-    if model.isDirty_ then
-        ( { model | isDirty_ = False }
+clearDirty : EditingState -> ( EditingState, Cmd Msg )
+clearDirty editing =
+    if editing.isDirty_ then
+        ( { editing | isDirty_ = False }
         , Ports.setBeforeUnloadEnabled False
         )
 
     else
-        ( model, Cmd.none )
+        ( editing, Cmd.none )
 
 
 
@@ -222,7 +282,12 @@ type Msg
     | ClearMessage
 
 
-{-| 状態更新
+{-| 状態更新（外側）
+
+GotDefinitions で Loading → Loaded/Failed の状態遷移を処理。
+GotUsers は state に依存せず users を更新。
+それ以外は Loaded 状態のときのみ updateLoaded に委譲。
+
 -}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -230,12 +295,18 @@ update msg model =
         GotDefinitions result ->
             case result of
                 Ok definitions ->
-                    ( { model | definitions = Success definitions }
+                    ( { model
+                        | state =
+                            Loaded
+                                { definitions = definitions
+                                , formState = SelectingDefinition
+                                }
+                      }
                     , Cmd.none
                     )
 
                 Err error ->
-                    ( { model | definitions = Failure error }
+                    ( { model | state = Failed error }
                     , Cmd.none
                     )
 
@@ -251,55 +322,94 @@ update msg model =
                     , Cmd.none
                     )
 
+        _ ->
+            case model.state of
+                Loaded loaded ->
+                    let
+                        ( newLoaded, cmd ) =
+                            updateLoaded msg model.shared model.users loaded
+                    in
+                    ( { model | state = Loaded newLoaded }, cmd )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+{-| Loaded 状態の更新
+
+SelectDefinition で FormState を遷移。
+それ以外は Editing 状態のときのみ updateEditing に委譲。
+
+-}
+updateLoaded : Msg -> Shared -> RemoteData ApiError (List UserItem) -> LoadedState -> ( LoadedState, Cmd Msg )
+updateLoaded msg shared users loaded =
+    case msg of
         SelectDefinition definitionId ->
-            let
-                ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+            case List.Extra.find (\d -> d.id == definitionId) loaded.definitions of
+                Just definition ->
+                    let
+                        previousIsDirty =
+                            case loaded.formState of
+                                Editing prev ->
+                                    prev.isDirty_
 
-                approverStates =
-                    case model.definitions of
-                        Success definitions ->
-                            case getSelectedDefinition (Just definitionId) definitions of
-                                Just def ->
-                                    WorkflowDefinition.approvalStepInfos def
-                                        |> List.map (\info -> ( info.id, ApproverSelector.init ))
-                                        |> Dict.fromList
+                                SelectingDefinition ->
+                                    False
 
-                                Nothing ->
-                                    Dict.empty
+                        newEditing =
+                            initEditing definition
 
-                        _ ->
-                            Dict.empty
-            in
-            ( { dirtyModel
-                | selectedDefinitionId = Just definitionId
-                , formValues = Dict.empty
-                , validationErrors = Dict.empty
-                , approvers = approverStates
-              }
-            , dirtyCmd
-            )
+                        ( dirtyEditing, dirtyCmd ) =
+                            markDirty { newEditing | isDirty_ = previousIsDirty }
+                    in
+                    ( { loaded | formState = Editing dirtyEditing }, dirtyCmd )
 
+                Nothing ->
+                    ( loaded, Cmd.none )
+
+        _ ->
+            case loaded.formState of
+                Editing editing ->
+                    let
+                        ( newEditing, cmd ) =
+                            updateEditing msg shared users editing
+                    in
+                    ( { loaded | formState = Editing newEditing }, cmd )
+
+                SelectingDefinition ->
+                    ( loaded, Cmd.none )
+
+
+{-| Editing 状態の更新
+
+フォーム入力、承認者選択、保存、申請の処理を行う。
+定義が選択済みであることが型で保証されているため、
+定義未選択チェックが不要。
+
+-}
+updateEditing : Msg -> Shared -> RemoteData ApiError (List UserItem) -> EditingState -> ( EditingState, Cmd Msg )
+updateEditing msg shared users editing =
+    case msg of
         UpdateTitle newTitle ->
             let
-                ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+                ( dirtyEditing, dirtyCmd ) =
+                    markDirty editing
             in
-            ( { dirtyModel | title = newTitle }
+            ( { dirtyEditing | title = newTitle }
             , dirtyCmd
             )
 
         UpdateField fieldId value ->
             let
-                ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+                ( dirtyEditing, dirtyCmd ) =
+                    markDirty editing
             in
-            ( { dirtyModel | formValues = Dict.insert fieldId value model.formValues }
+            ( { dirtyEditing | formValues = Dict.insert fieldId value editing.formValues }
             , dirtyCmd
             )
 
         UpdateApproverSearch stepId query ->
-            ( { model
+            ( { editing
                 | approvers =
                     updateApproverState stepId
                         (\s ->
@@ -309,17 +419,17 @@ update msg model =
                                 , highlightIndex = 0
                             }
                         )
-                        model.approvers
+                        editing.approvers
               }
             , Cmd.none
             )
 
         SelectApprover stepId user ->
             let
-                ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+                ( dirtyEditing, dirtyCmd ) =
+                    markDirty editing
             in
-            ( { dirtyModel
+            ( { dirtyEditing
                 | approvers =
                     updateApproverState stepId
                         (\s ->
@@ -330,69 +440,61 @@ update msg model =
                                 , highlightIndex = 0
                             }
                         )
-                        dirtyModel.approvers
-                , validationErrors = Dict.remove ("approver_" ++ stepId) dirtyModel.validationErrors
+                        dirtyEditing.approvers
+                , validationErrors = Dict.remove ("approver_" ++ stepId) dirtyEditing.validationErrors
               }
             , dirtyCmd
             )
 
         ClearApprover stepId ->
             let
-                ( dirtyModel, dirtyCmd ) =
-                    markDirty model
+                ( dirtyEditing, dirtyCmd ) =
+                    markDirty editing
             in
-            ( { dirtyModel | approvers = Dict.insert stepId ApproverSelector.init dirtyModel.approvers }
+            ( { dirtyEditing | approvers = Dict.insert stepId ApproverSelector.init dirtyEditing.approvers }
             , dirtyCmd
             )
 
         ApproverKeyDown stepId key ->
-            handleApproverKeyDown stepId key model
+            handleApproverKeyDown stepId key users editing
 
         CloseApproverDropdown stepId ->
-            ( { model
+            ( { editing
                 | approvers =
                     updateApproverState stepId
                         (\s -> { s | dropdownOpen = False })
-                        model.approvers
+                        editing.approvers
               }
             , Cmd.none
             )
 
         SaveDraft ->
-            -- 下書き保存時は最小限のバリデーション（タイトル + 定義選択）
-            case ( model.selectedDefinitionId, Validation.validateTitle model.title ) of
-                ( Nothing, _ ) ->
-                    ( { model
-                        | saveMessage = Just (SaveError "ワークフロー種類を選択してください")
-                      }
-                    , Cmd.none
-                    )
-
-                ( _, Err errorMsg ) ->
-                    ( { model
+            case Validation.validateTitle editing.title of
+                Err errorMsg ->
+                    ( { editing
                         | validationErrors = Dict.singleton "title" errorMsg
                         , saveMessage = Nothing
                       }
                     , Cmd.none
                     )
 
-                ( Just definitionId, Ok _ ) ->
-                    ( { model
+                Ok _ ->
+                    ( { editing
                         | submitting = True
                         , saveMessage = Nothing
                         , validationErrors = Dict.empty
                       }
-                    , saveDraft model.shared definitionId model.title model.formValues
+                    , saveDraft shared editing.selectedDefinition.id editing.title editing.formValues
                     )
 
         GotSaveResult result ->
             case result of
                 Ok workflow ->
                     let
-                        ( cleanModel, cleanCmd ) =
-                            clearDirty model
+                        ( cleanEditing, cleanCmd ) =
+                            clearDirty editing
                     in
-                    ( { cleanModel
+                    ( { cleanEditing
                         | submitting = False
                         , savedWorkflow = Just workflow
                         , saveMessage = Just (SaveSuccess "下書きを保存しました")
@@ -401,7 +503,7 @@ update msg model =
                     )
 
                 Err _ ->
-                    ( { model
+                    ( { editing
                         | submitting = False
                         , saveMessage = Just (SaveError "保存に失敗しました。もう一度お試しください。")
                       }
@@ -409,57 +511,45 @@ update msg model =
                     )
 
         Submit ->
-            -- 申請時は全項目 + 承認者バリデーション
             let
                 validationErrors =
-                    validateFormWithApprover model
+                    validateFormWithApprover editing
             in
             if Dict.isEmpty validationErrors then
                 let
                     approvers =
-                        buildApprovers model
+                        buildApprovers editing
                 in
-                case model.savedWorkflow of
+                case editing.savedWorkflow of
                     Just workflow ->
-                        -- 既に下書き保存済みならそのまま申請
                         let
-                            ( cleanModel, cleanCmd ) =
-                                clearDirty model
+                            ( cleanEditing, cleanCmd ) =
+                                clearDirty editing
                         in
-                        ( { cleanModel
+                        ( { cleanEditing
                             | submitting = True
                             , saveMessage = Nothing
                           }
                         , Cmd.batch
-                            [ submitWorkflow cleanModel.shared workflow.displayNumber approvers
+                            [ submitWorkflow shared workflow.displayNumber approvers
                             , cleanCmd
                             ]
                         )
 
                     Nothing ->
-                        -- 未保存の場合、まず保存してから申請
-                        case model.selectedDefinitionId of
-                            Just definitionId ->
-                                ( { model
-                                    | submitting = True
-                                    , saveMessage = Nothing
-                                  }
-                                , saveAndSubmit model.shared
-                                    definitionId
-                                    model.title
-                                    model.formValues
-                                    approvers
-                                )
-
-                            Nothing ->
-                                ( { model
-                                    | saveMessage = Just (SaveError "ワークフロー種類を選択してください")
-                                  }
-                                , Cmd.none
-                                )
+                        ( { editing
+                            | submitting = True
+                            , saveMessage = Nothing
+                          }
+                        , saveAndSubmit shared
+                            editing.selectedDefinition.id
+                            editing.title
+                            editing.formValues
+                            approvers
+                        )
 
             else
-                ( { model
+                ( { editing
                     | validationErrors = validationErrors
                     , saveMessage = Nothing
                   }
@@ -469,20 +559,19 @@ update msg model =
         GotSaveAndSubmitResult approvers result ->
             case result of
                 Ok workflow ->
-                    -- 保存成功 → 続けて申請（データは永続化済みなので dirty リセット）
                     let
-                        ( cleanModel, cleanCmd ) =
-                            clearDirty model
+                        ( cleanEditing, cleanCmd ) =
+                            clearDirty editing
                     in
-                    ( { cleanModel | savedWorkflow = Just workflow }
+                    ( { cleanEditing | savedWorkflow = Just workflow }
                     , Cmd.batch
-                        [ submitWorkflow cleanModel.shared workflow.displayNumber approvers
+                        [ submitWorkflow shared workflow.displayNumber approvers
                         , cleanCmd
                         ]
                     )
 
                 Err _ ->
-                    ( { model
+                    ( { editing
                         | submitting = False
                         , saveMessage = Just (SaveError "保存に失敗しました。もう一度お試しください。")
                       }
@@ -493,10 +582,10 @@ update msg model =
             case result of
                 Ok workflow ->
                     let
-                        ( cleanModel, cleanCmd ) =
-                            clearDirty model
+                        ( cleanEditing, cleanCmd ) =
+                            clearDirty editing
                     in
-                    ( { cleanModel
+                    ( { cleanEditing
                         | submitting = False
                         , savedWorkflow = Just workflow
                         , saveMessage = Just (SaveSuccess "申請が完了しました")
@@ -505,7 +594,7 @@ update msg model =
                     )
 
                 Err _ ->
-                    ( { model
+                    ( { editing
                         | submitting = False
                         , saveMessage = Just (SaveError "申請に失敗しました。もう一度お試しください。")
                       }
@@ -513,45 +602,38 @@ update msg model =
                     )
 
         ClearMessage ->
-            ( { model | saveMessage = Nothing }
+            ( { editing | saveMessage = Nothing }
             , Cmd.none
             )
 
+        -- 外側レベルで処理済みのメッセージ（GotDefinitions, GotUsers, SelectDefinition）
+        _ ->
+            ( editing, Cmd.none )
 
-{-| フォーム全体のバリデーション（下書き保存用）
+
+{-| フォーム全体のバリデーション
 
 タイトルと動的フォームフィールドを検証する。
+selectedDefinition により定義検索が不要。
 
 -}
-validateForm : Model -> Dict String String
-validateForm model =
+validateForm : EditingState -> Dict String String
+validateForm editing =
     let
-        -- タイトルのバリデーション
         titleErrors =
-            case Validation.validateTitle model.title of
+            case Validation.validateTitle editing.title of
                 Err msg ->
                     Dict.singleton "title" msg
 
                 Ok _ ->
                     Dict.empty
 
-        -- 動的フィールドのバリデーション
         fieldErrors =
-            case model.definitions of
-                Success definitions ->
-                    case getSelectedDefinition model.selectedDefinitionId definitions of
-                        Just definition ->
-                            case DynamicForm.extractFormFields definition.definition of
-                                Ok fields ->
-                                    Validation.validateAllFields fields model.formValues
+            case DynamicForm.extractFormFields editing.selectedDefinition.definition of
+                Ok fields ->
+                    Validation.validateAllFields fields editing.formValues
 
-                                Err _ ->
-                                    Dict.empty
-
-                        Nothing ->
-                            Dict.empty
-
-                _ ->
+                Err _ ->
                     Dict.empty
     in
     Dict.union titleErrors fieldErrors
@@ -559,14 +641,14 @@ validateForm model =
 
 {-| フォーム全体 + 承認者のバリデーション（申請用）
 -}
-validateFormWithApprover : Model -> Dict String String
-validateFormWithApprover model =
+validateFormWithApprover : EditingState -> Dict String String
+validateFormWithApprover editing =
     let
         formErrors =
-            validateForm model
+            validateForm editing
 
         approverErrors =
-            model.approvers
+            editing.approvers
                 |> Dict.toList
                 |> List.filterMap
                     (\( stepId, state ) ->
@@ -583,15 +665,15 @@ validateFormWithApprover model =
 
 {-| 承認者検索のキーボードイベントを処理
 -}
-handleApproverKeyDown : String -> String -> Model -> ( Model, Cmd Msg )
-handleApproverKeyDown stepId key model =
-    case Dict.get stepId model.approvers of
+handleApproverKeyDown : String -> String -> RemoteData ApiError (List UserItem) -> EditingState -> ( EditingState, Cmd Msg )
+handleApproverKeyDown stepId key users editing =
+    case Dict.get stepId editing.approvers of
         Just state ->
             let
                 candidates =
-                    case model.users of
-                        Success users ->
-                            UserItem.filterUsers state.search users
+                    case users of
+                        Success userList ->
+                            UserItem.filterUsers state.search userList
 
                         _ ->
                             []
@@ -605,19 +687,19 @@ handleApproverKeyDown stepId key model =
             in
             case result of
                 ApproverSelector.NoChange ->
-                    ( model, Cmd.none )
+                    ( editing, Cmd.none )
 
                 ApproverSelector.Navigate newIndex ->
-                    ( { model | approvers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) model.approvers }
+                    ( { editing | approvers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) editing.approvers }
                     , Cmd.none
                     )
 
                 ApproverSelector.Select user ->
                     let
-                        ( dirtyModel, dirtyCmd ) =
-                            markDirty model
+                        ( dirtyEditing, dirtyCmd ) =
+                            markDirty editing
                     in
-                    ( { dirtyModel
+                    ( { dirtyEditing
                         | approvers =
                             updateApproverState stepId
                                 (\s ->
@@ -628,19 +710,19 @@ handleApproverKeyDown stepId key model =
                                         , highlightIndex = 0
                                     }
                                 )
-                                dirtyModel.approvers
-                        , validationErrors = Dict.remove ("approver_" ++ stepId) dirtyModel.validationErrors
+                                dirtyEditing.approvers
+                        , validationErrors = Dict.remove ("approver_" ++ stepId) dirtyEditing.validationErrors
                       }
                     , dirtyCmd
                     )
 
                 ApproverSelector.Close ->
-                    ( { model | approvers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) model.approvers }
+                    ( { editing | approvers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) editing.approvers }
                     , Cmd.none
                     )
 
         Nothing ->
-            ( model, Cmd.none )
+            ( editing, Cmd.none )
 
 
 {-| ApproverSelector.State を更新するヘルパー
@@ -650,40 +732,24 @@ updateApproverState stepId updater dict =
     Dict.update stepId (Maybe.map updater) dict
 
 
-{-| 選択されたワークフロー定義を取得
--}
-getSelectedDefinition : Maybe String -> List WorkflowDefinition -> Maybe WorkflowDefinition
-getSelectedDefinition maybeId definitions =
-    maybeId
-        |> Maybe.andThen (\defId -> List.Extra.find (\d -> d.id == defId) definitions)
-
-
 {-| 各ステップの承認者選択から承認者リストを構築する
 
 定義の承認ステップ順序に従って構築する。
-Dict.toList はキーのアルファベット順で返すため、バックエンドが期待する
-定義の steps 配列順と一致しない場合がある。
+selectedDefinition により直接ステップ情報にアクセスできるため、
+Dict のキー順へのフォールバックが不要。
 
 -}
-buildApprovers : Model -> List WorkflowApi.StepApproverRequest
-buildApprovers model =
+buildApprovers : EditingState -> List WorkflowApi.StepApproverRequest
+buildApprovers editing =
     let
-        -- 定義の承認ステップ順序を取得（定義が利用不可の場合は Dict のキー順）
         stepIds =
-            case model.definitions of
-                Success definitions ->
-                    getSelectedDefinition model.selectedDefinitionId definitions
-                        |> Maybe.map WorkflowDefinition.approvalStepInfos
-                        |> Maybe.map (List.map .id)
-                        |> Maybe.withDefault (Dict.keys model.approvers)
-
-                _ ->
-                    Dict.keys model.approvers
+            WorkflowDefinition.approvalStepInfos editing.selectedDefinition
+                |> List.map .id
     in
     stepIds
         |> List.filterMap
             (\stepId ->
-                Dict.get stepId model.approvers
+                Dict.get stepId editing.approvers
                     |> Maybe.andThen (\state -> ApproverSelector.selectedUserId state.selection)
                     |> Maybe.map (\userId -> { stepId = stepId, assignedTo = userId })
             )
@@ -760,9 +826,48 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [ class "mb-6 text-2xl font-bold text-secondary-900" ] [ text "新規申請" ]
-        , viewSaveMessage model.saveMessage
-        , viewContent model
+        , viewBody model
         ]
+
+
+{-| メインコンテンツ
+
+PageState のパターンマッチで Loading/Failed/Loaded を分岐。
+Failed では ErrorState.viewSimple + ErrorMessage.toUserMessage で
+ApiError に応じた具体的なエラーメッセージを表示する。
+
+-}
+viewBody : Model -> Html Msg
+viewBody model =
+    case model.state of
+        Loading ->
+            LoadingSpinner.view
+
+        Failed error ->
+            ErrorState.viewSimple
+                (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } error)
+
+        Loaded loaded ->
+            viewLoaded model.users loaded
+
+
+{-| Loaded 状態の描画
+
+FormState のパターンマッチで SelectingDefinition/Editing を分岐。
+
+-}
+viewLoaded : RemoteData ApiError (List UserItem) -> LoadedState -> Html Msg
+viewLoaded users loaded =
+    case loaded.formState of
+        SelectingDefinition ->
+            viewDefinitionSelector loaded.definitions Nothing
+
+        Editing editing ->
+            div []
+                [ viewSaveMessage editing.saveMessage
+                , viewDefinitionSelector loaded.definitions (Just editing.selectedDefinition.id)
+                , viewFormInputs users editing
+                ]
 
 
 {-| 保存メッセージバナー
@@ -794,66 +899,6 @@ viewSaveMessage maybeSaveMessage =
 
         Nothing ->
             text ""
-
-
-{-| メインコンテンツ
--}
-viewContent : Model -> Html Msg
-viewContent model =
-    case model.definitions of
-        NotAsked ->
-            viewLoading
-
-        Loading ->
-            viewLoading
-
-        Failure _ ->
-            viewError
-
-        Success definitions ->
-            viewForm model definitions
-
-
-{-| ローディング表示
--}
-viewLoading : Html Msg
-viewLoading =
-    LoadingSpinner.view
-
-
-{-| エラー表示
--}
-viewError : Html Msg
-viewError =
-    div [ class "rounded-lg bg-error-50 p-8 text-center text-error-700" ]
-        [ text "データの取得に失敗しました。"
-        , br [] []
-        , text "ページを再読み込みしてください。"
-        ]
-
-
-{-| フォーム表示
--}
-viewForm : Model -> List WorkflowDefinition -> Html Msg
-viewForm model definitions =
-    let
-        -- 選択された定義を取得
-        selectedDefinition =
-            model.selectedDefinitionId
-                |> Maybe.andThen (\defId -> List.Extra.find (\d -> d.id == defId) definitions)
-    in
-    div []
-        [ -- Step 1: ワークフロー定義選択
-          viewDefinitionSelector definitions model.selectedDefinitionId
-
-        -- Step 2: フォーム入力（定義選択後に表示）
-        , case selectedDefinition of
-            Just definition ->
-                viewFormInputs model definition
-
-            Nothing ->
-                text ""
-        ]
 
 
 {-| ワークフロー定義セレクター
@@ -912,8 +957,8 @@ viewDefinitionOption selectedId definition =
 
 {-| フォーム入力エリア
 -}
-viewFormInputs : Model -> WorkflowDefinition -> Html Msg
-viewFormInputs model definition =
+viewFormInputs : RemoteData ApiError (List UserItem) -> EditingState -> Html Msg
+viewFormInputs users editing =
     div []
         [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 2: フォーム入力" ]
 
@@ -929,52 +974,52 @@ viewFormInputs model definition =
             , input
                 [ type_ "text"
                 , id "title"
-                , Html.Attributes.value model.title
+                , Html.Attributes.value editing.title
                 , Html.Events.onInput UpdateTitle
                 , placeholder "申請のタイトルを入力"
                 , class "w-full rounded border border-secondary-300 bg-white px-3 py-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
                 ]
                 []
-            , viewTitleError model
+            , viewTitleError editing
             ]
 
         -- 動的フォームフィールド
-        , viewDynamicFormFields definition model
+        , viewDynamicFormFields editing
 
         -- Step 3: 承認者選択
-        , viewApproverSection definition model
+        , viewApproverSection users editing
 
         -- アクションボタン
-        , viewActions model
+        , viewActions editing
         ]
 
 
 {-| 承認者選択セクション
 
 各承認ステップごとに承認者を選択する UI を表示する。
-ステップ情報は WorkflowDefinition から取得する。
+ステップ情報は selectedDefinition から直接取得する。
 
 -}
-viewApproverSection : WorkflowDefinition -> Model -> Html Msg
-viewApproverSection definition model =
+viewApproverSection : RemoteData ApiError (List UserItem) -> EditingState -> Html Msg
+viewApproverSection users editing =
     let
         stepInfos =
-            WorkflowDefinition.approvalStepInfos definition
+            WorkflowDefinition.approvalStepInfos editing.selectedDefinition
     in
     div []
         [ h3 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "Step 3: 承認者選択" ]
         , div [ class "flex flex-col gap-4" ]
-            (List.map (viewApproverStep model) stepInfos)
+            (List.map (viewApproverStep users editing) stepInfos)
         ]
 
 
 {-| 承認ステップごとの承認者選択
 -}
-viewApproverStep : Model -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
-viewApproverStep model stepInfo =
+viewApproverStep : RemoteData ApiError (List UserItem) -> EditingState -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
+viewApproverStep users editing stepInfo =
     let
         state =
-            Dict.get stepInfo.id model.approvers
+            Dict.get stepInfo.id editing.approvers
                 |> Maybe.withDefault ApproverSelector.init
     in
     div [ class "mb-2" ]
@@ -985,8 +1030,8 @@ viewApproverStep model stepInfo =
             ]
         , ApproverSelector.view
             { state = state
-            , users = model.users
-            , validationError = Dict.get ("approver_" ++ stepInfo.id) model.validationErrors
+            , users = users
+            , validationError = Dict.get ("approver_" ++ stepInfo.id) editing.validationErrors
             , onSearch = UpdateApproverSearch stepInfo.id
             , onSelect = SelectApprover stepInfo.id
             , onClear = ClearApprover stepInfo.id
@@ -998,9 +1043,9 @@ viewApproverStep model stepInfo =
 
 {-| タイトルのエラー表示
 -}
-viewTitleError : Model -> Html Msg
-viewTitleError model =
-    case Dict.get "title" model.validationErrors of
+viewTitleError : EditingState -> Html Msg
+viewTitleError editing =
+    case Dict.get "title" editing.validationErrors of
         Just errorMsg ->
             div
                 [ class "mt-1 text-sm text-error-600" ]
@@ -1012,9 +1057,9 @@ viewTitleError model =
 
 {-| 動的フォームフィールドを描画
 -}
-viewDynamicFormFields : WorkflowDefinition -> Model -> Html Msg
-viewDynamicFormFields definition model =
-    case DynamicForm.extractFormFields definition.definition of
+viewDynamicFormFields : EditingState -> Html Msg
+viewDynamicFormFields editing =
+    case DynamicForm.extractFormFields editing.selectedDefinition.definition of
         Ok fields ->
             if List.isEmpty fields then
                 text ""
@@ -1024,11 +1069,11 @@ viewDynamicFormFields definition model =
                     [ class "mb-6 rounded-lg bg-secondary-50 p-4" ]
                     [ h4
                         [ class "mb-4 text-secondary-900" ]
-                        [ text (definition.name ++ " フォーム") ]
+                        [ text (editing.selectedDefinition.name ++ " フォーム") ]
                     , DynamicForm.viewFields
                         fields
-                        model.formValues
-                        model.validationErrors
+                        editing.formValues
+                        editing.validationErrors
                         UpdateField
                     ]
 
@@ -1040,19 +1085,19 @@ viewDynamicFormFields definition model =
 
 {-| アクションボタン
 -}
-viewActions : Model -> Html Msg
-viewActions model =
+viewActions : EditingState -> Html Msg
+viewActions editing =
     div
         [ class "mt-8 flex justify-end gap-4 border-t border-secondary-100 pt-4" ]
         [ Button.view
             { variant = Button.Outline
-            , disabled = model.submitting
+            , disabled = editing.submitting
             , onClick = SaveDraft
             }
             [ text "下書き保存" ]
         , Button.view
             { variant = Button.Primary
-            , disabled = model.submitting
+            , disabled = editing.submitting
             , onClick = Submit
             }
             [ text "申請する" ]
