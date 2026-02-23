@@ -13,6 +13,9 @@ module Page.Task.Detail exposing
 タスク（承認ステップ）の詳細情報と、関連するワークフロー情報を表示する。
 承認/却下/差し戻し操作が可能。
 
+[ADR-054](../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md) に基づき、Model を ADT ベースステートマシンで構造化している。
+Loading/Failed 状態では承認操作フィールドが型レベルで存在しない。
+
 
 ## 機能
 
@@ -47,7 +50,6 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import Json.Decode as Decode
 import Ports
-import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
 import Time
@@ -69,22 +71,50 @@ type PendingAction
     | ConfirmRequestChanges WorkflowStep
 
 
-{-| ページの状態
+{-| ページの状態（[ADR-054](../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md) パターン A: 外側に共通フィールド）
 -}
 type alias Model =
     { shared : Shared
     , workflowDisplayNumber : Int
     , stepDisplayNumber : Int
+    , state : PageState
+    }
 
-    -- API データ
-    , task : RemoteData ApiError TaskDetail
 
-    -- 承認/却下/差し戻しの状態
+{-| ページの状態遷移
+-}
+type PageState
+    = Loading
+    | Failed ApiError
+    | Loaded LoadedState
+
+
+{-| Loaded 時のみ存在するフィールド
+
+承認/却下/差し戻し操作に必要なフィールドは、タスク詳細データの取得が
+完了した Loaded 状態でのみ型レベルで存在する。
+
+-}
+type alias LoadedState =
+    { taskDetail : TaskDetail
     , comment : String
     , isSubmitting : Bool
     , pendingAction : Maybe PendingAction
     , errorMessage : Maybe String
     , successMessage : Maybe String
+    }
+
+
+{-| LoadedState の初期値を構築
+-}
+initLoaded : TaskDetail -> LoadedState
+initLoaded taskDetail =
+    { taskDetail = taskDetail
+    , comment = ""
+    , isSubmitting = False
+    , pendingAction = Nothing
+    , errorMessage = Nothing
+    , successMessage = Nothing
     }
 
 
@@ -95,12 +125,7 @@ init shared workflowDisplayNumber stepDisplayNumber =
     ( { shared = shared
       , workflowDisplayNumber = workflowDisplayNumber
       , stepDisplayNumber = stepDisplayNumber
-      , task = Loading
-      , comment = ""
-      , isSubmitting = False
-      , pendingAction = Nothing
-      , errorMessage = Nothing
-      , successMessage = Nothing
+      , state = Loading
       }
     , TaskApi.getTaskByDisplayNumbers
         { config = Shared.toRequestConfig shared
@@ -140,28 +165,19 @@ type Msg
 
 
 {-| 状態更新
+
+状態遷移メッセージ（GotTaskDetail, Refresh）は外側で処理し、
+操作メッセージは updateLoaded に委譲する。
+
 -}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotTaskDetail result ->
-            case result of
-                Ok taskDetail ->
-                    ( { model | task = Success taskDetail }
-                    , Cmd.none
-                    )
-
-                Err err ->
-                    ( { model | task = Failure err }
-                    , Cmd.none
-                    )
+            handleGotTaskDetail result model
 
         Refresh ->
-            ( { model
-                | task = Loading
-                , errorMessage = Nothing
-                , successMessage = Nothing
-              }
+            ( { model | state = Loading }
             , TaskApi.getTaskByDisplayNumbers
                 { config = Shared.toRequestConfig model.shared
                 , workflowDisplayNumber = model.workflowDisplayNumber
@@ -170,127 +186,160 @@ update msg model =
                 }
             )
 
+        _ ->
+            case model.state of
+                Loaded loaded ->
+                    let
+                        ( newLoaded, cmd ) =
+                            updateLoaded msg model.shared model.workflowDisplayNumber model.stepDisplayNumber loaded
+                    in
+                    ( { model | state = Loaded newLoaded }, cmd )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+{-| タスク詳細取得結果のハンドリング
+
+初回ロード時（Loading/Failed → Loaded）は新しい LoadedState を構築する。
+承認後の再取得時（Loaded → Loaded）は taskDetail のみ更新し、メッセージを保持する。
+
+-}
+handleGotTaskDetail : Result ApiError TaskDetail -> Model -> ( Model, Cmd Msg )
+handleGotTaskDetail result model =
+    case result of
+        Ok taskDetail ->
+            case model.state of
+                Loaded loaded ->
+                    ( { model | state = Loaded { loaded | taskDetail = taskDetail } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( { model | state = Loaded (initLoaded taskDetail) }
+                    , Cmd.none
+                    )
+
+        Err err ->
+            ( { model | state = Failed err }
+            , Cmd.none
+            )
+
+
+{-| Loaded 状態でのメッセージ処理
+-}
+updateLoaded : Msg -> Shared -> Int -> Int -> LoadedState -> ( LoadedState, Cmd Msg )
+updateLoaded msg shared workflowDisplayNumber stepDisplayNumber loaded =
+    case msg of
         UpdateComment comment ->
-            ( { model | comment = comment }
+            ( { loaded | comment = comment }
             , Cmd.none
             )
 
         ClickApprove step ->
-            ( { model | pendingAction = Just (ConfirmApprove step) }
+            ( { loaded | pendingAction = Just (ConfirmApprove step) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ClickReject step ->
-            ( { model | pendingAction = Just (ConfirmReject step) }
+            ( { loaded | pendingAction = Just (ConfirmReject step) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ClickRequestChanges step ->
-            ( { model | pendingAction = Just (ConfirmRequestChanges step) }
+            ( { loaded | pendingAction = Just (ConfirmRequestChanges step) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ConfirmAction ->
-            case model.pendingAction of
+            case loaded.pendingAction of
                 Just (ConfirmApprove step) ->
-                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
-                    , approveStep model step
+                    ( { loaded | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , approveStep shared loaded step
                     )
 
                 Just (ConfirmReject step) ->
-                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
-                    , rejectStep model step
+                    ( { loaded | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , rejectStep shared loaded step
                     )
 
                 Just (ConfirmRequestChanges step) ->
-                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
-                    , requestChangesStep model step
+                    ( { loaded | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    , requestChangesStep shared loaded step
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( loaded, Cmd.none )
 
         CancelAction ->
-            ( { model | pendingAction = Nothing }
+            ( { loaded | pendingAction = Nothing }
             , Cmd.none
             )
 
         GotApproveResult result ->
-            handleApprovalResult "承認しました" result model
+            handleApprovalResult "承認しました" result shared workflowDisplayNumber stepDisplayNumber loaded
 
         GotRejectResult result ->
-            handleApprovalResult "却下しました" result model
+            handleApprovalResult "却下しました" result shared workflowDisplayNumber stepDisplayNumber loaded
 
         GotRequestChangesResult result ->
-            handleApprovalResult "差し戻しました" result model
+            handleApprovalResult "差し戻しました" result shared workflowDisplayNumber stepDisplayNumber loaded
 
         DismissMessage ->
-            ( { model | errorMessage = Nothing, successMessage = Nothing }
+            ( { loaded | errorMessage = Nothing, successMessage = Nothing }
             , Cmd.none
             )
+
+        _ ->
+            ( loaded, Cmd.none )
 
 
 {-| 承認 API 呼び出し
 -}
-approveStep : Model -> WorkflowStep -> Cmd Msg
-approveStep model step =
-    case model.task of
-        Success taskDetail ->
-            WorkflowApi.approveStep
-                { config = Shared.toRequestConfig model.shared
-                , workflowDisplayNumber = taskDetail.workflow.displayNumber
-                , stepDisplayNumber = step.displayNumber
-                , body =
-                    { version = step.version
-                    , comment = nonEmptyComment model.comment
-                    }
-                , toMsg = GotApproveResult
-                }
-
-        _ ->
-            Cmd.none
+approveStep : Shared -> LoadedState -> WorkflowStep -> Cmd Msg
+approveStep shared loaded step =
+    WorkflowApi.approveStep
+        { config = Shared.toRequestConfig shared
+        , workflowDisplayNumber = loaded.taskDetail.workflow.displayNumber
+        , stepDisplayNumber = step.displayNumber
+        , body =
+            { version = step.version
+            , comment = nonEmptyComment loaded.comment
+            }
+        , toMsg = GotApproveResult
+        }
 
 
 {-| 却下 API 呼び出し
 -}
-rejectStep : Model -> WorkflowStep -> Cmd Msg
-rejectStep model step =
-    case model.task of
-        Success taskDetail ->
-            WorkflowApi.rejectStep
-                { config = Shared.toRequestConfig model.shared
-                , workflowDisplayNumber = taskDetail.workflow.displayNumber
-                , stepDisplayNumber = step.displayNumber
-                , body =
-                    { version = step.version
-                    , comment = nonEmptyComment model.comment
-                    }
-                , toMsg = GotRejectResult
-                }
-
-        _ ->
-            Cmd.none
+rejectStep : Shared -> LoadedState -> WorkflowStep -> Cmd Msg
+rejectStep shared loaded step =
+    WorkflowApi.rejectStep
+        { config = Shared.toRequestConfig shared
+        , workflowDisplayNumber = loaded.taskDetail.workflow.displayNumber
+        , stepDisplayNumber = step.displayNumber
+        , body =
+            { version = step.version
+            , comment = nonEmptyComment loaded.comment
+            }
+        , toMsg = GotRejectResult
+        }
 
 
 {-| 差し戻し API 呼び出し
 -}
-requestChangesStep : Model -> WorkflowStep -> Cmd Msg
-requestChangesStep model step =
-    case model.task of
-        Success taskDetail ->
-            WorkflowApi.requestChangesStep
-                { config = Shared.toRequestConfig model.shared
-                , workflowDisplayNumber = taskDetail.workflow.displayNumber
-                , stepDisplayNumber = step.displayNumber
-                , body =
-                    { version = step.version
-                    , comment = nonEmptyComment model.comment
-                    }
-                , toMsg = GotRequestChangesResult
-                }
-
-        _ ->
-            Cmd.none
+requestChangesStep : Shared -> LoadedState -> WorkflowStep -> Cmd Msg
+requestChangesStep shared loaded step =
+    WorkflowApi.requestChangesStep
+        { config = Shared.toRequestConfig shared
+        , workflowDisplayNumber = loaded.taskDetail.workflow.displayNumber
+        , stepDisplayNumber = step.displayNumber
+        , body =
+            { version = step.version
+            , comment = nonEmptyComment loaded.comment
+            }
+        , toMsg = GotRequestChangesResult
+        }
 
 
 {-| 空文字列を Nothing に変換
@@ -309,26 +358,26 @@ nonEmptyComment comment =
 成功時はタスク詳細を再読み込みして最新の状態を反映する。
 
 -}
-handleApprovalResult : String -> Result ApiError WorkflowInstance -> Model -> ( Model, Cmd Msg )
-handleApprovalResult successMsg result model =
+handleApprovalResult : String -> Result ApiError WorkflowInstance -> Shared -> Int -> Int -> LoadedState -> ( LoadedState, Cmd Msg )
+handleApprovalResult successMsg result shared workflowDisplayNumber stepDisplayNumber loaded =
     case result of
         Ok _ ->
-            ( { model
+            ( { loaded
                 | isSubmitting = False
                 , successMessage = Just successMsg
                 , errorMessage = Nothing
                 , comment = ""
               }
             , TaskApi.getTaskByDisplayNumbers
-                { config = Shared.toRequestConfig model.shared
-                , workflowDisplayNumber = model.workflowDisplayNumber
-                , stepDisplayNumber = model.stepDisplayNumber
+                { config = Shared.toRequestConfig shared
+                , workflowDisplayNumber = workflowDisplayNumber
+                , stepDisplayNumber = stepDisplayNumber
                 , toMsg = GotTaskDetail
                 }
             )
 
         Err error ->
-            ( { model
+            ( { loaded
                 | isSubmitting = False
                 , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "タスク" } error)
               }
@@ -357,13 +406,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewHeader
-        , MessageAlert.view
-            { onDismiss = DismissMessage
-            , successMessage = model.successMessage
-            , errorMessage = model.errorMessage
-            }
-        , viewContent model
-        , viewConfirmDialog model.pendingAction
+        , viewBody model
         ]
 
 
@@ -376,39 +419,53 @@ viewHeader =
         ]
 
 
-viewContent : Model -> Html Msg
-viewContent model =
-    case model.task of
-        NotAsked ->
-            text ""
-
+{-| 状態に応じたコンテンツ描画
+-}
+viewBody : Model -> Html Msg
+viewBody model =
+    case model.state of
         Loading ->
             LoadingSpinner.view
 
-        Failure _ ->
-            viewError
+        Failed err ->
+            viewError err
 
-        Success taskDetail ->
-            viewTaskDetail taskDetail model
+        Loaded loaded ->
+            viewLoaded (Shared.zone model.shared) loaded
 
 
-viewError : Html Msg
-viewError =
+viewError : ApiError -> Html Msg
+viewError err =
     ErrorState.view
-        { message = "データの取得に失敗しました。"
+        { message = ErrorMessage.toUserMessage { entityName = "タスク" } err
         , onRefresh = Refresh
         }
 
 
-viewTaskDetail : TaskDetail -> Model -> Html Msg
-viewTaskDetail taskDetail model =
+{-| Loaded 状態のビュー
+-}
+viewLoaded : Time.Zone -> LoadedState -> Html Msg
+viewLoaded zone loaded =
+    div []
+        [ MessageAlert.view
+            { onDismiss = DismissMessage
+            , successMessage = loaded.successMessage
+            , errorMessage = loaded.errorMessage
+            }
+        , viewTaskDetail zone loaded
+        , viewConfirmDialog loaded.pendingAction
+        ]
+
+
+viewTaskDetail : Time.Zone -> LoadedState -> Html Msg
+viewTaskDetail zone loaded =
     div [ class "space-y-6" ]
-        [ viewWorkflowTitle taskDetail.workflow
-        , viewWorkflowStatus taskDetail.workflow
-        , viewApprovalSection taskDetail.step model
-        , viewSteps taskDetail.workflow
-        , viewBasicInfo (Shared.zone model.shared) taskDetail.workflow
-        , viewFormData taskDetail.workflow
+        [ viewWorkflowTitle loaded.taskDetail.workflow
+        , viewWorkflowStatus loaded.taskDetail.workflow
+        , viewApprovalSection loaded.taskDetail.step loaded
+        , viewSteps loaded.taskDetail.workflow
+        , viewBasicInfo zone loaded.taskDetail.workflow
+        , viewFormData loaded.taskDetail.workflow
         ]
 
 
@@ -437,12 +494,12 @@ viewWorkflowStatus workflow =
 タスクのステップが Active な場合のみ承認/却下/差し戻しボタンとコメント入力欄を表示。
 
 -}
-viewApprovalSection : WorkflowStep -> Model -> Html Msg
-viewApprovalSection step model =
+viewApprovalSection : WorkflowStep -> LoadedState -> Html Msg
+viewApprovalSection step loaded =
     if step.status == StepActive then
         div [ class "space-y-4 rounded-lg border border-secondary-200 bg-white p-4 shadow-sm" ]
-            [ viewCommentInput model.comment
-            , viewApprovalButtons step model.isSubmitting
+            [ viewCommentInput loaded.comment
+            , viewApprovalButtons step loaded.isSubmitting
             ]
 
     else
