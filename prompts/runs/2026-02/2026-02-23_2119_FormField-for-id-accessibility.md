@@ -55,7 +55,7 @@ PR: #809
 - `frontend/src/Page/Role/Edit.elm`
 - `frontend/src/Page/WorkflowDefinition/Designer.elm`
 - `tests/e2e/tests/user-management.spec.ts`
-- `prompts/plans/peppy-waddling-cherny.md`
+- `prompts/plans/805_formfield-for-id-accessibility.md`
 
 ## 議論の経緯
 
