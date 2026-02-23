@@ -406,7 +406,7 @@ check-duplicates:
 
 # 改善記録の標準フォーマット準拠チェック（カテゴリ・失敗タイプの値検証）
 lint-improvements:
-    ./scripts/check/improvement-records.sh
+    rust-script ./scripts/check/improvement-records.rs
 
 # .claude/rules/ 内のルールファイルが CLAUDE.md または paths: で参照されているかチェック
 lint-rules:
