@@ -3,15 +3,22 @@
 対応 PR: #697
 対応 Issue: #696
 
+> 注: 本ドキュメントは PR #697 で導入された Shell スクリプト（`instrumentation.sh`）の実装を解説している。PR #842 で `syn` クレートによる AST 解析を用いた rust-script（`instrumentation.rs`）に置き換えられた。以下のコード解説は、テキストベースの lookback 方式による元の設計を記録した歴史的ドキュメントである。
+
 ## 主要な型・関数
+
+現在の実装（rust-script）:
 
 | 型/関数 | ファイル | 責務 |
 |--------|---------|------|
-| `is_excluded()` | [`scripts/check/instrumentation.sh:19`](../../../scripts/check/instrumentation.sh) | 関数名が除外リストに含まれるか判定 |
-| `is_impl_method()` | [`scripts/check/instrumentation.sh:31`](../../../scripts/check/instrumentation.sh) | trait 署名と impl メソッドを判別 |
-| `has_instrument()` | [`scripts/check/instrumentation.sh:58`](../../../scripts/check/instrumentation.sh) | 上方 N 行以内に `tracing::instrument` があるか判定 |
-| `check_handlers()` | [`scripts/check/instrumentation.sh:71`](../../../scripts/check/instrumentation.sh) | ハンドラの計装チェック |
-| `check_repository_impls()` | [`scripts/check/instrumentation.sh:96`](../../../scripts/check/instrumentation.sh) | リポジトリ impl の計装チェック |
+| `is_excluded()` | [`scripts/check/instrumentation.rs:71`](../../../scripts/check/instrumentation.rs) | 関数名が除外リストに含まれるか判定 |
+| `has_instrument_attr()` | [`scripts/check/instrumentation.rs:51`](../../../scripts/check/instrumentation.rs) | `syn::Attribute` から `tracing::instrument` を検出 |
+| `check_handler_file()` | [`scripts/check/instrumentation.rs:76`](../../../scripts/check/instrumentation.rs) | ハンドラの計装チェック（`Item::Fn` を走査） |
+| `check_repository_file()` | [`scripts/check/instrumentation.rs:112`](../../../scripts/check/instrumentation.rs) | リポジトリ impl の計装チェック（`Item::Impl` を走査） |
+
+元の Shell 実装では `is_impl_method()` で trait 署名と impl メソッドを前方スキャン（`{` vs `;`）で判別していたが、`syn` の AST 解析（`Item::Trait` vs `Item::Impl`）により構造的に判別されるため不要になった。
+
+以下のコードフローは元の Shell 実装（`instrumentation.sh`）の解説:
 
 ## コードフロー
 
@@ -219,7 +226,7 @@ CI チェックスクリプトのため自動テストはなく、手動検証�
 ```bash
 just check-instrumentation
 # または直接実行
-./scripts/check/instrumentation.sh
+rust-script ./scripts/check/instrumentation.rs
 ```
 
 ## 設計解説
