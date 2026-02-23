@@ -25,7 +25,7 @@ module Page.Workflow.Detail exposing
 
 詳細: [申請フォーム UI 設計](../../../../docs/03_詳細設計書/10_ワークフロー申請フォームUI設計.md)
 
-Model は ADT ベースステートマシン（[ADR-054](../../../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md)
+Model は型安全ステートマシン（[ADR-054](../../../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md)
 パターン A）で Loading/Failed/Loaded を分離し、Loaded 時のみ操作フィールドが存在する。
 
 -}
