@@ -427,7 +427,7 @@ lint-plans:
 
 # 計装（tracing::instrument）の漏れを検出
 check-instrumentation:
-    ./scripts/check/instrumentation.sh
+    rust-script ./scripts/check/instrumentation.rs
 
 # =============================================================================
 # 未使用依存チェック
