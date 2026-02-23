@@ -25,6 +25,9 @@ module Page.Workflow.Detail exposing
 
 詳細: [申請フォーム UI 設計](../../../../docs/03_詳細設計書/10_ワークフロー申請フォームUI設計.md)
 
+Model は ADT ベースステートマシン（[ADR-054](../../../../docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md)
+パターン A）で Loading/Failed/Loaded を分離し、Loaded 時のみ操作フィールドが存在する。
+
 -}
 
 import Api exposing (ApiError)
@@ -74,20 +77,34 @@ type PendingAction
     | ConfirmRequestChanges WorkflowStep
 
 
-{-| ページの状態
+{-| ページの状態（ADR-054 パターン A: 外側に共通フィールド）
 -}
 type alias Model =
-    { -- 共有状態
-      shared : Shared
-
-    -- パラメータ
+    { shared : Shared
     , workflowDisplayNumber : Int
+    , state : PageState
+    }
 
-    -- API データ
-    , workflow : RemoteData ApiError WorkflowInstance
+
+{-| ページの状態遷移
+-}
+type PageState
+    = Loading
+    | Failed ApiError
+    | Loaded LoadedState
+
+
+{-| Loaded 時のみ存在するフィールド
+
+workflow 取得完了後の状態でのみ有効なフィールドを集約する。
+definition/comments は Loaded 後も非同期ロード中のため RemoteData を維持。
+
+-}
+type alias LoadedState =
+    { workflow : WorkflowInstance
     , definition : RemoteData ApiError WorkflowDefinition
 
-    -- 承認/却下の状態
+    -- 承認/却下/差し戻し
     , comment : String
     , isSubmitting : Bool
     , pendingAction : Maybe PendingAction
@@ -109,41 +126,46 @@ type alias Model =
     }
 
 
+{-| LoadedState の初期値を構築
+
+GotWorkflow Ok 受信時、workflow から LoadedState を生成する。
+definition は後続の GotDefinition で、comments は後続の GotComments で更新される。
+
+-}
+initLoaded : WorkflowInstance -> LoadedState
+initLoaded workflow =
+    { workflow = workflow
+    , definition = RemoteData.Loading
+    , comment = ""
+    , isSubmitting = False
+    , pendingAction = Nothing
+    , errorMessage = Nothing
+    , successMessage = Nothing
+    , comments = RemoteData.Loading
+    , newCommentBody = ""
+    , isPostingComment = False
+    , isEditing = False
+    , editFormData = Dict.empty
+    , editApprovers = Dict.empty
+    , users = NotAsked
+    , resubmitValidationErrors = Dict.empty
+    , isResubmitting = False
+    }
+
+
 {-| 初期化
 -}
 init : Shared -> Int -> ( Model, Cmd Msg )
 init shared workflowDisplayNumber =
     ( { shared = shared
       , workflowDisplayNumber = workflowDisplayNumber
-      , workflow = Loading
-      , definition = NotAsked
-      , comment = ""
-      , isSubmitting = False
-      , pendingAction = Nothing
-      , errorMessage = Nothing
-      , successMessage = Nothing
-      , comments = Loading
-      , newCommentBody = ""
-      , isPostingComment = False
-      , isEditing = False
-      , editFormData = Dict.empty
-      , editApprovers = Dict.empty
-      , users = NotAsked
-      , resubmitValidationErrors = Dict.empty
-      , isResubmitting = False
+      , state = Loading
       }
-    , Cmd.batch
-        [ WorkflowApi.getWorkflow
-            { config = Shared.toRequestConfig shared
-            , displayNumber = workflowDisplayNumber
-            , toMsg = GotWorkflow
-            }
-        , WorkflowApi.listComments
-            { config = Shared.toRequestConfig shared
-            , displayNumber = workflowDisplayNumber
-            , toMsg = GotComments
-            }
-        ]
+    , WorkflowApi.getWorkflow
+        { config = Shared.toRequestConfig shared
+        , displayNumber = workflowDisplayNumber
+        , toMsg = GotWorkflow
+        }
     )
 
 
@@ -196,151 +218,185 @@ type Msg
 
 
 {-| 状態更新
+
+状態遷移メッセージ（GotWorkflow, Refresh）は外側で処理し、
+操作メッセージは updateLoaded に委譲する。
+
 -}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotWorkflow result ->
-            case result of
-                Ok workflow ->
-                    ( { model | workflow = Success workflow }
-                    , WorkflowDefinitionApi.getDefinition
-                        { config = Shared.toRequestConfig model.shared
-                        , id = workflow.definitionId
-                        , toMsg = GotDefinition
-                        }
-                    )
+            handleGotWorkflow result model
 
-                Err err ->
-                    ( { model | workflow = Failure err }
+        Refresh ->
+            ( { model | state = Loading }
+            , WorkflowApi.getWorkflow
+                { config = Shared.toRequestConfig model.shared
+                , displayNumber = model.workflowDisplayNumber
+                , toMsg = GotWorkflow
+                }
+            )
+
+        _ ->
+            case model.state of
+                Loaded loaded ->
+                    let
+                        ( newLoaded, cmd ) =
+                            updateLoaded msg model.shared model.workflowDisplayNumber loaded
+                    in
+                    ( { model | state = Loaded newLoaded }, cmd )
+
+                _ ->
+                    ( model, Cmd.none )
+
+
+{-| ワークフロー取得結果のハンドリング
+
+初回ロード時（Loading/Failed → Loaded）は新しい LoadedState を構築し、
+definition と comments の fetch を並列発行する。
+Refresh 後の再取得もこのパスを通る（Refresh で Loading に遷移するため）。
+
+-}
+handleGotWorkflow : Result ApiError WorkflowInstance -> Model -> ( Model, Cmd Msg )
+handleGotWorkflow result model =
+    case result of
+        Ok workflow ->
+            case model.state of
+                Loaded loaded ->
+                    ( { model | state = Loaded { loaded | workflow = workflow } }
                     , Cmd.none
                     )
 
+                _ ->
+                    ( { model | state = Loaded (initLoaded workflow) }
+                    , Cmd.batch
+                        [ WorkflowDefinitionApi.getDefinition
+                            { config = Shared.toRequestConfig model.shared
+                            , id = workflow.definitionId
+                            , toMsg = GotDefinition
+                            }
+                        , WorkflowApi.listComments
+                            { config = Shared.toRequestConfig model.shared
+                            , displayNumber = model.workflowDisplayNumber
+                            , toMsg = GotComments
+                            }
+                        ]
+                    )
+
+        Err err ->
+            ( { model | state = Failed err }
+            , Cmd.none
+            )
+
+
+{-| Loaded 状態専用の状態更新
+
+GotWorkflow/Refresh 以外のすべてのメッセージを処理する。
+
+-}
+updateLoaded : Msg -> Shared -> Int -> LoadedState -> ( LoadedState, Cmd Msg )
+updateLoaded msg shared workflowDisplayNumber loaded =
+    case msg of
         GotDefinition result ->
             case result of
                 Ok definition ->
-                    ( { model | definition = Success definition }
-                    , Cmd.none
-                    )
+                    ( { loaded | definition = Success definition }, Cmd.none )
 
                 Err err ->
-                    ( { model | definition = Failure err }
-                    , Cmd.none
-                    )
+                    ( { loaded | definition = Failure err }, Cmd.none )
 
-        Refresh ->
-            ( { model
-                | workflow = Loading
-                , definition = NotAsked
-                , comments = Loading
-                , errorMessage = Nothing
-                , successMessage = Nothing
-              }
-            , Cmd.batch
-                [ WorkflowApi.getWorkflow
-                    { config = Shared.toRequestConfig model.shared
-                    , displayNumber = model.workflowDisplayNumber
-                    , toMsg = GotWorkflow
-                    }
-                , WorkflowApi.listComments
-                    { config = Shared.toRequestConfig model.shared
-                    , displayNumber = model.workflowDisplayNumber
-                    , toMsg = GotComments
-                    }
-                ]
-            )
+        GotComments result ->
+            case result of
+                Ok comments ->
+                    ( { loaded | comments = Success comments }, Cmd.none )
+
+                Err err ->
+                    ( { loaded | comments = Failure err }, Cmd.none )
 
         UpdateComment newComment ->
-            ( { model | comment = newComment }, Cmd.none )
+            ( { loaded | comment = newComment }, Cmd.none )
 
         ClickApprove step ->
-            ( { model | pendingAction = Just (ConfirmApprove step) }
+            ( { loaded | pendingAction = Just (ConfirmApprove step) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ClickReject step ->
-            ( { model | pendingAction = Just (ConfirmReject step) }
+            ( { loaded | pendingAction = Just (ConfirmReject step) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ClickRequestChanges step ->
-            ( { model | pendingAction = Just (ConfirmRequestChanges step) }
+            ( { loaded | pendingAction = Just (ConfirmRequestChanges step) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
         ConfirmAction ->
-            case model.pendingAction of
+            case loaded.pendingAction of
                 Just (ConfirmApprove step) ->
-                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    ( { loaded | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
                     , WorkflowApi.approveStep
-                        { config = Shared.toRequestConfig model.shared
-                        , workflowDisplayNumber = model.workflowDisplayNumber
+                        { config = Shared.toRequestConfig shared
+                        , workflowDisplayNumber = workflowDisplayNumber
                         , stepDisplayNumber = step.displayNumber
-                        , body = { version = step.version, comment = nonEmptyComment model.comment }
+                        , body = { version = step.version, comment = nonEmptyComment loaded.comment }
                         , toMsg = GotApproveResult
                         }
                     )
 
                 Just (ConfirmReject step) ->
-                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    ( { loaded | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
                     , WorkflowApi.rejectStep
-                        { config = Shared.toRequestConfig model.shared
-                        , workflowDisplayNumber = model.workflowDisplayNumber
+                        { config = Shared.toRequestConfig shared
+                        , workflowDisplayNumber = workflowDisplayNumber
                         , stepDisplayNumber = step.displayNumber
-                        , body = { version = step.version, comment = nonEmptyComment model.comment }
+                        , body = { version = step.version, comment = nonEmptyComment loaded.comment }
                         , toMsg = GotRejectResult
                         }
                     )
 
                 Just (ConfirmRequestChanges step) ->
-                    ( { model | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
+                    ( { loaded | pendingAction = Nothing, isSubmitting = True, errorMessage = Nothing }
                     , WorkflowApi.requestChangesStep
-                        { config = Shared.toRequestConfig model.shared
-                        , workflowDisplayNumber = model.workflowDisplayNumber
+                        { config = Shared.toRequestConfig shared
+                        , workflowDisplayNumber = workflowDisplayNumber
                         , stepDisplayNumber = step.displayNumber
-                        , body = { version = step.version, comment = nonEmptyComment model.comment }
+                        , body = { version = step.version, comment = nonEmptyComment loaded.comment }
                         , toMsg = GotRequestChangesResult
                         }
                     )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( loaded, Cmd.none )
 
         CancelAction ->
-            ( { model | pendingAction = Nothing }
+            ( { loaded | pendingAction = Nothing }
             , Cmd.none
             )
 
         GotApproveResult result ->
-            handleApprovalResult "承認しました" result model
+            handleApprovalResult "承認しました" result loaded
 
         GotRejectResult result ->
-            handleApprovalResult "却下しました" result model
+            handleApprovalResult "却下しました" result loaded
 
         GotRequestChangesResult result ->
-            handleApprovalResult "差し戻しました" result model
-
-        GotComments result ->
-            case result of
-                Ok comments ->
-                    ( { model | comments = Success comments }, Cmd.none )
-
-                Err err ->
-                    ( { model | comments = Failure err }, Cmd.none )
+            handleApprovalResult "差し戻しました" result loaded
 
         UpdateNewComment body ->
-            ( { model | newCommentBody = body }, Cmd.none )
+            ( { loaded | newCommentBody = body }, Cmd.none )
 
         SubmitComment ->
-            if String.isEmpty (String.trim model.newCommentBody) then
-                ( model, Cmd.none )
+            if String.isEmpty (String.trim loaded.newCommentBody) then
+                ( loaded, Cmd.none )
 
             else
-                ( { model | isPostingComment = True }
+                ( { loaded | isPostingComment = True }
                 , WorkflowApi.postComment
-                    { config = Shared.toRequestConfig model.shared
-                    , displayNumber = model.workflowDisplayNumber
-                    , body = { body = String.trim model.newCommentBody }
+                    { config = Shared.toRequestConfig shared
+                    , displayNumber = workflowDisplayNumber
+                    , body = { body = String.trim loaded.newCommentBody }
                     , toMsg = GotPostCommentResult
                     }
                 )
@@ -350,14 +406,14 @@ update msg model =
                 Ok newComment ->
                     let
                         updatedComments =
-                            case model.comments of
+                            case loaded.comments of
                                 Success existing ->
                                     Success (existing ++ [ newComment ])
 
                                 _ ->
                                     Success [ newComment ]
                     in
-                    ( { model
+                    ( { loaded
                         | comments = updatedComments
                         , newCommentBody = ""
                         , isPostingComment = False
@@ -366,7 +422,7 @@ update msg model =
                     )
 
                 Err _ ->
-                    ( { model
+                    ( { loaded
                         | isPostingComment = False
                         , errorMessage = Just "コメントの投稿に失敗しました。"
                       }
@@ -374,67 +430,62 @@ update msg model =
                     )
 
         StartEditing ->
-            case model.workflow of
-                Success workflow ->
-                    let
-                        formDataDict =
-                            case Decode.decodeValue (Decode.keyValuePairs Decode.string) workflow.formData of
-                                Ok pairs ->
-                                    Dict.fromList pairs
+            let
+                formDataDict =
+                    case Decode.decodeValue (Decode.keyValuePairs Decode.string) loaded.workflow.formData of
+                        Ok pairs ->
+                            Dict.fromList pairs
 
-                                Err _ ->
-                                    Dict.empty
+                        Err _ ->
+                            Dict.empty
 
-                        approverStates =
-                            case model.definition of
-                                Success def ->
-                                    WorkflowDefinition.approvalStepInfos def
-                                        |> List.map
-                                            (\info ->
-                                                let
-                                                    existingApprover =
-                                                        workflow.steps
-                                                            |> List.filter (\s -> s.stepName == info.name)
-                                                            |> List.head
-                                                            |> Maybe.andThen .assignedTo
+                approverStates =
+                    case loaded.definition of
+                        Success def ->
+                            WorkflowDefinition.approvalStepInfos def
+                                |> List.map
+                                    (\info ->
+                                        let
+                                            existingApprover =
+                                                loaded.workflow.steps
+                                                    |> List.filter (\s -> s.stepName == info.name)
+                                                    |> List.head
+                                                    |> Maybe.andThen .assignedTo
 
-                                                    state =
-                                                        case existingApprover of
-                                                            Just ref ->
-                                                                { selection = Preselected ref
-                                                                , search = ""
-                                                                , dropdownOpen = False
-                                                                , highlightIndex = -1
-                                                                }
+                                            state =
+                                                case existingApprover of
+                                                    Just ref ->
+                                                        { selection = Preselected ref
+                                                        , search = ""
+                                                        , dropdownOpen = False
+                                                        , highlightIndex = -1
+                                                        }
 
-                                                            Nothing ->
-                                                                ApproverSelector.init
-                                                in
-                                                ( info.id, state )
-                                            )
-                                        |> Dict.fromList
+                                                    Nothing ->
+                                                        ApproverSelector.init
+                                        in
+                                        ( info.id, state )
+                                    )
+                                |> Dict.fromList
 
-                                _ ->
-                                    Dict.empty
-                    in
-                    ( { model
-                        | isEditing = True
-                        , editFormData = formDataDict
-                        , editApprovers = approverStates
-                        , resubmitValidationErrors = Dict.empty
-                        , users = Loading
-                      }
-                    , UserApi.listUsers
-                        { config = Shared.toRequestConfig model.shared
-                        , toMsg = GotUsers
-                        }
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+                        _ ->
+                            Dict.empty
+            in
+            ( { loaded
+                | isEditing = True
+                , editFormData = formDataDict
+                , editApprovers = approverStates
+                , resubmitValidationErrors = Dict.empty
+                , users = RemoteData.Loading
+              }
+            , UserApi.listUsers
+                { config = Shared.toRequestConfig shared
+                , toMsg = GotUsers
+                }
+            )
 
         CancelEditing ->
-            ( { model
+            ( { loaded
                 | isEditing = False
                 , editFormData = Dict.empty
                 , editApprovers = Dict.empty
@@ -444,31 +495,31 @@ update msg model =
             )
 
         UpdateEditFormField fieldId fieldValue ->
-            ( { model | editFormData = Dict.insert fieldId fieldValue model.editFormData }
+            ( { loaded | editFormData = Dict.insert fieldId fieldValue loaded.editFormData }
             , Cmd.none
             )
 
         EditApproverSearchChanged stepId search ->
-            ( { model | editApprovers = updateApproverState stepId (\s -> { s | search = search, dropdownOpen = True, highlightIndex = 0 }) model.editApprovers }
+            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | search = search, dropdownOpen = True, highlightIndex = 0 }) loaded.editApprovers }
             , Cmd.none
             )
 
         EditApproverSelected stepId user ->
-            ( { model | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) model.editApprovers }
+            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) loaded.editApprovers }
             , Cmd.none
             )
 
         EditApproverCleared stepId ->
-            ( { model | editApprovers = updateApproverState stepId (\_ -> ApproverSelector.init) model.editApprovers }
+            ( { loaded | editApprovers = updateApproverState stepId (\_ -> ApproverSelector.init) loaded.editApprovers }
             , Cmd.none
             )
 
         EditApproverKeyDown stepId key ->
-            case Dict.get stepId model.editApprovers of
+            case Dict.get stepId loaded.editApprovers of
                 Just state ->
                     let
                         candidates =
-                            RemoteData.withDefault [] model.users
+                            RemoteData.withDefault [] loaded.users
                                 |> UserItem.filterUsers state.search
 
                         result =
@@ -480,60 +531,55 @@ update msg model =
                     in
                     case result of
                         ApproverSelector.Navigate newIndex ->
-                            ( { model | editApprovers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) model.editApprovers }, Cmd.none )
+                            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) loaded.editApprovers }, Cmd.none )
 
                         ApproverSelector.Select user ->
-                            ( { model | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) model.editApprovers }, Cmd.none )
+                            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) loaded.editApprovers }, Cmd.none )
 
                         ApproverSelector.Close ->
-                            ( { model | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) model.editApprovers }, Cmd.none )
+                            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) loaded.editApprovers }, Cmd.none )
 
                         ApproverSelector.NoChange ->
-                            ( model, Cmd.none )
+                            ( loaded, Cmd.none )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( loaded, Cmd.none )
 
         EditApproverDropdownClosed stepId ->
-            ( { model | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) model.editApprovers }
+            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) loaded.editApprovers }
             , Cmd.none
             )
 
         SubmitResubmit ->
-            case model.workflow of
-                Success workflow ->
-                    let
-                        validationErrors =
-                            validateResubmit model
+            let
+                validationErrors =
+                    validateResubmit loaded
 
-                        approvers =
-                            buildResubmitApprovers model
-                    in
-                    if Dict.isEmpty validationErrors then
-                        ( { model | isResubmitting = True, resubmitValidationErrors = Dict.empty, errorMessage = Nothing }
-                        , WorkflowApi.resubmitWorkflow
-                            { config = Shared.toRequestConfig model.shared
-                            , displayNumber = model.workflowDisplayNumber
-                            , body =
-                                { version = workflow.version
-                                , formData = encodeFormValues model.editFormData
-                                , approvers = approvers
-                                }
-                            , toMsg = GotResubmitResult
-                            }
-                        )
+                approvers =
+                    buildResubmitApprovers loaded
+            in
+            if Dict.isEmpty validationErrors then
+                ( { loaded | isResubmitting = True, resubmitValidationErrors = Dict.empty, errorMessage = Nothing }
+                , WorkflowApi.resubmitWorkflow
+                    { config = Shared.toRequestConfig shared
+                    , displayNumber = workflowDisplayNumber
+                    , body =
+                        { version = loaded.workflow.version
+                        , formData = encodeFormValues loaded.editFormData
+                        , approvers = approvers
+                        }
+                    , toMsg = GotResubmitResult
+                    }
+                )
 
-                    else
-                        ( { model | resubmitValidationErrors = validationErrors }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+            else
+                ( { loaded | resubmitValidationErrors = validationErrors }, Cmd.none )
 
         GotResubmitResult result ->
             case result of
                 Ok workflow ->
-                    ( { model
-                        | workflow = Success workflow
+                    ( { loaded
+                        | workflow = workflow
                         , isEditing = False
                         , isResubmitting = False
                         , editFormData = Dict.empty
@@ -542,14 +588,14 @@ update msg model =
                         , errorMessage = Nothing
                       }
                     , WorkflowApi.listComments
-                        { config = Shared.toRequestConfig model.shared
-                        , displayNumber = model.workflowDisplayNumber
+                        { config = Shared.toRequestConfig shared
+                        , displayNumber = workflowDisplayNumber
                         , toMsg = GotComments
                         }
                     )
 
                 Err error ->
-                    ( { model
+                    ( { loaded
                         | isResubmitting = False
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー" } error)
                       }
@@ -559,15 +605,18 @@ update msg model =
         GotUsers result ->
             case result of
                 Ok users ->
-                    ( { model | users = Success users }, Cmd.none )
+                    ( { loaded | users = Success users }, Cmd.none )
 
                 Err err ->
-                    ( { model | users = Failure err }, Cmd.none )
+                    ( { loaded | users = Failure err }, Cmd.none )
 
         DismissMessage ->
-            ( { model | errorMessage = Nothing, successMessage = Nothing }
+            ( { loaded | errorMessage = Nothing, successMessage = Nothing }
             , Cmd.none
             )
+
+        _ ->
+            ( loaded, Cmd.none )
 
 
 {-| 空文字列を Nothing に変換
@@ -583,12 +632,12 @@ nonEmptyComment comment =
 
 {-| 承認/却下結果のハンドリング
 -}
-handleApprovalResult : String -> Result ApiError WorkflowInstance -> Model -> ( Model, Cmd Msg )
-handleApprovalResult successMsg result model =
+handleApprovalResult : String -> Result ApiError WorkflowInstance -> LoadedState -> ( LoadedState, Cmd Msg )
+handleApprovalResult successMsg result loaded =
     case result of
         Ok workflow ->
-            ( { model
-                | workflow = Success workflow
+            ( { loaded
+                | workflow = workflow
                 , isSubmitting = False
                 , successMessage = Just successMsg
                 , errorMessage = Nothing
@@ -598,7 +647,7 @@ handleApprovalResult successMsg result model =
             )
 
         Err error ->
-            ( { model
+            ( { loaded
                 | isSubmitting = False
                 , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー" } error)
               }
@@ -619,11 +668,11 @@ updateApproverState stepId updater dict =
 
 {-| 再提出のバリデーション
 -}
-validateResubmit : Model -> Dict String String
-validateResubmit model =
+validateResubmit : LoadedState -> Dict String String
+validateResubmit loaded =
     let
         approverErrors =
-            model.editApprovers
+            loaded.editApprovers
                 |> Dict.toList
                 |> List.filterMap
                     (\( stepId, state ) ->
@@ -639,9 +688,9 @@ validateResubmit model =
 
 {-| 再提出用の承認者リストを構築
 -}
-buildResubmitApprovers : Model -> List WorkflowApi.StepApproverRequest
-buildResubmitApprovers model =
-    model.editApprovers
+buildResubmitApprovers : LoadedState -> List WorkflowApi.StepApproverRequest
+buildResubmitApprovers loaded =
+    loaded.editApprovers
         |> Dict.toList
         |> List.filterMap
             (\( stepId, state ) ->
@@ -680,13 +729,37 @@ view : Model -> Html Msg
 view model =
     div []
         [ viewHeader
-        , MessageAlert.view
+        , viewBody model
+        ]
+
+
+{-| 状態に応じたコンテンツ描画
+-}
+viewBody : Model -> Html Msg
+viewBody model =
+    case model.state of
+        Loading ->
+            LoadingSpinner.view
+
+        Failed err ->
+            viewError err
+
+        Loaded loaded ->
+            viewLoaded model.shared loaded
+
+
+{-| Loaded 状態のビュー
+-}
+viewLoaded : Shared -> LoadedState -> Html Msg
+viewLoaded shared loaded =
+    div []
+        [ MessageAlert.view
             { onDismiss = DismissMessage
-            , successMessage = model.successMessage
-            , errorMessage = model.errorMessage
+            , successMessage = loaded.successMessage
+            , errorMessage = loaded.errorMessage
             }
-        , viewContent model
-        , viewConfirmDialog model.pendingAction
+        , viewWorkflowDetail shared loaded
+        , viewConfirmDialog loaded.pendingAction
         ]
 
 
@@ -699,46 +772,30 @@ viewHeader =
         ]
 
 
-viewContent : Model -> Html Msg
-viewContent model =
-    case model.workflow of
-        NotAsked ->
-            div [] []
-
-        Loading ->
-            LoadingSpinner.view
-
-        Failure _ ->
-            viewError
-
-        Success workflow ->
-            viewWorkflowDetail model workflow
-
-
-viewError : Html Msg
-viewError =
+viewError : ApiError -> Html Msg
+viewError err =
     ErrorState.view
-        { message = "データの取得に失敗しました。"
+        { message = ErrorMessage.toUserMessage { entityName = "ワークフロー" } err
         , onRefresh = Refresh
         }
 
 
-viewWorkflowDetail : Model -> WorkflowInstance -> Html Msg
-viewWorkflowDetail model workflow =
+viewWorkflowDetail : Shared -> LoadedState -> Html Msg
+viewWorkflowDetail shared loaded =
     div [ class "space-y-6" ]
-        [ viewTitle workflow
-        , viewStatus workflow
-        , viewStepProgress workflow
-        , viewApprovalSection workflow model.comment model.isSubmitting model.shared
-        , viewResubmitSection model workflow
-        , viewSteps workflow
-        , viewBasicInfo (Shared.zone model.shared) workflow
-        , if model.isEditing then
-            viewEditableFormData model
+        [ viewTitle loaded.workflow
+        , viewStatus loaded.workflow
+        , viewStepProgress loaded.workflow
+        , viewApprovalSection loaded.workflow loaded.comment loaded.isSubmitting shared
+        , viewResubmitSection shared loaded
+        , viewSteps loaded.workflow
+        , viewBasicInfo (Shared.zone shared) loaded.workflow
+        , if loaded.isEditing then
+            viewEditableFormData loaded
 
           else
-            viewFormData workflow model.definition
-        , viewCommentSection model
+            viewFormData loaded.workflow loaded.definition
+        , viewCommentSection loaded
         ]
 
 
@@ -877,19 +934,19 @@ viewBasicInfo zone workflow =
 ステータスが ChangesRequested かつ現在のユーザーが起案者の場合のみ表示。
 
 -}
-viewResubmitSection : Model -> WorkflowInstance -> Html Msg
-viewResubmitSection model workflow =
+viewResubmitSection : Shared -> LoadedState -> Html Msg
+viewResubmitSection shared loaded =
     let
         currentUserId =
-            Shared.getUserId model.shared
+            Shared.getUserId shared
 
         isInitiator =
-            currentUserId == Just workflow.initiatedBy.id
+            currentUserId == Just loaded.workflow.initiatedBy.id
 
         isChangesRequested =
-            workflow.status == WorkflowInstance.ChangesRequested
+            loaded.workflow.status == WorkflowInstance.ChangesRequested
     in
-    if isChangesRequested && isInitiator && not model.isEditing then
+    if isChangesRequested && isInitiator && not loaded.isEditing then
         div [ class "rounded-lg border border-warning-200 bg-warning-50 p-4" ]
             [ p [ class "mb-3 text-sm text-warning-700" ] [ text "この申請は差し戻されました。内容を修正して再申請できます。" ]
             , Button.view
@@ -906,18 +963,18 @@ viewResubmitSection model workflow =
 
 {-| 編集可能なフォームデータ表示
 -}
-viewEditableFormData : Model -> Html Msg
-viewEditableFormData model =
+viewEditableFormData : LoadedState -> Html Msg
+viewEditableFormData loaded =
     div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ（編集中）" ]
-        , case model.definition of
+        , case loaded.definition of
             Success definition ->
                 case DynamicForm.extractFormFields definition.definition of
                     Ok fields ->
                         div [ class "space-y-4" ]
-                            (List.map (viewEditableFormField model.editFormData) fields
-                                ++ [ viewEditableApprovers model definition
-                                   , viewEditActions model
+                            (List.map (viewEditableFormField loaded.editFormData) fields
+                                ++ [ viewEditableApprovers loaded definition
+                                   , viewEditActions loaded
                                    ]
                             )
 
@@ -943,8 +1000,8 @@ viewEditableFormField formData field =
         ]
 
 
-viewEditableApprovers : Model -> WorkflowDefinition -> Html Msg
-viewEditableApprovers model definition =
+viewEditableApprovers : LoadedState -> WorkflowDefinition -> Html Msg
+viewEditableApprovers loaded definition =
     let
         stepInfos =
             WorkflowDefinition.approvalStepInfos definition
@@ -952,23 +1009,23 @@ viewEditableApprovers model definition =
     div [ class "space-y-3" ]
         [ h3 [ class "text-sm font-semibold text-secondary-700" ] [ text "承認者" ]
         , div [ class "space-y-3" ]
-            (List.map (viewEditableApproverStep model) stepInfos)
+            (List.map (viewEditableApproverStep loaded) stepInfos)
         ]
 
 
-viewEditableApproverStep : Model -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
-viewEditableApproverStep model stepInfo =
+viewEditableApproverStep : LoadedState -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
+viewEditableApproverStep loaded stepInfo =
     let
         state =
-            Dict.get stepInfo.id model.editApprovers
+            Dict.get stepInfo.id loaded.editApprovers
                 |> Maybe.withDefault ApproverSelector.init
     in
     div [ class "space-y-1" ]
         [ label [ class "block text-sm font-medium text-secondary-600" ] [ text stepInfo.name ]
         , ApproverSelector.view
             { state = state
-            , users = model.users
-            , validationError = Dict.get ("approver_" ++ stepInfo.id) model.resubmitValidationErrors
+            , users = loaded.users
+            , validationError = Dict.get ("approver_" ++ stepInfo.id) loaded.resubmitValidationErrors
             , onSearch = EditApproverSearchChanged stepInfo.id
             , onSelect = EditApproverSelected stepInfo.id
             , onClear = EditApproverCleared stepInfo.id
@@ -978,16 +1035,16 @@ viewEditableApproverStep model stepInfo =
         ]
 
 
-viewEditActions : Model -> Html Msg
-viewEditActions model =
+viewEditActions : LoadedState -> Html Msg
+viewEditActions loaded =
     div [ class "flex gap-3 pt-4 border-t border-secondary-100" ]
         [ Button.view
             { variant = Button.Primary
-            , disabled = model.isResubmitting
+            , disabled = loaded.isResubmitting
             , onClick = SubmitResubmit
             }
             [ text
-                (if model.isResubmitting then
+                (if loaded.isResubmitting then
                     "再申請中..."
 
                  else
@@ -996,7 +1053,7 @@ viewEditActions model =
             ]
         , Button.view
             { variant = Button.Outline
-            , disabled = model.isResubmitting
+            , disabled = loaded.isResubmitting
             , onClick = CancelEditing
             }
             [ text "キャンセル" ]
@@ -1011,7 +1068,7 @@ viewFormData workflow maybeDefinition =
             NotAsked ->
                 text ""
 
-            Loading ->
+            RemoteData.Loading ->
                 LoadingSpinner.view
 
             Failure _ ->
@@ -1036,18 +1093,18 @@ viewFormDataWithLabels definition formData =
 viewFormField : Decode.Value -> FormField -> List (Html Msg)
 viewFormField formData field =
     let
-        value =
+        fieldValue =
             Decode.decodeValue (Decode.field field.id Decode.string) formData
                 |> Result.withDefault ""
     in
     [ dt [ class "text-secondary-500" ] [ text field.label ]
     , dd [ class "text-secondary-900" ]
         [ text
-            (if String.isEmpty value then
+            (if String.isEmpty fieldValue then
                 "-"
 
              else
-                value
+                fieldValue
             )
         ]
     ]
@@ -1073,15 +1130,15 @@ viewRawFormData formData =
 ワークフローに紐づくコメントスレッドを表示し、新規コメントの投稿を提供する。
 
 -}
-viewCommentSection : Model -> Html Msg
-viewCommentSection model =
+viewCommentSection : LoadedState -> Html Msg
+viewCommentSection loaded =
     div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "コメント" ]
-        , case model.comments of
+        , case loaded.comments of
             NotAsked ->
                 text ""
 
-            Loading ->
+            RemoteData.Loading ->
                 LoadingSpinner.view
 
             Failure _ ->
@@ -1091,7 +1148,7 @@ viewCommentSection model =
             Success comments ->
                 div [ class "space-y-4" ]
                     [ viewCommentList comments
-                    , viewCommentForm model.newCommentBody model.isPostingComment
+                    , viewCommentForm loaded.newCommentBody loaded.isPostingComment
                     ]
         ]
 
@@ -1343,8 +1400,8 @@ viewStep step =
                 Nothing ->
                     text ""
             , case step.comment of
-                Just comment ->
-                    span [] [ text ("コメント: " ++ comment) ]
+                Just stepComment ->
+                    span [] [ text ("コメント: " ++ stepComment) ]
 
                 Nothing ->
                     text ""
