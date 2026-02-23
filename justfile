@@ -627,4 +627,4 @@ check-issue *args:
 # 使い方: just sync-epic ISSUE_NUMBER
 # 例: just sync-epic 749
 sync-epic issue_number:
-    ./scripts/issue/sync-epic.sh {{issue_number}}
+    rust-script ./scripts/issue/sync-epic.rs {{issue_number}}
