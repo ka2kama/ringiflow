@@ -44,6 +44,6 @@ Issue #820 に基づき、`WorkflowStep` のドメインモデルを ADT（代�
 変更ファイル:
 - `backend/crates/domain/src/workflow/step.rs` — ADT 型定義 + 全メソッド・テスト更新
 - `backend/crates/infra/src/repository/workflow_step_repository.rs` — TryFrom のエラーハンドリング更新
-- `prompts/plans/joyful-snacking-cookie.md` — 計画ファイル
+- `prompts/plans/820_workflow-step-adt-state-machine.md` — 計画ファイル
 
 PR: #840（Draft）
