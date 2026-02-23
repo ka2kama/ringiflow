@@ -194,6 +194,9 @@ async fn main() -> anyhow::Result<()> {
                 tracing::error!("DevAuth: セッション作成に失敗しました: {}", e);
             }
         }
+
+        // セッション TTL 経過後もデモ環境で認証が維持されるよう、定期更新タスクを起動
+        dev_auth::spawn_dev_session_refresh(redis_session_manager.clone());
     }
 
     // 依存関係の初期化
