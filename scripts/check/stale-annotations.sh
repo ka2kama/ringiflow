@@ -18,7 +18,7 @@ if ! command -v gh &>/dev/null; then
 fi
 
 # gh の認証状態チェック
-if ! gh auth status &>/dev/null 2>&1; then
+if ! gh auth status &>/dev/null; then
     echo "⚠ gh CLI が未認証です（stale annotation チェックをスキップ）"
     exit 0
 fi
