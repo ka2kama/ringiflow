@@ -1484,7 +1484,8 @@ viewTransitionLine canvas index transition =
                         , SvgAttr.stroke "transparent"
                         , SvgAttr.strokeWidth "12"
                         , SvgAttr.class "cursor-pointer"
-                        , Svg.Events.onClick (TransitionClicked index)
+                        , Html.Events.stopPropagationOn "click"
+                            (Decode.succeed ( TransitionClicked index, True ))
                         ]
                         []
 
