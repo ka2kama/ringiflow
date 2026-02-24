@@ -259,7 +259,7 @@ flowchart LR
 - Issue 精査: [問題解決フレームワーク](.claude/rules/problem-solving.md)で Issue の前提・スコープ・完了基準を検証する
 - 設計レビュー: [設計レビューの反復](.claude/rules/zoom-rhythm.md#設計ブラッシュアップループ)でギャップをゼロにしてから実装に入る
 - 設計原則レンズ: TDD Refactor で [SRP・DIP・Simple Design の問い](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ) に答え、改善機会を探す
-- 提出前チェック: [品質チェックリスト](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#62-品質チェックリスト)で漏れを防ぎ、PR に Self-review を記載する
+- 提出前チェック: [品質チェックリスト](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#62-品質チェックリスト)で漏れを防ぎ、PR に品質確認を記載する
 
 → 詳細: [CLAUDE.md](CLAUDE.md)
 
