@@ -191,6 +191,8 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 コードの整理に加えて、設計原則の観点から改善機会を探す。
 
+→ ISO 25010 品質特性との対応: [KB: ISO 25010 > 設計原則レンズとのマッピング](../../06_ナレッジベース/methodology/ISO25010.md#設計原則レンズとのマッピング)
+
 → 位置づけ: [俯瞰・実装リズム > 実装中の俯瞰](../../../.claude/rules/zoom-rhythm.md#実装中の俯瞰-設計原則レンズ)
 
 毎 Refactor（書いた直後が最も気づきやすい）:
