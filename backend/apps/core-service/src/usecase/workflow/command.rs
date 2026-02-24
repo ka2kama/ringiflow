@@ -2,6 +2,7 @@
 
 mod comment;
 mod decision;
+mod helpers;
 mod lifecycle;
 
 #[cfg(test)]

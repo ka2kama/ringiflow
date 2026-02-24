@@ -12,7 +12,6 @@ use ringiflow_domain::{
         WorkflowStepId,
     },
 };
-use ringiflow_infra::InfraError;
 use ringiflow_shared::{event_log::event, log_business_event};
 
 use crate::{
@@ -136,30 +135,16 @@ impl WorkflowUseCaseImpl {
             .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
         // 7. インスタンスとステップを保存（単一トランザクション）
-        let mut tx = self
-            .tx_manager
-            .begin()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
-        self.instance_repo
-            .update_with_version_check(&mut tx, &in_progress_instance, expected_version, &tenant_id)
-            .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
-                    "インスタンスは既に更新されています。最新の情報を取得してください。"
-                        .to_string(),
-                ),
-                other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
-            })?;
+        let mut tx = self.begin_tx().await?;
+        self.save_instance(&mut tx, &in_progress_instance, expected_version, &tenant_id)
+            .await?;
         for step in &steps {
             self.step_repo
                 .insert(&mut tx, step, &tenant_id)
                 .await
                 .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
         }
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
+        self.commit_tx(tx).await?;
 
         log_business_event!(
             event.category = event::category::WORKFLOW,
