@@ -4,15 +4,14 @@ use ringiflow_domain::{
     tenant::TenantId,
     user::UserId,
     value_objects::DisplayNumber,
-    workflow::{WorkflowStepId, WorkflowStepStatus},
+    workflow::WorkflowStepId,
 };
-use ringiflow_infra::InfraError;
-use ringiflow_shared::{event_log::event, log_business_event};
 
+use super::common::StepTerminationType;
 use crate::{
     error::CoreError,
     usecase::{
-        helpers::{FindResultExt, check_step_assigned_to},
+        helpers::FindResultExt,
         workflow::{ApproveRejectInput, WorkflowUseCaseImpl, WorkflowWithSteps},
     },
 };
@@ -20,22 +19,8 @@ use crate::{
 impl WorkflowUseCaseImpl {
     /// ワークフローステップを却下する
     ///
-    /// ## 処理フロー
-    ///
-    /// 1. ステップを取得
-    /// 2. 権限チェック（担当者のみ却下可能）
-    /// 3. 楽観的ロック（バージョン一致チェック）
-    /// 4. ステップを却下
-    /// 5. 残りの Pending ステップを Skipped に遷移
-    /// 6. インスタンスを Rejected に遷移
-    /// 7. 保存
-    ///
-    /// ## エラー
-    ///
-    /// - ステップが見つからない場合: 404
-    /// - 権限がない場合: 403
-    /// - Active 以外の場合: 400
-    /// - バージョン不一致の場合: 409
+    /// 共通フロー `terminate_step` に `Reject` 種別で委譲する。
+    /// 詳細な処理フローは `common::terminate_step` を参照。
     pub async fn reject_step(
         &self,
         input: ApproveRejectInput,
@@ -43,138 +28,14 @@ impl WorkflowUseCaseImpl {
         tenant_id: TenantId,
         user_id: UserId,
     ) -> Result<WorkflowWithSteps, CoreError> {
-        // 1. ステップを取得
-        let step = self
-            .step_repo
-            .find_by_id(&step_id, &tenant_id)
-            .await
-            .or_not_found("ステップ")?;
-
-        // 2. 権限チェック
-        check_step_assigned_to(&step, &user_id, "却下")?;
-
-        // 3. 楽観的ロック（バージョン一致チェック — 早期フェイル）
-        if step.version() != input.version {
-            return Err(CoreError::Conflict(
-                "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
-            ));
-        }
-
-        // 4. ステップを却下
-        let now = self.clock.now();
-        let step_expected_version = step.version();
-        let rejected_step = step
-            .reject(input.comment, now)
-            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
-
-        // 5. 残りの Pending ステップを Skipped に遷移（トランザクション開始前にドメインロジック実行）
-        let all_steps = self
-            .step_repo
-            .find_by_instance(rejected_step.instance_id(), &tenant_id)
-            .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
-
-        let mut skipped_steps = Vec::new();
-        for pending_step in all_steps
-            .into_iter()
-            .filter(|s| s.status() == WorkflowStepStatus::Pending)
-        {
-            let version = pending_step.version();
-            let skipped = pending_step
-                .skipped(now)
-                .map_err(|e| CoreError::Internal(format!("ステップのスキップに失敗: {}", e)))?;
-            skipped_steps.push((skipped, version));
-        }
-
-        // 6. インスタンスを取得して Rejected に遷移（トランザクション開始前にドメインロジック実行）
-        let instance = self
-            .instance_repo
-            .find_by_id(rejected_step.instance_id(), &tenant_id)
-            .await
-            .or_not_found("インスタンス")?;
-
-        let instance_expected_version = instance.version();
-        let completed_instance = instance
-            .complete_with_rejection(now)
-            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
-
-        // 7. 全更新を単一トランザクションで実行
-        let mut tx = self
-            .tx_manager
-            .begin()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
-
-        self.step_repo
-            .update_with_version_check(&mut tx, &rejected_step, step_expected_version, &tenant_id)
-            .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
-                    "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
-                ),
-                other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-            })?;
-
-        for (skipped_step, pending_expected_version) in &skipped_steps {
-            self.step_repo
-                .update_with_version_check(
-                    &mut tx,
-                    skipped_step,
-                    *pending_expected_version,
-                    &tenant_id,
-                )
-                .await
-                .map_err(|e| match e {
-                    InfraError::Conflict { .. } => CoreError::Conflict(
-                        "ステップは既に更新されています。最新の情報を取得してください。"
-                            .to_string(),
-                    ),
-                    other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-                })?;
-        }
-
-        self.instance_repo
-            .update_with_version_check(
-                &mut tx,
-                &completed_instance,
-                instance_expected_version,
-                &tenant_id,
-            )
-            .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
-                    "インスタンスは既に更新されています。最新の情報を取得してください。"
-                        .to_string(),
-                ),
-                other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
-            })?;
-
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
-
-        // 8. 保存後のステップ一覧を取得して返却
-        let steps = self
-            .step_repo
-            .find_by_instance(completed_instance.id(), &tenant_id)
-            .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
-
-        log_business_event!(
-            event.category = event::category::WORKFLOW,
-            event.action = event::action::STEP_REJECTED,
-            event.entity_type = event::entity_type::WORKFLOW_STEP,
-            event.entity_id = %step_id,
-            event.actor_id = %user_id,
-            event.tenant_id = %tenant_id,
-            event.result = event::result::SUCCESS,
-            "却下ステップ完了"
-        );
-
-        Ok(WorkflowWithSteps {
-            instance: completed_instance,
-            steps,
-        })
+        self.terminate_step(
+            input,
+            step_id,
+            tenant_id,
+            user_id,
+            StepTerminationType::Reject,
+        )
+        .await
     }
 
     /// display_number でワークフローステップを却下する
