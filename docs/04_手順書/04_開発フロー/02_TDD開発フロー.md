@@ -197,7 +197,7 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 | レンズ | 問い |
 |--------|------|
-| 意図の明確さ | このコードの意図は読み手に伝わるか？ |
+| 意図の明確さ | このコードの意図は読み手に伝わるか？ 手がかり: 関数名が「何をするか」を伝えているか / 変数名が計算の意味を表しているか / コメントが必要なら命名やヘルパー関数で解決できないか |
 | 重複の排除 | 同じ知識が複数箇所に存在していないか？新しく書いたコードの主要パターン（関数シグネチャ、match ブロック、変換コード等）を Grep で既存コードと照合する |
 | 要素の最小性 | 不要な中間変数、引数、構造体フィールドはないか？ |
 
@@ -205,15 +205,15 @@ pub async fn find_by_email(&self, tenant_id: &TenantId, email: &Email) -> Result
 
 | レンズ | 問い |
 |--------|------|
-| 単一責務（SRP） | この関数/モジュールに変更理由は1つだけか？ |
-| 依存方向（DIP） | 依存の方向は正しいか？詳細が抽象に依存しているか？ |
-| 型の活用 | 型で防げる不正状態を String や整数で済ませていないか？（[ADR-016](../../../docs/05_ADR/016_プリミティブ型のNewtype化方針.md)） 状態によって有効なフィールドが異なるのにフラットな型にしていないか？（[ADR-054](../../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md)） |
+| 単一責務（SRP） | この関数/モジュールに変更理由は1つだけか？ 手がかり: レイヤー別の変更理由 — Handler: API 契約変更、UseCase: ビジネスルール変更、Repository: DB スキーマ/クエリ変更、Domain Entity: ドメインモデル変更。複数のレイヤーの変更理由が混在していたら分離の兆候 |
+| 依存方向（DIP） | 依存の方向は正しいか？ 手がかり: `apps → domain → shared`, `apps → infra → shared` に違反する import がないか / domain が infra の具体型（`PgPool` 等）に依存していないか / 新しい外部依存は trait で抽象化し `Arc<dyn Trait>` で注入しているか |
+| 型の活用 | 不正な状態や操作を型で防げていないか？ Newtype: プリミティブ型の取り違え防止（[ADR-016](../../../docs/05_ADR/016_プリミティブ型のNewtype化方針.md)）/ 型安全ステートマシン: 状態依存フィールドの分離（[ADR-054](../../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md)）/ 構造的強制: 引数の型でルール遵守を強制（[ADR-051](../../../docs/05_ADR/051_トランザクションコンテキストによる構造的強制.md)）/ 境界での型変換: 外部入力を未検証のまま内部で持ち回していないか / 不変条件の保護: `new()` で検証される不変条件が公開フィールドで壊されないか |
 
 発見があった場合のみ、セッションログの判断ログに記録する。発見がなければ記録不要。
 
-これらの観点は [品質チェックリスト](01_Issue駆動開発.md#62-品質チェックリスト) の「品質向上の最終確認（ゼロ→プラス）」と同一の設計原則。Refactor で作り込み、品質チェックリストで最終確認する。
+これらの観点は [品質チェックリスト](01_Issue駆動開発.md#62-品質チェックリスト) の「品質向上の最終確認（ゼロ→プラス）」と同一の設計原則。レンズは Refactor ステップで設計品質を作り込むためのもの。品質チェックリストは PR 全体を通した最終確認であり、レンズで見逃した問題を捕捉する最後の砦。
 
-既知手法との対応: 「毎 Refactor」は Kent Beck の Simple Design rules、「モジュール完成時」は SOLID 原則の SRP・DIP に対応。
+既知手法との対応: 「毎 Refactor」は Kent Beck の Four Rules of Simple Design（Reveals intention → No duplication → Fewest elements）、「モジュール完成時」は SOLID 原則の SRP・DIP および型による不正状態防止（"Making Illegal States Unrepresentable" — Minsky, 2011; "Parse, don't validate" — King, 2019）に対応。
 
 #### UI/UX レンズ（フロントエンド変更時）
 
@@ -677,13 +677,21 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 - t_wada のスライド・講演資料
 - [テスト駆動開発についてまとめてみた](https://qiita.com/t_wada/items/e2b3b1a5b9e89a5b7f9c)
 - Robert C. Martin (2021) "Clean Craftsmanship" — nano-cycle（Red 内の小サイクル）
+- Kent Beck (2000) "Extreme Programming Explained" — Four Rules of Simple Design
+- Robert C. Martin (2003) "Agile Software Development, Principles, Patterns, and Practices" — SOLID 原則
 - Steve Freeman & Nat Pryce (2009) "Growing Object-Oriented Software, Guided by Tests" — "Write the test you wish you had"
+- Yaron Minsky (2011) "Effective ML" — Making Illegal States Unrepresentable
+- Alexis King (2019) "Parse, don't validate"
 - Robin Williams (2004) "The Non-Designer's Design Book" (CRAP 原則)
 
 ### 既知手法との対応
 
 | 概念 | 出典 | 本ドキュメントでの対応 |
 |------|------|---------------------|
+| Four Rules of Simple Design | Kent Beck, *Extreme Programming Explained* (2000) | 毎 Refactor レンズ（意図の明確さ・重複の排除・要素の最小性） |
+| SRP・DIP（SOLID 原則） | Robert C. Martin, *Agile Software Development* (2003) | モジュール完成時レンズ（単一責務・依存方向） |
+| Making Illegal States Unrepresentable | Yaron Minsky, *Effective ML* (2011); Richard Feldman, *Elm Conf* (2016) | 型の活用レンズ（Newtype、型安全ステートマシン、構造的強制） |
+| Parse, don't validate | Alexis King (2019) | 型の活用レンズ（境界での型変換、不変条件の保護） |
 | nano-cycle（Red 内の小サイクル） | Robert C. Martin, *Clean Craftsmanship* (2021) | 二層の Red モデル |
 | Compiler-Driven Development | 静的型付き言語 TDD の一般的な考え方 | コンパイルエラー解消の原則 |
 | "Write the test you wish you had" | Freeman & Pryce, *GOOS* (2009) | Red フェーズの「テストを1つだけ書く」 |
@@ -699,6 +707,7 @@ TDD サイクル（高速）→ Phase 完了 → just check-all（E2E 含む）�
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-24 | 設計原則レンズの各レンズに手がかりを追加（意図の明確さ、SRP、DIP、型の活用）。型の活用に ADR-051・境界型変換・不変条件を追加。既知手法に Four Rules of Simple Design、SOLID、Making Illegal States Unrepresentable、Parse don't validate を追記（#891） |
 | 2026-02-21 | テストリストセクションに「操作パスの列挙」「テスト設計の方向性」を追加。テスト設計を操作パス起点に再構成（#765） |
 | 2026-02-21 | 確認事項の実施をゲート条件方式に変更。チェックボックス更新手順を廃止し、Read/Grep の実行自体を証跡とする（#747） |
 | 2026-02-18 | UI/UX レンズにデザイン品質向上（攻め）レンズを追加。CRAP 原則を既知手法に記載（#653） |
