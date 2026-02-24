@@ -4,6 +4,7 @@ module Data.DesignerCanvas exposing
     , Dimensions
     , DraggingState(..)
     , Position
+    , ReconnectEnd(..)
     , StepColors
     , StepNode
     , StepType(..)
@@ -92,17 +93,26 @@ type alias Bounds =
     { x : Float, y : Float, width : Float, height : Float }
 
 
+{-| 接続線の付け替え対象の端点
+-}
+type ReconnectEnd
+    = SourceEnd
+    | TargetEnd
+
+
 {-| ドラッグ操作の状態
 
   - DraggingExistingStep: 既存ステップの移動中（stepId, ステップ原点からのオフセット）
   - DraggingNewStep: パレットからの新規配置中（StepType, 現在のキャンバス座標）
   - DraggingConnection: 接続線作成中（接続元 stepId, 現在のマウス座標）
+  - DraggingReconnection: 接続線端点の付け替え中（transition index, 変更する端点, 現在のマウス座標）
 
 -}
 type DraggingState
     = DraggingExistingStep String Position
     | DraggingNewStep StepType Position
     | DraggingConnection String Position
+    | DraggingReconnection Int ReconnectEnd Position
 
 
 {-| グリッドサイズ（px）

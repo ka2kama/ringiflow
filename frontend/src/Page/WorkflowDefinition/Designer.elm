@@ -21,7 +21,7 @@ import Component.ErrorState as ErrorState
 import Component.FormField as FormField
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
-import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
+import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), ReconnectEnd(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (ValidationError, ValidationResult, WorkflowDefinition)
 import Dict exposing (Dict)
 import Form.DirtyState as DirtyState
@@ -140,6 +140,7 @@ type Msg
     | CanvasBackgroundClicked
     | StepMouseDown String Float Float -- stepId, clientX, clientY
     | ConnectionPortMouseDown String Float Float -- sourceStepId, clientX, clientY
+    | TransitionEndpointMouseDown Int ReconnectEnd Float Float -- transition index, 端点, clientX, clientY
     | TransitionClicked Int
     | UpdatePropertyName String
     | UpdatePropertyEndStatus String
@@ -283,10 +284,19 @@ updateLoaded msg shared definitionId canvas =
                             ( canvas, Cmd.none )
 
                 Just (DraggingConnection sourceId _) ->
-                    -- Phase 2 で接続線プレビュー更新を実装
                     case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                         Just canvasPos ->
                             ( { canvas | dragging = Just (DraggingConnection sourceId canvasPos) }
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( canvas, Cmd.none )
+
+                Just (DraggingReconnection index end _) ->
+                    case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
+                        Just canvasPos ->
+                            ( { canvas | dragging = Just (DraggingReconnection index end canvasPos) }
                             , Cmd.none
                             )
 
@@ -367,6 +377,9 @@ updateLoaded msg shared definitionId canvas =
                             , Cmd.none
                             )
 
+                Just (DraggingReconnection index end mousePos) ->
+                    handleReconnectionDrop index end mousePos canvas
+
                 Nothing ->
                     ( canvas, Cmd.none )
 
@@ -384,6 +397,16 @@ updateLoaded msg shared definitionId canvas =
             case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                 Just canvasPos ->
                     ( { canvas | dragging = Just (DraggingConnection sourceStepId canvasPos) }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( canvas, Cmd.none )
+
+        TransitionEndpointMouseDown index end clientX clientY ->
+            case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
+                Just canvasPos ->
+                    ( { canvas | dragging = Just (DraggingReconnection index end canvasPos) }
                     , Cmd.none
                     )
 
@@ -757,6 +780,89 @@ deleteSelectedStep canvas =
 removeAt : Int -> List a -> List a
 removeAt index list =
     List.take index list ++ List.drop (index + 1) list
+
+
+{-| リストの指定インデックスの要素を変換する
+-}
+updateAt : Int -> (a -> a) -> List a -> List a
+updateAt index fn list =
+    List.indexedMap
+        (\i item ->
+            if i == index then
+                fn item
+
+            else
+                item
+        )
+        list
+
+
+{-| 接続線端点の付け替えドロップ処理
+
+ドロップ先のステップを判定し、有効な場合は transition の from/to を更新する。
+trigger は維持する（付け替え時に自動変更しない）。
+
+-}
+handleReconnectionDrop : Int -> ReconnectEnd -> DesignerCanvas.Position -> CanvasState -> ( CanvasState, Cmd Msg )
+handleReconnectionDrop index end mousePos canvas =
+    case getAt index canvas.transitions of
+        Just transition ->
+            let
+                -- 付け替えない側のステップ ID（自己ループ防止に使用）
+                fixedStepId =
+                    case end of
+                        SourceEnd ->
+                            transition.to
+
+                        TargetEnd ->
+                            transition.from
+
+                -- ドロップ先のステップを判定（固定端と同じステップは除外 = 自己ループ防止）
+                droppedStep =
+                    canvas.steps
+                        |> Dict.values
+                        |> List.filter (\s -> s.id /= fixedStepId)
+                        |> List.filter (DesignerCanvas.stepContainsPoint mousePos)
+                        |> List.head
+            in
+            case droppedStep of
+                Just target ->
+                    let
+                        updatedTransition =
+                            case end of
+                                SourceEnd ->
+                                    { transition | from = target.id }
+
+                                TargetEnd ->
+                                    { transition | to = target.id }
+
+                        ( dirtyCanvas, dirtyCmd ) =
+                            DirtyState.markDirty canvas
+                    in
+                    ( { dirtyCanvas
+                        | transitions = updateAt index (\_ -> updatedTransition) dirtyCanvas.transitions
+                        , dragging = Nothing
+                        , selectedTransitionIndex = Nothing
+                      }
+                    , dirtyCmd
+                    )
+
+                Nothing ->
+                    ( { canvas | dragging = Nothing }
+                    , Cmd.none
+                    )
+
+        Nothing ->
+            ( { canvas | dragging = Nothing }
+            , Cmd.none
+            )
+
+
+{-| リストの指定インデックスの要素を取得する
+-}
+getAt : Int -> List a -> Maybe a
+getAt index list =
+    list |> List.drop index |> List.head
 
 
 
