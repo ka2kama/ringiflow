@@ -1,6 +1,6 @@
 ---
 name: start
-description: Issue のコンテキストを構築して作業を開始する。ブランチから Issue を特定し、残タスクと作業状況を把握して再開、または新規着手する。
+description: Issue のコンテキストを構築して作業を開始する。ブランチ・Draft PR の作成まで完結させ、コンテキストクリアによるステップ喪失を防止する。
 argument-hint: <省略可。Issue 番号>
 user-invocable: true
 ---
@@ -8,7 +8,9 @@ user-invocable: true
 # 作業開始
 
 `/wrap-up`（セッション終了時）と対になる、セッション開始時のスキル。
-Issue のコンテキストを構築し、作業を開始する（再開・新規着手の両方に対応）。
+Issue のコンテキストを構築し、ワークフローの基盤（ブランチ・Draft PR）を確立してから作業を開始する。
+
+改善の経緯: [コンテキストクリア後のワークフローステップ喪失](../../../process/improvements/2026-02/2026-02-24_2106_コンテキストクリア後のDraft-PR作成漏れ.md)
 
 ## 引数
 
@@ -49,25 +51,52 @@ git branch --show-current
 |------|------|
 | ブランチ名に Issue 番号あり | 抽出して Step 3 へ |
 | 引数で Issue 番号指定あり | 指定番号を使って Step 3 へ |
-| main ブランチ + 引数なし | オープンな Issue 一覧を表示し、ユーザーに選択を促す |
+| main / detached HEAD + 引数なし | オープンな Issue 一覧を表示し、ユーザーに選択を促す |
 | ブランチ名に番号なし + 引数なし | ユーザーに Issue 番号を確認 |
 
-main ブランチで Issue を選択した場合、対応するブランチに切り替える:
+### Step 3: ワークフロー状態を検出
+
+Issue 番号が確定したら、ブランチと PR の状態からワークフロー状態を判定する。
 
 ```bash
-# オープンな Issue 一覧
-gh issue list --state open --limit 20
+# 現在のブランチ
+git branch --show-current
 
-# 対応するブランチが存在するか確認
+# Issue 用ブランチの存在確認（main / detached HEAD の場合）
 git branch --list "feature/<Issue番号>-*" "fix/<Issue番号>-*"
 
-# ブランチが存在すれば切り替え
+# PR の存在・状態確認（feature ブランチ上の場合）
+gh pr view --json number,state,isDraft,title,url 2>/dev/null
+```
+
+| 状態 | ブランチ | PR | 検出条件 |
+|------|---------|-----|---------|
+| A: 新規着手 | なし | なし | main / detached HEAD + Issue 用ブランチなし |
+| B: PR 欠落 | あり | なし | feature ブランチ上 + `gh pr view` が失敗 |
+| C: 通常再開 | あり | あり（Draft） | feature ブランチ + PR が Draft |
+| D: レビュー中 | あり | あり（Ready） | feature ブランチ + PR が非 Draft |
+
+判定結果を提示する:
+
+```
+### ワークフロー状態: <状態名>
+- ブランチ: <ブランチ名 / なし>
+- PR: <あり（Draft / Ready） / なし>
+```
+
+main / detached HEAD で Issue 用ブランチが存在する場合は、切り替えてから PR を確認する:
+
+```bash
 git checkout <ブランチ名>
 ```
 
-対応するブランチが存在しない場合は、新規ブランチ作成を提案する。
+### Step 4: 状態別フロー
 
-### Step 3: Issue の状態を確認
+#### 状態 A: 新規着手
+
+Issue 駆動開発フロー（Step 1-3）をこの中で実行する。
+
+**4a-1: Issue の状態を確認**
 
 ```bash
 gh issue view <Issue番号>
@@ -77,22 +106,120 @@ gh issue view <Issue番号>
 
 - Issue タイトルと概要
 - 完了基準のチェックリスト（✅/⬜ の状態）
-- 実装計画（Phase の進捗、テストリスト）
+- 実装計画（あれば）
 
-### Step 4: 直近の作業を確認
+**4a-2: Issue 精査**
+
+[Issue 駆動開発 > 既存 Issue の精査](../../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査) に従い、精査を実施する。精査結果を Issue コメントとして記録する。
+
+| 精査結果 | アクション |
+|---------|-----------|
+| 続行 / 修正して続行 | 4a-3 へ進む |
+| 再構成 | 新 Issue の作成を案内して終了 |
+| 破棄 | Issue クローズを案内して終了 |
+
+**4a-3: ブランチ作成**
+
+worktree 環境と通常環境で分岐する:
 
 ```bash
-# このブランチのコミット一覧
+# worktree 判定: .worktree-slot ファイルの存在
+# → レシピ: prompts/recipes/worktree環境でのブランチ作成.md
+
+# worktree 環境
+git checkout -b feature/<Issue番号>-<slug> origin/main
+
+# 通常環境
+git checkout main && git pull origin main
+git checkout -b feature/<Issue番号>-<slug>
+```
+
+ブランチ名の生成:
+- prefix: `feature/`（新機能、Story）、`fix/`（バグ修正）
+- slug: Issue タイトルから英数字+ハイフンのスラッグを生成（`scripts/worktree/issue.sh` の生成ロジックと同じ）
+
+**4a-4: Draft PR 作成**
+
+[Issue 駆動開発 > Draft PR を作成](../../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#3-draft-pr-を作成) に従い、Draft PR を作成する。
+
+```bash
+# 空コミットで Draft PR を作成
+git commit --allow-empty -m "#<Issue番号> WIP: <Issue タイトル（英語）>"
+git push -u origin HEAD
+gh pr create --draft --title "#<Issue番号> <英語タイトル>" --body "<PR本文>"
+```
+
+PR 本文: `.github/pull_request_template.md` を読み込み、`## Issue` セクションに `Closes #<Issue番号>` を設定する。AI エージェントは `--body` で本文を直接指定し、末尾に署名を追加する。
+
+#### 状態 B: PR 欠落の復旧
+
+ブランチは存在するが PR がない状態を検出し、Draft PR を作成する。
+
+```
+検出: ブランチ <ブランチ名> は存在しますが、PR がありません。Draft PR を作成します。
+```
+
+コミットの有無・push 状態を確認し、分岐する:
+
+```bash
+# コミットの有無
+git log --oneline main..HEAD
+
+# リモートとの差分
+git log --oneline origin/<ブランチ名>..HEAD 2>/dev/null
+```
+
+| コミット状態 | 対応 |
+|-------------|------|
+| コミットなし | 空コミット → push → PR 作成 |
+| コミットあり + 未 push | push → PR 作成 |
+| コミットあり + push 済み | PR 作成のみ |
+
+PR 作成は 4a-4 と同じ手順。
+
+復旧後、Issue の状態を確認する（Step 4 状態 C と同じ処理）。
+
+#### 状態 C: 通常再開
+
+Issue の状態と直近の作業を確認する。
+
+```bash
+# Issue の状態
+gh issue view <Issue番号>
+
+# コミット一覧
 git log --oneline --reverse main..HEAD
 
 # 変更ファイルの統計
 git diff --stat main...HEAD
+
+# PR の状態
+gh pr view --json number,state,isDraft,title,url
 ```
 
-Draft PR がある場合は PR の状態も確認する:
+以下を確認し、整理する:
+
+- Issue タイトルと概要
+- 完了基準のチェックリスト（✅/⬜ の状態）
+- 実装計画（Phase の進捗、テストリスト）
+- 直近のコミット
+- PR の状態
+
+#### 状態 D: レビュー中
+
+PR とレビューの状態を表示し、`/review-and-merge` を案内する。
 
 ```bash
-gh pr view --json number,state,isDraft,title,url 2>/dev/null
+# PR の状態
+gh pr view --json number,state,isDraft,title,url,reviewDecision
+
+# レビューコメント
+gh pr view --comments
+```
+
+```
+PR #<番号> は Ready for Review 状態です。
+レビューの確認とマージを行うには `/review-and-merge` を実行してください。
 ```
 
 ### Step 5: セッションログを参照
@@ -112,14 +239,55 @@ grep -rl "#<Issue番号>" prompts/runs/ 2>/dev/null
 
 ### Step 6: コンテキストを提示して作業開始
 
-収集した情報を以下の形式で提示する:
+収集した情報を状態別の形式で提示する。
+
+#### 状態 A の出力（新規着手後）
 
 ```
 ## 作業開始: #<Issue番号> <タイトル>
 
+### 基盤構築済み
+- ブランチ: <ブランチ名> ✅
+- Draft PR: <PR URL> ✅
+- Issue 精査: <結果> ✅
+
+### 残タスク
+- [ ] タスク1（完了基準から）
+- [ ] タスク2
+
+### 次にやるべきこと
+設計フェーズに進みます。
+```
+
+#### 状態 B の出力（復旧後）
+
+```
+## 作業再開: #<Issue番号> <タイトル>
+
+### 復旧した基盤
+- Draft PR: <PR URL> ✅（新規作成）
+
 ### 現在の状況
 - ブランチ: <ブランチ名>
-- PR: <PR URL（あれば）>
+- コミット: N 件
+- 直近の作業: <最新コミットのサマリー>
+
+### 残タスク
+- [ ] タスク1
+- [ ] タスク2
+
+### 次にやるべきこと
+<Issue の進捗から特定した次のアクション>
+```
+
+#### 状態 C の出力（通常再開）
+
+```
+## 作業再開: #<Issue番号> <タイトル>
+
+### 現在の状況
+- ブランチ: <ブランチ名>
+- PR: <PR URL>
 - 直近の作業: <最新コミットのサマリー>
 - 進捗: <Phase X 完了 / Phase Y 作業中>
 
@@ -129,6 +297,20 @@ grep -rl "#<Issue番号>" prompts/runs/ 2>/dev/null
 
 ### 次にやるべきこと
 <Issue の実装計画とコミット履歴から特定した、次の具体的アクション>
+```
+
+#### 状態 D の出力（レビュー中）
+
+```
+## 作業状況: #<Issue番号> <タイトル>
+
+### 現在の状態
+- ブランチ: <ブランチ名>
+- PR: <PR URL>（Ready for Review）
+- レビュー: <APPROVED / CHANGES_REQUESTED / pending>
+
+### 次にやるべきこと
+`/review-and-merge` でレビュー確認とマージを実行してください。
 ```
 
 コンテキスト提示後、必要なファイルを読み込んで作業を開始する。
