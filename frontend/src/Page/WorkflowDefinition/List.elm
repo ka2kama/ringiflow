@@ -45,10 +45,7 @@ type alias Model =
     , isProcessing : Bool
     , successMessage : Maybe String
     , errorMessage : Maybe String
-    , showCreateDialog : Bool
-    , createName : String
-    , createDescription : String
-    , createValidationErrors : Dict String String
+    , createDialog : Maybe CreateDialogState
     }
 
 
@@ -60,6 +57,20 @@ type PendingAction
     | ConfirmDelete WorkflowDefinition
 
 
+{-| 作成ダイアログの状態
+
+ダイアログが開いているときのみ存在する。
+フォームフィールドと送信状態を集約する。
+
+-}
+type alias CreateDialogState =
+    { name : String
+    , description : String
+    , validationErrors : Dict String String
+    , isSubmitting : Bool
+    }
+
+
 init : Shared -> ( Model, Cmd Msg )
 init shared =
     ( { shared = shared
@@ -69,10 +80,7 @@ init shared =
       , isProcessing = False
       , successMessage = Nothing
       , errorMessage = Nothing
-      , showCreateDialog = False
-      , createName = ""
-      , createDescription = ""
-      , createValidationErrors = Dict.empty
+      , createDialog = Nothing
       }
     , WorkflowDefinitionApi.listDefinitions
         { config = Shared.toRequestConfig shared
@@ -147,50 +155,74 @@ update msg model =
         -- 作成ダイアログ
         OpenCreateDialog ->
             ( { model
-                | showCreateDialog = True
-                , createName = ""
-                , createDescription = ""
-                , createValidationErrors = Dict.empty
+                | createDialog =
+                    Just
+                        { name = ""
+                        , description = ""
+                        , validationErrors = Dict.empty
+                        , isSubmitting = False
+                        }
               }
             , Ports.showModalDialog createDialogId
             )
 
         CloseCreateDialog ->
-            ( { model | showCreateDialog = False }, Cmd.none )
+            ( { model | createDialog = Nothing }, Cmd.none )
 
         InputCreateName name ->
-            ( { model | createName = name }, Cmd.none )
+            case model.createDialog of
+                Just dialog ->
+                    ( { model | createDialog = Just { dialog | name = name } }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         InputCreateDescription description ->
-            ( { model | createDescription = description }, Cmd.none )
+            case model.createDialog of
+                Just dialog ->
+                    ( { model | createDialog = Just { dialog | description = description } }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         SubmitCreate ->
-            let
-                errors =
-                    validateCreateForm model.createName
-            in
-            if Dict.isEmpty errors then
-                ( { model | isProcessing = True, createValidationErrors = Dict.empty }
-                , WorkflowDefinitionApi.createDefinition
-                    { config = Shared.toRequestConfig model.shared
-                    , body =
-                        WorkflowDefinition.encodeCreateRequest
-                            { name = String.trim model.createName
-                            , description = String.trim model.createDescription
+            case model.createDialog of
+                Just dialog ->
+                    let
+                        errors =
+                            validateCreateForm dialog.name
+                    in
+                    if Dict.isEmpty errors then
+                        ( { model
+                            | createDialog =
+                                Just { dialog | isSubmitting = True, validationErrors = Dict.empty }
+                          }
+                        , WorkflowDefinitionApi.createDefinition
+                            { config = Shared.toRequestConfig model.shared
+                            , body =
+                                WorkflowDefinition.encodeCreateRequest
+                                    { name = String.trim dialog.name
+                                    , description = String.trim dialog.description
+                                    }
+                            , toMsg = GotCreateResult
                             }
-                    , toMsg = GotCreateResult
-                    }
-                )
+                        )
 
-            else
-                ( { model | createValidationErrors = errors }, Cmd.none )
+                    else
+                        ( { model
+                            | createDialog = Just { dialog | validationErrors = errors }
+                          }
+                        , Cmd.none
+                        )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         GotCreateResult result ->
             case result of
                 Ok _ ->
                     ( { model
-                        | isProcessing = False
-                        , showCreateDialog = False
+                        | createDialog = Nothing
                         , successMessage = Just "ワークフロー定義を作成しました。"
                         , errorMessage = Nothing
                         , definitions = Loading
@@ -203,7 +235,9 @@ update msg model =
 
                 Err err ->
                     ( { model
-                        | isProcessing = False
+                        | createDialog =
+                            Maybe.map (\dialog -> { dialog | isSubmitting = False })
+                                model.createDialog
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
                       }
                     , Cmd.none
@@ -349,11 +383,12 @@ view model =
         , viewFilters model.statusFilter
         , viewContent model
         , viewConfirmDialog model.pendingAction
-        , if model.showCreateDialog then
-            viewCreateDialog model
+        , case model.createDialog of
+            Just dialog ->
+                viewCreateDialog dialog
 
-          else
-            text ""
+            Nothing ->
+                text ""
         ]
 
 
@@ -572,8 +607,8 @@ viewConfirmDialog maybePending =
 
 {-| 作成ダイアログ（`<dialog>` 要素）
 -}
-viewCreateDialog : Model -> Html Msg
-viewCreateDialog model =
+viewCreateDialog : CreateDialogState -> Html Msg
+viewCreateDialog dialog =
     Html.node "dialog"
         [ id createDialogId
         , class "fixed inset-0 m-0 h-full w-full max-h-none max-w-none bg-transparent p-0 border-none outline-none"
@@ -588,27 +623,27 @@ viewCreateDialog model =
                 , Html.form [ onSubmit SubmitCreate, class "mt-4 space-y-4" ]
                     [ viewFormField "名前"
                         "create-name"
-                        model.createName
+                        dialog.name
                         InputCreateName
-                        (Dict.get "name" model.createValidationErrors)
+                        (Dict.get "name" dialog.validationErrors)
                         True
                     , viewFormTextarea "説明"
                         "create-description"
-                        model.createDescription
+                        dialog.description
                         InputCreateDescription
                     , div [ class "mt-6 flex justify-end gap-3" ]
                         [ Button.view
                             { variant = Button.Outline
-                            , disabled = model.isProcessing
+                            , disabled = dialog.isSubmitting
                             , onClick = CloseCreateDialog
                             }
                             [ text "キャンセル" ]
                         , button
                             [ type_ "submit"
                             , class "inline-flex items-center rounded-lg px-4 py-2 text-sm font-medium bg-primary-500 hover:bg-primary-600 text-white transition-colors disabled:opacity-50"
-                            , disabled model.isProcessing
+                            , disabled dialog.isSubmitting
                             ]
-                            [ if model.isProcessing then
+                            [ if dialog.isSubmitting then
                                 text "作成中..."
 
                               else
