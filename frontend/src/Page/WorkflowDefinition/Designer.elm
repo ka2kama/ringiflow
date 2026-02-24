@@ -1124,6 +1124,7 @@ viewCanvasArea canvas =
             , viewTransitions canvas
             , viewConnectionDragPreview canvas
             , viewSteps canvas
+            , viewReconnectionHandleLayer canvas
             , viewDragPreview canvas
             ]
         ]
@@ -1395,6 +1396,40 @@ viewTransitions canvas =
         )
 
 
+{-| 選択中の接続線のドラッグハンドルレイヤー
+
+ステップノードより上（前面）に描画するために、viewSteps の後に配置する。
+
+-}
+viewReconnectionHandleLayer : CanvasState -> Svg.Svg Msg
+viewReconnectionHandleLayer canvas =
+    case ( canvas.selectedTransitionIndex, canvas.dragging ) of
+        ( Just index, Nothing ) ->
+            case List.drop index canvas.transitions |> List.head of
+                Just transition ->
+                    let
+                        fromStep =
+                            Dict.get transition.from canvas.steps
+
+                        toStep =
+                            Dict.get transition.to canvas.steps
+                    in
+                    case ( fromStep, toStep ) of
+                        ( Just from, Just to ) ->
+                            viewReconnectionHandles index
+                                (DesignerCanvas.stepOutputPortPosition from)
+                                (DesignerCanvas.stepInputPortPosition to)
+
+                        _ ->
+                            Svg.text ""
+
+                Nothing ->
+                    Svg.text ""
+
+        _ ->
+            Svg.text ""
+
+
 {-| 個別の接続線描画
 -}
 viewTransitionLine : CanvasState -> Int -> Transition -> Svg.Svg Msg
@@ -1465,10 +1500,6 @@ viewTransitionLine canvas index transition =
                     isSelected =
                         canvas.selectedTransitionIndex == Just index
 
-                    -- ドラッグ中でないときのみハンドルを表示
-                    showHandles =
-                        isSelected && canvas.dragging == Nothing
-
                     strokeWidth =
                         if isSelected then
                             "3"
@@ -1515,12 +1546,7 @@ viewTransitionLine canvas index transition =
                         )
                         []
 
-                    -- 選択中の接続線にドラッグハンドルを表示
-                    , if showHandles then
-                        viewReconnectionHandles index startPos endPos
-
-                      else
-                        Svg.text ""
+                    -- ハンドルは viewReconnectionHandleLayer で描画（ステップの上に表示するため）
                     ]
 
             _ ->
@@ -1535,42 +1561,30 @@ viewTransitionLine canvas index transition =
 -}
 viewReconnectionHandles : Int -> DesignerCanvas.Position -> DesignerCanvas.Position -> Svg.Svg Msg
 viewReconnectionHandles index startPos endPos =
+    let
+        handleAttrs pos reconnectEnd =
+            [ SvgAttr.cx (String.fromFloat pos.x)
+            , SvgAttr.cy (String.fromFloat pos.y)
+            , SvgAttr.r "10"
+            , SvgAttr.fill "white"
+            , SvgAttr.stroke "#6366f1"
+            , SvgAttr.strokeWidth "2.5"
+            , SvgAttr.filter "drop-shadow(0 0 4px rgba(99, 102, 241, 0.6))"
+            , SvgAttr.class "cursor-grab"
+            , Html.Events.stopPropagationOn "mousedown"
+                (Decode.map2
+                    (\cx cy -> ( TransitionEndpointMouseDown index reconnectEnd cx cy, True ))
+                    (Decode.field "clientX" Decode.float)
+                    (Decode.field "clientY" Decode.float)
+                )
+            ]
+    in
     Svg.g []
         [ -- 始点ハンドル
-          Svg.circle
-            [ SvgAttr.cx (String.fromFloat startPos.x)
-            , SvgAttr.cy (String.fromFloat startPos.y)
-            , SvgAttr.r "6"
-            , SvgAttr.fill "white"
-            , SvgAttr.stroke "#6366f1"
-            , SvgAttr.strokeWidth "2"
-            , SvgAttr.class "cursor-grab"
-            , Html.Events.stopPropagationOn "mousedown"
-                (Decode.map2
-                    (\cx cy -> ( TransitionEndpointMouseDown index SourceEnd cx cy, True ))
-                    (Decode.field "clientX" Decode.float)
-                    (Decode.field "clientY" Decode.float)
-                )
-            ]
-            []
+          Svg.circle (handleAttrs startPos SourceEnd) []
 
         -- 終点ハンドル
-        , Svg.circle
-            [ SvgAttr.cx (String.fromFloat endPos.x)
-            , SvgAttr.cy (String.fromFloat endPos.y)
-            , SvgAttr.r "6"
-            , SvgAttr.fill "white"
-            , SvgAttr.stroke "#6366f1"
-            , SvgAttr.strokeWidth "2"
-            , SvgAttr.class "cursor-grab"
-            , Html.Events.stopPropagationOn "mousedown"
-                (Decode.map2
-                    (\cx cy -> ( TransitionEndpointMouseDown index TargetEnd cx cy, True ))
-                    (Decode.field "clientX" Decode.float)
-                    (Decode.field "clientY" Decode.float)
-                )
-            ]
-            []
+        , Svg.circle (handleAttrs endPos TargetEnd) []
         ]
 
 
