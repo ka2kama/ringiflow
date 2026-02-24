@@ -236,6 +236,80 @@ port loadFromLocalStorage : String -> Cmd msg
 port localStorageLoaded : ({ key : String, value : Encode.Value } -> msg) -> Sub msg
 ```
 
+## DOM 依存の Ports コマンドとタイミング
+
+### 問題
+
+Elm → JavaScript の Port コマンドが DOM 要素の存在を前提とする場合（`getElementById` 等）、条件付きレンダリング（RemoteData の Loading → Success 等）との組み合わせでタイミング問題が発生する。
+
+```
+init → requestCanvasBounds（Port 発行）
+     → getDefinition（API リクエスト）
+
+view:
+  Loading → スピナー表示（SVG キャンバスは DOM に存在しない）
+  Success → SVG キャンバスを描画
+```
+
+この場合、`init` で発行した `requestCanvasBounds` が実行される時点では、JavaScript 側の `getElementById` が `null` を返す。
+
+### 原因
+
+Elm の `Cmd` は発行後すぐに JavaScript に渡されるが、`view` の条件付きレンダリングにより対象の DOM 要素がまだ存在しない場合がある。`requestAnimationFrame` を使っても、Elm の Virtual DOM が Loading 状態のままであれば要素は描画されない。
+
+```javascript
+// JavaScript 側: requestAnimationFrame でも DOM が存在しない場合がある
+app.ports.requestCanvasBounds.subscribe((elementId) => {
+    requestAnimationFrame(() => {
+        const el = document.getElementById(elementId);
+        // el が null → bounds が設定されない → ドラッグ不可
+    });
+});
+```
+
+### 対処法
+
+DOM 依存の Port コマンドは、対象要素がレンダリングされる状態になってから発行する。
+
+```elm
+-- NG: init で発行（Loading 中は DOM に要素がない）
+init =
+    ( initialModel
+    , Cmd.batch
+        [ Ports.requestCanvasBounds canvasElementId  -- DOM がない
+        , Api.getDefinition GotDefinition
+        ]
+    )
+
+-- OK: データ取得成功時に発行（Success で要素がレンダリングされる）
+update msg model =
+    case msg of
+        GotDefinition (Ok definition) ->
+            ( { model | loadState = Success definition }
+            , Ports.requestCanvasBounds canvasElementId  -- view が SVG を描画した後
+            )
+```
+
+### 判定基準
+
+以下の条件がすべて該当する場合、タイミング問題のリスクがある:
+
+1. Port コマンドが DOM 要素の存在を前提とする（`getElementById`、`querySelector` 等）
+2. 対象要素が条件付きでレンダリングされる（RemoteData、認証状態、タブ切り替え等）
+3. Port コマンドの発行タイミングが、要素のレンダリング条件と連動していない
+
+### 根本対策
+
+ADR-054（型安全ステートマシン）を適用すると、Loading 状態に DOM 関連フィールドが物理的に存在しなくなるため、この種のバグを型レベルで防止できる。
+
+→ [ADR-054: 型安全ステートマシンパターンの標準化](../../05_ADR/054_型安全ステートマシンパターンの標準化.md)
+→ [SVG キャンバスと Browser.Events](SVGキャンバスとBrowserEvents.md)（`requestCanvasBounds` の実装詳細）
+
+### 実例
+
+- #793: ワークフローデザイナーの初期ドラッグ不可バグ
+- #794: 修正 PR（`GotDefinition` の `Ok` ケースで `requestCanvasBounds` を発行）
+
 ## プロジェクトでの使用
 
 | ファイル | 役割 |
@@ -254,4 +328,5 @@ port localStorageLoaded : ({ key : String, value : Encode.Value } -> msg) -> Sub
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-02-24 | DOM 依存の Ports コマンドとタイミングのセクション追加（#795） |
 | 2026-01-14 | 初版作成 |
