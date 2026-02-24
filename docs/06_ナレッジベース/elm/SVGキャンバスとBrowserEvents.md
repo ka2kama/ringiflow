@@ -108,6 +108,8 @@ app.ports.requestCanvasBounds.subscribe((elementId) => {
 
 `requestAnimationFrame` を使う理由: Elm の Virtual DOM 更新が完了してから DOM 情報を取得するため。
 
+注意: 条件付きレンダリング（RemoteData の Loading 中等）でキャンバス要素が DOM に存在しない場合、`getElementById` が `null` を返す。Port コマンドの発行タイミングに注意すること。→ [Elm Ports: DOM 依存の Ports コマンドとタイミング](Elmポート.md#dom-依存の-ports-コマンドとタイミング)
+
 ## SVG レイヤー順序
 
 SVG は後に記述した要素が前面に描画される（z-index なし）。インタラクティブなキャンバスでは描画順序がイベント伝播に影響する。
