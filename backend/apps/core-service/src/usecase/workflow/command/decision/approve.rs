@@ -6,7 +6,6 @@ use ringiflow_domain::{
     value_objects::DisplayNumber,
     workflow::WorkflowStepId,
 };
-use ringiflow_infra::InfraError;
 use ringiflow_shared::{event_log::event, log_business_event};
 
 use crate::{
@@ -96,10 +95,8 @@ impl WorkflowUseCaseImpl {
         // 8. 次ステップがあればデータを準備（トランザクション開始前に読み取り）
         let activated_next_step = if let Some(next_step_id) = next_step_to_activate {
             let all_steps = self
-                .step_repo
-                .find_by_instance(updated_instance.id(), &tenant_id)
-                .await
-                .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+                .fetch_instance_steps(updated_instance.id(), &tenant_id)
+                .await?;
 
             all_steps
                 .into_iter()
@@ -114,66 +111,30 @@ impl WorkflowUseCaseImpl {
         };
 
         // 9. 全更新を単一トランザクションで実行
-        let mut tx = self
-            .tx_manager
-            .begin()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
+        let mut tx = self.begin_tx().await?;
 
-        self.step_repo
-            .update_with_version_check(&mut tx, &approved_step, step_expected_version, &tenant_id)
-            .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
-                    "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
-                ),
-                other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-            })?;
+        self.save_step(&mut tx, &approved_step, step_expected_version, &tenant_id)
+            .await?;
 
         if let Some((ref activated_step, next_expected_version)) = activated_next_step {
-            self.step_repo
-                .update_with_version_check(
-                    &mut tx,
-                    activated_step,
-                    next_expected_version,
-                    &tenant_id,
-                )
-                .await
-                .map_err(|e| match e {
-                    InfraError::Conflict { .. } => CoreError::Conflict(
-                        "ステップは既に更新されています。最新の情報を取得してください。"
-                            .to_string(),
-                    ),
-                    other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
-                })?;
+            self.save_step(&mut tx, activated_step, next_expected_version, &tenant_id)
+                .await?;
         }
 
-        self.instance_repo
-            .update_with_version_check(
-                &mut tx,
-                &updated_instance,
-                instance_expected_version,
-                &tenant_id,
-            )
-            .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
-                    "インスタンスは既に更新されています。最新の情報を取得してください。"
-                        .to_string(),
-                ),
-                other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
-            })?;
+        self.save_instance(
+            &mut tx,
+            &updated_instance,
+            instance_expected_version,
+            &tenant_id,
+        )
+        .await?;
 
-        tx.commit()
-            .await
-            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
+        self.commit_tx(tx).await?;
 
         // 10. 保存後のステップ一覧を取得して返却
         let steps = self
-            .step_repo
-            .find_by_instance(updated_instance.id(), &tenant_id)
-            .await
-            .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))?;
+            .fetch_instance_steps(updated_instance.id(), &tenant_id)
+            .await?;
 
         log_business_event!(
             event.category = event::category::WORKFLOW,
@@ -226,10 +187,7 @@ impl WorkflowUseCaseImpl {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use ringiflow_domain::{
-        clock::FixedClock,
         tenant::TenantId,
         user::UserId,
         value_objects::{DisplayNumber, Version, WorkflowName},
@@ -247,10 +205,6 @@ mod tests {
     };
     use ringiflow_infra::{
         mock::{
-            MockDisplayIdCounterRepository,
-            MockTransactionManager,
-            MockUserRepository,
-            MockWorkflowCommentRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
@@ -259,12 +213,13 @@ mod tests {
     };
 
     use super::super::super::test_helpers::{
+        build_sut,
         setup_two_step_approval,
         single_approval_definition_json,
     };
     use crate::{
         error::CoreError,
-        usecase::workflow::{ApproveRejectInput, WorkflowUseCaseImpl, WorkflowWithSteps},
+        usecase::workflow::{ApproveRejectInput, WorkflowWithSteps},
     };
 
     #[tokio::test]
@@ -325,16 +280,7 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step.version(),
@@ -403,16 +349,7 @@ mod tests {
         .activated(chrono::Utc::now());
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step.version(),
@@ -471,16 +408,7 @@ mod tests {
         // activated() を呼ばないので Pending のまま
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step.version(),
@@ -538,16 +466,7 @@ mod tests {
         .activated(chrono::Utc::now());
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         // 不一致バージョンを指定（ステップの version は 1 だが、2 を指定）
         let wrong_version = Version::initial().next();
@@ -586,16 +505,7 @@ mod tests {
         step_repo.insert_for_test(&step1, &tenant_id).await.unwrap();
         step_repo.insert_for_test(&step2, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step1.version(),
@@ -688,16 +598,7 @@ mod tests {
             .await
             .unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: active_step2.version(),

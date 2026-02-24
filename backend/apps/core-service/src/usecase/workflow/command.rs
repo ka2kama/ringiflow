@@ -2,11 +2,15 @@
 
 mod comment;
 mod decision;
+mod helpers;
 mod lifecycle;
 
 #[cfg(test)]
 pub(super) mod test_helpers {
+    use std::sync::Arc;
+
     use ringiflow_domain::{
+        clock::FixedClock,
         tenant::TenantId,
         user::UserId,
         value_objects::{DisplayNumber, Version, WorkflowName},
@@ -22,6 +26,39 @@ pub(super) mod test_helpers {
             WorkflowStepId,
         },
     };
+    use ringiflow_infra::mock::{
+        MockDisplayIdCounterRepository,
+        MockTransactionManager,
+        MockUserRepository,
+        MockWorkflowCommentRepository,
+        MockWorkflowDefinitionRepository,
+        MockWorkflowInstanceRepository,
+        MockWorkflowStepRepository,
+    };
+
+    use crate::usecase::workflow::WorkflowUseCaseImpl;
+
+    /// SUT（WorkflowUseCaseImpl）を構築する
+    ///
+    /// テストで繰り返される 8 引数の構築ボイラープレートを共通化する。
+    /// Mock repos は参照で受け取り、内部で clone する（共有ステートが保持される）。
+    pub fn build_sut(
+        definition_repo: &MockWorkflowDefinitionRepository,
+        instance_repo: &MockWorkflowInstanceRepository,
+        step_repo: &MockWorkflowStepRepository,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> WorkflowUseCaseImpl {
+        WorkflowUseCaseImpl::new(
+            Arc::new(definition_repo.clone()),
+            Arc::new(instance_repo.clone()),
+            Arc::new(step_repo.clone()),
+            Arc::new(MockWorkflowCommentRepository::new()),
+            Arc::new(MockUserRepository),
+            Arc::new(MockDisplayIdCounterRepository::new()),
+            Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
+        )
+    }
 
     /// テスト用の1段階承認定義 JSON
     pub fn single_approval_definition_json() -> serde_json::Value {
