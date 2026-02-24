@@ -34,6 +34,7 @@ suite =
         , propertyPanelTests
         , dragBoundsTests
         , deleteSelectedStepTests
+        , deleteSelectedTransitionTests
         , apiIntegrationTests
         , validationAndPublishTests
         ]
@@ -1236,6 +1237,94 @@ deleteSelectedStepTests =
                 newModel
                     |> expectLoaded
                         (\canvas -> Dict.size canvas.steps |> Expect.equal 1)
+        ]
+
+
+
+-- DeleteSelectedTransition
+
+
+{-| 接続線プロパティパネルからの削除メッセージ
+-}
+deleteSelectedTransitionTests : Test
+deleteSelectedTransitionTests =
+    describe "DeleteSelectedTransition"
+        [ test "選択中の接続線が削除される" <|
+            \_ ->
+                let
+                    startStep =
+                        { id = "start_1"
+                        , stepType = Start
+                        , name = "開始"
+                        , position = { x = 100, y = 100 }
+                        , assignee = Nothing
+                        , endStatus = Nothing
+                        }
+
+                    approvalStep =
+                        { id = "approval_1"
+                        , stepType = Approval
+                        , name = "承認"
+                        , position = { x = 300, y = 100 }
+                        , assignee = Nothing
+                        , endStatus = Nothing
+                        }
+
+                    modelWithTransition =
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithBounds
+                                        | steps =
+                                            Dict.fromList
+                                                [ ( "start_1", startStep )
+                                                , ( "approval_1", approvalStep )
+                                                ]
+                                        , transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                                        , selectedTransitionIndex = Just 0
+                                    }
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update DeleteSelectedTransition modelWithTransition
+                in
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> List.length c.transitions |> Expect.equal 0
+                                , \c -> c.selectedTransitionIndex |> Expect.equal Nothing
+                                , \c -> c.isDirty_ |> Expect.equal True
+                                ]
+                                canvas
+                        )
+        , test "接続線未選択時に状態が変わらない" <|
+            \_ ->
+                let
+                    modelWithTransition =
+                        { baseModel
+                            | state =
+                                Loaded
+                                    { canvasWithBounds
+                                        | transitions =
+                                            [ { from = "start_1", to = "approval_1", trigger = Nothing } ]
+                                        , selectedTransitionIndex = Nothing
+                                    }
+                        }
+
+                    ( newModel, _ ) =
+                        Designer.update DeleteSelectedTransition modelWithTransition
+                in
+                newModel
+                    |> expectLoaded
+                        (\canvas ->
+                            Expect.all
+                                [ \c -> List.length c.transitions |> Expect.equal 1
+                                , \c -> c.selectedTransitionIndex |> Expect.equal Nothing
+                                ]
+                                canvas
+                        )
         ]
 
 

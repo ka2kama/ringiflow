@@ -26,6 +26,7 @@ module Data.DesignerCanvas exposing
     , stepInputPortPosition
     , stepOutputPortPosition
     , stepTypeToString
+    , triggerLabel
     , viewBoxHeight
     , viewBoxWidth
     )
@@ -379,6 +380,24 @@ autoTrigger sourceType sourceId transitions =
 
         _ ->
             Nothing
+
+
+{-| トリガー種別の表示ラベルを返す
+-}
+triggerLabel : Maybe String -> String
+triggerLabel trigger =
+    case trigger of
+        Just "approve" ->
+            "承認"
+
+        Just "reject" ->
+            "却下"
+
+        Just other ->
+            other
+
+        Nothing ->
+            "なし"
 
 
 
