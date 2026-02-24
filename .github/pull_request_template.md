@@ -2,11 +2,11 @@
 
 <!-- Closes #123 または Related to #123 または なし -->
 
-## Summary
+## 概要
 
 （実装した機能や変更内容を簡潔に）
 
-## Self-review
+## セルフレビュー
 
 <!--
 品質チェックリスト（6.2）のカテゴリ別確認結果。
@@ -31,6 +31,6 @@
 - 横断検証:
 - `just check-all` pass:
 
-## Test plan
+## テスト計画
 
 - [ ] `just check-all` が通る
