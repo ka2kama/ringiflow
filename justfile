@@ -433,6 +433,14 @@ check-impl-docs:
 lint-plans:
     ./scripts/check/plan-confirmations.sh
 
+# 計画ファイルのテスト層網羅確認
+lint-plan-test-layers:
+    ./scripts/check/plan-test-layers.sh
+
+# OpenAPI ハンドラ登録照合（#[utoipa::path] と openapi.rs の paths() の一致確認）
+lint-openapi-handlers:
+    ./scripts/check/openapi-handler-registration.sh
+
 # 計装（tracing::instrument）の漏れを検出
 check-instrumentation:
     rust-script ./scripts/check/instrumentation.rs

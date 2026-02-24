@@ -14,14 +14,8 @@ use redis::aio::ConnectionManager;
 use ringiflow_shared::{CheckStatus, HealthResponse, ReadinessResponse, ReadinessStatus};
 
 /// BFF のヘルスチェックエンドポイント
-#[utoipa::path(
-   get,
-   path = "/health",
-   tag = "health",
-   responses(
-      (status = 200, description = "サーバー稼働中", body = HealthResponse)
-   )
-)]
+///
+/// インフラ用の liveness check。OpenAPI 仕様には含めない（/health/ready のみ公開）。
 pub async fn health_check() -> Json<HealthResponse> {
     Json(HealthResponse {
         status:  "healthy".to_string(),
