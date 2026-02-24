@@ -7,7 +7,7 @@ module Page.WorkflowDefinition.DesignerTest exposing (suite)
 -}
 
 import Api exposing (ApiError(..))
-import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), StepType(..))
+import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..), StepType(..))
 import Data.WorkflowDefinition exposing (ValidationResult, WorkflowDefinition)
 import Dict
 import Expect
@@ -30,6 +30,7 @@ suite =
         , connectionPortMouseDownTests
         , transitionClickedTests
         , connectionKeyDownTests
+        , reconnectionTests
         , propertyPanelTests
         , dragBoundsTests
         , deleteSelectedStepTests
@@ -631,6 +632,305 @@ connectionKeyDownTests =
                                 ]
                                 canvas
                         )
+        ]
+
+
+
+-- Reconnection（接続線端点の付け替え）
+
+
+{-| 3 ステップ + 1 transition の CanvasState（再接続テスト用）
+
+    start_1 ( 100, 100 ) --[approve]--> approval_1 (300,100)
+
+    end_1 ( 500, 100 )
+
+-}
+canvasWithTransition : CanvasState
+canvasWithTransition =
+    let
+        startStep =
+            { id = "start_1"
+            , stepType = Start
+            , name = "開始"
+            , position = { x = 100, y = 100 }
+            , assignee = Nothing
+            , endStatus = Nothing
+            }
+
+        approvalStep =
+            { id = "approval_1"
+            , stepType = Approval
+            , name = "承認"
+            , position = { x = 300, y = 100 }
+            , assignee = Nothing
+            , endStatus = Nothing
+            }
+
+        endStep =
+            { id = "end_1"
+            , stepType = End
+            , name = "終了"
+            , position = { x = 500, y = 100 }
+            , assignee = Nothing
+            , endStatus = Just "approved"
+            }
+    in
+    { canvasWithBounds
+        | steps =
+            Dict.fromList
+                [ ( "start_1", startStep )
+                , ( "approval_1", approvalStep )
+                , ( "end_1", endStep )
+                ]
+        , transitions =
+            [ { from = "start_1", to = "approval_1", trigger = Just "approve" } ]
+        , nextStepNumber = 4
+    }
+
+
+reconnectionTests : Test
+reconnectionTests =
+    describe "Reconnection（接続線端点の付け替え）"
+        [ describe "TransitionEndpointMouseDown"
+            [ test "SourceEnd で DraggingReconnection に遷移する" <|
+                \_ ->
+                    let
+                        model =
+                            { baseModel | state = Loaded canvasWithTransition }
+
+                        ( newModel, _ ) =
+                            Designer.update (TransitionEndpointMouseDown 0 SourceEnd 200 130) model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                case canvas.dragging of
+                                    Just (DraggingReconnection idx end _) ->
+                                        Expect.all
+                                            [ \_ -> idx |> Expect.equal 0
+                                            , \_ -> end |> Expect.equal SourceEnd
+                                            ]
+                                            ()
+
+                                    _ ->
+                                        Expect.fail "Expected DraggingReconnection with SourceEnd"
+                            )
+            , test "TargetEnd で DraggingReconnection に遷移する" <|
+                \_ ->
+                    let
+                        model =
+                            { baseModel | state = Loaded canvasWithTransition }
+
+                        ( newModel, _ ) =
+                            Designer.update (TransitionEndpointMouseDown 0 TargetEnd 300 130) model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                case canvas.dragging of
+                                    Just (DraggingReconnection idx end _) ->
+                                        Expect.all
+                                            [ \_ -> idx |> Expect.equal 0
+                                            , \_ -> end |> Expect.equal TargetEnd
+                                            ]
+                                            ()
+
+                                    _ ->
+                                        Expect.fail "Expected DraggingReconnection with TargetEnd"
+                            )
+            ]
+        , describe "CanvasMouseMove（DraggingReconnection）"
+            [ test "Position が更新される" <|
+                \_ ->
+                    let
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 SourceEnd { x = 100, y = 100 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update (CanvasMouseMove 400 300) model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                case canvas.dragging of
+                                    Just (DraggingReconnection 0 SourceEnd pos) ->
+                                        Expect.all
+                                            [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 400
+                                            , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 300
+                                            ]
+                                            pos
+
+                                    _ ->
+                                        Expect.fail "Expected DraggingReconnection with updated position"
+                            )
+            ]
+        , describe "CanvasMouseUp（DraggingReconnection）"
+            [ test "SourceEnd で有効なステップにドロップ → from が更新される" <|
+                \_ ->
+                    let
+                        -- end_1 の矩形内（500,100 - 680,190）にドロップ
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 SourceEnd { x = 550, y = 140 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update CanvasMouseUp model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                case List.head canvas.transitions of
+                                    Just t ->
+                                        Expect.all
+                                            [ \_ -> t.from |> Expect.equal "end_1"
+                                            , \_ -> t.to |> Expect.equal "approval_1"
+                                            , \_ -> canvas.dragging |> Expect.equal Nothing
+                                            ]
+                                            ()
+
+                                    Nothing ->
+                                        Expect.fail "Expected transition to exist"
+                            )
+            , test "TargetEnd で有効なステップにドロップ → to が更新される" <|
+                \_ ->
+                    let
+                        -- end_1 の矩形内にドロップ
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 TargetEnd { x = 550, y = 140 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update CanvasMouseUp model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                case List.head canvas.transitions of
+                                    Just t ->
+                                        Expect.all
+                                            [ \_ -> t.from |> Expect.equal "start_1"
+                                            , \_ -> t.to |> Expect.equal "end_1"
+                                            , \_ -> canvas.dragging |> Expect.equal Nothing
+                                            ]
+                                            ()
+
+                                    Nothing ->
+                                        Expect.fail "Expected transition to exist"
+                            )
+            , test "空白領域にドロップ → transitions が変更されない" <|
+                \_ ->
+                    let
+                        -- ステップがない領域（50,50）にドロップ
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 TargetEnd { x = 50, y = 50 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update CanvasMouseUp model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                Expect.all
+                                    [ \c ->
+                                        List.head c.transitions
+                                            |> Maybe.map (\t -> ( t.from, t.to ))
+                                            |> Expect.equal (Just ( "start_1", "approval_1" ))
+                                    , \c -> c.dragging |> Expect.equal Nothing
+                                    ]
+                                    canvas
+                            )
+            , test "反対端のステップにドロップ → transitions が変更されない（自己ループ防止）" <|
+                \_ ->
+                    let
+                        -- SourceEnd ドラッグ中に to 側のステップ（approval_1: 300,100）にドロップ
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 SourceEnd { x = 350, y = 140 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update CanvasMouseUp model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                Expect.all
+                                    [ \c ->
+                                        List.head c.transitions
+                                            |> Maybe.map (\t -> ( t.from, t.to ))
+                                            |> Expect.equal (Just ( "start_1", "approval_1" ))
+                                    , \c -> c.dragging |> Expect.equal Nothing
+                                    ]
+                                    canvas
+                            )
+            , test "付け替え後、trigger が元の値を維持する" <|
+                \_ ->
+                    let
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 TargetEnd { x = 550, y = 140 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update CanvasMouseUp model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas ->
+                                List.head canvas.transitions
+                                    |> Maybe.andThen .trigger
+                                    |> Expect.equal (Just "approve")
+                            )
+            , test "付け替え成功時に isDirty がマークされる" <|
+                \_ ->
+                    let
+                        model =
+                            { baseModel
+                                | state =
+                                    Loaded
+                                        { canvasWithTransition
+                                            | dragging = Just (DraggingReconnection 0 TargetEnd { x = 550, y = 140 })
+                                        }
+                            }
+
+                        ( newModel, _ ) =
+                            Designer.update CanvasMouseUp model
+                    in
+                    newModel
+                        |> expectLoaded
+                            (\canvas -> canvas.isDirty_ |> Expect.equal True)
+            ]
         ]
 
 

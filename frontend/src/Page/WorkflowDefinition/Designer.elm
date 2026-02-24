@@ -21,7 +21,7 @@ import Component.ErrorState as ErrorState
 import Component.FormField as FormField
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
-import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
+import Data.DesignerCanvas as DesignerCanvas exposing (Bounds, DraggingState(..), ReconnectEnd(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (ValidationError, ValidationResult, WorkflowDefinition)
 import Dict exposing (Dict)
 import Form.DirtyState as DirtyState
@@ -30,6 +30,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onMouseDown)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import List.Extra
 import Ports
 import Shared exposing (Shared)
 import Svg exposing (svg)
@@ -140,6 +141,7 @@ type Msg
     | CanvasBackgroundClicked
     | StepMouseDown String Float Float -- stepId, clientX, clientY
     | ConnectionPortMouseDown String Float Float -- sourceStepId, clientX, clientY
+    | TransitionEndpointMouseDown Int ReconnectEnd Float Float -- transition index, 端点, clientX, clientY
     | TransitionClicked Int
     | UpdatePropertyName String
     | UpdatePropertyEndStatus String
@@ -283,10 +285,19 @@ updateLoaded msg shared definitionId canvas =
                             ( canvas, Cmd.none )
 
                 Just (DraggingConnection sourceId _) ->
-                    -- Phase 2 で接続線プレビュー更新を実装
                     case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                         Just canvasPos ->
                             ( { canvas | dragging = Just (DraggingConnection sourceId canvasPos) }
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( canvas, Cmd.none )
+
+                Just (DraggingReconnection index end _) ->
+                    case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
+                        Just canvasPos ->
+                            ( { canvas | dragging = Just (DraggingReconnection index end canvasPos) }
                             , Cmd.none
                             )
 
@@ -367,6 +378,9 @@ updateLoaded msg shared definitionId canvas =
                             , Cmd.none
                             )
 
+                Just (DraggingReconnection index end mousePos) ->
+                    handleReconnectionDrop index end mousePos canvas
+
                 Nothing ->
                     ( canvas, Cmd.none )
 
@@ -384,6 +398,16 @@ updateLoaded msg shared definitionId canvas =
             case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
                 Just canvasPos ->
                     ( { canvas | dragging = Just (DraggingConnection sourceStepId canvasPos) }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( canvas, Cmd.none )
+
+        TransitionEndpointMouseDown index end clientX clientY ->
+            case DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY of
+                Just canvasPos ->
+                    ( { canvas | dragging = Just (DraggingReconnection index end canvasPos) }
                     , Cmd.none
                     )
 
@@ -759,6 +783,74 @@ removeAt index list =
     List.take index list ++ List.drop (index + 1) list
 
 
+{-| 接続線端点の付け替えドロップ処理
+
+ドロップ先のステップを判定し、有効な場合は transition の from/to を更新する。
+trigger は維持する（付け替え時に自動変更しない）。
+
+-}
+handleReconnectionDrop : Int -> ReconnectEnd -> DesignerCanvas.Position -> CanvasState -> ( CanvasState, Cmd Msg )
+handleReconnectionDrop index end mousePos canvas =
+    case getAt index canvas.transitions of
+        Just transition ->
+            let
+                -- 付け替えない側のステップ ID（自己ループ防止に使用）
+                fixedStepId =
+                    case end of
+                        SourceEnd ->
+                            transition.to
+
+                        TargetEnd ->
+                            transition.from
+
+                -- ドロップ先のステップを判定（固定端と同じステップは除外 = 自己ループ防止）
+                droppedStep =
+                    canvas.steps
+                        |> Dict.values
+                        |> List.filter (\s -> s.id /= fixedStepId)
+                        |> List.filter (DesignerCanvas.stepContainsPoint mousePos)
+                        |> List.head
+            in
+            case droppedStep of
+                Just target ->
+                    let
+                        updatedTransition =
+                            case end of
+                                SourceEnd ->
+                                    { transition | from = target.id }
+
+                                TargetEnd ->
+                                    { transition | to = target.id }
+
+                        ( dirtyCanvas, dirtyCmd ) =
+                            DirtyState.markDirty canvas
+                    in
+                    ( { dirtyCanvas
+                        | transitions = List.Extra.updateAt index (\_ -> updatedTransition) dirtyCanvas.transitions
+                        , dragging = Nothing
+                        , selectedTransitionIndex = Nothing
+                      }
+                    , dirtyCmd
+                    )
+
+                Nothing ->
+                    ( { canvas | dragging = Nothing }
+                    , Cmd.none
+                    )
+
+        Nothing ->
+            ( { canvas | dragging = Nothing }
+            , Cmd.none
+            )
+
+
+{-| リストの指定インデックスの要素を取得する
+-}
+getAt : Int -> List a -> Maybe a
+getAt index list =
+    list |> List.drop index |> List.head
+
+
 
 -- SUBSCRIPTIONS
 
@@ -1018,6 +1110,7 @@ viewCanvasArea canvas =
             , viewTransitions canvas
             , viewConnectionDragPreview canvas
             , viewSteps canvas
+            , viewReconnectionHandleLayer canvas
             , viewDragPreview canvas
             ]
         ]
@@ -1289,113 +1382,204 @@ viewTransitions canvas =
         )
 
 
-{-| 個別の接続線描画
+{-| 選択中の接続線のドラッグハンドルレイヤー
+
+ステップノードより上（前面）に描画するために、viewSteps の後に配置する。
+
 -}
-viewTransitionLine : CanvasState -> Int -> Transition -> Svg.Svg Msg
-viewTransitionLine canvas index transition =
-    let
-        fromStep =
-            Dict.get transition.from canvas.steps
+viewReconnectionHandleLayer : CanvasState -> Svg.Svg Msg
+viewReconnectionHandleLayer canvas =
+    case ( canvas.selectedTransitionIndex, canvas.dragging ) of
+        ( Just index, Nothing ) ->
+            case List.drop index canvas.transitions |> List.head of
+                Just transition ->
+                    let
+                        fromStep =
+                            Dict.get transition.from canvas.steps
 
-        toStep =
-            Dict.get transition.to canvas.steps
-    in
-    case ( fromStep, toStep ) of
-        ( Just from, Just to ) ->
-            let
-                startPos =
-                    DesignerCanvas.stepOutputPortPosition from
-
-                endPos =
-                    DesignerCanvas.stepInputPortPosition to
-
-                -- ベジェ曲線の制御点（水平方向に 1/3 オフセット）
-                dx =
-                    abs (endPos.x - startPos.x) / 3
-
-                pathData =
-                    "M "
-                        ++ String.fromFloat startPos.x
-                        ++ " "
-                        ++ String.fromFloat startPos.y
-                        ++ " C "
-                        ++ String.fromFloat (startPos.x + dx)
-                        ++ " "
-                        ++ String.fromFloat startPos.y
-                        ++ ", "
-                        ++ String.fromFloat (endPos.x - dx)
-                        ++ " "
-                        ++ String.fromFloat endPos.y
-                        ++ ", "
-                        ++ String.fromFloat endPos.x
-                        ++ " "
-                        ++ String.fromFloat endPos.y
-
-                ( strokeColor, markerId, dashArray ) =
-                    case transition.trigger of
-                        Just "approve" ->
-                            ( "#059669", "arrow-approve", "" )
-
-                        Just "reject" ->
-                            ( "#dc2626", "arrow-reject", "6 3" )
+                        toStep =
+                            Dict.get transition.to canvas.steps
+                    in
+                    case ( fromStep, toStep ) of
+                        ( Just from, Just to ) ->
+                            viewReconnectionHandles index
+                                (DesignerCanvas.stepOutputPortPosition from)
+                                (DesignerCanvas.stepInputPortPosition to)
 
                         _ ->
-                            ( "#94a3b8", "arrow-none", "" )
+                            Svg.text ""
 
-                isSelected =
-                    canvas.selectedTransitionIndex == Just index
-
-                strokeWidth =
-                    if isSelected then
-                        "3"
-
-                    else
-                        "2"
-            in
-            Svg.g []
-                [ -- クリック判定用の透明な太いパス
-                  Svg.path
-                    [ SvgAttr.d pathData
-                    , SvgAttr.fill "none"
-                    , SvgAttr.stroke "transparent"
-                    , SvgAttr.strokeWidth "12"
-                    , SvgAttr.class "cursor-pointer"
-                    , Svg.Events.onClick (TransitionClicked index)
-                    ]
-                    []
-
-                -- 表示用のパス
-                , Svg.path
-                    ([ SvgAttr.d pathData
-                     , SvgAttr.fill "none"
-                     , SvgAttr.stroke strokeColor
-                     , SvgAttr.strokeWidth strokeWidth
-                     , SvgAttr.markerEnd ("url(#" ++ markerId ++ ")")
-                     , SvgAttr.class "pointer-events-none"
-                     ]
-                        ++ (if dashArray /= "" then
-                                [ SvgAttr.strokeDasharray dashArray ]
-
-                            else
-                                []
-                           )
-                        ++ (if isSelected then
-                                [ SvgAttr.filter "drop-shadow(0 0 3px rgba(99, 102, 241, 0.5))" ]
-
-                            else
-                                []
-                           )
-                    )
-                    []
-                ]
+                Nothing ->
+                    Svg.text ""
 
         _ ->
             Svg.text ""
 
 
+{-| 個別の接続線描画
+-}
+viewTransitionLine : CanvasState -> Int -> Transition -> Svg.Svg Msg
+viewTransitionLine canvas index transition =
+    let
+        -- DraggingReconnection 中は対象の接続線を非表示にする（プレビュー線のみ表示）
+        isBeingReconnected =
+            case canvas.dragging of
+                Just (DraggingReconnection reconnectIndex _ _) ->
+                    reconnectIndex == index
+
+                _ ->
+                    False
+    in
+    if isBeingReconnected then
+        Svg.text ""
+
+    else
+        let
+            fromStep =
+                Dict.get transition.from canvas.steps
+
+            toStep =
+                Dict.get transition.to canvas.steps
+        in
+        case ( fromStep, toStep ) of
+            ( Just from, Just to ) ->
+                let
+                    startPos =
+                        DesignerCanvas.stepOutputPortPosition from
+
+                    endPos =
+                        DesignerCanvas.stepInputPortPosition to
+
+                    -- ベジェ曲線の制御点（水平方向に 1/3 オフセット）
+                    dx =
+                        abs (endPos.x - startPos.x) / 3
+
+                    pathData =
+                        "M "
+                            ++ String.fromFloat startPos.x
+                            ++ " "
+                            ++ String.fromFloat startPos.y
+                            ++ " C "
+                            ++ String.fromFloat (startPos.x + dx)
+                            ++ " "
+                            ++ String.fromFloat startPos.y
+                            ++ ", "
+                            ++ String.fromFloat (endPos.x - dx)
+                            ++ " "
+                            ++ String.fromFloat endPos.y
+                            ++ ", "
+                            ++ String.fromFloat endPos.x
+                            ++ " "
+                            ++ String.fromFloat endPos.y
+
+                    ( strokeColor, markerId, dashArray ) =
+                        case transition.trigger of
+                            Just "approve" ->
+                                ( "#059669", "arrow-approve", "" )
+
+                            Just "reject" ->
+                                ( "#dc2626", "arrow-reject", "6 3" )
+
+                            _ ->
+                                ( "#94a3b8", "arrow-none", "" )
+
+                    isSelected =
+                        canvas.selectedTransitionIndex == Just index
+
+                    strokeWidth =
+                        if isSelected then
+                            "3"
+
+                        else
+                            "2"
+                in
+                Svg.g []
+                    [ -- クリック判定用の透明な太いパス
+                      -- pointer-events="all" により stroke の塗り状態に依存せずクリックを受け取る
+                      Svg.path
+                        [ SvgAttr.d pathData
+                        , SvgAttr.fill "none"
+                        , SvgAttr.stroke "transparent"
+                        , SvgAttr.strokeWidth "12"
+                        , SvgAttr.pointerEvents "all"
+                        , SvgAttr.class "cursor-pointer"
+                        , Html.Events.stopPropagationOn "click"
+                            (Decode.succeed ( TransitionClicked index, True ))
+                        ]
+                        []
+
+                    -- 表示用のパス
+                    , Svg.path
+                        ([ SvgAttr.d pathData
+                         , SvgAttr.fill "none"
+                         , SvgAttr.stroke strokeColor
+                         , SvgAttr.strokeWidth strokeWidth
+                         , SvgAttr.markerEnd ("url(#" ++ markerId ++ ")")
+                         , SvgAttr.class "pointer-events-none"
+                         ]
+                            ++ (if dashArray /= "" then
+                                    [ SvgAttr.strokeDasharray dashArray ]
+
+                                else
+                                    []
+                               )
+                            ++ (if isSelected then
+                                    [ SvgAttr.filter "drop-shadow(0 0 3px rgba(99, 102, 241, 0.5))" ]
+
+                                else
+                                    []
+                               )
+                        )
+                        []
+
+                    -- ハンドルは viewReconnectionHandleLayer で描画（ステップの上に表示するため）
+                    ]
+
+            _ ->
+                Svg.text ""
+
+
+{-| 接続線端点のドラッグハンドル
+
+選択中の接続線の始点・終点に表示するハンドル。
+ドラッグすることで接続先を変更できる。
+
+-}
+viewReconnectionHandles : Int -> DesignerCanvas.Position -> DesignerCanvas.Position -> Svg.Svg Msg
+viewReconnectionHandles index startPos endPos =
+    let
+        handleAttrs pos reconnectEnd =
+            [ SvgAttr.cx (String.fromFloat pos.x)
+            , SvgAttr.cy (String.fromFloat pos.y)
+            , SvgAttr.r "10"
+            , SvgAttr.fill "white"
+            , SvgAttr.stroke "#6366f1"
+            , SvgAttr.strokeWidth "2.5"
+            , SvgAttr.filter "drop-shadow(0 0 4px rgba(99, 102, 241, 0.6))"
+            , SvgAttr.class "cursor-grab"
+            , Html.Events.stopPropagationOn "mousedown"
+                (Decode.map2
+                    (\cx cy -> ( TransitionEndpointMouseDown index reconnectEnd cx cy, True ))
+                    (Decode.field "clientX" Decode.float)
+                    (Decode.field "clientY" Decode.float)
+                )
+            ]
+    in
+    Svg.g []
+        [ -- 始点ハンドル
+          Svg.circle (handleAttrs startPos SourceEnd) []
+
+        -- 終点ハンドル
+        , Svg.circle (handleAttrs endPos TargetEnd) []
+        ]
+
+
 {-| 接続線ドラッグ中のプレビュー
 
-DraggingConnection 中、接続元の出力ポートから現在のマウス位置まで破線を描画する。
+DraggingConnection / DraggingReconnection 中に破線を描画する。
+
+  - DraggingConnection: 接続元の出力ポートから現在のマウス位置まで
+  - DraggingReconnection: 固定端から現在のマウス位置まで（SourceEnd なら to 側固定、TargetEnd なら from 側固定）
 
 -}
 viewConnectionDragPreview : CanvasState -> Svg.Svg Msg
@@ -1404,47 +1588,78 @@ viewConnectionDragPreview canvas =
         Just (DraggingConnection sourceId mousePos) ->
             case Dict.get sourceId canvas.steps of
                 Just sourceStep ->
-                    let
-                        startPos =
-                            DesignerCanvas.stepOutputPortPosition sourceStep
+                    viewPreviewLine
+                        (DesignerCanvas.stepOutputPortPosition sourceStep)
+                        mousePos
 
-                        dx =
-                            abs (mousePos.x - startPos.x) / 3
+                Nothing ->
+                    Svg.text ""
 
-                        pathData =
-                            "M "
-                                ++ String.fromFloat startPos.x
-                                ++ " "
-                                ++ String.fromFloat startPos.y
-                                ++ " C "
-                                ++ String.fromFloat (startPos.x + dx)
-                                ++ " "
-                                ++ String.fromFloat startPos.y
-                                ++ ", "
-                                ++ String.fromFloat (mousePos.x - dx)
-                                ++ " "
-                                ++ String.fromFloat mousePos.y
-                                ++ ", "
-                                ++ String.fromFloat mousePos.x
-                                ++ " "
-                                ++ String.fromFloat mousePos.y
-                    in
-                    Svg.path
-                        [ SvgAttr.d pathData
-                        , SvgAttr.fill "none"
-                        , SvgAttr.stroke "#94a3b8"
-                        , SvgAttr.strokeWidth "2"
-                        , SvgAttr.strokeDasharray "6 3"
-                        , SvgAttr.markerEnd "url(#arrow-none)"
-                        , SvgAttr.class "pointer-events-none"
-                        ]
-                        []
+        Just (DraggingReconnection index end mousePos) ->
+            case getAt index canvas.transitions of
+                Just transition ->
+                    case end of
+                        SourceEnd ->
+                            -- 始点をドラッグ中: マウス位置 → to ステップの入力ポート
+                            case Dict.get transition.to canvas.steps of
+                                Just toStep ->
+                                    viewPreviewLine mousePos (DesignerCanvas.stepInputPortPosition toStep)
+
+                                Nothing ->
+                                    Svg.text ""
+
+                        TargetEnd ->
+                            -- 終点をドラッグ中: from ステップの出力ポート → マウス位置
+                            case Dict.get transition.from canvas.steps of
+                                Just fromStep ->
+                                    viewPreviewLine (DesignerCanvas.stepOutputPortPosition fromStep) mousePos
+
+                                Nothing ->
+                                    Svg.text ""
 
                 Nothing ->
                     Svg.text ""
 
         _ ->
             Svg.text ""
+
+
+{-| 接続プレビュー線の描画（共通）
+-}
+viewPreviewLine : DesignerCanvas.Position -> DesignerCanvas.Position -> Svg.Svg Msg
+viewPreviewLine from to =
+    let
+        dx =
+            abs (to.x - from.x) / 3
+
+        pathData =
+            "M "
+                ++ String.fromFloat from.x
+                ++ " "
+                ++ String.fromFloat from.y
+                ++ " C "
+                ++ String.fromFloat (from.x + dx)
+                ++ " "
+                ++ String.fromFloat from.y
+                ++ ", "
+                ++ String.fromFloat (to.x - dx)
+                ++ " "
+                ++ String.fromFloat to.y
+                ++ ", "
+                ++ String.fromFloat to.x
+                ++ " "
+                ++ String.fromFloat to.y
+    in
+    Svg.path
+        [ SvgAttr.d pathData
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "#94a3b8"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.strokeDasharray "6 3"
+        , SvgAttr.markerEnd "url(#arrow-none)"
+        , SvgAttr.class "pointer-events-none"
+        ]
+        []
 
 
 {-| ドラッグ中のプレビュー表示
