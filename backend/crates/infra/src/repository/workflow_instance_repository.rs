@@ -195,7 +195,7 @@ impl TryFrom<WorkflowInstanceRow> for WorkflowInstance {
     type Error = InfraError;
 
     fn try_from(row: WorkflowInstanceRow) -> Result<Self, Self::Error> {
-        Ok(WorkflowInstance::from_db(WorkflowInstanceRecord {
+        WorkflowInstance::from_db(WorkflowInstanceRecord {
             id: WorkflowInstanceId::from_uuid(row.id),
             tenant_id: TenantId::from_uuid(row.tenant_id),
             definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
@@ -217,7 +217,8 @@ impl TryFrom<WorkflowInstanceRow> for WorkflowInstance {
             completed_at: row.completed_at,
             created_at: row.created_at,
             updated_at: row.updated_at,
-        }))
+        })
+        .map_err(|e| InfraError::Unexpected(e.to_string()))
     }
 }
 
