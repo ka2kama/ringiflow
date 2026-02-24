@@ -1478,12 +1478,13 @@ viewTransitionLine canvas index transition =
                 in
                 Svg.g []
                     [ -- クリック判定用の透明な太いパス
+                      -- pointer-events="all" により stroke の塗り状態に依存せずクリックを受け取る
                       Svg.path
                         [ SvgAttr.d pathData
                         , SvgAttr.fill "none"
                         , SvgAttr.stroke "transparent"
                         , SvgAttr.strokeWidth "12"
-                        , SvgAttr.pointerEvents "stroke"
+                        , SvgAttr.pointerEvents "all"
                         , SvgAttr.class "cursor-pointer"
                         , Html.Events.stopPropagationOn "click"
                             (Decode.succeed ( TransitionClicked index, True ))
