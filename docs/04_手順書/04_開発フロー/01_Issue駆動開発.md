@@ -731,6 +731,26 @@ grep -rl "#<Issue番号>" process/improvements/ --include="*.md"
 
 改善の経緯: [改善記録の効果追跡が機能していない](../../../process/improvements/2026-02/2026-02-10_0337_改善記録の効果追跡が機能していない.md)
 
+<!-- 改善: process/improvements/2026-02/2026-02-24_1500_TODO-FIXMEのライフサイクル管理不在.md -->
+
+#### TODO/FIXME の棚卸し
+
+Issue クローズ時に、クローズした Issue を参照する TODO/FIXME がないか確認する。
+
+```bash
+grep -rn "TODO(#<Issue番号>)\|FIXME(#<Issue番号>)" backend/ frontend/
+```
+
+| 状態 | 対応 |
+|------|------|
+| アノテーションなし | 追加アクション不要 |
+| 解消済み | アノテーションを削除 |
+| 未解消 | 新 Issue を作成し、参照番号を更新 |
+
+注: 自動 lint（`just check-stale-annotations`）が補完するため、手動ステップの漏れはプッシュ前に検出される。
+
+→ アノテーション規約: [code-annotations.md > ライフサイクル](../../../.claude/rules/code-annotations.md#ライフサイクル)
+
 #### 振り返りのスキップ
 
 以下の場合は振り返りを簡略化または省略できる:
