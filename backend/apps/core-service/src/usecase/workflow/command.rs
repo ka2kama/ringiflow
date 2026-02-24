@@ -88,7 +88,8 @@ pub(super) mod test_helpers {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("manager_approval".to_string(), now);
+        .with_current_step("manager_approval".to_string(), now)
+        .unwrap();
 
         let step1 = WorkflowStep::new(NewWorkflowStep {
             id: WorkflowStepId::new(),

@@ -584,9 +584,13 @@ impl WorkflowInstance {
     ///
     /// Submit 時の初期遷移（Pending → InProgress）用。
     /// 承認後の次ステップ遷移には `advance_to_next_step` を使用する。
-    pub fn with_current_step(self, step_id: String, now: DateTime<Utc>) -> Self {
+    pub fn with_current_step(
+        self,
+        step_id: String,
+        now: DateTime<Utc>,
+    ) -> Result<Self, DomainError> {
         match self.state {
-            WorkflowInstanceState::Pending(pending) => Self {
+            WorkflowInstanceState::Pending(pending) => Ok(Self {
                 state: WorkflowInstanceState::InProgress(InProgressState {
                     current_step_id: step_id,
                     submitted_at:    pending.submitted_at,
@@ -594,17 +598,11 @@ impl WorkflowInstance {
                 version: self.version.next(),
                 updated_at: now,
                 ..self
-            },
-            // FIXME(#854): Pending からのみ遷移すべき。後方互換のための暫定対応を解消する
-            _ => Self {
-                state: WorkflowInstanceState::InProgress(InProgressState {
-                    current_step_id: step_id,
-                    submitted_at:    self.submitted_at().unwrap_or(now),
-                }),
-                version: self.version.next(),
-                updated_at: now,
-                ..self
-            },
+            }),
+            _ => Err(DomainError::Validation(format!(
+                "ステップ設定は承認待ち状態でのみ可能です（現在: {}）",
+                self.status()
+            ))),
         }
     }
 
@@ -836,7 +834,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let before = instance.clone();
 
             let sut = instance.complete_with_approval(now).unwrap();
@@ -857,7 +856,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let before = instance.clone();
 
             let sut = instance.complete_with_rejection(now).unwrap();
@@ -942,7 +942,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let before = instance.clone();
 
             let sut = instance.cancelled(now).unwrap();
@@ -966,6 +967,7 @@ mod tests {
                 .submitted(now)
                 .unwrap()
                 .with_current_step("step_1".to_string(), now)
+                .unwrap()
                 .complete_with_approval(now)
                 .unwrap();
 
@@ -983,6 +985,7 @@ mod tests {
                 .submitted(now)
                 .unwrap()
                 .with_current_step("step_1".to_string(), now)
+                .unwrap()
                 .complete_with_rejection(now)
                 .unwrap();
 
@@ -1013,7 +1016,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let before = instance.clone();
 
             let sut = instance
@@ -1049,7 +1053,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let before_version = instance.version();
 
             let sut = instance
@@ -1057,6 +1062,19 @@ mod tests {
                 .unwrap();
 
             assert_eq!(sut.version(), before_version.next());
+        }
+
+        // --- with_current_step() 異常系テスト ---
+
+        #[rstest]
+        fn test_下書きからのステップ設定はエラー(
+            test_instance: WorkflowInstance,
+            now: DateTime<Utc>,
+        ) {
+            // Draft 状態からはステップ設定不可
+            let result = test_instance.with_current_step("step_1".to_string(), now);
+
+            assert!(result.is_err());
         }
 
         // --- submitted() 異常系テスト ---
@@ -1081,7 +1099,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
 
             let result = instance.submitted(now);
 
@@ -1098,7 +1117,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let before = instance.clone();
 
             let sut = instance.complete_with_request_changes(now).unwrap();
@@ -1133,6 +1153,7 @@ mod tests {
                 .submitted(now)
                 .unwrap()
                 .with_current_step("step_1".to_string(), now)
+                .unwrap()
                 .complete_with_request_changes(now)
                 .unwrap();
             let before = instance.clone();
@@ -1163,7 +1184,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
 
             let result = instance.resubmitted(json!({}), "new_step_1".to_string(), now);
 
@@ -1181,6 +1203,7 @@ mod tests {
                 .submitted(now)
                 .unwrap()
                 .with_current_step("step_1".to_string(), now)
+                .unwrap()
                 .complete_with_request_changes(now)
                 .unwrap();
             let before = instance.clone();
@@ -1247,7 +1270,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let result = WorkflowInstance::from_db(WorkflowInstanceRecord {
                 status: WorkflowInstanceStatus::Approved,
                 completed_at: None,
@@ -1297,7 +1321,8 @@ mod tests {
             let instance = test_instance
                 .submitted(now)
                 .unwrap()
-                .with_current_step("step_1".to_string(), now);
+                .with_current_step("step_1".to_string(), now)
+                .unwrap();
             let result = WorkflowInstance::from_db(WorkflowInstanceRecord {
                 status: WorkflowInstanceStatus::Rejected,
                 completed_at: None,

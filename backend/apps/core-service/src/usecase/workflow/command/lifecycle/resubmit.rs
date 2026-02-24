@@ -292,6 +292,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now)
+        .unwrap()
         .complete_with_request_changes(now)
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
@@ -376,7 +377,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
@@ -447,6 +449,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now)
+        .unwrap()
         .complete_with_request_changes(now)
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
@@ -521,6 +524,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now)
+        .unwrap()
         .complete_with_request_changes(now)
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
@@ -601,6 +605,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("approval".to_string(), now)
+        .unwrap()
         .complete_with_request_changes(now)
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
