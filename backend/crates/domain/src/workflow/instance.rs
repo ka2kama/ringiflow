@@ -534,7 +534,7 @@ impl WorkflowInstance {
                 updated_at: now,
                 ..self
             },
-            // 本来 Pending からのみ遷移すべきだが、後方互換のため他の状態でも動作する
+            // FIXME(#854): Pending からのみ遷移すべき。後方互換のための暫定対応を解消する
             _ => Self {
                 state: WorkflowInstanceState::InProgress(InProgressState {
                     current_step_id: step_id,
