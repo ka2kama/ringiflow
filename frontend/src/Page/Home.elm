@@ -129,6 +129,7 @@ viewStatsCards stats =
             , value = stats.pendingTasks
             , bgColorClass = "bg-primary-50"
             , textColorClass = "text-primary-600"
+            , iconBgClass = "bg-primary-100"
             , route = Route.Tasks
             , icon = Icons.tasks
             }
@@ -137,6 +138,7 @@ viewStatsCards stats =
             , value = stats.myWorkflowsInProgress
             , bgColorClass = "bg-warning-50"
             , textColorClass = "text-warning-600"
+            , iconBgClass = "bg-warning-100"
             , route = Route.Workflows { status = Just InProgress, completedToday = False }
             , icon = Icons.workflows
             }
@@ -145,6 +147,7 @@ viewStatsCards stats =
             , value = stats.completedToday
             , bgColorClass = "bg-success-50"
             , textColorClass = "text-success-600"
+            , iconBgClass = "bg-success-100"
             , route = Route.Workflows { status = Nothing, completedToday = True }
             , icon = Icons.checkCircle
             }
@@ -162,6 +165,7 @@ viewStatCardLink :
     , value : Int
     , bgColorClass : String
     , textColorClass : String
+    , iconBgClass : String
     , route : Route.Route
     , icon : Html Msg
     }
@@ -171,8 +175,10 @@ viewStatCardLink config =
         [ href (Route.toString config.route)
         , class ("block rounded-lg border border-secondary-200 p-6 text-center no-underline shadow-sm transition-colors hover:shadow-md " ++ config.bgColorClass)
         ]
-        [ div [ class ("mb-2 flex justify-center " ++ config.textColorClass) ]
-            [ config.icon ]
+        [ div [ class "mb-3 flex justify-center" ]
+            [ div [ class ("inline-flex rounded-full p-2 " ++ config.iconBgClass ++ " " ++ config.textColorClass) ]
+                [ config.icon ]
+            ]
         , div [ class ("text-3xl font-bold " ++ config.textColorClass) ]
             [ text (String.fromInt config.value) ]
         , div [ class "mt-2 text-sm text-secondary-500" ]
