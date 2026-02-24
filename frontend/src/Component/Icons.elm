@@ -1,5 +1,6 @@
 module Component.Icons exposing
     ( auditLog
+    , checkCircle
     , dashboard
     , menu
     , roles
@@ -9,8 +10,9 @@ module Component.Icons exposing
     , workflows
     )
 
-{-| サイドバー用 SVG アイコン
+{-| SVG アイコン
 
+サイドバーナビゲーション、KPI カード等で使用するインラインアイコン。
 Main.elm のファイルサイズ削減のために抽出。
 
 -}
@@ -69,6 +71,22 @@ tasks =
         ]
         [ Svg.path [ SvgAttr.d "M9 11l3 3L22 4" ] []
         , Svg.path [ SvgAttr.d "M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" ] []
+        ]
+
+
+{-| 完了（チェック付き円）
+-}
+checkCircle : Html msg
+checkCircle =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.circle [ SvgAttr.cx "12", SvgAttr.cy "12", SvgAttr.r "10" ] []
+        , Svg.path [ SvgAttr.d "m9 12 2 2 4-4" ] []
         ]
 
 

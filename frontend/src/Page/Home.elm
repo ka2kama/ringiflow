@@ -11,6 +11,7 @@ import Api exposing (ApiError)
 import Api.Dashboard as DashboardApi
 import Component.Button as Button
 import Component.ErrorState as ErrorState
+import Component.Icons as Icons
 import Component.LoadingSpinner as LoadingSpinner
 import Data.Dashboard exposing (DashboardStats)
 import Data.WorkflowInstance exposing (Status(..))
@@ -111,7 +112,6 @@ viewStats remoteStats =
             ErrorState.viewSimple "統計情報の取得に失敗しました"
 
         Success stats ->
-            -- TODO(human): KPI カードのデザインを実装してください
             viewStatsCards stats
 
 
@@ -130,6 +130,7 @@ viewStatsCards stats =
             , bgColorClass = "bg-primary-50"
             , textColorClass = "text-primary-600"
             , route = Route.Tasks
+            , icon = Icons.tasks
             }
         , viewStatCardLink
             { label = "申請中"
@@ -137,6 +138,7 @@ viewStatsCards stats =
             , bgColorClass = "bg-warning-50"
             , textColorClass = "text-warning-600"
             , route = Route.Workflows { status = Just InProgress, completedToday = False }
+            , icon = Icons.workflows
             }
         , viewStatCardLink
             { label = "本日完了"
@@ -144,6 +146,7 @@ viewStatsCards stats =
             , bgColorClass = "bg-success-50"
             , textColorClass = "text-success-600"
             , route = Route.Workflows { status = Nothing, completedToday = True }
+            , icon = Icons.checkCircle
             }
         ]
 
@@ -160,14 +163,17 @@ viewStatCardLink :
     , bgColorClass : String
     , textColorClass : String
     , route : Route.Route
+    , icon : Html Msg
     }
     -> Html Msg
 viewStatCardLink config =
     a
         [ href (Route.toString config.route)
-        , class ("block rounded-lg border border-secondary-200 p-6 text-center no-underline shadow-sm transition-shadow hover:shadow-md " ++ config.bgColorClass)
+        , class ("block rounded-lg border border-secondary-200 p-6 text-center no-underline shadow-sm transition-colors hover:shadow-md " ++ config.bgColorClass)
         ]
-        [ div [ class ("text-3xl font-bold " ++ config.textColorClass) ]
+        [ div [ class ("mb-2 flex justify-center " ++ config.textColorClass) ]
+            [ config.icon ]
+        , div [ class ("text-3xl font-bold " ++ config.textColorClass) ]
             [ text (String.fromInt config.value) ]
         , div [ class "mt-2 text-sm text-secondary-500" ]
             [ text config.label ]
