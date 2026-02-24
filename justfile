@@ -301,7 +301,7 @@ lint-openapi:
 # =============================================================================
 
 # 全テスト（単体テストのみ）
-test: test-rust test-elm
+test: test-rust test-elm test-rust-scripts
 
 # Rust 単体テスト + doctest
 test-rust:
@@ -315,6 +315,13 @@ test-rust-integration:
 # Elm テスト
 test-elm:
     cd frontend && pnpm run test
+
+# rust-script ユニットテスト（Cargo workspace 外の独立スクリプト）
+test-rust-scripts:
+    rust-script --test ./scripts/check/instrumentation.rs
+    rust-script --test ./scripts/check/improvement-records.rs
+    rust-script --test ./scripts/check/impl-docs.rs
+    rust-script --test ./scripts/issue/sync-epic.rs
 
 # Elm ビルドチェック（コンパイルエラー検出）
 # lint-elm や test-elm ではコンパイルエラーを検出できないため、

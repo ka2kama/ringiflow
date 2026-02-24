@@ -31,6 +31,7 @@ trap 'rm -f "$non_rust_log"' EXIT
     set -e
     just lint-elm
     just test-elm
+    just test-rust-scripts
     just build-elm
     just lint-shell
     just lint-ci
