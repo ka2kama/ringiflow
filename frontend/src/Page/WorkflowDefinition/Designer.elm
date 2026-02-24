@@ -1311,10 +1311,10 @@ viewStepNode selectedStepId errorStepIds step =
             ]
             [ Svg.text step.name ]
 
-        -- 出力ポート（右端中央の円）
+        -- 出力ポート（下端中央の円）
         , Svg.circle
-            [ SvgAttr.cx (String.fromFloat dim.width)
-            , SvgAttr.cy (String.fromFloat (dim.height / 2))
+            [ SvgAttr.cx (String.fromFloat (dim.width / 2))
+            , SvgAttr.cy (String.fromFloat dim.height)
             , SvgAttr.r "7"
             , SvgAttr.fill colors.stroke
             , SvgAttr.stroke "white"
@@ -1328,10 +1328,10 @@ viewStepNode selectedStepId errorStepIds step =
             ]
             []
 
-        -- 入力ポート（左端中央の円）
+        -- 入力ポート（上端中央の円）
         , Svg.circle
-            [ SvgAttr.cx "0"
-            , SvgAttr.cy (String.fromFloat (dim.height / 2))
+            [ SvgAttr.cx (String.fromFloat (dim.width / 2))
+            , SvgAttr.cy "0"
             , SvgAttr.r "7"
             , SvgAttr.fill colors.stroke
             , SvgAttr.stroke "white"
@@ -1466,9 +1466,9 @@ viewTransitionLine canvas index transition =
                     endPos =
                         DesignerCanvas.stepInputPortPosition to
 
-                    -- ベジェ曲線の制御点（水平方向に 1/3 オフセット）
-                    dx =
-                        abs (endPos.x - startPos.x) / 3
+                    -- ベジェ曲線の制御点（垂直方向に 1/3 オフセット）
+                    dy =
+                        abs (endPos.y - startPos.y) / 3
 
                     pathData =
                         "M "
@@ -1476,13 +1476,13 @@ viewTransitionLine canvas index transition =
                             ++ " "
                             ++ String.fromFloat startPos.y
                             ++ " C "
-                            ++ String.fromFloat (startPos.x + dx)
+                            ++ String.fromFloat startPos.x
                             ++ " "
-                            ++ String.fromFloat startPos.y
+                            ++ String.fromFloat (startPos.y + dy)
                             ++ ", "
-                            ++ String.fromFloat (endPos.x - dx)
+                            ++ String.fromFloat endPos.x
                             ++ " "
-                            ++ String.fromFloat endPos.y
+                            ++ String.fromFloat (endPos.y - dy)
                             ++ ", "
                             ++ String.fromFloat endPos.x
                             ++ " "
@@ -1645,8 +1645,8 @@ viewConnectionDragPreview canvas =
 viewPreviewLine : DesignerCanvas.Position -> DesignerCanvas.Position -> Svg.Svg Msg
 viewPreviewLine from to =
     let
-        dx =
-            abs (to.x - from.x) / 3
+        dy =
+            abs (to.y - from.y) / 3
 
         pathData =
             "M "
@@ -1654,13 +1654,13 @@ viewPreviewLine from to =
                 ++ " "
                 ++ String.fromFloat from.y
                 ++ " C "
-                ++ String.fromFloat (from.x + dx)
+                ++ String.fromFloat from.x
                 ++ " "
-                ++ String.fromFloat from.y
+                ++ String.fromFloat (from.y + dy)
                 ++ ", "
-                ++ String.fromFloat (to.x - dx)
+                ++ String.fromFloat to.x
                 ++ " "
-                ++ String.fromFloat to.y
+                ++ String.fromFloat (to.y - dy)
                 ++ ", "
                 ++ String.fromFloat to.x
                 ++ " "
