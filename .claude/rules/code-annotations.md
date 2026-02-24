@@ -71,6 +71,25 @@ struct UnusedStruct { ... }
 | 一時的な回避策（HACK） | FIXME |
 | バグ・問題のあるコード | FIXME |
 
+## ライフサイクル
+
+### Issue 参照の維持
+
+TODO/FIXME に Issue 番号を付けた場合、参照先 Issue のクローズ時に棚卸しが必要:
+
+| 状態 | 対応 |
+|------|------|
+| アノテーションの内容が解消済み | アノテーションを削除 |
+| 未解消（Issue のスコープ外だった） | 新 Issue を作成し、参照番号を更新 |
+
+棚卸しの手順: [Issue 駆動開発 > TODO/FIXME の棚卸し](../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#todofixme-の棚卸し)
+
+<!-- 改善: process/improvements/2026-02/2026-02-24_1500_TODO-FIXMEのライフサイクル管理不在.md -->
+
+### 自動検出
+
+`just check-stale-annotations` でクローズ済み Issue を参照する TODO/FIXME を検出する。`just check` に含まれるため、プッシュ前に自動実行される。
+
 ## 検索方法
 
 ```bash
@@ -79,4 +98,7 @@ grep -rn "TODO\|FIXME" backend --include="*.rs"
 
 # FIXME のみ（優先度高）
 grep -rn "FIXME" backend --include="*.rs"
+
+# クローズ済み Issue を参照する TODO/FIXME を検出
+just check-stale-annotations
 ```

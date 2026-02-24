@@ -424,6 +424,10 @@ lint-rules:
 check-doc-links:
     ./scripts/check/doc-links.sh
 
+# クローズ済み Issue を参照する TODO/FIXME を検出
+check-stale-annotations:
+    ./scripts/check/stale-annotations.sh
+
 # 実装解説のファイル命名規則をチェック
 # 警告のみ（exit 0）: 既存の違反がある場合にブロックしない
 check-impl-docs:

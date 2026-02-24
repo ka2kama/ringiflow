@@ -804,7 +804,7 @@ saveAndSubmit : Shared -> String -> String -> Dict String String -> List Workflo
 saveAndSubmit shared definitionId title formValues approvers =
     -- MVP では簡略化: 保存のみ行い、保存成功後にユーザーが再度申請ボタンを押す
     -- 理由: Elm で Cmd のチェーンは Task 変換が必要で複雑になるため
-    -- TODO: 将来的には保存→申請の連続処理を実装
+    -- TODO(#889): 将来的には保存→申請の連続処理を実装
     WorkflowApi.createWorkflow
         { config = Shared.toRequestConfig shared
         , body =
