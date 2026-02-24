@@ -69,10 +69,7 @@ impl WorkflowUseCaseImpl {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use ringiflow_domain::{
-        clock::FixedClock,
         tenant::TenantId,
         user::UserId,
         value_objects::{DisplayNumber, Version, WorkflowName},
@@ -90,10 +87,6 @@ mod tests {
     };
     use ringiflow_infra::{
         mock::{
-            MockDisplayIdCounterRepository,
-            MockTransactionManager,
-            MockUserRepository,
-            MockWorkflowCommentRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
@@ -102,12 +95,13 @@ mod tests {
     };
 
     use super::super::super::test_helpers::{
+        build_sut,
         setup_two_step_approval,
         single_approval_definition_json,
     };
     use crate::{
         error::CoreError,
-        usecase::workflow::{ApproveRejectInput, WorkflowUseCaseImpl, WorkflowWithSteps},
+        usecase::workflow::{ApproveRejectInput, WorkflowWithSteps},
     };
 
     #[tokio::test]
@@ -152,16 +146,7 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step.version(),
@@ -246,16 +231,7 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step.version(),
@@ -326,16 +302,7 @@ mod tests {
         });
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step.version(),
@@ -393,16 +360,7 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let wrong_version = Version::initial().next();
         let input = ApproveRejectInput {
@@ -440,16 +398,7 @@ mod tests {
         step_repo.insert_for_test(&step1, &tenant_id).await.unwrap();
         step_repo.insert_for_test(&step2, &tenant_id).await.unwrap();
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
-        );
+        let sut = build_sut(&definition_repo, &instance_repo, &step_repo, now);
 
         let input = ApproveRejectInput {
             version: step1.version(),
