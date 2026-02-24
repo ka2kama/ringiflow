@@ -30,6 +30,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onMouseDown)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import List.Extra
 import Ports
 import Shared exposing (Shared)
 import Svg exposing (svg)
@@ -782,21 +783,6 @@ removeAt index list =
     List.take index list ++ List.drop (index + 1) list
 
 
-{-| リストの指定インデックスの要素を変換する
--}
-updateAt : Int -> (a -> a) -> List a -> List a
-updateAt index fn list =
-    List.indexedMap
-        (\i item ->
-            if i == index then
-                fn item
-
-            else
-                item
-        )
-        list
-
-
 {-| 接続線端点の付け替えドロップ処理
 
 ドロップ先のステップを判定し、有効な場合は transition の from/to を更新する。
@@ -840,7 +826,7 @@ handleReconnectionDrop index end mousePos canvas =
                             DirtyState.markDirty canvas
                     in
                     ( { dirtyCanvas
-                        | transitions = updateAt index (\_ -> updatedTransition) dirtyCanvas.transitions
+                        | transitions = List.Extra.updateAt index (\_ -> updatedTransition) dirtyCanvas.transitions
                         , dragging = Nothing
                         , selectedTransitionIndex = Nothing
                       }
