@@ -119,18 +119,65 @@ pub struct CompletedState {
     pub completed_at:    DateTime<Utc>,
 }
 
-/// Cancelled 状態の固有フィールド
+/// 取り消し状態
 ///
-/// Draft/Pending/InProgress/ChangesRequested から遷移可能。
-/// 前状態に依存するフィールドは Option で表現する。
+/// 遷移元に応じて保持するフィールドが異なる。
+/// ADT で遷移元ごとのバリアントに分離し、不正なフィールド組み合わせを型レベルで防止する。
+///
+/// - FromDraft: 申請前のため submitted_at, current_step_id なし
+/// - FromPending: 申請済みだがステップ未開始のため current_step_id なし
+/// - FromActive: InProgress/ChangesRequested から取り消し（ステップ処理中）
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CancelledState {
-    /// 現在のステップ ID（InProgress/ChangesRequested から遷移時のみ設定）
-    pub current_step_id: Option<String>,
-    /// 申請日時（Draft から遷移時は None）
-    pub submitted_at:    Option<DateTime<Utc>>,
-    /// 完了日時（INV-I9 を型で強制）
-    pub completed_at:    DateTime<Utc>,
+pub enum CancelledState {
+    /// Draft から取り消し
+    FromDraft {
+        /// 完了日時（INV-I9 を型で強制）
+        completed_at: DateTime<Utc>,
+    },
+    /// Pending から取り消し
+    FromPending {
+        /// 申請日時
+        submitted_at: DateTime<Utc>,
+        /// 完了日時（INV-I9 を型で強制）
+        completed_at: DateTime<Utc>,
+    },
+    /// InProgress/ChangesRequested から取り消し
+    FromActive {
+        /// 現在のステップ ID
+        current_step_id: String,
+        /// 申請日時
+        submitted_at:    DateTime<Utc>,
+        /// 完了日時（INV-I9 を型で強制）
+        completed_at:    DateTime<Utc>,
+    },
+}
+
+impl CancelledState {
+    pub fn completed_at(&self) -> DateTime<Utc> {
+        match self {
+            Self::FromDraft { completed_at, .. }
+            | Self::FromPending { completed_at, .. }
+            | Self::FromActive { completed_at, .. } => *completed_at,
+        }
+    }
+
+    pub fn current_step_id(&self) -> Option<&str> {
+        match self {
+            Self::FromActive {
+                current_step_id, ..
+            } => Some(current_step_id),
+            Self::FromDraft { .. } | Self::FromPending { .. } => None,
+        }
+    }
+
+    pub fn submitted_at(&self) -> Option<DateTime<Utc>> {
+        match self {
+            Self::FromPending { submitted_at, .. } | Self::FromActive { submitted_at, .. } => {
+                Some(*submitted_at)
+            }
+            Self::FromDraft { .. } => None,
+        }
+    }
 }
 
 /// ChangesRequested 状態の固有フィールド
@@ -308,11 +355,25 @@ impl WorkflowInstance {
                         "Cancelled インスタンスには completed_at が必要です".to_string(),
                     )
                 })?;
-                WorkflowInstanceState::Cancelled(CancelledState {
-                    current_step_id: record.current_step_id,
-                    submitted_at: record.submitted_at,
-                    completed_at,
-                })
+                let cancelled_state = match (record.current_step_id, record.submitted_at) {
+                    (None, None) => CancelledState::FromDraft { completed_at },
+                    (None, Some(submitted_at)) => CancelledState::FromPending {
+                        submitted_at,
+                        completed_at,
+                    },
+                    (Some(current_step_id), Some(submitted_at)) => CancelledState::FromActive {
+                        current_step_id,
+                        submitted_at,
+                        completed_at,
+                    },
+                    (Some(_), None) => {
+                        return Err(DomainError::Validation(
+                                "Cancelled インスタンスで current_step_id がある場合は submitted_at が必要です"
+                                    .to_string(),
+                            ));
+                    }
+                };
+                WorkflowInstanceState::Cancelled(cancelled_state)
             }
             WorkflowInstanceStatus::ChangesRequested => {
                 let current_step_id = record.current_step_id.ok_or_else(|| {
@@ -400,7 +461,7 @@ impl WorkflowInstance {
             WorkflowInstanceState::Approved(s) | WorkflowInstanceState::Rejected(s) => {
                 Some(&s.current_step_id)
             }
-            WorkflowInstanceState::Cancelled(s) => s.current_step_id.as_deref(),
+            WorkflowInstanceState::Cancelled(s) => s.current_step_id(),
             WorkflowInstanceState::ChangesRequested(s) => Some(&s.current_step_id),
             WorkflowInstanceState::Draft | WorkflowInstanceState::Pending(_) => None,
         }
@@ -418,7 +479,7 @@ impl WorkflowInstance {
             WorkflowInstanceState::Approved(s) | WorkflowInstanceState::Rejected(s) => {
                 Some(s.submitted_at)
             }
-            WorkflowInstanceState::Cancelled(s) => s.submitted_at,
+            WorkflowInstanceState::Cancelled(s) => s.submitted_at(),
             WorkflowInstanceState::ChangesRequested(s) => Some(s.submitted_at),
         }
     }
@@ -428,8 +489,11 @@ impl WorkflowInstance {
             WorkflowInstanceState::Approved(s) | WorkflowInstanceState::Rejected(s) => {
                 Some(s.completed_at)
             }
-            WorkflowInstanceState::Cancelled(s) => Some(s.completed_at),
-            _ => None,
+            WorkflowInstanceState::Cancelled(s) => Some(s.completed_at()),
+            WorkflowInstanceState::Draft
+            | WorkflowInstanceState::Pending(_)
+            | WorkflowInstanceState::InProgress(_)
+            | WorkflowInstanceState::ChangesRequested(_) => None,
         }
     }
 
@@ -476,36 +540,33 @@ impl WorkflowInstance {
     pub fn cancelled(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
         match self.state {
             WorkflowInstanceState::Draft => Ok(Self {
-                state: WorkflowInstanceState::Cancelled(CancelledState {
-                    current_step_id: None,
-                    submitted_at:    None,
-                    completed_at:    now,
+                state: WorkflowInstanceState::Cancelled(CancelledState::FromDraft {
+                    completed_at: now,
                 }),
                 updated_at: now,
                 ..self
             }),
             WorkflowInstanceState::Pending(pending) => Ok(Self {
-                state: WorkflowInstanceState::Cancelled(CancelledState {
-                    current_step_id: None,
-                    submitted_at:    Some(pending.submitted_at),
-                    completed_at:    now,
+                state: WorkflowInstanceState::Cancelled(CancelledState::FromPending {
+                    submitted_at: pending.submitted_at,
+                    completed_at: now,
                 }),
                 updated_at: now,
                 ..self
             }),
             WorkflowInstanceState::InProgress(in_progress) => Ok(Self {
-                state: WorkflowInstanceState::Cancelled(CancelledState {
-                    current_step_id: Some(in_progress.current_step_id),
-                    submitted_at:    Some(in_progress.submitted_at),
+                state: WorkflowInstanceState::Cancelled(CancelledState::FromActive {
+                    current_step_id: in_progress.current_step_id,
+                    submitted_at:    in_progress.submitted_at,
                     completed_at:    now,
                 }),
                 updated_at: now,
                 ..self
             }),
             WorkflowInstanceState::ChangesRequested(changes) => Ok(Self {
-                state: WorkflowInstanceState::Cancelled(CancelledState {
-                    current_step_id: Some(changes.current_step_id),
-                    submitted_at:    Some(changes.submitted_at),
+                state: WorkflowInstanceState::Cancelled(CancelledState::FromActive {
+                    current_step_id: changes.current_step_id,
+                    submitted_at:    changes.submitted_at,
                     completed_at:    now,
                 }),
                 updated_at: now,
@@ -1282,6 +1343,21 @@ mod tests {
             let result = WorkflowInstance::from_db(WorkflowInstanceRecord {
                 status: WorkflowInstanceStatus::Cancelled,
                 completed_at: None,
+                ..record_from(&test_instance)
+            });
+
+            assert!(result.is_err());
+        }
+
+        #[rstest]
+        fn test_from_db_cancelledでcurrent_step_idありsubmitted_atなしはエラー(
+            test_instance: WorkflowInstance,
+        ) {
+            let result = WorkflowInstance::from_db(WorkflowInstanceRecord {
+                status: WorkflowInstanceStatus::Cancelled,
+                current_step_id: Some("step_1".to_string()),
+                submitted_at: None,
+                completed_at: Some(Utc::now()),
                 ..record_from(&test_instance)
             });
 

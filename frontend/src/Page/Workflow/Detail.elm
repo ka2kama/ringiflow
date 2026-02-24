@@ -25,8 +25,10 @@ module Page.Workflow.Detail exposing
 
 詳細: [申請フォーム UI 設計](../../../../docs/03_詳細設計書/10_ワークフロー申請フォームUI設計.md)
 
-Model は型安全ステートマシン（[ADR-054](../../../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md)
-パターン A）で Loading/Failed/Loaded を分離し、Loaded 時のみ操作フィールドが存在する。
+Model は 2 層の型安全ステートマシン（[ADR-054](../../../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md)）で構成される。
+
+  - 外側（PageState）: Loading/Failed/Loaded を分離し、Loaded 時のみ操作フィールドが存在する（パターン A）
+  - 内側（EditState）: Loaded 内で Viewing/Editing を分離し、編集中のみフォームデータ・承認者選択状態が存在する
 
 -}
 
@@ -99,6 +101,9 @@ type PageState
 workflow 取得完了後の状態でのみ有効なフィールドを集約する。
 definition/comments は Loaded 後も非同期ロード中のため RemoteData を維持。
 
+編集状態は EditState ADT で Viewing/Editing を分離し、
+編集中のみ有効なフィールドが Editing バリアント内に存在する（ADR-054）。
+
 -}
 type alias LoadedState =
     { workflow : WorkflowInstance
@@ -116,11 +121,34 @@ type alias LoadedState =
     , newCommentBody : String
     , isPostingComment : Bool
 
-    -- 再提出
-    , isEditing : Bool
-    , editFormData : Dict String String
-    , editApprovers : Dict String ApproverSelector.State
+    -- ユーザー一覧（承認者選択で使用）
     , users : RemoteData ApiError (List UserItem)
+
+    -- 編集状態
+    , editState : EditState
+    }
+
+
+{-| 再提出の編集状態
+
+Viewing → Editing（StartEditing）
+Editing → Viewing（CancelEditing, GotResubmitResult Ok）
+
+-}
+type EditState
+    = Viewing
+    | Editing EditingState
+
+
+{-| 編集中の状態
+
+編集中のみ有効なフィールドを集約する。
+Workflow/New.elm の EditingState と同じパターン。
+
+-}
+type alias EditingState =
+    { editFormData : Dict String String
+    , editApprovers : Dict String ApproverSelector.State
     , resubmitValidationErrors : Dict String String
     , isResubmitting : Bool
     }
@@ -144,12 +172,8 @@ initLoaded workflow =
     , comments = RemoteData.Loading
     , newCommentBody = ""
     , isPostingComment = False
-    , isEditing = False
-    , editFormData = Dict.empty
-    , editApprovers = Dict.empty
     , users = NotAsked
-    , resubmitValidationErrors = Dict.empty
-    , isResubmitting = False
+    , editState = Viewing
     }
 
 
@@ -472,10 +496,13 @@ updateLoaded msg shared workflowDisplayNumber loaded =
                             Dict.empty
             in
             ( { loaded
-                | isEditing = True
-                , editFormData = formDataDict
-                , editApprovers = approverStates
-                , resubmitValidationErrors = Dict.empty
+                | editState =
+                    Editing
+                        { editFormData = formDataDict
+                        , editApprovers = approverStates
+                        , resubmitValidationErrors = Dict.empty
+                        , isResubmitting = False
+                        }
                 , users = RemoteData.Loading
               }
             , UserApi.listUsers
@@ -485,105 +512,127 @@ updateLoaded msg shared workflowDisplayNumber loaded =
             )
 
         CancelEditing ->
-            ( { loaded
-                | isEditing = False
-                , editFormData = Dict.empty
-                , editApprovers = Dict.empty
-                , resubmitValidationErrors = Dict.empty
-              }
+            ( { loaded | editState = Viewing }
             , Cmd.none
             )
 
         UpdateEditFormField fieldId fieldValue ->
-            ( { loaded | editFormData = Dict.insert fieldId fieldValue loaded.editFormData }
-            , Cmd.none
-            )
+            case loaded.editState of
+                Editing editing ->
+                    ( { loaded
+                        | editState =
+                            Editing { editing | editFormData = Dict.insert fieldId fieldValue editing.editFormData }
+                      }
+                    , Cmd.none
+                    )
+
+                Viewing ->
+                    ( loaded, Cmd.none )
 
         EditApproverSearchChanged stepId search ->
-            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | search = search, dropdownOpen = True, highlightIndex = 0 }) loaded.editApprovers }
-            , Cmd.none
-            )
+            updateEditing loaded
+                (\editing ->
+                    { editing | editApprovers = updateApproverState stepId (\s -> { s | search = search, dropdownOpen = True, highlightIndex = 0 }) editing.editApprovers }
+                )
 
         EditApproverSelected stepId user ->
-            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) loaded.editApprovers }
-            , Cmd.none
-            )
+            updateEditing loaded
+                (\editing ->
+                    { editing | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) editing.editApprovers }
+                )
 
         EditApproverCleared stepId ->
-            ( { loaded | editApprovers = updateApproverState stepId (\_ -> ApproverSelector.init) loaded.editApprovers }
-            , Cmd.none
-            )
+            updateEditing loaded
+                (\editing ->
+                    { editing | editApprovers = updateApproverState stepId (\_ -> ApproverSelector.init) editing.editApprovers }
+                )
 
         EditApproverKeyDown stepId key ->
-            case Dict.get stepId loaded.editApprovers of
-                Just state ->
-                    let
-                        candidates =
-                            RemoteData.withDefault [] loaded.users
-                                |> UserItem.filterUsers state.search
+            case loaded.editState of
+                Editing editing ->
+                    case Dict.get stepId editing.editApprovers of
+                        Just state ->
+                            let
+                                candidates =
+                                    RemoteData.withDefault [] loaded.users
+                                        |> UserItem.filterUsers state.search
 
-                        result =
-                            ApproverSelector.handleKeyDown
-                                { key = key
-                                , candidates = candidates
-                                , highlightIndex = state.highlightIndex
-                                }
-                    in
-                    case result of
-                        ApproverSelector.Navigate newIndex ->
-                            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) loaded.editApprovers }, Cmd.none )
+                                result =
+                                    ApproverSelector.handleKeyDown
+                                        { key = key
+                                        , candidates = candidates
+                                        , highlightIndex = state.highlightIndex
+                                        }
+                            in
+                            case result of
+                                ApproverSelector.Navigate newIndex ->
+                                    updateEditing loaded
+                                        (\e -> { e | editApprovers = updateApproverState stepId (\s -> { s | highlightIndex = newIndex }) e.editApprovers })
 
-                        ApproverSelector.Select user ->
-                            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) loaded.editApprovers }, Cmd.none )
+                                ApproverSelector.Select user ->
+                                    updateEditing loaded
+                                        (\e -> { e | editApprovers = updateApproverState stepId (\s -> { s | selection = Selected user, search = "", dropdownOpen = False }) e.editApprovers })
 
-                        ApproverSelector.Close ->
-                            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) loaded.editApprovers }, Cmd.none )
+                                ApproverSelector.Close ->
+                                    updateEditing loaded
+                                        (\e -> { e | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) e.editApprovers })
 
-                        ApproverSelector.NoChange ->
+                                ApproverSelector.NoChange ->
+                                    ( loaded, Cmd.none )
+
+                        Nothing ->
                             ( loaded, Cmd.none )
 
-                Nothing ->
+                Viewing ->
                     ( loaded, Cmd.none )
 
         EditApproverDropdownClosed stepId ->
-            ( { loaded | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) loaded.editApprovers }
-            , Cmd.none
-            )
-
-        SubmitResubmit ->
-            let
-                validationErrors =
-                    validateResubmit loaded
-
-                approvers =
-                    buildResubmitApprovers loaded
-            in
-            if Dict.isEmpty validationErrors then
-                ( { loaded | isResubmitting = True, resubmitValidationErrors = Dict.empty, errorMessage = Nothing }
-                , WorkflowApi.resubmitWorkflow
-                    { config = Shared.toRequestConfig shared
-                    , displayNumber = workflowDisplayNumber
-                    , body =
-                        { version = loaded.workflow.version
-                        , formData = encodeFormValues loaded.editFormData
-                        , approvers = approvers
-                        }
-                    , toMsg = GotResubmitResult
-                    }
+            updateEditing loaded
+                (\editing ->
+                    { editing | editApprovers = updateApproverState stepId (\s -> { s | dropdownOpen = False }) editing.editApprovers }
                 )
 
-            else
-                ( { loaded | resubmitValidationErrors = validationErrors }, Cmd.none )
+        SubmitResubmit ->
+            case loaded.editState of
+                Editing editing ->
+                    let
+                        validationErrors =
+                            validateResubmit editing
+
+                        approvers =
+                            buildResubmitApprovers editing
+                    in
+                    if Dict.isEmpty validationErrors then
+                        ( { loaded
+                            | editState = Editing { editing | isResubmitting = True, resubmitValidationErrors = Dict.empty }
+                            , errorMessage = Nothing
+                          }
+                        , WorkflowApi.resubmitWorkflow
+                            { config = Shared.toRequestConfig shared
+                            , displayNumber = workflowDisplayNumber
+                            , body =
+                                { version = loaded.workflow.version
+                                , formData = encodeFormValues editing.editFormData
+                                , approvers = approvers
+                                }
+                            , toMsg = GotResubmitResult
+                            }
+                        )
+
+                    else
+                        ( { loaded | editState = Editing { editing | resubmitValidationErrors = validationErrors } }
+                        , Cmd.none
+                        )
+
+                Viewing ->
+                    ( loaded, Cmd.none )
 
         GotResubmitResult result ->
             case result of
                 Ok workflow ->
                     ( { loaded
                         | workflow = workflow
-                        , isEditing = False
-                        , isResubmitting = False
-                        , editFormData = Dict.empty
-                        , editApprovers = Dict.empty
+                        , editState = Viewing
                         , successMessage = Just "再申請しました"
                         , errorMessage = Nothing
                       }
@@ -595,12 +644,17 @@ updateLoaded msg shared workflowDisplayNumber loaded =
                     )
 
                 Err error ->
-                    ( { loaded
-                        | isResubmitting = False
-                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー" } error)
-                      }
-                    , Cmd.none
-                    )
+                    case loaded.editState of
+                        Editing editing ->
+                            ( { loaded
+                                | editState = Editing { editing | isResubmitting = False }
+                                , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー" } error)
+                              }
+                            , Cmd.none
+                            )
+
+                        Viewing ->
+                            ( loaded, Cmd.none )
 
         GotUsers result ->
             case result of
@@ -655,6 +709,21 @@ handleApprovalResult successMsg result loaded =
             )
 
 
+{-| EditingState を更新するヘルパー
+
+Editing 状態のときのみ更新を適用し、Viewing 状態では何もしない。
+
+-}
+updateEditing : LoadedState -> (EditingState -> EditingState) -> ( LoadedState, Cmd Msg )
+updateEditing loaded updater =
+    case loaded.editState of
+        Editing editing ->
+            ( { loaded | editState = Editing (updater editing) }, Cmd.none )
+
+        Viewing ->
+            ( loaded, Cmd.none )
+
+
 
 -- RESUBMIT HELPERS
 
@@ -668,11 +737,11 @@ updateApproverState stepId updater dict =
 
 {-| 再提出のバリデーション
 -}
-validateResubmit : LoadedState -> Dict String String
-validateResubmit loaded =
+validateResubmit : EditingState -> Dict String String
+validateResubmit editing =
     let
         approverErrors =
-            loaded.editApprovers
+            editing.editApprovers
                 |> Dict.toList
                 |> List.filterMap
                     (\( stepId, state ) ->
@@ -688,9 +757,9 @@ validateResubmit loaded =
 
 {-| 再提出用の承認者リストを構築
 -}
-buildResubmitApprovers : LoadedState -> List WorkflowApi.StepApproverRequest
-buildResubmitApprovers loaded =
-    loaded.editApprovers
+buildResubmitApprovers : EditingState -> List WorkflowApi.StepApproverRequest
+buildResubmitApprovers editing =
+    editing.editApprovers
         |> Dict.toList
         |> List.filterMap
             (\( stepId, state ) ->
@@ -790,11 +859,12 @@ viewWorkflowDetail shared loaded =
         , viewResubmitSection shared loaded
         , viewSteps loaded.workflow
         , viewBasicInfo (Shared.zone shared) loaded.workflow
-        , if loaded.isEditing then
-            viewEditableFormData loaded
+        , case loaded.editState of
+            Editing editing ->
+                viewEditableFormData loaded editing
 
-          else
-            viewFormData loaded.workflow loaded.definition
+            Viewing ->
+                viewFormData loaded.workflow loaded.definition
         , viewCommentSection loaded
         ]
 
@@ -946,7 +1016,7 @@ viewResubmitSection shared loaded =
         isChangesRequested =
             loaded.workflow.status == WorkflowInstance.ChangesRequested
     in
-    if isChangesRequested && isInitiator && not loaded.isEditing then
+    if isChangesRequested && isInitiator && loaded.editState == Viewing then
         div [ class "rounded-lg border border-warning-200 bg-warning-50 p-4" ]
             [ p [ class "mb-3 text-sm text-warning-700" ] [ text "この申請は差し戻されました。内容を修正して再申請できます。" ]
             , Button.view
@@ -963,8 +1033,8 @@ viewResubmitSection shared loaded =
 
 {-| 編集可能なフォームデータ表示
 -}
-viewEditableFormData : LoadedState -> Html Msg
-viewEditableFormData loaded =
+viewEditableFormData : LoadedState -> EditingState -> Html Msg
+viewEditableFormData loaded editing =
     div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
         [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "フォームデータ（編集中）" ]
         , case loaded.definition of
@@ -972,9 +1042,9 @@ viewEditableFormData loaded =
                 case DynamicForm.extractFormFields definition.definition of
                     Ok fields ->
                         div [ class "space-y-4" ]
-                            (List.map (viewEditableFormField loaded.editFormData) fields
-                                ++ [ viewEditableApprovers loaded definition
-                                   , viewEditActions loaded
+                            (List.map (viewEditableFormField editing.editFormData) fields
+                                ++ [ viewEditableApprovers loaded editing definition
+                                   , viewEditActions editing
                                    ]
                             )
 
@@ -1000,8 +1070,8 @@ viewEditableFormField formData field =
         ]
 
 
-viewEditableApprovers : LoadedState -> WorkflowDefinition -> Html Msg
-viewEditableApprovers loaded definition =
+viewEditableApprovers : LoadedState -> EditingState -> WorkflowDefinition -> Html Msg
+viewEditableApprovers loaded editing definition =
     let
         stepInfos =
             WorkflowDefinition.approvalStepInfos definition
@@ -1009,15 +1079,15 @@ viewEditableApprovers loaded definition =
     div [ class "space-y-3" ]
         [ h3 [ class "text-sm font-semibold text-secondary-700" ] [ text "承認者" ]
         , div [ class "space-y-3" ]
-            (List.map (viewEditableApproverStep loaded) stepInfos)
+            (List.map (viewEditableApproverStep loaded editing) stepInfos)
         ]
 
 
-viewEditableApproverStep : LoadedState -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
-viewEditableApproverStep loaded stepInfo =
+viewEditableApproverStep : LoadedState -> EditingState -> WorkflowDefinition.ApprovalStepInfo -> Html Msg
+viewEditableApproverStep loaded editing stepInfo =
     let
         state =
-            Dict.get stepInfo.id loaded.editApprovers
+            Dict.get stepInfo.id editing.editApprovers
                 |> Maybe.withDefault ApproverSelector.init
     in
     div [ class "space-y-1" ]
@@ -1025,7 +1095,7 @@ viewEditableApproverStep loaded stepInfo =
         , ApproverSelector.view
             { state = state
             , users = loaded.users
-            , validationError = Dict.get ("approver_" ++ stepInfo.id) loaded.resubmitValidationErrors
+            , validationError = Dict.get ("approver_" ++ stepInfo.id) editing.resubmitValidationErrors
             , onSearch = EditApproverSearchChanged stepInfo.id
             , onSelect = EditApproverSelected stepInfo.id
             , onClear = EditApproverCleared stepInfo.id
@@ -1035,16 +1105,16 @@ viewEditableApproverStep loaded stepInfo =
         ]
 
 
-viewEditActions : LoadedState -> Html Msg
-viewEditActions loaded =
+viewEditActions : EditingState -> Html Msg
+viewEditActions editing =
     div [ class "flex gap-3 pt-4 border-t border-secondary-100" ]
         [ Button.view
             { variant = Button.Primary
-            , disabled = loaded.isResubmitting
+            , disabled = editing.isResubmitting
             , onClick = SubmitResubmit
             }
             [ text
-                (if loaded.isResubmitting then
+                (if editing.isResubmitting then
                     "再申請中..."
 
                  else
@@ -1053,7 +1123,7 @@ viewEditActions loaded =
             ]
         , Button.view
             { variant = Button.Outline
-            , disabled = loaded.isResubmitting
+            , disabled = editing.isResubmitting
             , onClick = CancelEditing
             }
             [ text "キャンセル" ]
