@@ -13,7 +13,7 @@
 // - 「- 失敗タイプ: <有効値>」が存在する（エラー）
 // - 「- 問題の性質: <有効値>」が存在する（警告のみ — 2026-02-15 導入のため遡及は別 Issue）
 //
-// 有効値の定義: process/improvements/README.md
+// 有効値の定義: [改善記録フォーマット](../../process/improvements/README.md)
 //
 // Usage: rust-script ./scripts/check/improvement-records.rs
 
