@@ -307,7 +307,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         // Active なステップを作成
@@ -385,7 +386,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {
@@ -451,7 +453,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         // Pending 状態のステップ（Active ではない）
@@ -518,7 +521,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         let step = WorkflowStep::new(NewWorkflowStep {

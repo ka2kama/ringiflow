@@ -141,6 +141,7 @@ impl WorkflowTestBuilder {
         .submitted(self.now)
         .unwrap()
         .with_current_step("approval".to_string(), self.now)
+        .unwrap()
     }
 
     /// Mock リポジトリ群を含む SUT（System Under Test）を構築

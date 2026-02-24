@@ -149,7 +149,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         // Active ステップ（カウント対象）
@@ -218,7 +219,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&in_progress).await.unwrap();
 
         // Draft インスタンス（カウント対象外）
@@ -250,6 +252,7 @@ mod tests {
         .submitted(now)
         .unwrap()
         .with_current_step("step_1".to_string(), now)
+        .unwrap()
         .complete_with_approval(now)
         .unwrap();
         instance_repo.insert_for_test(&approved).await.unwrap();
@@ -283,7 +286,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         // 完了済みステップ（今日 → カウント対象）
@@ -357,7 +361,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         // approver_id にアサインされた Active ステップ

@@ -169,7 +169,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
@@ -225,7 +226,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         // approver_id が承認者のステップを作成
@@ -299,7 +301,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(

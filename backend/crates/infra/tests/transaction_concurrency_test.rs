@@ -45,7 +45,8 @@ async fn test_楽観的ロックで古いバージョンの更新がconflictを�
     let instance = create_test_instance(200)
         .submitted(now)
         .unwrap()
-        .with_current_step("step1".to_string(), now);
+        .with_current_step("step1".to_string(), now)
+        .unwrap();
     let step = create_test_step(instance.id(), 1).activated(now);
 
     let instance_id = instance.id().clone();
@@ -130,7 +131,8 @@ async fn test_ステップinsert失敗時にインスタンス更新もロール
     let instance = create_test_instance(400)
         .submitted(now)
         .unwrap()
-        .with_current_step("step1".to_string(), now);
+        .with_current_step("step1".to_string(), now)
+        .unwrap();
     let step = create_test_step(instance.id(), 1).activated(now);
 
     let instance_id = instance.id().clone();
@@ -204,7 +206,8 @@ async fn test_トランザクション原子性で部分更新がロールバッ
     let instance = create_test_instance(300)
         .submitted(now)
         .unwrap()
-        .with_current_step("step1".to_string(), now);
+        .with_current_step("step1".to_string(), now)
+        .unwrap();
     let step = create_test_step(instance.id(), 1).activated(now);
 
     let instance_id = instance.id().clone();

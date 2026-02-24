@@ -131,7 +131,9 @@ impl WorkflowUseCaseImpl {
             .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
         // current_step_id を最初の承認ステップに設定して in_progress に遷移
-        let in_progress_instance = submitted_instance.with_current_step(first_step_id, now);
+        let in_progress_instance = submitted_instance
+            .with_current_step(first_step_id, now)
+            .map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
         // 7. インスタンスとステップを保存（単一トランザクション）
         let mut tx = self
@@ -317,7 +319,8 @@ mod tests {
         let expected = instance
             .submitted(now)
             .unwrap()
-            .with_current_step("approval".to_string(), now);
+            .with_current_step("approval".to_string(), now)
+            .unwrap();
         assert_eq!(result, expected);
 
         // ステップが作成されていることを確認
@@ -536,7 +539,8 @@ mod tests {
         })
         .submitted(now)
         .unwrap()
-        .with_current_step("approval".to_string(), now);
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
         let sut = WorkflowUseCaseImpl::new(
