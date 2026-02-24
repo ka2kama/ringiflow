@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# FIXME: shellcheck SC2094 を解消する（check_section 関数は $file を読み取り専用で使用するため一時的に抑制）
 # shellcheck disable=SC2094
 #
 # 計画ファイルのテスト層網羅確認
