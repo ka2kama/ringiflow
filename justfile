@@ -415,6 +415,10 @@ check-duplicates:
 lint-improvements:
     rust-script ./scripts/check/improvement-records.rs
 
+# 改善記録のサニタイズ違反検出（ユーザー発言の直接引用）
+lint-improvements-sanitize:
+    ./scripts/check/sanitize-improvements.sh
+
 # .claude/rules/ 内のルールファイルが CLAUDE.md または paths: で参照されているかチェック
 lint-rules:
     ./scripts/check/rule-files.sh

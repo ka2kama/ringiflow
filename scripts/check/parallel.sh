@@ -37,6 +37,7 @@ trap 'rm -f "$non_rust_log"' EXIT
     just lint-ci
     just lint-openapi
     just lint-improvements
+    just lint-improvements-sanitize
     just lint-plans
     just lint-plan-test-layers
     just lint-rules
