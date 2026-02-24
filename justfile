@@ -403,17 +403,18 @@ check-fn-size:
 # コード重複（コピー＆ペースト）を検出（jscpd）
 # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
 # 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
-# 注: --formats-exts と複数 format の同時指定にバグがあるため、Rust と Elm を分けて実行する
+# ベースライン: .config/baselines.env（ラチェット方式、閾値超過で exit 1）
 check-duplicates:
-    @echo "=== Rust コード重複チェック ==="
-    pnpm exec jscpd --min-lines 10 --min-tokens 50 --format "rust" --gitignore --exitCode 0 backend/
-    @echo ""
-    @echo "=== Elm コード重複チェック ==="
-    pnpm exec jscpd --min-lines 10 --min-tokens 50 --format "haskell" --formats-exts "haskell:elm" --gitignore --exitCode 0 frontend/src/
+    ./scripts/check/check-duplicates.sh
 
 # 改善記録の標準フォーマット準拠チェック（カテゴリ・失敗タイプの値検証）
+# ベースライン: .config/baselines.env（ラチェット方式、閾値超過で exit 1）
 lint-improvements:
-    rust-script ./scripts/check/improvement-records.rs
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source .config/baselines.env
+    rust-script ./scripts/check/improvement-records.rs \
+        --max-missing-nature "$IMPROVEMENT_RECORDS_MAX_MISSING_NATURE"
 
 # 改善記録のサニタイズ違反検出（ユーザー発言の直接引用）
 lint-improvements-sanitize:

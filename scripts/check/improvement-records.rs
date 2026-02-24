@@ -131,6 +131,35 @@ struct ValidationResult {
     warnings: Vec<String>,
 }
 
+/// ベースライン比較の結果
+#[derive(Debug, PartialEq)]
+enum BaselineResult {
+    /// ベースラインが指定されていない（従来の警告のみ動作）
+    NotConfigured,
+    /// ベースライン以内（OK）
+    WithinBaseline,
+    /// ベースラインを超過（CI 失敗）
+    ExceededBaseline { actual: usize, max: usize },
+    /// ベースラインを下回った（改善された）
+    ImprovedBelowBaseline { actual: usize, max: usize },
+}
+
+/// ベースラインと警告件数を比較する
+fn check_baseline(warning_count: usize, max_allowed: Option<usize>) -> BaselineResult {
+    match max_allowed {
+        None => BaselineResult::NotConfigured,
+        Some(max) if warning_count > max => BaselineResult::ExceededBaseline {
+            actual: warning_count,
+            max,
+        },
+        Some(max) if warning_count < max => BaselineResult::ImprovedBelowBaseline {
+            actual: warning_count,
+            max,
+        },
+        Some(_) => BaselineResult::WithinBaseline,
+    }
+}
+
 /// 行からプレフィックスを除去し、括弧以降を除去し、末尾空白を除去して値を抽出する
 ///
 /// 例: "- カテゴリ: 知識-実行乖離（検証の仕組みは...）" → "知識-実行乖離"
@@ -209,7 +238,7 @@ fn validate_file(file_path: &str, content: &str) -> ValidationResult {
     ValidationResult { errors, warnings }
 }
 
-fn run() -> i32 {
+fn run(max_missing_nature: Option<usize>) -> i32 {
     let mut all_errors = Vec::new();
     let mut all_warnings = Vec::new();
 
@@ -267,12 +296,53 @@ fn run() -> i32 {
         return 1;
     }
 
+    // ベースライン比較
+    match check_baseline(all_warnings.len(), max_missing_nature) {
+        BaselineResult::ExceededBaseline { actual, max } => {
+            println!();
+            println!(
+                "❌ 「問題の性質」未記載件数がベースラインを超えました: {actual} 件（上限: {max} 件）"
+            );
+            return 1;
+        }
+        BaselineResult::ImprovedBelowBaseline { actual, max } => {
+            println!();
+            println!(
+                "💡 「問題の性質」未記載件数が改善されました: {actual} 件（ベースライン: {max} 件）"
+            );
+            println!(
+                "   .config/baselines.env の IMPROVEMENT_RECORDS_MAX_MISSING_NATURE を {actual} に更新してください"
+            );
+        }
+        BaselineResult::WithinBaseline | BaselineResult::NotConfigured => {}
+    }
+
     println!("✅ すべての改善記録が標準フォーマットに準拠しています");
     0
 }
 
+/// CLI 引数から --max-missing-nature の値を解析する
+fn parse_max_missing_nature() -> Option<usize> {
+    let args: Vec<String> = std::env::args().collect();
+    let mut i = 1;
+    while i < args.len() {
+        if args[i] == "--max-missing-nature" {
+            if let Some(value) = args.get(i + 1) {
+                return Some(value.parse().unwrap_or_else(|e| {
+                    panic!("--max-missing-nature の値が不正です: '{value}' ({e})");
+                }));
+            } else {
+                panic!("--max-missing-nature に値が指定されていません");
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
 fn main() {
-    std::process::exit(run());
+    let max_missing_nature = parse_max_missing_nature();
+    std::process::exit(run(max_missing_nature));
 }
 
 #[cfg(test)]
@@ -518,5 +588,44 @@ mod tests {
         let result = validate_file("test.md", content);
         assert_eq!(result.errors.len(), 1);
         assert!(result.errors[0].contains("不明な性質"));
+    }
+
+    // --- check_baseline ---
+
+    #[test]
+    fn test_check_baseline_未指定のときnotconfiguredを返す() {
+        assert_eq!(check_baseline(5, None), BaselineResult::NotConfigured);
+    }
+
+    #[test]
+    fn test_check_baseline_ベースライン以内のときwithin_baselineを返す() {
+        assert_eq!(check_baseline(70, Some(70)), BaselineResult::WithinBaseline);
+    }
+
+    #[test]
+    fn test_check_baseline_ベースライン超過のときexceededを返す() {
+        assert_eq!(
+            check_baseline(71, Some(70)),
+            BaselineResult::ExceededBaseline {
+                actual: 71,
+                max: 70,
+            }
+        );
+    }
+
+    #[test]
+    fn test_check_baseline_ベースラインを下回ったときimprovedを返す() {
+        assert_eq!(
+            check_baseline(60, Some(70)),
+            BaselineResult::ImprovedBelowBaseline {
+                actual: 60,
+                max: 70,
+            }
+        );
+    }
+
+    #[test]
+    fn test_check_baseline_0件でベースライン0のときwithin_baselineを返す() {
+        assert_eq!(check_baseline(0, Some(0)), BaselineResult::WithinBaseline);
     }
 }
