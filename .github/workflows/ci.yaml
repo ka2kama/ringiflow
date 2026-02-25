@@ -230,6 +230,10 @@ jobs:
       DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow
       REDIS_URL: redis://localhost:16379
       DYNAMODB_ENDPOINT: http://localhost:18000
+      S3_ENDPOINT_URL: http://localhost:19000
+      S3_BUCKET_NAME: ringiflow-dev-documents
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
 
     steps:
       - name: Checkout
@@ -267,6 +271,25 @@ jobs:
       - name: Run migrations
         run: sqlx migrate run
         working-directory: backend
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 19000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:19000/minio/health/live && break
+            sleep 1
+          done
+
+      - name: Create MinIO bucket
+        run: |
+          curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          chmod +x /usr/local/bin/mc
+          mc alias set local http://localhost:19000 minioadmin minioadmin
+          mc mb --ignore-existing local/ringiflow-dev-documents
 
       - name: Install PostgreSQL 17 client
         run: |
