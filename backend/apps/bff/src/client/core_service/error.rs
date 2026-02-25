@@ -25,6 +25,10 @@ pub enum CoreServiceError {
     #[error("ロールが見つかりません")]
     RoleNotFound,
 
+    /// フォルダが見つからない（404）
+    #[error("フォルダが見つかりません")]
+    FolderNotFound,
+
     /// バリデーションエラー（400）
     #[error("バリデーションエラー: {0}")]
     ValidationError(String),

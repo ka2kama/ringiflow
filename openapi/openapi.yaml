@@ -219,6 +219,140 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
       security:
       - session_auth: []
+  /api/v1/folders:
+    get:
+      tags:
+      - folders
+      summary: GET /api/v1/folders
+      description: テナント内のフォルダ一覧を path 順で取得する。
+      operationId: list_folders
+      responses:
+        '200':
+          description: フォルダ一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_Vec_FolderData'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+    post:
+      tags:
+      - folders
+      summary: POST /api/v1/folders
+      description: フォルダを作成する。
+      operationId: create_folder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFolderRequest'
+        required: true
+      responses:
+        '201':
+          description: フォルダ作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_FolderData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: フォルダ名重複
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+  /api/v1/folders/{folder_id}:
+    put:
+      tags:
+      - folders
+      summary: PUT /api/v1/folders/{folder_id}
+      description: フォルダを更新する（名前変更・移動）。
+      operationId: update_folder
+      parameters:
+      - name: folder_id
+        in: path
+        description: フォルダID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFolderRequest'
+        required: true
+      responses:
+        '200':
+          description: フォルダ更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_FolderData'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: フォルダが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: フォルダ名重複
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
+    delete:
+      tags:
+      - folders
+      summary: DELETE /api/v1/folders/{folder_id}
+      description: フォルダを削除する。
+      operationId: delete_folder
+      parameters:
+      - name: folder_id
+        in: path
+        description: フォルダID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: 削除成功
+        '400':
+          description: 子フォルダが存在する
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: フォルダが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - session_auth: []
   /api/v1/roles:
     get:
       tags:
@@ -1566,6 +1700,56 @@ components:
             completed_today:
               type: integer
               format: int64
+    ApiResponse_FolderData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          description: フォルダデータ
+          required:
+          - id
+          - name
+          - path
+          - depth
+          - created_at
+          - updated_at
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            parent_id:
+              type:
+              - string
+              - 'null'
+            path:
+              type: string
+            depth:
+              type: integer
+              format: int32
+            created_at:
+              type: string
+            updated_at:
+              type: string
     ApiResponse_LoginResponseData:
       type: object
       description: |-
@@ -1867,6 +2051,58 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/ValidationErrorData'
+    ApiResponse_Vec_FolderData:
+      type: object
+      description: |-
+        公開 API の統一レスポンス型
+
+        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
+        この型は以下の場所で使用される:
+        - Core Service ハンドラ（Serialize でレスポンスを返す）
+        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
+        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
+
+        ## 使用例
+
+        ```
+        use ringiflow_shared::ApiResponse;
+
+        let response = ApiResponse::new("hello");
+        assert_eq!(response.data, "hello");
+        ```
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            description: フォルダデータ
+            required:
+            - id
+            - name
+            - path
+            - depth
+            - created_at
+            - updated_at
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              parent_id:
+                type:
+                - string
+                - 'null'
+              path:
+                type: string
+              depth:
+                type: integer
+                format: int32
+              created_at:
+                type: string
+              updated_at:
+                type: string
     ApiResponse_Vec_RoleItemData:
       type: object
       description: |-
@@ -2423,6 +2659,19 @@ components:
           description: 説明（任意）
         definition:
           description: 定義 JSON
+    CreateFolderRequest:
+      type: object
+      description: フォルダ作成リクエスト
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        parent_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
     CreateRoleRequest:
       type: object
       description: ロール作成リクエスト
@@ -2747,6 +2996,19 @@ components:
           type: integer
           format: int32
           description: 楽観的ロック用バージョン
+    UpdateFolderRequest:
+      type: object
+      description: フォルダ更新リクエスト
+      properties:
+        name:
+          type:
+          - string
+          - 'null'
+        parent_id:
+          type:
+          - string
+          - 'null'
+          format: uuid
     UpdateRoleRequest:
       type: object
       description: ロール更新リクエスト
@@ -2957,6 +3219,8 @@ tags:
   description: ユーザー管理
 - name: roles
   description: ロール管理
+- name: folders
+  description: フォルダ管理
 - name: audit-logs
   description: 監査ログ
 - name: dashboard

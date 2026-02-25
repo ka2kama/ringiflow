@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM folders WHERE tenant_id = $1 AND depth = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c97d85b5b1124cea496f546d9a9350c8d9594ab9e9b37f6465f24f8e9e405830"
+}

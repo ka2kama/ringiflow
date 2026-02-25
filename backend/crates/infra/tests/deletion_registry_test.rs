@@ -58,6 +58,7 @@ fn test_期待リストの具体的な内容() {
         "postgres:roles",
         "postgres:workflows",
         "postgres:display_id_counters",
+        "postgres:folders",
         "auth:credentials",
         "dynamodb:audit_logs",
         "redis:sessions",

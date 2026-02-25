@@ -128,6 +128,11 @@ impl IntoResponse for CoreServiceError {
             CoreServiceError::RoleNotFound => {
                 not_found_response("role-not-found", "Role Not Found", "ロールが見つかりません")
             }
+            CoreServiceError::FolderNotFound => not_found_response(
+                "folder-not-found",
+                "Folder Not Found",
+                "フォルダが見つかりません",
+            ),
             CoreServiceError::ValidationError(ref detail) => validation_error_response(detail),
             CoreServiceError::Forbidden(ref detail) => forbidden_response(detail),
             CoreServiceError::EmailAlreadyExists => {

@@ -328,6 +328,37 @@ pub struct WorkflowCommentDto {
     pub created_at: String,
 }
 
+// --- フォルダ関連の型 ---
+
+/// フォルダ DTO（Core Service からのデシリアライズ用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct FolderItemDto {
+    pub id:         Uuid,
+    pub name:       String,
+    pub parent_id:  Option<Uuid>,
+    pub path:       String,
+    pub depth:      i32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// フォルダ作成リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct CreateFolderCoreRequest {
+    pub tenant_id:  Uuid,
+    pub name:       String,
+    pub parent_id:  Option<Uuid>,
+    pub created_by: Uuid,
+}
+
+/// フォルダ更新リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct UpdateFolderCoreRequest {
+    pub tenant_id: Uuid,
+    pub name:      Option<String>,
+    pub parent_id: Option<Option<Uuid>>,
+}
+
 // --- ダッシュボード関連の型 ---
 
 /// ダッシュボード統計 DTO

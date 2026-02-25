@@ -11,6 +11,7 @@
 
 mod auth_credentials;
 mod dynamodb_audit_log;
+mod postgres_folders;
 mod postgres_simple;
 mod postgres_workflow;
 mod redis_session;
@@ -21,6 +22,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 pub use auth_credentials::AuthCredentialsDeleter;
 pub use dynamodb_audit_log::DynamoDbAuditLogDeleter;
+pub use postgres_folders::PostgresFoldersDeleter;
 pub use postgres_simple::{
     PostgresDisplayIdCounterDeleter,
     PostgresRoleDeleter,
