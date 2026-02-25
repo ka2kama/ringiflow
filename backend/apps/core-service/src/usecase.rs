@@ -15,6 +15,7 @@ pub(crate) mod helpers;
 
 pub mod dashboard;
 pub mod folder;
+pub mod notification;
 pub mod role;
 pub mod task;
 pub mod user;
@@ -25,6 +26,7 @@ use std::collections::HashMap;
 
 pub use dashboard::DashboardUseCaseImpl;
 pub use folder::FolderUseCaseImpl;
+pub use notification::{NotificationService, TemplateRenderer};
 use ringiflow_domain::user::UserId;
 use ringiflow_infra::repository::UserRepository;
 pub use role::RoleUseCaseImpl;

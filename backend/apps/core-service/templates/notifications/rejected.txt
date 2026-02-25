@@ -1,0 +1,7 @@
+ワークフローが却下されました。
+
+ワークフロー: {{ workflow_title }}（{{ workflow_display_id }}）
+{% if comment %}
+コメント: {{ comment }}
+{% endif %}
+ワークフロー詳細: {{ workflow_url }}

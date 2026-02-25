@@ -1,0 +1,7 @@
+ステップが承認されました。
+
+ワークフロー: {{ workflow_title }}（{{ workflow_display_id }}）
+承認ステップ: {{ step_name }}
+承認者: {{ approver_name }}
+
+ワークフロー詳細: {{ workflow_url }}

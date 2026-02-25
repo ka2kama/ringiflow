@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><meta charset="UTF-8"></head>
+<body>
+<p>ステップが承認されました。</p>
+<table>
+  <tr><td>ワークフロー</td><td>{{ workflow_title }}（{{ workflow_display_id }}）</td></tr>
+  <tr><td>承認ステップ</td><td>{{ step_name }}</td></tr>
+  <tr><td>承認者</td><td>{{ approver_name }}</td></tr>
+</table>
+<p><a href="{{ workflow_url | safe }}">ワークフロー詳細を確認する</a></p>
+</body>
+</html>

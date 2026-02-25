@@ -53,6 +53,7 @@ pub mod event {
     pub mod category {
         pub const WORKFLOW: &str = "workflow";
         pub const AUTH: &str = "auth";
+        pub const NOTIFICATION: &str = "notification";
     }
 
     /// イベントアクション
@@ -69,6 +70,10 @@ pub mod event {
         pub const LOGIN_SUCCESS: &str = "auth.login_success";
         pub const LOGIN_FAILURE: &str = "auth.login_failure";
         pub const LOGOUT: &str = "auth.logout";
+
+        // 通知
+        pub const NOTIFICATION_SENT: &str = "notification.sent";
+        pub const NOTIFICATION_FAILED: &str = "notification.failed";
     }
 
     /// エンティティ種別
@@ -77,6 +82,7 @@ pub mod event {
         pub const WORKFLOW_STEP: &str = "workflow_step";
         pub const USER: &str = "user";
         pub const SESSION: &str = "session";
+        pub const NOTIFICATION_LOG: &str = "notification_log";
     }
 
     /// イベント結果

@@ -65,6 +65,20 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  # Mailpit（API テスト用メールサーバー）
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "${API_TEST_MAILPIT_SMTP_PORT}:1025"
+      - "${API_TEST_MAILPIT_UI_PORT}:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8025/api/v1/info || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
 # 名前付きボリューム
 # name を指定しない → プロジェクト名がプレフィックスとして付与される
 # 例: ringiflow-api-test_postgres_api_test_data

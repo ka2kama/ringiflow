@@ -39,6 +39,11 @@ aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-dynamodb = "1"
 base64 = "0.22"
 
+# メール通知
+aws-sdk-sesv2 = "1"
+lettre = { version = "0.11", default-features = false, features = ["tokio1", "smtp-transport", "builder"] }
+tera = "1"
+
 # HTTP クライアント
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 http = "1"

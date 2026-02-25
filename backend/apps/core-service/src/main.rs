@@ -126,9 +126,11 @@ use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
     PgTransactionManager,
     db,
+    notification::{NoopNotificationSender, NotificationSender, SmtpNotificationSender},
     repository::{
         DisplayIdCounterRepository,
         FolderRepository,
+        NotificationLogRepository,
         RoleRepository,
         TenantRepository,
         UserRepository,
@@ -138,6 +140,7 @@ use ringiflow_infra::{
         WorkflowStepRepository,
         display_id_counter_repository::PostgresDisplayIdCounterRepository,
         folder_repository::PostgresFolderRepository,
+        notification_log_repository::PostgresNotificationLogRepository,
         role_repository::PostgresRoleRepository,
         tenant_repository::PostgresTenantRepository,
         user_repository::PostgresUserRepository,
@@ -153,8 +156,10 @@ use tower_http::trace::TraceLayer;
 use usecase::{
     DashboardUseCaseImpl,
     FolderUseCaseImpl,
+    NotificationService,
     RoleUseCaseImpl,
     TaskUseCaseImpl,
+    TemplateRenderer,
     UserUseCaseImpl,
     WorkflowDefinitionUseCaseImpl,
     WorkflowUseCaseImpl,
@@ -275,6 +280,40 @@ async fn main() -> anyhow::Result<()> {
     let dashboard_state = Arc::new(DashboardState {
         usecase: dashboard_usecase,
     });
+
+    // 通知サービス
+    // NOTIFICATION_BACKEND 環境変数で送信バックエンドを切り替える
+    let notification_sender: Arc<dyn NotificationSender> =
+        match config.notification.backend.as_str() {
+            "smtp" => {
+                tracing::info!(
+                    host = %config.notification.smtp_host,
+                    port = config.notification.smtp_port,
+                    "SMTP バックエンドで通知サービスを初期化します"
+                );
+                Arc::new(SmtpNotificationSender::new(
+                    &config.notification.smtp_host,
+                    config.notification.smtp_port,
+                    config.notification.from_address.clone(),
+                ))
+            }
+            // SES バックエンドは #879 で有効化
+            // "ses" => { ... }
+            _ => {
+                tracing::info!("Noop バックエンドで通知サービスを初期化します");
+                Arc::new(NoopNotificationSender)
+            }
+        };
+    let notification_log_repo: Arc<dyn NotificationLogRepository> =
+        Arc::new(PostgresNotificationLogRepository::new(pool.clone()));
+    let template_renderer = TemplateRenderer::new().expect("テンプレートエンジンの初期化に失敗");
+    let _notification_service = Arc::new(NotificationService::new(
+        notification_sender,
+        template_renderer,
+        notification_log_repo,
+        config.notification.base_url,
+    ));
+    // → 後続 Story (#876-#879) で WorkflowUseCaseImpl に注入
 
     // ルーター構築
     let app = Router::new()

@@ -55,6 +55,7 @@ pub mod dynamodb;
 pub mod error;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod mock;
+pub mod notification;
 pub mod password;
 pub mod redis;
 pub mod repository;

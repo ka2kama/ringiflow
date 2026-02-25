@@ -12,6 +12,7 @@ pub mod audit_log_repository;
 pub mod credentials_repository;
 pub mod display_id_counter_repository;
 pub mod folder_repository;
+pub mod notification_log_repository;
 pub mod role_repository;
 pub mod tenant_repository;
 pub mod user_repository;
@@ -37,6 +38,11 @@ pub use display_id_counter_repository::{
     PostgresDisplayIdCounterRepository,
 };
 pub use folder_repository::{FolderRepository, PostgresFolderRepository};
+pub use notification_log_repository::{
+    NotificationLog,
+    NotificationLogRepository,
+    PostgresNotificationLogRepository,
+};
 pub use role_repository::{PostgresRoleRepository, RoleRepository};
 pub use tenant_repository::{PostgresTenantRepository, TenantRepository};
 pub use user_repository::{PostgresUserRepository, UserRepository};
