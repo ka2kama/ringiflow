@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE folders\n            SET name = $2, parent_id = $3, path = $4, depth = $5, updated_at = $6\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Uuid",
+        "Text",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0e29717ad4277b573322f688ff06c36e1fa30dbac22d04f518de0ac6cc7bf83f"
+}

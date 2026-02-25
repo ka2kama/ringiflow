@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                tenant_id as \"tenant_id!\",\n                name as \"name!\",\n                parent_id,\n                path as \"path!\",\n                depth as \"depth!\",\n                created_by,\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\"\n            FROM folders\n            WHERE tenant_id = $1\n            ORDER BY path ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tenant_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name!",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "parent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "path!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "depth!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "2679d2a1d0b1e296df847fbcc627d68fcdd059348a347ca4a813ad6d3218a4d0"
+}
