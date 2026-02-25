@@ -31,6 +31,7 @@ import Html.Events exposing (onMouseDown)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra
+import Maybe.Extra
 import Ports
 import Shared exposing (Shared)
 import Svg exposing (svg)
@@ -1790,8 +1791,7 @@ viewTransitionProperties canvas transition =
     let
         stepName stepId =
             Dict.get stepId canvas.steps
-                |> Maybe.map .name
-                |> Maybe.withDefault stepId
+                |> Maybe.Extra.unwrap stepId .name
     in
     div [ class "space-y-4" ]
         [ -- 種別ラベル
