@@ -63,11 +63,12 @@ use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     Router,
-    routing::{get, patch, post},
+    routing::{get, patch, post, put},
 };
 use config::CoreConfig;
 use handler::{
     DashboardState,
+    FolderState,
     ReadinessState,
     RoleState,
     TaskState,
@@ -78,10 +79,12 @@ use handler::{
     approve_step_by_display_number,
     archive_definition,
     create_definition,
+    create_folder,
     create_role,
     create_user,
     create_workflow,
     delete_definition,
+    delete_folder,
     delete_role,
     get_dashboard_stats,
     get_definition,
@@ -96,6 +99,7 @@ use handler::{
     health_check,
     list_comments,
     list_definitions,
+    list_folders,
     list_my_tasks,
     list_my_workflows,
     list_roles,
@@ -112,6 +116,7 @@ use handler::{
     submit_workflow,
     submit_workflow_by_display_number,
     update_definition,
+    update_folder,
     update_role,
     update_user,
     update_user_status,
@@ -123,6 +128,7 @@ use ringiflow_infra::{
     db,
     repository::{
         DisplayIdCounterRepository,
+        FolderRepository,
         RoleRepository,
         TenantRepository,
         UserRepository,
@@ -131,6 +137,7 @@ use ringiflow_infra::{
         WorkflowInstanceRepository,
         WorkflowStepRepository,
         display_id_counter_repository::PostgresDisplayIdCounterRepository,
+        folder_repository::PostgresFolderRepository,
         role_repository::PostgresRoleRepository,
         tenant_repository::PostgresTenantRepository,
         user_repository::PostgresUserRepository,
@@ -145,6 +152,7 @@ use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use usecase::{
     DashboardUseCaseImpl,
+    FolderUseCaseImpl,
     RoleUseCaseImpl,
     TaskUseCaseImpl,
     UserUseCaseImpl,
@@ -204,6 +212,9 @@ async fn main() -> anyhow::Result<()> {
     let counter_repo: Arc<dyn DisplayIdCounterRepository> =
         Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
 
+    let folder_repo: Arc<dyn FolderRepository> =
+        Arc::new(PostgresFolderRepository::new(pool.clone()));
+
     let role_repo: Arc<dyn RoleRepository> = Arc::new(PostgresRoleRepository::new(pool.clone()));
 
     // Clock（複数ユースケースで共有）
@@ -215,6 +226,12 @@ async fn main() -> anyhow::Result<()> {
         user_repository:   user_repo.clone(),
         tenant_repository: tenant_repo,
         usecase:           user_usecase,
+    });
+
+    // フォルダ UseCase + State
+    let folder_usecase = FolderUseCaseImpl::new(folder_repo, clock.clone());
+    let folder_state = Arc::new(FolderState {
+        usecase: folder_usecase,
     });
 
     // ロール UseCase + State
@@ -282,6 +299,16 @@ async fn main() -> anyhow::Result<()> {
          get(get_user_by_display_number),
       )
       .with_state(user_state)
+      // フォルダ管理 API
+      .route(
+         "/internal/folders",
+         get(list_folders).post(create_folder),
+      )
+      .route(
+         "/internal/folders/{folder_id}",
+         put(update_folder).delete(delete_folder),
+      )
+      .with_state(folder_state)
       // ロール管理 API
       .route(
          "/internal/roles",
