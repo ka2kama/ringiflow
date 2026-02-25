@@ -31,6 +31,9 @@ urlencoding.workspace = true
 rand.workspace = true
 utoipa.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 default = ["dev-auth"]
 dev-auth = []

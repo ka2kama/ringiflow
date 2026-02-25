@@ -21,6 +21,9 @@ tokio.workspace = true
 argon2.workspace = true
 tracing.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 test-utils = []
 

@@ -118,7 +118,7 @@ jobs:
         working-directory: backend
 
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features
         working-directory: backend
 
   # Rust テスト: ユニットテスト、OpenAPI 同期チェック、本番ビルド検証

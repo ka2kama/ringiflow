@@ -229,6 +229,105 @@ Err(DomainError::Validation(
 Err(DomainError::Validation("Invalid email".to_string()))
 ```
 
+### 関数内スタイル
+
+clippy lint（[ADR-057](../../docs/05_ADR/057_workspace-lintsによるlint管理の標準化.md)）が自動強制するもの以外の判断基準。
+
+#### 制御フロー
+
+- 早期リターン / ガード節を推奨。ネスト 2 段以上は平坦化する
+- `let-else`: `Option` / `Result` の早期脱出に使用（clippy `manual_let_else` が自動検出）
+- `match` vs `if let`: enum の全バリアント網羅 → `match`、1 パターン抽出 → `if let`
+- `if let` + `&&`（let chains）: 複合条件の簡潔表現に使用
+
+```rust
+// Good: let-else で早期脱出
+let Some(user) = repo.find_by_id(&id).await? else {
+    return Err(AppError::NotFound);
+};
+
+// Good: match で全バリアント網羅
+match status {
+    UserStatus::Active => handle_active(),
+    UserStatus::Inactive => handle_inactive(),
+    UserStatus::Deleted => handle_deleted(),
+}
+
+// Good: if let で 1 パターン抽出
+if let Some(email) = user.secondary_email() {
+    send_notification(email);
+}
+```
+
+#### イテレータ vs for ループ
+
+- 変換・フィルタ・集約 → イテレータチェーン
+- 副作用が主目的（DB 操作、ログ、可変状態の蓄積）→ `for` ループ
+- チェーン 4 段以上 → 中間 `let` 束縛かヘルパー関数に分割
+- `collect` は必要になるまで遅延（型推論が困難な場合は早期 collect）
+
+```rust
+// Good: イテレータで変換・フィルタ
+let active_emails: Vec<_> = users
+    .iter()
+    .filter(|u| u.is_active())
+    .map(|u| u.email().clone())
+    .collect();
+
+// Good: 副作用が主目的なら for ループ
+for user in &users {
+    repo.save(user).await?;
+}
+
+// Good: 長いチェーンは中間 let で分割
+let active_users = users.iter().filter(|u| u.is_active());
+let emails: Vec<_> = active_users
+    .map(|u| u.email().clone())
+    .unique()
+    .sorted()
+    .collect();
+```
+
+#### 変数束縛
+
+- 3 段以上のメソッドチェーンが不明瞭なら中間 `let` 導入
+- 構造体フィールド抽出にはデストラクチャリング活用
+- 意図を明確にする名前があれば一度使い変数でも `let` 束縛
+
+```rust
+// Good: デストラクチャリング
+let CreateUserRequest { name, email, role } = request;
+
+// Good: 意図を明確にする let 束縛
+let is_admin = user.role() == &Role::Admin;
+if is_admin && feature_enabled {
+    grant_elevated_access(user);
+}
+```
+
+#### クロージャ
+
+- 単一メソッド呼び出し → メソッド参照 `Type::method`（clippy が検出）
+- 複数操作 → クロージャ `|x| x.method().another()`
+- 3 行以上 → ヘルパー関数に抽出
+
+```rust
+// Good: メソッド参照
+let names: Vec<_> = users.iter().map(User::name).collect();
+
+// Good: 複数操作はクロージャ
+let display_names: Vec<_> = users
+    .iter()
+    .map(|u| format!("{} ({})", u.name(), u.email()))
+    .collect();
+```
+
+#### impl ブロックの構成順序
+
+- コンストラクタ → ゲッター → ビジネスロジック → ビルダー/変換
+- trait impl は別 `impl` ブロック
+- rustfmt `reorder_impl_items = true` が整列
+
 ## セキュリティ
 
 - **入力値の検証**: すべての外部入力をドメイン層で検証
