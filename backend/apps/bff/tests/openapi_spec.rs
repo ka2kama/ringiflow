@@ -17,9 +17,9 @@ fn test_全パスが含まれている() {
     let doc = ApiDoc::openapi();
     let paths: Vec<&str> = doc.paths.paths.keys().map(|k| k.as_str()).collect();
 
-    // 27 パス（36 ハンドラ、同一パスに複数メソッドがあるため 27 パス）
+    // 29 パス（40 ハンドラ、同一パスに複数メソッドがあるため 29 パス）
     // /health はインフラ用のため OpenAPI 仕様には含めない、/health/ready は含める
-    assert_eq!(paths.len(), 27, "パス数が 27 であること: {paths:?}");
+    assert_eq!(paths.len(), 29, "パス数が 29 であること: {paths:?}");
 
     // 全パスの存在確認
     assert!(paths.contains(&"/health/ready"));
@@ -52,6 +52,8 @@ fn test_全パスが含まれている() {
     assert!(paths.contains(&"/api/v1/users/{display_number}/status"));
     assert!(paths.contains(&"/api/v1/roles"));
     assert!(paths.contains(&"/api/v1/roles/{role_id}"));
+    assert!(paths.contains(&"/api/v1/folders"));
+    assert!(paths.contains(&"/api/v1/folders/{folder_id}"));
     assert!(paths.contains(&"/api/v1/audit-logs"));
     assert!(paths.contains(&"/api/v1/workflows/{display_number}/comments"));
     assert!(paths.contains(&"/api/v1/dashboard/stats"));
@@ -85,6 +87,7 @@ fn test_全タグが含まれている() {
     assert!(tags.contains(&"tasks"));
     assert!(tags.contains(&"users"));
     assert!(tags.contains(&"roles"));
+    assert!(tags.contains(&"folders"));
     assert!(tags.contains(&"audit-logs"));
     assert!(tags.contains(&"dashboard"));
 }

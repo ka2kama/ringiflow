@@ -152,6 +152,7 @@ impl Folder {
     ///
     /// - `parent_path`: 親フォルダの path（ルート直下なら `None`）
     /// - `parent_depth`: 親フォルダの depth（ルート直下なら `None`）
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: FolderId,
         tenant_id: TenantId,

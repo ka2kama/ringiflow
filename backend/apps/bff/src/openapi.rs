@@ -13,6 +13,7 @@ use crate::handler::{
     audit_log,
     auth,
     dashboard,
+    folder,
     health,
     role,
     task,
@@ -73,6 +74,11 @@ use crate::handler::{
       role::create_role,
       role::update_role,
       role::delete_role,
+      // folders
+      folder::list_folders,
+      folder::create_folder,
+      folder::update_folder,
+      folder::delete_folder,
       // dashboard
       dashboard::get_dashboard_stats,
    ),
@@ -87,6 +93,7 @@ use crate::handler::{
       (name = "tasks", description = "タスク管理"),
       (name = "users", description = "ユーザー管理"),
       (name = "roles", description = "ロール管理"),
+      (name = "folders", description = "フォルダ管理"),
       (name = "audit-logs", description = "監査ログ"),
       (name = "dashboard", description = "ダッシュボード"),
    ),
