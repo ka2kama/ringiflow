@@ -47,6 +47,7 @@ mod macros;
 pub mod audit_log;
 pub mod clock;
 pub mod error;
+pub mod folder;
 pub mod password;
 pub mod role;
 pub mod tenant;
