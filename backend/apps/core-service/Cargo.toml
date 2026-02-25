@@ -24,6 +24,9 @@ chrono.workspace = true
 dotenvy.workspace = true
 itertools.workspace = true
 
+[lints]
+workspace = true
+
 [dev-dependencies]
 ringiflow-core-service = { path = ".", features = ["test-utils"] }
 ringiflow-domain = { workspace = true, features = ["test-support"] }

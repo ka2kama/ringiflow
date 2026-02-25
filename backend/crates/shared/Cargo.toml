@@ -4,6 +4,9 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lints]
+workspace = true
+
 [features]
 openapi = ["dep:utoipa"]
 observability = ["dep:tracing-subscriber", "dep:http", "dep:tower-http", "dep:tracing", "dep:uuid"]

@@ -275,17 +275,14 @@ pub async fn get_user_by_email(
     Query(query): Query<GetUserByEmailQuery>,
 ) -> impl IntoResponse {
     // メールアドレスを検証
-    let email = match Email::new(&query.email) {
-        Ok(e) => e,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse::validation_error(
-                    "メールアドレスの形式が不正です",
-                )),
-            )
-                .into_response();
-        }
+    let Ok(email) = Email::new(&query.email) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse::validation_error(
+                "メールアドレスの形式が不正です",
+            )),
+        )
+            .into_response();
     };
 
     let tenant_id = TenantId::from_uuid(query.tenant_id);

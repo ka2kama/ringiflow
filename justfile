@@ -271,7 +271,7 @@ lint: lint-rust lint-elm lint-shell lint-ci lint-openapi check-unused-deps
 # Rust リント（rustfmt + clippy）
 lint-rust:
     cd backend && cargo +nightly fmt --all -- --check
-    cd backend && cargo clippy {{ _cargo_q }} --all-targets --all-features -- -D warnings
+    cd backend && cargo clippy {{ _cargo_q }} --all-targets --all-features
 
 # Elm リント（elm-format + elm-review）
 lint-elm:

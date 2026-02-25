@@ -93,6 +93,14 @@ ringiflow-domain = { path = "crates/domain" }
 ringiflow-infra = { path = "crates/infra" }
 ringiflow-shared = { path = "crates/shared" }
 
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+manual_let_else = "deny"
+cloned_instead_of_copied = "deny"
+semicolon_if_nothing_returned = "deny"
+redundant_else = "deny"
+implicit_clone = "deny"
+
 [profile.release]
 opt-level = 1
 overflow-checks = true
