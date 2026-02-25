@@ -7,13 +7,13 @@
 
 | 型/関数 | ファイル | 責務 |
 |--------|---------|------|
-| `FolderId` | [`domain/src/folder.rs:50`](../../backend/crates/domain/src/folder.rs) | UUID ベースのフォルダ識別子（`define_uuid_id!` マクロ） |
-| `FolderName` | [`domain/src/folder.rs:75`](../../backend/crates/domain/src/folder.rs) | フォルダ名値オブジェクト（禁止文字バリデーション付き） |
-| `Folder` | [`domain/src/folder.rs:136`](../../backend/crates/domain/src/folder.rs) | フォルダエンティティ（path/depth を含む） |
-| `FolderRepository` | [`infra/src/repository/folder_repository.rs:27`](../../backend/crates/infra/src/repository/folder_repository.rs) | フォルダ永続化トレイト |
-| `PostgresFolderRepository` | [`infra/src/repository/folder_repository.rs:65`](../../backend/crates/infra/src/repository/folder_repository.rs) | PostgreSQL 実装 |
-| `FolderUseCaseImpl` | [`core-service/src/usecase/folder.rs:37`](../../backend/apps/core-service/src/usecase/folder.rs) | CRUD ビジネスロジック |
-| `CoreServiceFolderClient` | [`bff/src/client/core_service/folder_client.rs:17`](../../backend/apps/bff/src/client/core_service/folder_client.rs) | BFF→Core Service HTTP クライアントトレイト |
+| `FolderId` | [`domain/src/folder.rs:50`](../../../backend/crates/domain/src/folder.rs) | UUID ベースのフォルダ識別子（`define_uuid_id!` マクロ） |
+| `FolderName` | [`domain/src/folder.rs:75`](../../../backend/crates/domain/src/folder.rs) | フォルダ名値オブジェクト（禁止文字バリデーション付き） |
+| `Folder` | [`domain/src/folder.rs:136`](../../../backend/crates/domain/src/folder.rs) | フォルダエンティティ（path/depth を含む） |
+| `FolderRepository` | [`infra/src/repository/folder_repository.rs:27`](../../../backend/crates/infra/src/repository/folder_repository.rs) | フォルダ永続化トレイト |
+| `PostgresFolderRepository` | [`infra/src/repository/folder_repository.rs:65`](../../../backend/crates/infra/src/repository/folder_repository.rs) | PostgreSQL 実装 |
+| `FolderUseCaseImpl` | [`core-service/src/usecase/folder.rs:37`](../../../backend/apps/core-service/src/usecase/folder.rs) | CRUD ビジネスロジック |
+| `CoreServiceFolderClient` | [`bff/src/client/core_service/folder_client.rs:17`](../../../backend/apps/bff/src/client/core_service/folder_client.rs) | BFF→Core Service HTTP クライアントトレイト |
 
 ### 型の関係
 
