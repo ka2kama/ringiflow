@@ -65,6 +65,7 @@ use config::BffConfig;
 use handler::{
     AuditLogState,
     AuthState,
+    FolderState,
     ReadinessState,
     RoleState,
     UserState,
@@ -73,11 +74,13 @@ use handler::{
     approve_step,
     archive_definition,
     create_definition,
+    create_folder,
     create_role,
     create_user,
     create_workflow,
     csrf,
     delete_definition,
+    delete_folder,
     delete_role,
     get_dashboard_stats,
     get_role,
@@ -88,6 +91,7 @@ use handler::{
     health_check,
     list_audit_logs,
     list_comments,
+    list_folders,
     list_my_tasks,
     list_my_workflows,
     list_roles,
@@ -104,6 +108,7 @@ use handler::{
     resubmit_workflow,
     submit_workflow,
     update_definition,
+    update_folder,
     update_role,
     update_user,
     update_user_status,
@@ -251,9 +256,15 @@ async fn main() -> anyhow::Result<()> {
 
     // RoleState はロール管理の CRUD に必要
     let role_state = Arc::new(RoleState {
+        core_service_client:  core_service_client.clone(),
+        session_manager:      session_manager.clone(),
+        audit_log_repository: audit_log_repository.clone(),
+    });
+
+    // FolderState はフォルダ管理の CRUD に必要
+    let folder_state = Arc::new(FolderState {
         core_service_client,
         session_manager: session_manager.clone(),
-        audit_log_repository: audit_log_repository.clone(),
     });
 
     // 認可ミドルウェア用の状態（権限別ルートグループ）
@@ -365,6 +376,16 @@ async fn main() -> anyhow::Result<()> {
         // ダッシュボード API
         .route("/api/v1/dashboard/stats", get(get_dashboard_stats))
         .with_state(workflow_state.clone())
+        // フォルダ管理 API
+        .route(
+            "/api/v1/folders",
+            get(list_folders).post(create_folder),
+        )
+        .route(
+            "/api/v1/folders/{folder_id}",
+            put(update_folder).delete(delete_folder),
+        )
+        .with_state(folder_state)
         // 管理者 API（認可ミドルウェア適用、権限別ルートグループ）
         .merge(
             Router::new()
