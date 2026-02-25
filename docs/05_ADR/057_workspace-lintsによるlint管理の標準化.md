@@ -47,9 +47,9 @@ lint 設定を `backend/Cargo.toml` の `[workspace.lints.clippy]` に集約し�
 
 主な理由:
 
-1. **単一管理場所**: lint 設定が `backend/Cargo.toml` の 1 箇所に集約される
-2. **宣言的設定**: lint ルールがコードベースの一部としてバージョン管理される
-3. **拡張性**: Phase 2 で pedantic lint を追加する際、TOML テーブルに行を追加するだけで済む
+1. 単一管理場所: lint 設定が `backend/Cargo.toml` の 1 箇所に集約される
+2. 宣言的設定: lint ルールがコードベースの一部としてバージョン管理される
+3. 拡張性: Phase 2 で pedantic lint を追加する際、TOML テーブルに行を追加するだけで済む
 
 ### 設定
 
