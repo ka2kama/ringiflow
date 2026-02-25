@@ -11,6 +11,7 @@ sqlx.workspace = true
 redis.workspace = true
 aws-config.workspace = true
 aws-sdk-dynamodb.workspace = true
+aws-sdk-s3.workspace = true
 aws-sdk-sesv2.workspace = true
 base64.workspace = true
 lettre.workspace = true
@@ -32,6 +33,7 @@ test-utils = []
 [dev-dependencies]
 dotenvy.workspace = true
 pretty_assertions.workspace = true
+reqwest.workspace = true
 rstest.workspace = true
 tokio-test.workspace = true
 uuid.workspace = true
