@@ -159,52 +159,9 @@ jobs:
         if: steps.check-draft.outputs.is_draft == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
-
-          # PR 本文を取得
-          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json body --jq '.body // ""')
-
-          # Closes #NNN パターンから Issue 番号を抽出
-          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep -oP '(?i)(?:closes|close|fixes|fix)\s+#\K\d+' || true)
-
-          {
-            echo "VALIDATION_CONTEXT<<EOF_VALIDATION"
-
-            echo "### PR 本文"
-            echo ""
-            echo "$PR_BODY"
-            echo ""
-
-            if [ -n "$ISSUE_NUMBERS" ]; then
-              for NUM in $ISSUE_NUMBERS; do
-                echo "### Issue #${NUM}（完了基準の参照元）"
-                echo ""
-                gh issue view "$NUM" --repo "${{ github.repository }}" --json title,body \
-                  --jq '"タイトル: \(.title)\n\n\(.body // "(本文なし)")"' 2>/dev/null || echo "(取得失敗)"
-                echo ""
-
-                # 計画ファイルの検出
-                for FILE in "prompts/plans/${NUM}_"*.md; do
-                  if [ -f "$FILE" ]; then
-                    echo "### 計画ファイル: $(basename "$FILE")"
-                    echo ""
-                    head -c 10000 "$FILE"
-                    FILESIZE=$(wc -c < "$FILE")
-                    if [ "$FILESIZE" -gt 10000 ]; then
-                      echo ""
-                      echo "(... ${FILESIZE} bytes 中 10000 bytes を表示。全文は cat prompts/plans/$(basename "$FILE") で確認可能 ...)"
-                    fi
-                    echo ""
-                  fi
-                done
-              done
-            else
-              echo "(Issue 参照なし — Validation チェックは PR 本文の品質確認セクションのみで実施)"
-            fi
-
-            echo "EOF_VALIDATION"
-          } >> "$GITHUB_OUTPUT"
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          GH_REPO: ${{ github.repository }}
+        run: ./scripts/ci/fetch-validation-context.sh
 
       - name: Run Claude Code Review
         id: review
