@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 
 use aws_sdk_dynamodb::Client as DynamoDbClient;
+use aws_sdk_s3::Client as S3Client;
 use redis::aio::ConnectionManager;
 use ringiflow_domain::tenant::TenantId;
 use sqlx::PgPool;
@@ -19,6 +20,7 @@ use super::{
     PostgresUserDeleter,
     PostgresWorkflowDeleter,
     RedisSessionDeleter,
+    S3DocumentDeleter,
     TenantDeleter,
 };
 use crate::error::InfraError;
@@ -54,6 +56,8 @@ impl DeletionRegistry {
         pg_pool: PgPool,
         dynamodb_client: DynamoDbClient,
         dynamodb_table_name: String,
+        s3_client: S3Client,
+        s3_bucket_name: String,
         redis_conn: ConnectionManager,
     ) -> Self {
         let mut registry = Self::new();
@@ -73,6 +77,7 @@ impl DeletionRegistry {
             dynamodb_client,
             dynamodb_table_name,
         )));
+        registry.register(Box::new(S3DocumentDeleter::new(s3_client, s3_bucket_name)));
         registry.register(Box::new(RedisSessionDeleter::new(redis_conn)));
         registry
     }
@@ -87,6 +92,7 @@ impl DeletionRegistry {
             "postgres:roles",
             "postgres:users",
             "dynamodb:audit_logs",
+            "s3:documents",
             "redis:sessions",
         ]
     }

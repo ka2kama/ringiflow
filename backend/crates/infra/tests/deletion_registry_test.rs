@@ -40,11 +40,13 @@ fn test_期待リストが全データストアをカバーしている() {
     let has_postgres = expected.iter().any(|n| n.starts_with("postgres:"));
     let has_auth = expected.iter().any(|n| n.starts_with("auth:"));
     let has_dynamodb = expected.iter().any(|n| n.starts_with("dynamodb:"));
+    let has_s3 = expected.iter().any(|n| n.starts_with("s3:"));
     let has_redis = expected.iter().any(|n| n.starts_with("redis:"));
 
     assert!(has_postgres, "PostgreSQL Deleter が期待リストにありません");
     assert!(has_auth, "Auth Deleter が期待リストにありません");
     assert!(has_dynamodb, "DynamoDB Deleter が期待リストにありません");
+    assert!(has_s3, "S3 Deleter が期待リストにありません");
     assert!(has_redis, "Redis Deleter が期待リストにありません");
 }
 
@@ -61,6 +63,7 @@ fn test_期待リストの具体的な内容() {
         "postgres:folders",
         "auth:credentials",
         "dynamodb:audit_logs",
+        "s3:documents",
         "redis:sessions",
     ]);
 

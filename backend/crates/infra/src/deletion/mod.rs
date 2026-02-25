@@ -4,7 +4,7 @@
 //!
 //! ## 概要
 //!
-//! 各データストア（PostgreSQL, DynamoDB, Redis）に対応する `TenantDeleter`
+//! 各データストア（PostgreSQL, DynamoDB, S3, Redis）に対応する `TenantDeleter`
 //! 実装を `DeletionRegistry` に登録し、一括削除・件数確認を行う。
 //!
 //! 詳細: [テナント退会時データ削除設計](../../../../docs/03_詳細設計書/06_テナント退会時データ削除設計.md)
@@ -16,6 +16,7 @@ mod postgres_simple;
 mod postgres_workflow;
 mod redis_session;
 mod registry;
+mod s3_document;
 
 use std::collections::HashMap;
 
@@ -32,6 +33,7 @@ pub use postgres_workflow::PostgresWorkflowDeleter;
 pub use redis_session::RedisSessionDeleter;
 pub use registry::DeletionRegistry;
 use ringiflow_domain::tenant::TenantId;
+pub use s3_document::S3DocumentDeleter;
 
 use crate::error::InfraError;
 
