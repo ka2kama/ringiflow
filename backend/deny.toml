@@ -54,10 +54,48 @@ name = "r-efi"
 # bans: クレートの禁止・制限
 # =============================================================================
 [bans]
-# 同じクレートの複数バージョンは警告（初期は緩めに設定）
-multiple-versions = "warn"
+# 同じクレートの複数バージョンはエラー（#901 でラチェット化）
+# 既知の duplicate は skip で明示許容。新規 duplicate は CI を失敗させる。
+multiple-versions = "deny"
 # ワイルドカード依存は許可（workspace 内では一般的）
 wildcards = "allow"
+
+# 既知の duplicate crate の旧バージョンを skip（上流の移行完了後に削除する）
+#
+# 主な原因:
+# - AWS SDK がまだ hyper 1.x / rustls 0.23 に完全移行していない
+# - sqlx / argon2 が旧 rand (0.8) / getrandom (0.2) エコシステムに依存
+# - Windows プラットフォームクレートのバージョン断片化
+skip = [
+    # rand / getrandom エコシステム（sqlx, argon2 経由）
+    { crate = "getrandom@0.2", reason = "sqlx / argon2 が旧 rand エコシステムに依存" },
+    { crate = "rand@0.8", reason = "sqlx / argon2 が旧 rand に依存" },
+    { crate = "rand_chacha@0.3", reason = "rand 0.8 の推移的依存" },
+    { crate = "rand_core@0.6", reason = "rand 0.8 の推移的依存" },
+    # hyper / HTTP エコシステム（AWS SDK 経由）
+    { crate = "h2@0.3", reason = "AWS SDK が hyper 0.14 経由で依存" },
+    { crate = "http@0.2", reason = "AWS SDK が hyper 0.14 経由で依存" },
+    { crate = "http-body@0.4", reason = "AWS SDK が hyper 0.14 経由で依存" },
+    { crate = "hyper@0.14", reason = "AWS SDK がまだ hyper 1.x に移行していない" },
+    { crate = "hyper-rustls@0.24", reason = "AWS SDK が rustls 0.21 に依存" },
+    # TLS エコシステム（AWS SDK 経由）
+    { crate = "rustls@0.21", reason = "AWS SDK がまだ rustls 0.23 に移行していない" },
+    { crate = "rustls-webpki@0.101", reason = "rustls 0.21 の推移的依存" },
+    { crate = "tokio-rustls@0.24", reason = "rustls 0.21 の推移的依存" },
+    # その他
+    { crate = "hashbrown@0.15", reason = "推移的依存のバージョン差異" },
+    { crate = "socket2@0.5", reason = "推移的依存のバージョン差異" },
+]
+
+# Windows プラットフォームクレートの旧バージョンツリーを一括 skip
+# windows-sys の旧バージョンを skip-tree すると、対応する windows-targets と
+# windows_* アーキテクチャクレートも自動的に skip される
+skip-tree = [
+    { crate = "windows-sys@0.48", reason = "sqlx (etcetera) 経由の旧バージョン" },
+    { crate = "windows-sys@0.52", reason = "ring 経由の旧バージョン" },
+    { crate = "windows-sys@0.59", reason = "insta (console) 経由の旧バージョン" },
+    { crate = "windows-sys@0.60", reason = "socket2 経由の旧バージョン" },
+]
 
 # =============================================================================
 # sources: クレートソースの制限

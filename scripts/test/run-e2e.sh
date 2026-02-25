@@ -23,9 +23,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # バックグラウンドプロセスを終了するトラップ
-# FIXME: SC2046 - trap 内のコマンド置換はクォートすると kill に複数 PID を渡せない
-# shellcheck disable=SC2046
-trap 'kill $(jobs -p) 2>/dev/null' EXIT
+# kill 後に wait で終了を待ち、関数の stderr を抑制して ELIFECYCLE ノイズを除去する
+cleanup() {
+    local pids
+    # shellcheck disable=SC2046
+    pids=$(jobs -p 2>/dev/null) || true
+    if [ -n "$pids" ]; then
+        # shellcheck disable=SC2086
+        kill $pids 2>/dev/null || true
+        # shellcheck disable=SC2086
+        wait $pids 2>/dev/null || true
+    fi
+} 2>/dev/null
+trap cleanup EXIT
 
 # API テスト環境変数を読み込み
 cd "$PROJECT_ROOT/backend"
