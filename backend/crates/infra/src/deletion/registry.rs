@@ -14,6 +14,7 @@ use super::{
     DeletionReport,
     DynamoDbAuditLogDeleter,
     PostgresDisplayIdCounterDeleter,
+    PostgresFoldersDeleter,
     PostgresRoleDeleter,
     PostgresUserDeleter,
     PostgresWorkflowDeleter,
@@ -65,6 +66,7 @@ impl DeletionRegistry {
         registry.register(Box::new(PostgresDisplayIdCounterDeleter::new(
             pg_pool.clone(),
         )));
+        registry.register(Box::new(PostgresFoldersDeleter::new(pg_pool.clone())));
         registry.register(Box::new(PostgresRoleDeleter::new(pg_pool.clone())));
         registry.register(Box::new(PostgresUserDeleter::new(pg_pool)));
         registry.register(Box::new(DynamoDbAuditLogDeleter::new(
@@ -81,6 +83,7 @@ impl DeletionRegistry {
             "postgres:workflows",
             "auth:credentials",
             "postgres:display_id_counters",
+            "postgres:folders",
             "postgres:roles",
             "postgres:users",
             "dynamodb:audit_logs",

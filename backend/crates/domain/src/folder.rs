@@ -152,6 +152,7 @@ impl Folder {
     ///
     /// - `parent_path`: 親フォルダの path（ルート直下なら `None`）
     /// - `parent_depth`: 親フォルダの depth（ルート直下なら `None`）
+    // FIXME: 引数が多い。親フォルダ情報を値オブジェクトにまとめて引数を削減する
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: FolderId,
@@ -194,6 +195,7 @@ impl Folder {
     }
 
     /// データベースからフォルダを復元する
+    // FIXME: 引数が多い。DB 行データの中間構造体を経由して引数を削減する
     #[allow(clippy::too_many_arguments)]
     pub fn from_db(
         id: FolderId,

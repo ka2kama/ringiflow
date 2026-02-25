@@ -226,14 +226,17 @@ impl FolderUseCaseImpl {
             .ok_or_else(|| CoreError::NotFound("フォルダが見つかりません".to_string()))?;
 
         // 子フォルダチェック
-        let child_count = self.folder_repository.count_children(folder_id).await?;
+        let child_count = self
+            .folder_repository
+            .count_children(folder_id, tenant_id)
+            .await?;
         if child_count > 0 {
             return Err(CoreError::BadRequest(
                 "子フォルダが存在するため削除できません".to_string(),
             ));
         }
 
-        self.folder_repository.delete(folder_id).await?;
+        self.folder_repository.delete(folder_id, tenant_id).await?;
 
         Ok(())
     }

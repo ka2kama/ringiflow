@@ -75,7 +75,7 @@ impl CoreServiceFolderClient for CoreServiceClientImpl {
             .json(req)
             .send()
             .await?;
-        handle_response(response, None).await
+        handle_response(response, Some(CoreServiceError::FolderNotFound)).await
     }
 
     #[tracing::instrument(skip_all, level = "debug", fields(%folder_id))]

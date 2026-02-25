@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE folders\n            SET path = $2 || SUBSTRING(path FROM LENGTH($1) + 1),\n                depth = depth + $3,\n                updated_at = NOW()\n            WHERE tenant_id = $4\n              AND starts_with(path, $1)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int4",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "31b8ab31c6c51bf2c244f8d8cafeff318f11cf51a13d0cce91c976f52c88e4f1"
+}

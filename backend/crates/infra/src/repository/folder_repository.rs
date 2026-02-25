@@ -54,10 +54,14 @@ pub trait FolderRepository: Send + Sync {
     ) -> Result<(), InfraError>;
 
     /// フォルダを削除する
-    async fn delete(&self, id: &FolderId) -> Result<(), InfraError>;
+    async fn delete(&self, id: &FolderId, tenant_id: &TenantId) -> Result<(), InfraError>;
 
     /// 指定フォルダの直接の子フォルダ数をカウントする
-    async fn count_children(&self, parent_id: &FolderId) -> Result<i64, InfraError>;
+    async fn count_children(
+        &self,
+        parent_id: &FolderId,
+        tenant_id: &TenantId,
+    ) -> Result<i64, InfraError>;
 }
 
 /// PostgreSQL 実装の FolderRepository
@@ -195,14 +199,15 @@ impl FolderRepository for PostgresFolderRepository {
             r#"
             UPDATE folders
             SET name = $2, parent_id = $3, path = $4, depth = $5, updated_at = $6
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $7
             "#,
             folder.id().as_uuid(),
             folder.name().as_str(),
             folder.parent_id().map(|p| *p.as_uuid()),
             folder.path(),
             folder.depth(),
-            folder.updated_at()
+            folder.updated_at(),
+            folder.tenant_id().as_uuid()
         )
         .execute(&self.pool)
         .await?;
@@ -222,6 +227,7 @@ impl FolderRepository for PostgresFolderRepository {
         // depth に depth_delta を加算する。
         // SUBSTRING(path FROM LENGTH($1) + 1) で old_path 以降の部分を取得し、
         // new_path と結合して新しい path を構築する。
+        // starts_with を使用: LIKE だとフォルダ名の _ や % がワイルドカードとして解釈される
         sqlx::query!(
             r#"
             UPDATE folders
@@ -229,7 +235,7 @@ impl FolderRepository for PostgresFolderRepository {
                 depth = depth + $3,
                 updated_at = NOW()
             WHERE tenant_id = $4
-              AND path LIKE $1 || '%'
+              AND starts_with(path, $1)
             "#,
             old_path,
             new_path,
@@ -242,14 +248,15 @@ impl FolderRepository for PostgresFolderRepository {
         Ok(())
     }
 
-    #[tracing::instrument(skip_all, level = "debug", fields(%id))]
-    async fn delete(&self, id: &FolderId) -> Result<(), InfraError> {
+    #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]
+    async fn delete(&self, id: &FolderId, tenant_id: &TenantId) -> Result<(), InfraError> {
         sqlx::query!(
             r#"
             DELETE FROM folders
-            WHERE id = $1
+            WHERE id = $1 AND tenant_id = $2
             "#,
-            id.as_uuid()
+            id.as_uuid(),
+            tenant_id.as_uuid()
         )
         .execute(&self.pool)
         .await?;
@@ -257,15 +264,20 @@ impl FolderRepository for PostgresFolderRepository {
         Ok(())
     }
 
-    #[tracing::instrument(skip_all, level = "debug", fields(%parent_id))]
-    async fn count_children(&self, parent_id: &FolderId) -> Result<i64, InfraError> {
+    #[tracing::instrument(skip_all, level = "debug", fields(%parent_id, %tenant_id))]
+    async fn count_children(
+        &self,
+        parent_id: &FolderId,
+        tenant_id: &TenantId,
+    ) -> Result<i64, InfraError> {
         let count = sqlx::query_scalar!(
             r#"
             SELECT COUNT(*)::bigint as "count!"
             FROM folders
-            WHERE parent_id = $1
+            WHERE parent_id = $1 AND tenant_id = $2
             "#,
-            parent_id.as_uuid()
+            parent_id.as_uuid(),
+            tenant_id.as_uuid()
         )
         .fetch_one(&self.pool)
         .await?;

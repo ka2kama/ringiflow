@@ -272,11 +272,15 @@ mod tests {
             Ok(())
         }
 
-        async fn delete(&self, _id: &FolderId) -> Result<(), InfraError> {
+        async fn delete(&self, _id: &FolderId, _tenant_id: &TenantId) -> Result<(), InfraError> {
             Ok(())
         }
 
-        async fn count_children(&self, parent_id: &FolderId) -> Result<i64, InfraError> {
+        async fn count_children(
+            &self,
+            parent_id: &FolderId,
+            _tenant_id: &TenantId,
+        ) -> Result<i64, InfraError> {
             let count = self
                 .folders
                 .iter()
