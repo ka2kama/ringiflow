@@ -185,7 +185,7 @@ jobs:
                 echo ""
 
                 # 計画ファイルの検出
-                for FILE in prompts/plans/${NUM}_*.md; do
+                for FILE in "prompts/plans/${NUM}_"*.md; do
                   if [ -f "$FILE" ]; then
                     echo "### 計画ファイル: $(basename "$FILE")"
                     echo ""
