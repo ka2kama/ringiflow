@@ -4,10 +4,10 @@
 //! RESTRICT は各行削除時に即座にチェックされるため、単純な `DELETE FROM folders WHERE tenant_id = $1`
 //! では親フォルダの削除が子フォルダより先に処理された場合に FK 違反が発生する。
 //!
-//! このため depth の深い順（5 → 1）に削除する。
+//! このため depth の深い順（MAX_FOLDER_DEPTH → 1）に削除する。
 
 use async_trait::async_trait;
-use ringiflow_domain::tenant::TenantId;
+use ringiflow_domain::{folder::MAX_FOLDER_DEPTH, tenant::TenantId};
 use sqlx::PgPool;
 
 use super::{DeletionResult, TenantDeleter};
@@ -36,8 +36,8 @@ impl TenantDeleter for PostgresFoldersDeleter {
         let mut total_deleted: u64 = 0;
 
         // 自己参照 FK (parent_id → id, ON DELETE RESTRICT) のため、
-        // 深い階層から順に削除する（depth 5 → 1）
-        for depth in (1..=5).rev() {
+        // 深い階層から順に削除する（depth MAX_FOLDER_DEPTH → 1）
+        for depth in (1..=MAX_FOLDER_DEPTH).rev() {
             let result = sqlx::query!(
                 "DELETE FROM folders WHERE tenant_id = $1 AND depth = $2",
                 tenant_id.as_uuid(),
