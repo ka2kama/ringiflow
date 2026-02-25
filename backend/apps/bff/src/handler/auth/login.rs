@@ -85,129 +85,12 @@ pub async fn login(
     };
 
     // Step 1: Core API でユーザーを検索
-    let user_result = state
+    let user_response = match state
         .core_service_client
         .get_user_by_email(tenant_id, &req.email)
-        .await;
-
-    match user_result {
-        Ok(user_response) => {
-            let user = &user_response.data;
-
-            // Step 2: Auth Service でパスワードを検証
-            let verify_result = state
-                .auth_service_client
-                .verify_password(user.tenant_id, user.id, &req.password)
-                .await;
-
-            match verify_result {
-                Ok(_) => {
-                    // Step 3: ロール情報を取得（get_user で権限付きで取得）
-                    let user_with_roles = match state.core_service_client.get_user(user.id).await {
-                        Ok(u) => u,
-                        Err(e) => {
-                            tracing::error!(
-                                error.category = "external_service",
-                                error.kind = "user_lookup",
-                                "ユーザー情報取得で内部エラー: {}",
-                                e
-                            );
-                            return internal_error_response();
-                        }
-                    };
-
-                    // Step 4: セッションを作成（ロールと権限をキャッシュ）
-                    let session_data = SessionData::new(
-                        ringiflow_domain::user::UserId::from_uuid(user.id),
-                        TenantId::from_uuid(user.tenant_id),
-                        user.email.clone(),
-                        user.name.clone(),
-                        user_with_roles.data.roles.clone(),
-                        user_with_roles.data.permissions.clone(),
-                    );
-
-                    match state.session_manager.create(&session_data).await {
-                        Ok(session_id) => {
-                            // CSRF トークンを作成
-                            let tenant_id = TenantId::from_uuid(user.tenant_id);
-                            if let Err(e) = state
-                                .session_manager
-                                .create_csrf_token(&tenant_id, &session_id)
-                                .await
-                            {
-                                tracing::error!(
-                                    error.category = "infrastructure",
-                                    error.kind = "csrf_token",
-                                    "CSRF トークン作成に失敗: {}",
-                                    e
-                                );
-                                return internal_error_response();
-                            }
-
-                            // Cookie を設定
-                            let cookie = build_session_cookie(&session_id);
-                            let jar = jar.add(cookie);
-
-                            // レスポンスを返す
-                            let response = ApiResponse::new(LoginResponseData {
-                                user: LoginUserResponse {
-                                    id:        user.id,
-                                    email:     user.email.clone(),
-                                    name:      user.name.clone(),
-                                    tenant_id: user.tenant_id,
-                                    roles:     user_with_roles.data.roles,
-                                },
-                            });
-
-                            log_business_event!(
-                                event.category = event::category::AUTH,
-                                event.action = event::action::LOGIN_SUCCESS,
-                                event.entity_type = event::entity_type::SESSION,
-                                event.entity_id = %session_id,
-                                event.actor_id = %user.id,
-                                event.tenant_id = %user.tenant_id,
-                                event.result = event::result::SUCCESS,
-                                "ログイン成功"
-                            );
-
-                            (jar, Json(response)).into_response()
-                        }
-                        Err(e) => {
-                            tracing::error!(
-                                error.category = "infrastructure",
-                                error.kind = "session",
-                                "セッション作成に失敗: {}",
-                                e
-                            );
-                            internal_error_response()
-                        }
-                    }
-                }
-                Err(AuthServiceError::AuthenticationFailed) => {
-                    log_business_event!(
-                        event.category = event::category::AUTH,
-                        event.action = event::action::LOGIN_FAILURE,
-                        event.entity_type = event::entity_type::USER,
-                        event.entity_id = %user.id,
-                        event.tenant_id = %user.tenant_id,
-                        event.result = event::result::FAILURE,
-                        event.reason = "password_mismatch",
-                        "ログイン失敗: パスワード不一致"
-                    );
-                    authentication_failed_response()
-                }
-                Err(AuthServiceError::ServiceUnavailable) => service_unavailable_response(),
-                Err(e) => {
-                    tracing::error!(
-                        error.category = "external_service",
-                        error.kind = "password_verification",
-                        "パスワード検証で内部エラー: {}",
-                        e
-                    );
-                    internal_error_response()
-                }
-            }
-        }
+        .await
+    {
+        Ok(resp) => resp,
         Err(CoreServiceError::UserNotFound) => {
             // タイミング攻撃対策: ユーザーが存在しない場合もダミー検証を実行
             // Auth Service にダミーの user_id を送信して処理時間を均一化
@@ -227,7 +110,7 @@ pub async fn login(
                 event.reason = "user_not_found",
                 "ログイン失敗: ユーザー不存在"
             );
-            authentication_failed_response()
+            return authentication_failed_response();
         }
         Err(e) => {
             tracing::error!(
@@ -236,9 +119,125 @@ pub async fn login(
                 "ユーザー検索で内部エラー: {}",
                 e
             );
-            internal_error_response()
+            return internal_error_response();
         }
+    };
+
+    let user = &user_response.data;
+
+    // Step 2: Auth Service でパスワードを検証
+    if let Err(e) = state
+        .auth_service_client
+        .verify_password(user.tenant_id, user.id, &req.password)
+        .await
+    {
+        return match e {
+            AuthServiceError::AuthenticationFailed => {
+                log_business_event!(
+                    event.category = event::category::AUTH,
+                    event.action = event::action::LOGIN_FAILURE,
+                    event.entity_type = event::entity_type::USER,
+                    event.entity_id = %user.id,
+                    event.tenant_id = %user.tenant_id,
+                    event.result = event::result::FAILURE,
+                    event.reason = "password_mismatch",
+                    "ログイン失敗: パスワード不一致"
+                );
+                authentication_failed_response()
+            }
+            AuthServiceError::ServiceUnavailable => service_unavailable_response(),
+            e => {
+                tracing::error!(
+                    error.category = "external_service",
+                    error.kind = "password_verification",
+                    "パスワード検証で内部エラー: {}",
+                    e
+                );
+                internal_error_response()
+            }
+        };
     }
+
+    // Step 3: ロール情報を取得（get_user で権限付きで取得）
+    let user_with_roles = match state.core_service_client.get_user(user.id).await {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::error!(
+                error.category = "external_service",
+                error.kind = "user_lookup",
+                "ユーザー情報取得で内部エラー: {}",
+                e
+            );
+            return internal_error_response();
+        }
+    };
+
+    // Step 4: セッションを作成（ロールと権限をキャッシュ）
+    let session_data = SessionData::new(
+        ringiflow_domain::user::UserId::from_uuid(user.id),
+        TenantId::from_uuid(user.tenant_id),
+        user.email.clone(),
+        user.name.clone(),
+        user_with_roles.data.roles.clone(),
+        user_with_roles.data.permissions.clone(),
+    );
+
+    let session_id = match state.session_manager.create(&session_data).await {
+        Ok(id) => id,
+        Err(e) => {
+            tracing::error!(
+                error.category = "infrastructure",
+                error.kind = "session",
+                "セッション作成に失敗: {}",
+                e
+            );
+            return internal_error_response();
+        }
+    };
+
+    // CSRF トークンを作成
+    let tenant_id = TenantId::from_uuid(user.tenant_id);
+    if let Err(e) = state
+        .session_manager
+        .create_csrf_token(&tenant_id, &session_id)
+        .await
+    {
+        tracing::error!(
+            error.category = "infrastructure",
+            error.kind = "csrf_token",
+            "CSRF トークン作成に失敗: {}",
+            e
+        );
+        return internal_error_response();
+    }
+
+    // Cookie を設定
+    let cookie = build_session_cookie(&session_id);
+    let jar = jar.add(cookie);
+
+    // レスポンスを返す
+    let response = ApiResponse::new(LoginResponseData {
+        user: LoginUserResponse {
+            id:        user.id,
+            email:     user.email.clone(),
+            name:      user.name.clone(),
+            tenant_id: user.tenant_id,
+            roles:     user_with_roles.data.roles,
+        },
+    });
+
+    log_business_event!(
+        event.category = event::category::AUTH,
+        event.action = event::action::LOGIN_SUCCESS,
+        event.entity_type = event::entity_type::SESSION,
+        event.entity_id = %session_id,
+        event.actor_id = %user.id,
+        event.tenant_id = %user.tenant_id,
+        event.result = event::result::SUCCESS,
+        "ログイン成功"
+    );
+
+    (jar, Json(response)).into_response()
 }
 
 /// POST /api/v1/auth/logout

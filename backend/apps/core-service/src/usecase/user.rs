@@ -173,31 +173,14 @@ impl UserUseCaseImpl {
             .ok_or_else(|| CoreError::NotFound("ユーザーが見つかりません".to_string()))?;
 
         // 最後のテナント管理者保護
-        if input.status != UserStatus::Active {
-            let admin_count = self
-                .user_repository
-                .count_active_users_with_role(
-                    &input.tenant_id,
-                    "tenant_admin",
-                    Some(&input.user_id),
-                )
-                .await?;
-
-            if admin_count == 0 {
-                // 対象ユーザーが tenant_admin かチェック
-                let (_, roles) = self
-                    .user_repository
-                    .find_with_roles(&input.user_id)
-                    .await?
-                    .ok_or_else(|| CoreError::NotFound("ユーザーが見つかりません".to_string()))?;
-
-                let is_admin = roles.iter().any(|r| r.name() == "tenant_admin");
-                if is_admin {
-                    return Err(CoreError::BadRequest(
-                        "最後のテナント管理者を無効化することはできません".to_string(),
-                    ));
-                }
-            }
+        if input.status != UserStatus::Active
+            && self
+                .is_last_tenant_admin(&input.tenant_id, &input.user_id)
+                .await?
+        {
+            return Err(CoreError::BadRequest(
+                "最後のテナント管理者を無効化することはできません".to_string(),
+            ));
         }
 
         let now = self.clock.now();
@@ -205,5 +188,30 @@ impl UserUseCaseImpl {
         self.user_repository.update_status(&updated).await?;
 
         Ok(updated)
+    }
+
+    /// 対象ユーザーがテナント内で最後の管理者かどうかを判定する
+    async fn is_last_tenant_admin(
+        &self,
+        tenant_id: &TenantId,
+        user_id: &UserId,
+    ) -> Result<bool, CoreError> {
+        let admin_count = self
+            .user_repository
+            .count_active_users_with_role(tenant_id, "tenant_admin", Some(user_id))
+            .await?;
+
+        if admin_count > 0 {
+            return Ok(false);
+        }
+
+        // 他の管理者がいない場合、対象ユーザーが管理者かチェック
+        let (_, roles) = self
+            .user_repository
+            .find_with_roles(user_id)
+            .await?
+            .ok_or_else(|| CoreError::NotFound("ユーザーが見つかりません".to_string()))?;
+
+        Ok(roles.iter().any(|r| r.name() == "tenant_admin"))
     }
 }

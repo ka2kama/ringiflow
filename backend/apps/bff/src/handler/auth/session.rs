@@ -52,28 +52,28 @@ pub async fn me(
     let tenant_id = TenantId::from_uuid(tenant_id);
 
     // セッションを取得
-    match state.session_manager.get(&tenant_id, &session_id).await {
-        Ok(Some(session_data)) => {
-            // Core API からユーザー情報を取得
-            let user_id = *session_data.user_id().as_uuid();
-            match state.core_service_client.get_user(user_id).await {
-                Ok(user_info) => {
-                    let response = ApiResponse::new(MeResponseData::from(user_info.data));
-                    (StatusCode::OK, Json(response)).into_response()
-                }
-                Err(CoreServiceError::UserNotFound) => {
-                    // ユーザーが削除された場合
-                    unauthorized_response()
-                }
-                Err(e) => {
-                    tracing::error!("ユーザー情報取得で内部エラー: {}", e);
-                    internal_error_response()
-                }
-            }
-        }
-        Ok(None) => unauthorized_response(),
+    let session_data = match state.session_manager.get(&tenant_id, &session_id).await {
+        Ok(Some(data)) => data,
+        Ok(None) => return unauthorized_response(),
         Err(e) => {
             tracing::error!("セッション取得で内部エラー: {}", e);
+            return internal_error_response();
+        }
+    };
+
+    // Core API からユーザー情報を取得
+    let user_id = *session_data.user_id().as_uuid();
+    match state.core_service_client.get_user(user_id).await {
+        Ok(user_info) => {
+            let response = ApiResponse::new(MeResponseData::from(user_info.data));
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(CoreServiceError::UserNotFound) => {
+            // ユーザーが削除された場合
+            unauthorized_response()
+        }
+        Err(e) => {
+            tracing::error!("ユーザー情報取得で内部エラー: {}", e);
             internal_error_response()
         }
     }
@@ -115,43 +115,43 @@ pub async fn csrf(
 
     // セッションが存在するか確認
     match state.session_manager.get(&tenant_id, &session_id).await {
-        Ok(Some(_)) => {
-            // 既存の CSRF トークンを取得、なければ新規作成
-            let token = match state
-                .session_manager
-                .get_csrf_token(&tenant_id, &session_id)
-                .await
-            {
-                Ok(Some(token)) => token,
-                Ok(None) => {
-                    // トークンが存在しない場合は新規作成
-                    match state
-                        .session_manager
-                        .create_csrf_token(&tenant_id, &session_id)
-                        .await
-                    {
-                        Ok(token) => token,
-                        Err(e) => {
-                            tracing::error!("CSRF トークン作成で内部エラー: {}", e);
-                            return internal_error_response();
-                        }
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("CSRF トークン取得で内部エラー: {}", e);
-                    return internal_error_response();
-                }
-            };
-
-            let response = ApiResponse::new(CsrfResponseData { token });
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Ok(None) => unauthorized_response(),
+        Ok(Some(_)) => {}
+        Ok(None) => return unauthorized_response(),
         Err(e) => {
             tracing::error!("セッション取得で内部エラー: {}", e);
-            internal_error_response()
+            return internal_error_response();
         }
     }
+
+    // 既存の CSRF トークンを取得、なければ新規作成
+    let token = match state
+        .session_manager
+        .get_csrf_token(&tenant_id, &session_id)
+        .await
+    {
+        Ok(Some(token)) => token,
+        Ok(None) => {
+            // トークンが存在しない場合は新規作成
+            match state
+                .session_manager
+                .create_csrf_token(&tenant_id, &session_id)
+                .await
+            {
+                Ok(token) => token,
+                Err(e) => {
+                    tracing::error!("CSRF トークン作成で内部エラー: {}", e);
+                    return internal_error_response();
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("CSRF トークン取得で内部エラー: {}", e);
+            return internal_error_response();
+        }
+    };
+
+    let response = ApiResponse::new(CsrfResponseData { token });
+    (StatusCode::OK, Json(response)).into_response()
 }
 
 #[cfg(test)]
