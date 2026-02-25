@@ -4,7 +4,7 @@
 # Draft PR は除外。
 #
 # 責務分離:
-# - このワークフロー: コード品質、設計、セキュリティ、パフォーマンスのレビュー
+# - このワークフロー: Verification（コード品質、設計、セキュリティ）+ Validation（完了基準との整合）
 # - claude-rules-check.yaml: .claude/rules/ のルール準拠チェック
 #
 # 設計判断: [ADR-011](../../docs/05_ADR/011_Claude_Code_Action導入.md)
@@ -154,6 +154,58 @@ jobs:
             echo "REVIEW_MODE_EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Fetch validation context
+        id: validation-context
+        if: steps.check-draft.outputs.is_draft == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+
+          # PR 本文を取得
+          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json body --jq '.body // ""')
+
+          # Closes #NNN パターンから Issue 番号を抽出
+          ISSUE_NUMBERS=$(echo "$PR_BODY" | grep -oP '(?i)(?:closes|close|fixes|fix)\s+#\K\d+' || true)
+
+          {
+            echo "VALIDATION_CONTEXT<<EOF_VALIDATION"
+
+            echo "### PR 本文"
+            echo ""
+            echo "$PR_BODY"
+            echo ""
+
+            if [ -n "$ISSUE_NUMBERS" ]; then
+              for NUM in $ISSUE_NUMBERS; do
+                echo "### Issue #${NUM}（完了基準の参照元）"
+                echo ""
+                gh issue view "$NUM" --repo "${{ github.repository }}" --json title,body \
+                  --jq '"タイトル: \(.title)\n\n\(.body // "(本文なし)")"' 2>/dev/null || echo "(取得失敗)"
+                echo ""
+
+                # 計画ファイルの検出
+                for FILE in prompts/plans/${NUM}_*.md; do
+                  if [ -f "$FILE" ]; then
+                    echo "### 計画ファイル: $(basename "$FILE")"
+                    echo ""
+                    head -c 10000 "$FILE"
+                    FILESIZE=$(wc -c < "$FILE")
+                    if [ "$FILESIZE" -gt 10000 ]; then
+                      echo ""
+                      echo "(... ${FILESIZE} bytes 中 10000 bytes を表示。全文は cat prompts/plans/$(basename "$FILE") で確認可能 ...)"
+                    fi
+                    echo ""
+                  fi
+                done
+              done
+            else
+              echo "(Issue 参照なし — Validation チェックは PR 本文の品質確認セクションのみで実施)"
+            fi
+
+            echo "EOF_VALIDATION"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Run Claude Code Review
         id: review
         if: steps.check-draft.outputs.is_draft == 'false'
@@ -186,6 +238,13 @@ jobs:
 
             ${{ steps.review-context.outputs.REVIEW_MODE }}
 
+            ## Validation コンテキスト
+
+            以下は PR に関連する Issue、PR 本文、計画ファイルの情報です。
+            Validation チェックの入力として使用してください。
+
+            ${{ steps.validation-context.outputs.VALIDATION_CONTEXT }}
+
             ## 言語
 
             レビューコメントは日本語で記述する。
@@ -200,7 +259,7 @@ jobs:
 
             ## レビュー観点（CLAUDE.md を補完）
 
-            ### 必須チェック
+            ### Verification チェック（コードの品質）
 
             1. バグ・正確性: 実行時エラー、ロジックミス、エッジケースの見落とし
             2. セキュリティ: 脆弱性、認証/認可の問題、機密データの露出
@@ -210,6 +269,38 @@ jobs:
             6. 設計: 責務の混在、依存関係の方向違反、過度な複雑さ
 
             注: ルール準拠チェック（.claude/rules/）は別ワークフローで実施。
+
+            ### Validation チェック（書かれていないことの検出）
+
+            Validation コンテキストを参照し、以下を確認する。
+            Issue や計画ファイルが存在しない場合（ドキュメント修正等）、PR 本文の検証のみ実施する。
+
+            #### 欠落（Omission）の検出
+
+            Issue の完了基準に対して:
+            - 完了基準の各項目に対応する実装が diff に含まれているか
+            - 実装計画の Phase に対応する変更がすべて含まれているか
+
+            計画ファイルのテストリストに対して:
+            - テストリストの各項目に対応するテストコードが存在するか
+            - 操作パスの全分類（正常系・準正常系・異常系）がテストでカバーされているか
+
+            #### 乖離（Divergence）の検出
+
+            Issue・計画ファイルとの一致:
+            - 実装が完了基準の意図する動作と異なっていないか
+            - 計画で「対象外」とされた範囲に変更が含まれていないか
+
+            PR 本文の品質確認セクションの検証:
+            - 「設計・ドキュメント」で挙げられたファイルパスが実際に変更されているか
+            - 「テスト」の記載内容と実際のテストファイルの対応
+            - 「N/A（理由）」の理由の妥当性
+
+            #### 注意事項
+
+            - Validation は確信度が Verification より低い場合がある。確信度を明示すること
+            - 完了基準の「解釈の幅」を考慮し、字句一致ではなく意図レベルで判断する
+            - 実装者が意図的にスコープを調整している可能性を考慮する
 
             ### 学習機会の提供
 
@@ -242,16 +333,48 @@ jobs:
             以下の順序で実行する:
 
             1. インラインコメント: コード固有の問題は `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
-            2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿。問題の有無に関わらずレビュー結果のサマリーを記載。学習機会があれば解説を含める
+            2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿。以下の構成で記載する:
+
+            ### 全体フィードバックの構成
+
+            ```
+            ## Verification（コード品質）
+
+            [Verification の指摘・サマリー]
+
+            ## Validation（完了基準との整合）
+
+            ### 確認済み
+            - [突合して問題なかった項目を簡潔に列挙]
+
+            ### 欠落
+            - [severity] [指摘内容]（確信度: 高/中/低）
+
+            ### 乖離
+            - [severity] [指摘内容]（確信度: 高/中/低）
+            ```
+
+            Validation の指摘がない場合は「確認済み」のみ記載する。
+            Issue 参照がない場合は Validation セクションを「Issue 参照なし — PR 本文の品質確認セクションのみ検証」と記載する。
+            学習機会があれば Verification セクション内で解説を含める。
+
             3. 承認/却下: `gh pr review` で承認判断を実行
 
             ## 承認判断
 
-            | 重大度 | 基準 | アクション |
-            |--------|------|-----------|
-            | Critical/High | マージ前に必ず修正が必要 | `gh pr review --request-changes` |
-            | Medium/Low | 改善推奨だがマージ可能 | `gh pr review --approve` + コメント |
+            | カテゴリ | 重大度 | アクション |
+            |---------|--------|-----------|
+            | Verification: Critical/High | マージ前に必ず修正が必要 | `gh pr review --request-changes` |
+            | Verification: Medium/Low | 改善推奨だがマージ可能 | `gh pr review --approve` + コメント |
+            | Validation: 全重大度 | 確認推奨だがマージ可能 | `gh pr review --approve` + コメント |
             | None | 問題なし | `gh pr review --approve` |
+
+            Validation 指摘は常に approve する。理由:
+            - Validation は「書かれていないこと」の検出であり、偽陽性の可能性がある
+            - 品質ゲート（実装者セルフチェック）が主であり、Auto Review は補完的な役割
+
+            ただし、Validation で完了基準のセキュリティ関連項目が完全に欠落している場合は、
+            Verification の Critical として扱い request-changes とする。
 
             学習のための解説コメントは承認判断に影響しない。
             問題がなければ、躊躇なく承認してください。
@@ -267,6 +390,8 @@ jobs:
             severity-high: <数値>
             severity-medium: <数値>
             severity-low: <数値>
+            validation-omission: <数値>
+            validation-divergence: <数値>
             action-required: true | false
             -->
             ```
@@ -276,19 +401,27 @@ jobs:
             | フィールド | 型 | 説明 | 例 |
             |-----------|-----|------|-----|
             | `type` | enum | レビュータイプ。`auto-review` 固定 | `type: auto-review` |
-            | `severity-critical` | int | Critical 指摘の件数 | `severity-critical: 0` |
-            | `severity-high` | int | High 指摘の件数 | `severity-high: 1` |
-            | `severity-medium` | int | Medium 指摘の件数 | `severity-medium: 2` |
-            | `severity-low` | int | Low 指摘の件数 | `severity-low: 3` |
-            | `action-required` | boolean | 対応必須か。`true` = CHANGES_REQUESTED, `false` = APPROVED | `action-required: false` |
+            | `severity-critical` | int | Verification: Critical 指摘の件数 | `severity-critical: 0` |
+            | `severity-high` | int | Verification: High 指摘の件数 | `severity-high: 1` |
+            | `severity-medium` | int | Verification: Medium 指摘の件数 | `severity-medium: 2` |
+            | `severity-low` | int | Verification: Low 指摘の件数 | `severity-low: 3` |
+            | `validation-omission` | int | Validation: 欠落の指摘件数 | `validation-omission: 1` |
+            | `validation-divergence` | int | Validation: 乖離の指摘件数 | `validation-divergence: 0` |
+            | `action-required` | boolean | Verification の Critical/High が 1 件以上なら true | `action-required: false` |
 
             ### 指摘件数のカウント方法
 
-            インラインコメントと PR コメント本文の両方に含まれる指摘を重大度別にカウントする:
+            `severity-*` フィールドには Verification 指摘のみをカウントする:
 
-            1. インラインコメントで指摘した箇所をすべて数える
-            2. PR コメント本文に記載した全体的な指摘（特定行に紐づかない指摘）もカウントする
+            1. インラインコメントで指摘した Verification の箇所をすべて数える
+            2. PR コメント本文の Verification セクションに記載した全体的な指摘もカウントする
             3. 学習のための解説コメント（指摘を含まないもの）はカウントしない
+
+            `validation-*` フィールドには Validation 指摘をカウントする:
+
+            4. Validation セクションの「欠落」に記載した指摘を `validation-omission` にカウントする
+            5. Validation セクションの「乖離」に記載した指摘を `validation-divergence` にカウントする
+            6. 「確認済み」の項目はカウントしない
 
             ### 配置場所
 
@@ -305,11 +438,13 @@ jobs:
             severity-high: 0
             severity-medium: 0
             severity-low: 0
+            validation-omission: 0
+            validation-divergence: 0
             action-required: false
             -->
             ```
 
-            **例2: 軽微な指摘あり（APPROVED）**
+            **例2: 軽微な Verification 指摘 + Validation 欠落あり（APPROVED）**
 
             ```html
             <!-- review-metadata
@@ -318,11 +453,13 @@ jobs:
             severity-high: 0
             severity-medium: 2
             severity-low: 1
+            validation-omission: 1
+            validation-divergence: 0
             action-required: false
             -->
             ```
 
-            **例3: 重大な指摘あり（CHANGES_REQUESTED）**
+            **例3: 重大な Verification 指摘あり（CHANGES_REQUESTED）**
 
             ```html
             <!-- review-metadata
@@ -331,6 +468,8 @@ jobs:
             severity-high: 2
             severity-medium: 0
             severity-low: 0
+            validation-omission: 0
+            validation-divergence: 0
             action-required: true
             -->
             ```
@@ -373,7 +512,7 @@ jobs:
           claude_args: |
             --model claude-opus-4-6
             --max-turns 40
-            --allowedTools "Bash(cat:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git status:*),mcp__github_inline_comment__create_inline_comment"
+            --allowedTools "Bash(cat:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh issue view:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git status:*),mcp__github_inline_comment__create_inline_comment"
 
       - name: Check review decision
         id: review-decision
