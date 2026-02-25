@@ -142,6 +142,23 @@ COMMENT ON COLUMN public.display_id_counters.entity_type IS 'エンティティ�
 COMMENT ON COLUMN public.display_id_counters.last_number IS '最後に採番した番号（0 は未採番）';
 
 --
+-- Name: folders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.folders (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    name character varying(255) NOT NULL,
+    parent_id uuid,
+    path text NOT NULL,
+    depth integer NOT NULL,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT folders_depth_check CHECK (((depth >= 1) AND (depth <= 5)))
+);
+
+--
 -- Name: roles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -750,6 +767,20 @@ ALTER TABLE ONLY public.display_id_counters
     ADD CONSTRAINT display_id_counters_pkey PRIMARY KEY (tenant_id, entity_type);
 
 --
+-- Name: folders folders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_pkey PRIMARY KEY (id);
+
+--
+-- Name: folders folders_tenant_id_parent_id_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_tenant_id_parent_id_name_key UNIQUE NULLS NOT DISTINCT (tenant_id, parent_id, name);
+
+--
 -- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -844,6 +875,24 @@ CREATE INDEX idx_credentials_tenant_id ON auth.credentials USING btree (tenant_i
 --
 
 CREATE INDEX idx_credentials_user_id ON auth.credentials USING btree (user_id);
+
+--
+-- Name: idx_folders_parent_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_folders_parent_id ON public.folders USING btree (parent_id);
+
+--
+-- Name: idx_folders_path; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_folders_path ON public.folders USING btree (path);
+
+--
+-- Name: idx_folders_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_folders_tenant_id ON public.folders USING btree (tenant_id);
 
 --
 -- Name: idx_users_display_number; Type: INDEX; Schema: public; Owner: -
@@ -997,6 +1046,27 @@ ALTER TABLE ONLY public.display_id_counters
     ADD CONSTRAINT display_id_counters_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 --
+-- Name: folders folders_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+--
+-- Name: folders folders_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.folders(id) ON DELETE RESTRICT;
+
+--
+-- Name: folders folders_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.folders
+    ADD CONSTRAINT folders_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+--
 -- Name: roles roles_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1127,6 +1197,12 @@ CREATE POLICY tenant_isolation ON auth.credentials TO ringiflow_app USING ((tena
 ALTER TABLE public.display_id_counters ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: folders; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.folders ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: roles; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1137,6 +1213,12 @@ ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.display_id_counters TO ringiflow_app USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+--
+-- Name: folders tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.folders TO ringiflow_app USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 --
 -- Name: roles tenant_isolation; Type: POLICY; Schema: public; Owner: -
