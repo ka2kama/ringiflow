@@ -604,7 +604,7 @@ loadTransitionsFromDefinitionTests =
 stepOutputPortPositionTests : Test
 stepOutputPortPositionTests =
     describe "stepOutputPortPosition"
-        [ test "ステップ右端中央の座標を返す" <|
+        [ test "ステップ下端中央の座標を返す" <|
             \_ ->
                 let
                     step =
@@ -614,10 +614,10 @@ stepOutputPortPositionTests =
                         DesignerCanvas.stepOutputPortPosition step
                 in
                 -- stepDimensions: width=180, height=90
-                -- 右端中央: (100+180, 200+90/2) = (280, 245)
+                -- 下端中央: (100+180/2, 200+90) = (190, 290)
                 Expect.all
-                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 280
-                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 245
+                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 190
+                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 290
                     ]
                     pos
         ]
@@ -630,7 +630,7 @@ stepOutputPortPositionTests =
 stepInputPortPositionTests : Test
 stepInputPortPositionTests =
     describe "stepInputPortPosition"
-        [ test "ステップ左端中央の座標を返す" <|
+        [ test "ステップ上端中央の座標を返す" <|
             \_ ->
                 let
                     step =
@@ -639,10 +639,10 @@ stepInputPortPositionTests =
                     pos =
                         DesignerCanvas.stepInputPortPosition step
                 in
-                -- 左端中央: (300, 200+90/2) = (300, 245)
+                -- 上端中央: (300+180/2, 200) = (390, 200)
                 Expect.all
-                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 300
-                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 245
+                    [ \p -> p.x |> Expect.within (Expect.Absolute 0.1) 390
+                    , \p -> p.y |> Expect.within (Expect.Absolute 0.1) 200
                     ]
                     pos
         ]

@@ -318,21 +318,21 @@ boundsDecoder =
 -- CONNECTION HELPERS
 
 
-{-| ステップの出力ポート位置（右端中央）
+{-| ステップの出力ポート位置（下端中央）
 -}
 stepOutputPortPosition : StepNode -> Position
 stepOutputPortPosition step =
-    { x = step.position.x + stepDimensions.width
-    , y = step.position.y + stepDimensions.height / 2
+    { x = step.position.x + stepDimensions.width / 2
+    , y = step.position.y + stepDimensions.height
     }
 
 
-{-| ステップの入力ポート位置（左端中央）
+{-| ステップの入力ポート位置（上端中央）
 -}
 stepInputPortPosition : StepNode -> Position
 stepInputPortPosition step =
-    { x = step.position.x
-    , y = step.position.y + stepDimensions.height / 2
+    { x = step.position.x + stepDimensions.width / 2
+    , y = step.position.y
     }
 
 
