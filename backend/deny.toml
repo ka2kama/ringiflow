@@ -82,6 +82,9 @@ skip = [
     { crate = "rustls@0.21", reason = "AWS SDK がまだ rustls 0.23 に移行していない" },
     { crate = "rustls-webpki@0.101", reason = "rustls 0.21 の推移的依存" },
     { crate = "tokio-rustls@0.24", reason = "rustls 0.21 の推移的依存" },
+    # AWS SDK 内部の smithy バージョン断層（aws-sdk-s3 が旧 smithy に依存）
+    { crate = "aws-smithy-http@0.62", reason = "aws-sdk-s3 が旧 smithy-http に依存" },
+    { crate = "aws-smithy-json@0.61", reason = "aws-sdk-s3 が旧 smithy-json に依存" },
     # 暗号エコシステム（AWS SDK 経由）
     { crate = "crypto-bigint@0.4", reason = "AWS SDK (aws-sigv4 → p256 → elliptic-curve) が旧バージョンに依存" },
     # その他
