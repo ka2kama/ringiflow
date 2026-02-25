@@ -28,7 +28,7 @@ use super::TemplateRenderer;
 ///
 /// ワークフロー操作に伴うメール通知の全体フローを統合する。
 /// `notify()` は fire-and-forget で、送信失敗してもエラーを返さない。
-// TODO: #876-#879 で WorkflowUseCaseImpl に注入後に削除
+// FIXME(#876): #[allow(dead_code)] を解消する（WorkflowUseCaseImpl への注入後）
 #[allow(dead_code)]
 pub struct NotificationService {
     sender: Arc<dyn NotificationSender>,
@@ -37,6 +37,7 @@ pub struct NotificationService {
     base_url: String,
 }
 
+// FIXME(#876): #[allow(dead_code)] を解消する（WorkflowUseCaseImpl への注入後）
 #[allow(dead_code)]
 impl NotificationService {
     pub fn new(
