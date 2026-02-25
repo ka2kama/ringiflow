@@ -90,8 +90,15 @@ services:
       CORE_PORT: 13001
       # PostgreSQL 接続
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # S3 接続（MinIO）
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_BUCKET_NAME: ringiflow-dev-documents
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/13001'"]
@@ -194,6 +201,43 @@ services:
       - backend
     restart: unless-stopped
 
+  # ==========================================================
+  # MinIO（S3 互換ストレージ: ドキュメント管理）
+  # ==========================================================
+  minio:
+    image: minio/minio:latest
+    container_name: ringiflow-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+    restart: unless-stopped
+
+  # MinIO 初期設定（バケット自動作成）
+  minio-init:
+    image: minio/mc:latest
+    container_name: ringiflow-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc mb --ignore-existing local/ringiflow-dev-documents;
+      "
+    networks:
+      - backend
+
 # ==========================================================
 # ネットワーク
 # ==========================================================
@@ -221,6 +265,10 @@ volumes:
   # Redis データ永続化
   redis_data:
     name: ringiflow-redis-data
+
+  # MinIO データ永続化
+  minio_data:
+    name: ringiflow-minio-data
 
   # フロントエンド静的ファイル（デプロイ時にコピー）
   frontend_dist:
