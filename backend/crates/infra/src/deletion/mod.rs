@@ -26,6 +26,7 @@ pub use dynamodb_audit_log::DynamoDbAuditLogDeleter;
 pub use postgres_folders::PostgresFoldersDeleter;
 pub use postgres_simple::{
     PostgresDisplayIdCounterDeleter,
+    PostgresNotificationLogDeleter,
     PostgresRoleDeleter,
     PostgresUserDeleter,
 };

@@ -16,6 +16,7 @@ use super::{
     DynamoDbAuditLogDeleter,
     PostgresDisplayIdCounterDeleter,
     PostgresFoldersDeleter,
+    PostgresNotificationLogDeleter,
     PostgresRoleDeleter,
     PostgresUserDeleter,
     PostgresWorkflowDeleter,
@@ -62,6 +63,11 @@ impl DeletionRegistry {
     ) -> Self {
         let mut registry = Self::new();
         // FK 安全な順序: 参照元（子）→ 参照先（親）
+        // notification_logs.workflow_instance_id → workflow_instances(id) ON DELETE CASCADE
+        // → notification_logs を workflows より先に削除する
+        registry.register(Box::new(PostgresNotificationLogDeleter::new(
+            pg_pool.clone(),
+        )));
         // workflow_definitions.created_by → users(id) (NO CASCADE)
         // workflow_instances.initiated_by → users(id) (NO CASCADE)
         // → workflows を users より先に削除する必要がある
@@ -85,6 +91,7 @@ impl DeletionRegistry {
     /// 期待される Deleter 名の一覧を返す（登録漏れ検出テスト用）
     pub fn expected_deleter_names() -> Vec<&'static str> {
         vec![
+            "postgres:notification_logs",
             "postgres:workflows",
             "auth:credentials",
             "postgres:display_id_counters",

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM notification_logs WHERE tenant_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f948ad73cd2611bcf1552bee36568d1c057b18641a6a8abd7af9eecbf3999a98"
+}
