@@ -83,3 +83,11 @@ define_simple_postgres_deleter!(
     count_sql: r#"SELECT COUNT(*) as "count!" FROM display_id_counters WHERE tenant_id = $1"#,
     doc: "PostgreSQL 表示用 ID カウンター Deleter"
 );
+
+define_simple_postgres_deleter!(
+    name: PostgresNotificationLogDeleter,
+    deleter_name: "postgres:notification_logs",
+    delete_sql: "DELETE FROM notification_logs WHERE tenant_id = $1",
+    count_sql: r#"SELECT COUNT(*) as "count!" FROM notification_logs WHERE tenant_id = $1"#,
+    doc: "PostgreSQL 通知ログ Deleter\n\nworkflow_instances の CASCADE でも削除されるが、正確な件数のため明示的に削除する。"
+);

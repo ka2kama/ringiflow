@@ -56,6 +56,7 @@ fn test_期待リストの具体的な内容() {
     let expected_set: HashSet<&str> = expected.into_iter().collect();
 
     let required = HashSet::from([
+        "postgres:notification_logs",
         "postgres:users",
         "postgres:roles",
         "postgres:workflows",
