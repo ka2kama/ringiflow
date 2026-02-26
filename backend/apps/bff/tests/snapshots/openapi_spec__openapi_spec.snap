@@ -1,5 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
+assertion_line: 113
 expression: json
 ---
 {
@@ -295,6 +296,142 @@ expression: json
           },
           "401": {
             "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/upload-url": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "POST /api/v1/documents/upload-url",
+        "description": "Presigned PUT URL を発行する。",
+        "operationId": "request_upload_url",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestUploadUrlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Upload URL 発行成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UploadUrlData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/confirm": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "POST /api/v1/documents/{document_id}/confirm",
+        "description": "アップロード完了を確認し、ドキュメントを active にする。",
+        "operationId": "confirm_upload",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "description": "ドキュメントID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "アップロード確認成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DocumentData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ステータスエラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ドキュメントが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "S3 エラー",
             "content": {
               "application/json": {
                 "schema": {
@@ -2482,6 +2619,48 @@ expression: json
           }
         }
       },
+      "ApiResponse_DocumentData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "ドキュメントデータ",
+            "required": [
+              "id",
+              "filename",
+              "content_type",
+              "size",
+              "status",
+              "created_at"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "content_type": {
+                "type": "string"
+              },
+              "size": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "status": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
       "ApiResponse_FolderData": {
         "type": "object",
         "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
@@ -2674,6 +2853,37 @@ expression: json
               },
               "workflow": {
                 "$ref": "#/components/schemas/WorkflowData"
+              }
+            }
+          }
+        }
+      },
+      "ApiResponse_UploadUrlData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Upload URL データ",
+            "required": [
+              "document_id",
+              "upload_url",
+              "expires_in"
+            ],
+            "properties": {
+              "document_id": {
+                "type": "string"
+              },
+              "upload_url": {
+                "type": "string"
+              },
+              "expires_in": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
               }
             }
           }
@@ -3640,6 +3850,39 @@ expression: json
           }
         }
       },
+      "DocumentData": {
+        "type": "object",
+        "description": "ドキュメントデータ",
+        "required": [
+          "id",
+          "filename",
+          "content_type",
+          "size",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        }
+      },
       "FolderData": {
         "type": "object",
         "description": "フォルダデータ",
@@ -3933,6 +4176,41 @@ expression: json
           "ready",
           "not_ready"
         ]
+      },
+      "RequestUploadUrlRequest": {
+        "type": "object",
+        "description": "Upload URL 発行リクエスト\n\n`tenant_id` と `uploaded_by` はセッションから取得するため、\nフロントエンドからは指定しない。",
+        "required": [
+          "filename",
+          "content_type",
+          "content_length"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "content_length": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "folder_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "workflow_instance_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
       },
       "ResubmitWorkflowRequest": {
         "type": "object",
@@ -4293,6 +4571,28 @@ expression: json
         "properties": {
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "UploadUrlData": {
+        "type": "object",
+        "description": "Upload URL データ",
+        "required": [
+          "document_id",
+          "upload_url",
+          "expires_in"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string"
+          },
+          "upload_url": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -4757,6 +5057,10 @@ expression: json
     {
       "name": "folders",
       "description": "フォルダ管理"
+    },
+    {
+      "name": "documents",
+      "description": "ドキュメント管理"
     },
     {
       "name": "audit-logs",

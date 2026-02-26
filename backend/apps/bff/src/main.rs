@@ -65,6 +65,7 @@ use config::BffConfig;
 use handler::{
     AuditLogState,
     AuthState,
+    DocumentState,
     FolderState,
     ReadinessState,
     RoleState,
@@ -73,6 +74,7 @@ use handler::{
     WorkflowState,
     approve_step,
     archive_definition,
+    confirm_upload,
     create_definition,
     create_folder,
     create_role,
@@ -105,6 +107,7 @@ use handler::{
     readiness_check,
     reject_step,
     request_changes_step,
+    request_upload_url,
     resubmit_workflow,
     submit_workflow,
     update_definition,
@@ -263,6 +266,12 @@ async fn main() -> anyhow::Result<()> {
 
     // FolderState はフォルダ管理の CRUD に必要
     let folder_state = Arc::new(FolderState {
+        core_service_client: core_service_client.clone(),
+        session_manager:     session_manager.clone(),
+    });
+
+    // DocumentState はドキュメント管理（Upload URL 発行・確認）に必要
+    let document_state = Arc::new(DocumentState {
         core_service_client,
         session_manager: session_manager.clone(),
     });
@@ -386,6 +395,16 @@ async fn main() -> anyhow::Result<()> {
             put(update_folder).delete(delete_folder),
         )
         .with_state(folder_state)
+        // ドキュメント管理 API
+        .route(
+            "/api/v1/documents/upload-url",
+            post(request_upload_url),
+        )
+        .route(
+            "/api/v1/documents/{document_id}/confirm",
+            post(confirm_upload),
+        )
+        .with_state(document_state)
         // 管理者 API（認可ミドルウェア適用、権限別ルートグループ）
         .merge(
             Router::new()

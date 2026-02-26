@@ -13,6 +13,7 @@ use crate::handler::{
     audit_log,
     auth,
     dashboard,
+    document,
     folder,
     health,
     role,
@@ -79,6 +80,9 @@ use crate::handler::{
       folder::create_folder,
       folder::update_folder,
       folder::delete_folder,
+      // documents
+      document::request_upload_url,
+      document::confirm_upload,
       // dashboard
       dashboard::get_dashboard_stats,
    ),
@@ -94,6 +98,7 @@ use crate::handler::{
       (name = "users", description = "ユーザー管理"),
       (name = "roles", description = "ロール管理"),
       (name = "folders", description = "フォルダ管理"),
+      (name = "documents", description = "ドキュメント管理"),
       (name = "audit-logs", description = "監査ログ"),
       (name = "dashboard", description = "ダッシュボード"),
    ),
