@@ -57,7 +57,7 @@ docker pull ${BACKEND_IMAGE}:latest
 docker pull ${FRONTEND_IMAGE}:latest
 
 echo "[INFO] 古いイメージを削除..."
-docker image prune -af
+docker image prune -f
 
 echo "[INFO] フロントエンド静的ファイルを更新..."
 docker volume create ringiflow-frontend-dist 2>/dev/null || true
