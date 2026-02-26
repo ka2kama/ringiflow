@@ -110,7 +110,7 @@ gh issue view <Issue番号>
 
 **4a-2: Issue 精査**
 
-[Issue 駆動開発 > Issue 精査](../../../.claude/rules/dev-flow-issue.md#issue-精査) に従い、精査を実施する。精査結果を Issue コメントとして記録する。
+[Issue 駆動開発 > Issue 精査](../../../.claude/rules/dev-flow-issue.md#1-issue-精査) に従い、精査を実施する。精査結果を Issue コメントとして記録する。
 
 | 精査結果 | アクション |
 |---------|-----------|
