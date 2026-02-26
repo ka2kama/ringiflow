@@ -56,6 +56,10 @@ workflow_display_number: jsonpath "$.data.display_number"
 # When: 承認者を指定してワークフローを申請する
 # Then: ステータスが Pending に変わり、current_step_id が設定される
 
+# Mailpit のメールをクリア（通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
+
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{csrf_token}}
@@ -80,6 +84,21 @@ jsonpath "$.data.current_step_id" == "approval"
 jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
+
+# =============================================================================
+# 通知検証: 承認依頼メールが Mailpit に送信されている
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" >= 1
+jsonpath "$.messages[0].To[0].Address" == "{{user_email}}"
+jsonpath "$.messages[0].Subject" contains "[RingiFlow] 承認依頼"
+jsonpath "$.messages[0].Subject" contains "経費申請"
 
 # =============================================================================
 # 異常系: 未認証では申請できない（CSRF トークンなしで 403）

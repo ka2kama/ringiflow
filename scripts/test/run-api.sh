@@ -30,6 +30,12 @@ set -a
 source .env.api-test
 set +a
 
+# Mailpit UI ポートをルート .env から取得（テストからメール受信を検証するため）
+API_TEST_MAILPIT_UI_PORT=$(grep '^API_TEST_MAILPIT_UI_PORT=' "$PROJECT_ROOT/.env" | cut -d= -f2)
+if [ -z "$API_TEST_MAILPIT_UI_PORT" ]; then
+    echo "警告: API_TEST_MAILPIT_UI_PORT が .env に見つかりません。Mailpit テストをスキップします。" >&2
+fi
+
 # cargo-watch 検知: 同一 workspace で実行中だとパッケージキャッシュのロック競合が発生するため
 for pid in $(pgrep -x cargo-watch 2>/dev/null); do
     cwd="$(readlink /proc/"$pid"/cwd 2>/dev/null)"
@@ -72,5 +78,6 @@ done
 echo "API テストを実行中..."
 hurl --test --jobs 1 \
     --variable "bff_url=http://localhost:$BFF_PORT" \
+    --variable "mailpit_url=http://localhost:${API_TEST_MAILPIT_UI_PORT:-18026}" \
     --variables-file tests/api/hurl/vars.env \
     tests/api/hurl/**/*.hurl

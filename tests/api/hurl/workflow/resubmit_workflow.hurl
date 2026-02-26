@@ -169,6 +169,10 @@ HTTP 400
 
 # ===== 正常系テスト: admin が再申請する =====
 
+# Mailpit のメールをクリア（通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
+
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/resubmit
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{admin_csrf_token}}
@@ -213,3 +217,18 @@ jsonpath "$.data.steps[0].status" == "Active"
 jsonpath "$.data.steps[0].version" == 1
 jsonpath "$.data.steps[0].decision" == null
 jsonpath "$.data.steps[0].comment" == null
+
+# =============================================================================
+# 通知検証: 再申請後に承認依頼メールが Mailpit に送信されている
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" >= 1
+jsonpath "$.messages[0].To[0].Address" == "{{user_email}}"
+jsonpath "$.messages[0].Subject" contains "[RingiFlow] 承認依頼"
+jsonpath "$.messages[0].Subject" contains "再申請テスト申請"

@@ -17,14 +17,10 @@ use tera::{Context, Tera};
 ///
 /// tera テンプレートエンジンをラップし、`WorkflowNotification` から
 /// `EmailMessage` を生成する。
-// FIXME(#876): #[allow(dead_code)] を解消する（WorkflowUseCaseImpl への注入後）
-#[allow(dead_code)]
 pub struct TemplateRenderer {
     engine: Tera,
 }
 
-// FIXME(#876): #[allow(dead_code)] を解消する（WorkflowUseCaseImpl への注入後）
-#[allow(dead_code)]
 impl TemplateRenderer {
     /// 新しいレンダラーインスタンスを作成
     ///
