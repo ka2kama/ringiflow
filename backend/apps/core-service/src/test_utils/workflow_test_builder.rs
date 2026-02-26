@@ -16,6 +16,8 @@ use ringiflow_domain::{
 use ringiflow_infra::{
     mock::{
         MockDisplayIdCounterRepository,
+        MockNotificationLogRepository,
+        MockNotificationSender,
         MockTransactionManager,
         MockUserRepository,
         MockWorkflowCommentRepository,
@@ -31,7 +33,10 @@ use ringiflow_infra::{
     },
 };
 
-use crate::usecase::workflow::WorkflowUseCaseImpl;
+use crate::usecase::{
+    notification::{NotificationService, TemplateRenderer},
+    workflow::WorkflowUseCaseImpl,
+};
 
 /// ワークフローテストのセットアップデータ
 ///
@@ -159,6 +164,13 @@ impl WorkflowTestBuilder {
         let comment_repo: Arc<dyn WorkflowCommentRepository> =
             Arc::new(MockWorkflowCommentRepository::new());
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             definition_repo.clone(),
             instance_repo.clone(),
@@ -168,6 +180,7 @@ impl WorkflowTestBuilder {
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(self.now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         WorkflowTestSetup {

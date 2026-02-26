@@ -28,6 +28,8 @@ pub(super) mod test_helpers {
     };
     use ringiflow_infra::mock::{
         MockDisplayIdCounterRepository,
+        MockNotificationLogRepository,
+        MockNotificationSender,
         MockTransactionManager,
         MockUserRepository,
         MockWorkflowCommentRepository,
@@ -36,11 +38,14 @@ pub(super) mod test_helpers {
         MockWorkflowStepRepository,
     };
 
-    use crate::usecase::workflow::WorkflowUseCaseImpl;
+    use crate::usecase::{
+        notification::{NotificationService, TemplateRenderer},
+        workflow::WorkflowUseCaseImpl,
+    };
 
     /// SUT（WorkflowUseCaseImpl）を構築する
     ///
-    /// テストで繰り返される 8 引数の構築ボイラープレートを共通化する。
+    /// テストで繰り返される構築ボイラープレートを共通化する。
     /// Mock repos は参照で受け取り、内部で clone する（共有ステートが保持される）。
     pub fn build_sut(
         definition_repo: &MockWorkflowDefinitionRepository,
@@ -48,6 +53,12 @@ pub(super) mod test_helpers {
         step_repo: &MockWorkflowStepRepository,
         now: chrono::DateTime<chrono::Utc>,
     ) -> WorkflowUseCaseImpl {
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
         WorkflowUseCaseImpl::new(
             Arc::new(definition_repo.clone()),
             Arc::new(instance_repo.clone()),
@@ -57,6 +68,7 @@ pub(super) mod test_helpers {
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         )
     }
 

@@ -128,6 +128,8 @@ mod tests {
     use ringiflow_infra::{
         mock::{
             MockDisplayIdCounterRepository,
+            MockNotificationLogRepository,
+            MockNotificationSender,
             MockTransactionManager,
             MockUserRepository,
             MockWorkflowCommentRepository,
@@ -140,7 +142,10 @@ mod tests {
 
     use crate::{
         error::CoreError,
-        usecase::workflow::{PostCommentInput, WorkflowUseCaseImpl},
+        usecase::{
+            notification::{NotificationService, TemplateRenderer},
+            workflow::{PostCommentInput, WorkflowUseCaseImpl},
+        },
     };
 
     #[tokio::test]
@@ -173,6 +178,13 @@ mod tests {
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
             Arc::new(instance_repo),
@@ -182,6 +194,7 @@ mod tests {
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         let input = PostCommentInput {
@@ -244,6 +257,13 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
             Arc::new(instance_repo),
@@ -253,6 +273,7 @@ mod tests {
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         let input = PostCommentInput {
@@ -305,6 +326,13 @@ mod tests {
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
             Arc::new(instance_repo),
@@ -314,6 +342,7 @@ mod tests {
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         let input = PostCommentInput {
@@ -348,6 +377,13 @@ mod tests {
 
         // インスタンスを作成しない
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
             Arc::new(instance_repo),
@@ -357,6 +393,7 @@ mod tests {
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         let input = PostCommentInput {
