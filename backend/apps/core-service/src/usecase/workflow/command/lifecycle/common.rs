@@ -102,18 +102,16 @@ impl WorkflowUseCaseImpl {
         tenant_id: &TenantId,
     ) {
         // Active ステップ（最初の承認ステップ）を取得
-        let active_step = match steps
+        let Some(active_step) = steps
             .iter()
             .find(|s| s.status() == ringiflow_domain::workflow::WorkflowStepStatus::Active)
-        {
-            Some(step) => step,
-            None => return,
+        else {
+            return;
         };
 
         // 承認者のユーザー ID を取得
-        let approver_id = match active_step.assigned_to() {
-            Some(id) => id,
-            None => return,
+        let Some(approver_id) = active_step.assigned_to() else {
+            return;
         };
 
         // 申請者の情報を取得
