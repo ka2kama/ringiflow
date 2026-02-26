@@ -30,26 +30,18 @@ impl S3DocumentDeleter {
             bucket_name,
         }
     }
-}
 
-#[async_trait]
-impl TenantDeleter for S3DocumentDeleter {
-    fn name(&self) -> &'static str {
-        "s3:documents"
-    }
-
-    async fn delete(&self, tenant_id: &TenantId) -> Result<DeletionResult, InfraError> {
-        let prefix = format!("{}/", tenant_id.as_uuid());
-        let mut deleted_count: u64 = 0;
+    /// 指定プレフィックスの全オブジェクトキーをページネーションで取得する
+    async fn list_all_keys(&self, prefix: &str) -> Result<Vec<String>, InfraError> {
+        let mut keys = Vec::new();
         let mut continuation_token = None;
 
         loop {
-            // ListObjectsV2 でテナントのオブジェクトキーを取得
             let mut list = self
                 .client
                 .list_objects_v2()
                 .bucket(&self.bucket_name)
-                .prefix(&prefix);
+                .prefix(prefix);
 
             if let Some(token) = continuation_token {
                 list = list.continuation_token(token);
@@ -60,63 +52,81 @@ impl TenantDeleter for S3DocumentDeleter {
                 .await
                 .map_err(|e| InfraError::S3(format!("オブジェクト一覧の取得に失敗: {e}")))?;
 
-            let contents = output.contents();
-            if contents.is_empty() {
-                break;
-            }
-
-            // DeleteObjects で 1000 件ずつ削除（S3 API の上限）
-            for chunk in contents.chunks(1000) {
-                let objects: Vec<ObjectIdentifier> = chunk
-                    .iter()
-                    .filter_map(|obj| {
-                        obj.key().map(|key| {
-                            ObjectIdentifier::builder()
-                                .key(key)
-                                .build()
-                                .expect("key は必須フィールド")
-                        })
-                    })
-                    .collect();
-
-                let count = objects.len() as u64;
-
-                let delete = Delete::builder()
-                    .set_objects(Some(objects))
-                    .quiet(true)
-                    .build()
-                    .map_err(|e| InfraError::S3(format!("Delete リクエストの構築に失敗: {e}")))?;
-
-                let result = self
-                    .client
-                    .delete_objects()
-                    .bucket(&self.bucket_name)
-                    .delete(delete)
-                    .send()
-                    .await
-                    .map_err(|e| InfraError::S3(format!("オブジェクトの削除に失敗: {e}")))?;
-
-                // エラーが含まれる場合はログに記録
-                let errors = result.errors();
-                if !errors.is_empty() {
-                    tracing::error!(
-                        error_count = errors.len(),
-                        "S3 DeleteObjects: 一部のオブジェクト削除に失敗"
-                    );
-                    return Err(InfraError::S3(format!(
-                        "{}件のオブジェクト削除に失敗",
-                        errors.len()
-                    )));
+            for obj in output.contents() {
+                if let Some(key) = obj.key() {
+                    keys.push(key.to_string());
                 }
-
-                deleted_count += count;
             }
 
-            // ページネーション
             if output.is_truncated() != Some(true) {
                 break;
             }
             continuation_token = output.next_continuation_token().map(String::from);
+        }
+
+        Ok(keys)
+    }
+}
+
+#[async_trait]
+impl TenantDeleter for S3DocumentDeleter {
+    fn name(&self) -> &'static str {
+        "s3:documents"
+    }
+
+    async fn delete(&self, tenant_id: &TenantId) -> Result<DeletionResult, InfraError> {
+        let prefix = format!("{}/", tenant_id.as_uuid());
+        let keys = self.list_all_keys(&prefix).await?;
+
+        if keys.is_empty() {
+            return Ok(DeletionResult { deleted_count: 0 });
+        }
+
+        let mut deleted_count: u64 = 0;
+
+        // DeleteObjects で 1000 件ずつ削除（S3 API の上限）
+        for chunk in keys.chunks(1000) {
+            let objects: Vec<ObjectIdentifier> = chunk
+                .iter()
+                .map(|key| {
+                    ObjectIdentifier::builder()
+                        .key(key)
+                        .build()
+                        .expect("key は必須フィールド")
+                })
+                .collect();
+
+            let count = objects.len() as u64;
+
+            let delete = Delete::builder()
+                .set_objects(Some(objects))
+                .quiet(true)
+                .build()
+                .map_err(|e| InfraError::S3(format!("Delete リクエストの構築に失敗: {e}")))?;
+
+            let result = self
+                .client
+                .delete_objects()
+                .bucket(&self.bucket_name)
+                .delete(delete)
+                .send()
+                .await
+                .map_err(|e| InfraError::S3(format!("オブジェクトの削除に失敗: {e}")))?;
+
+            // エラーが含まれる場合はログに記録
+            let errors = result.errors();
+            if !errors.is_empty() {
+                tracing::error!(
+                    error_count = errors.len(),
+                    "S3 DeleteObjects: 一部のオブジェクト削除に失敗"
+                );
+                return Err(InfraError::S3(format!(
+                    "{}件のオブジェクト削除に失敗",
+                    errors.len()
+                )));
+            }
+
+            deleted_count += count;
         }
 
         Ok(DeletionResult { deleted_count })
@@ -124,34 +134,8 @@ impl TenantDeleter for S3DocumentDeleter {
 
     async fn count(&self, tenant_id: &TenantId) -> Result<u64, InfraError> {
         let prefix = format!("{}/", tenant_id.as_uuid());
-        let mut total: u64 = 0;
-        let mut continuation_token = None;
-
-        loop {
-            let mut list = self
-                .client
-                .list_objects_v2()
-                .bucket(&self.bucket_name)
-                .prefix(&prefix);
-
-            if let Some(token) = continuation_token {
-                list = list.continuation_token(token);
-            }
-
-            let output = list
-                .send()
-                .await
-                .map_err(|e| InfraError::S3(format!("オブジェクト件数の取得に失敗: {e}")))?;
-
-            total += output.key_count().unwrap_or(0) as u64;
-
-            if output.is_truncated() != Some(true) {
-                break;
-            }
-            continuation_token = output.next_continuation_token().map(String::from);
-        }
-
-        Ok(total)
+        let keys = self.list_all_keys(&prefix).await?;
+        Ok(keys.len() as u64)
     }
 }
 
