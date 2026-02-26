@@ -35,6 +35,8 @@ BASE_BFF_PORT=13000
 BASE_CORE_PORT=13001
 BASE_AUTH_PORT=13002
 BASE_VITE_PORT=15173
+BASE_MAILPIT_SMTP_PORT=11025
+BASE_MAILPIT_UI_PORT=18025
 
 # 基準ポート（メインworktree用）— API テスト環境
 BASE_API_TEST_POSTGRES_PORT=15433
@@ -44,6 +46,8 @@ BASE_API_TEST_BFF_PORT=14000
 BASE_API_TEST_CORE_PORT=14001
 BASE_API_TEST_AUTH_PORT=14002
 BASE_API_TEST_VITE_PORT=15174
+BASE_API_TEST_MAILPIT_SMTP_PORT=11026
+BASE_API_TEST_MAILPIT_UI_PORT=18026
 
 # オフセット計算（100 単位）
 OFFSET=$((PORT_OFFSET * 100))
@@ -56,6 +60,8 @@ BFF_PORT=$((BASE_BFF_PORT + OFFSET))
 CORE_PORT=$((BASE_CORE_PORT + OFFSET))
 AUTH_PORT=$((BASE_AUTH_PORT + OFFSET))
 VITE_PORT=$((BASE_VITE_PORT + OFFSET))
+MAILPIT_SMTP_PORT=$((BASE_MAILPIT_SMTP_PORT + OFFSET))
+MAILPIT_UI_PORT=$((BASE_MAILPIT_UI_PORT + OFFSET))
 
 # API テスト環境ポート
 API_TEST_POSTGRES_PORT=$((BASE_API_TEST_POSTGRES_PORT + OFFSET))
@@ -65,6 +71,8 @@ API_TEST_BFF_PORT=$((BASE_API_TEST_BFF_PORT + OFFSET))
 API_TEST_CORE_PORT=$((BASE_API_TEST_CORE_PORT + OFFSET))
 API_TEST_AUTH_PORT=$((BASE_API_TEST_AUTH_PORT + OFFSET))
 API_TEST_VITE_PORT=$((BASE_API_TEST_VITE_PORT + OFFSET))
+API_TEST_MAILPIT_SMTP_PORT=$((BASE_API_TEST_MAILPIT_SMTP_PORT + OFFSET))
+API_TEST_MAILPIT_UI_PORT=$((BASE_API_TEST_MAILPIT_UI_PORT + OFFSET))
 
 # ルート .env を生成
 cat > "$PROJECT_ROOT/.env" << EOF
@@ -80,6 +88,8 @@ cat > "$PROJECT_ROOT/.env" << EOF
 POSTGRES_PORT=$POSTGRES_PORT
 REDIS_PORT=$REDIS_PORT
 DYNAMODB_PORT=$DYNAMODB_PORT
+MAILPIT_SMTP_PORT=$MAILPIT_SMTP_PORT
+MAILPIT_UI_PORT=$MAILPIT_UI_PORT
 
 # -----------------------------------------------------------------------------
 # Docker Compose ポート設定（API テスト用）
@@ -87,6 +97,8 @@ DYNAMODB_PORT=$DYNAMODB_PORT
 API_TEST_POSTGRES_PORT=$API_TEST_POSTGRES_PORT
 API_TEST_REDIS_PORT=$API_TEST_REDIS_PORT
 API_TEST_DYNAMODB_PORT=$API_TEST_DYNAMODB_PORT
+API_TEST_MAILPIT_SMTP_PORT=$API_TEST_MAILPIT_SMTP_PORT
+API_TEST_MAILPIT_UI_PORT=$API_TEST_MAILPIT_UI_PORT
 
 # -----------------------------------------------------------------------------
 # 開発サーバーポート設定
@@ -157,6 +169,16 @@ ENVIRONMENT=development
 # 詳細: docs/06_ナレッジベース/security/DevAuth.md
 # -----------------------------------------------------------------------------
 DEV_AUTH_ENABLED=true
+
+# -----------------------------------------------------------------------------
+# 通知設定
+# 詳細: docs/03_詳細設計書/16_通知機能設計.md
+# -----------------------------------------------------------------------------
+NOTIFICATION_BACKEND=smtp
+SMTP_HOST=localhost
+SMTP_PORT=$MAILPIT_SMTP_PORT
+NOTIFICATION_FROM_ADDRESS=noreply@ringiflow.example.com
+NOTIFICATION_BASE_URL=http://localhost:$VITE_PORT
 EOF
 
 # backend/.env.api-test を生成
@@ -222,6 +244,15 @@ E2E_VITE_PORT=$API_TEST_VITE_PORT
 # -----------------------------------------------------------------------------
 RUST_LOG=warn,ringiflow=info
 ENVIRONMENT=test
+
+# -----------------------------------------------------------------------------
+# 通知設定（API テスト用）
+# -----------------------------------------------------------------------------
+NOTIFICATION_BACKEND=smtp
+SMTP_HOST=localhost
+SMTP_PORT=$API_TEST_MAILPIT_SMTP_PORT
+NOTIFICATION_FROM_ADDRESS=noreply@ringiflow.example.com
+NOTIFICATION_BASE_URL=http://localhost:$API_TEST_VITE_PORT
 EOF
 
 echo "✓ .env ファイルを生成しました（ポートオフセット: $PORT_OFFSET）"
@@ -233,6 +264,8 @@ echo "    BFF:            $BFF_PORT"
 echo "    Core Service:   $CORE_PORT"
 echo "    Auth Service:   $AUTH_PORT"
 echo "    Vite:           $VITE_PORT"
+echo "    Mailpit SMTP:  $MAILPIT_SMTP_PORT"
+echo "    Mailpit UI:    $MAILPIT_UI_PORT"
 echo "  [API テスト環境]"
 echo "    PostgreSQL:     $API_TEST_POSTGRES_PORT"
 echo "    Redis:          $API_TEST_REDIS_PORT"
@@ -241,3 +274,5 @@ echo "    BFF:            $API_TEST_BFF_PORT"
 echo "    Core Service:   $API_TEST_CORE_PORT"
 echo "    Auth Service:   $API_TEST_AUTH_PORT"
 echo "    E2E Vite:       $API_TEST_VITE_PORT"
+echo "    Mailpit SMTP:  $API_TEST_MAILPIT_SMTP_PORT"
+echo "    Mailpit UI:    $API_TEST_MAILPIT_UI_PORT"

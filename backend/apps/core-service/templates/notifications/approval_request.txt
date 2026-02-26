@@ -1,0 +1,7 @@
+承認依頼が届きました。
+
+ワークフロー: {{ workflow_title }}（{{ workflow_display_id }}）
+申請者: {{ applicant_name }}
+承認ステップ: {{ step_name }}
+
+ワークフロー詳細: {{ workflow_url }}

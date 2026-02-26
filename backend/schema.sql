@@ -159,6 +159,25 @@ CREATE TABLE public.folders (
 );
 
 --
+-- Name: notification_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notification_logs (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    event_type character varying(50) NOT NULL,
+    workflow_instance_id uuid NOT NULL,
+    workflow_title character varying(255) NOT NULL,
+    workflow_display_id character varying(50) NOT NULL,
+    recipient_user_id uuid NOT NULL,
+    recipient_email character varying(255) NOT NULL,
+    subject character varying(500) NOT NULL,
+    status character varying(20) NOT NULL,
+    error_message text,
+    sent_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+--
 -- Name: roles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -781,6 +800,13 @@ ALTER TABLE ONLY public.folders
     ADD CONSTRAINT folders_tenant_id_parent_id_name_key UNIQUE NULLS NOT DISTINCT (tenant_id, parent_id, name);
 
 --
+-- Name: notification_logs notification_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notification_logs
+    ADD CONSTRAINT notification_logs_pkey PRIMARY KEY (id);
+
+--
 -- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -893,6 +919,30 @@ CREATE INDEX idx_folders_path ON public.folders USING btree (path);
 --
 
 CREATE INDEX idx_folders_tenant_id ON public.folders USING btree (tenant_id);
+
+--
+-- Name: idx_notification_logs_recipient_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_notification_logs_recipient_user_id ON public.notification_logs USING btree (recipient_user_id);
+
+--
+-- Name: idx_notification_logs_sent_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_notification_logs_sent_at ON public.notification_logs USING btree (sent_at DESC);
+
+--
+-- Name: idx_notification_logs_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_notification_logs_tenant_id ON public.notification_logs USING btree (tenant_id);
+
+--
+-- Name: idx_notification_logs_workflow_instance_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_notification_logs_workflow_instance_id ON public.notification_logs USING btree (workflow_instance_id);
 
 --
 -- Name: idx_users_display_number; Type: INDEX; Schema: public; Owner: -
@@ -1067,6 +1117,20 @@ ALTER TABLE ONLY public.folders
     ADD CONSTRAINT folders_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 --
+-- Name: notification_logs notification_logs_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notification_logs
+    ADD CONSTRAINT notification_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+--
+-- Name: notification_logs notification_logs_workflow_instance_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notification_logs
+    ADD CONSTRAINT notification_logs_workflow_instance_id_fkey FOREIGN KEY (workflow_instance_id) REFERENCES public.workflow_instances(id) ON DELETE CASCADE;
+
+--
 -- Name: roles roles_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1201,6 +1265,18 @@ ALTER TABLE public.display_id_counters ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.folders ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: notification_logs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.notification_logs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: notification_logs notification_logs_tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY notification_logs_tenant_isolation ON public.notification_logs USING ((tenant_id = (current_setting('app.current_tenant_id'::text))::uuid));
 
 --
 -- Name: roles; Type: ROW SECURITY; Schema: public; Owner: -

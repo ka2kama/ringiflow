@@ -89,6 +89,23 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  # Mailpit（開発用メールサーバー）
+  # 通知メールの送信先。Web UI でメール内容を確認できる。
+  # SMTP: ポート 1025（メール送信用）
+  # Web UI: ポート 8025（メール確認用）
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "${MAILPIT_SMTP_PORT}:1025"
+      - "${MAILPIT_UI_PORT}:8025"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8025/api/v1/info || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
 # 名前付きボリューム
 # name を指定しない → プロジェクト名がプレフィックスとして付与される
 # 例: ringiflow_postgres_data, ringiflow-auth_postgres_data

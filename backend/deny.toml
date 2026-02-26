@@ -82,7 +82,10 @@ skip = [
     { crate = "rustls@0.21", reason = "AWS SDK がまだ rustls 0.23 に移行していない" },
     { crate = "rustls-webpki@0.101", reason = "rustls 0.21 の推移的依存" },
     { crate = "tokio-rustls@0.24", reason = "rustls 0.21 の推移的依存" },
+    # 暗号エコシステム（AWS SDK 経由）
+    { crate = "crypto-bigint@0.4", reason = "AWS SDK (aws-sigv4 → p256 → elliptic-curve) が旧バージョンに依存" },
     # その他
+    { crate = "hashbrown@0.14", reason = "lettre → chumsky が旧バージョンに依存" },
     { crate = "hashbrown@0.15", reason = "推移的依存のバージョン差異" },
     { crate = "socket2@0.5", reason = "推移的依存のバージョン差異" },
 ]

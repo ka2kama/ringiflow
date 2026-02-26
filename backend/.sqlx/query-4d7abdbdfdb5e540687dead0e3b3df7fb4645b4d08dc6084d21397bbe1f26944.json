@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO workflow_instances (id, tenant_id, definition_id, definition_version, title, status, initiated_by, display_number)\n        VALUES ($1, $2, $3, 1, 'テスト申請', 'draft', $4, 1)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d7abdbdfdb5e540687dead0e3b3df7fb4645b4d08dc6084d21397bbe1f26944"
+}

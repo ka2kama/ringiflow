@@ -1,0 +1,5 @@
+ワークフローが承認されました。
+
+ワークフロー: {{ workflow_title }}（{{ workflow_display_id }}）
+
+ワークフロー詳細: {{ workflow_url }}

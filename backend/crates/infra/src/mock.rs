@@ -15,6 +15,7 @@ use std::{
 
 use async_trait::async_trait;
 use ringiflow_domain::{
+    notification::{EmailMessage, NotificationError},
     role::{Role, RoleId},
     tenant::TenantId,
     user::{Email, User, UserId, UserStatus},
@@ -34,8 +35,11 @@ use ringiflow_domain::{
 use crate::{
     db::{TransactionManager, TxContext},
     error::InfraError,
+    notification::NotificationSender,
     repository::{
         DisplayIdCounterRepository,
+        NotificationLog,
+        NotificationLogRepository,
         UserRepository,
         WorkflowCommentRepository,
         WorkflowDefinitionRepository,
@@ -575,5 +579,67 @@ pub struct MockTransactionManager;
 impl TransactionManager for MockTransactionManager {
     async fn begin(&self) -> Result<TxContext, InfraError> {
         Ok(TxContext::mock())
+    }
+}
+
+// ===== MockNotificationSender =====
+
+/// テスト用のモック NotificationSender
+///
+/// 送信されたメッセージを `Arc<Mutex<Vec<EmailMessage>>>` に記録する。
+#[derive(Clone, Default)]
+pub struct MockNotificationSender {
+    sent_emails: Arc<Mutex<Vec<EmailMessage>>>,
+}
+
+impl MockNotificationSender {
+    pub fn new() -> Self {
+        Self {
+            sent_emails: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    /// 送信されたメールの一覧を取得する
+    pub fn sent_emails(&self) -> Vec<EmailMessage> {
+        self.sent_emails.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl NotificationSender for MockNotificationSender {
+    async fn send_email(&self, email: &EmailMessage) -> Result<(), NotificationError> {
+        self.sent_emails.lock().unwrap().push(email.clone());
+        Ok(())
+    }
+}
+
+// ===== MockNotificationLogRepository =====
+
+/// テスト用のモック NotificationLogRepository
+///
+/// 挿入されたログを `Arc<Mutex<Vec<NotificationLog>>>` に記録する。
+#[derive(Clone, Default)]
+pub struct MockNotificationLogRepository {
+    logs: Arc<Mutex<Vec<NotificationLog>>>,
+}
+
+impl MockNotificationLogRepository {
+    pub fn new() -> Self {
+        Self {
+            logs: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    /// 挿入されたログの一覧を取得する
+    pub fn logs(&self) -> Vec<NotificationLog> {
+        self.logs.lock().unwrap().clone()
+    }
+}
+
+#[async_trait]
+impl NotificationLogRepository for MockNotificationLogRepository {
+    async fn insert(&self, log: &NotificationLog) -> Result<(), InfraError> {
+        self.logs.lock().unwrap().push(log.clone());
+        Ok(())
     }
 }
