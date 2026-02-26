@@ -68,6 +68,7 @@ use axum::{
 use config::CoreConfig;
 use handler::{
     DashboardState,
+    DocumentState,
     FolderState,
     ReadinessState,
     RoleState,
@@ -78,6 +79,7 @@ use handler::{
     approve_step,
     approve_step_by_display_number,
     archive_definition,
+    confirm_upload,
     create_definition,
     create_folder,
     create_role,
@@ -111,6 +113,7 @@ use handler::{
     reject_step_by_display_number,
     request_changes_step,
     request_changes_step_by_display_number,
+    request_upload_url,
     resubmit_workflow,
     resubmit_workflow_by_display_number,
     submit_workflow,
@@ -129,6 +132,7 @@ use ringiflow_infra::{
     notification::{NoopNotificationSender, NotificationSender, SmtpNotificationSender},
     repository::{
         DisplayIdCounterRepository,
+        DocumentRepository,
         FolderRepository,
         NotificationLogRepository,
         RoleRepository,
@@ -139,6 +143,7 @@ use ringiflow_infra::{
         WorkflowInstanceRepository,
         WorkflowStepRepository,
         display_id_counter_repository::PostgresDisplayIdCounterRepository,
+        document_repository::PostgresDocumentRepository,
         folder_repository::PostgresFolderRepository,
         notification_log_repository::PostgresNotificationLogRepository,
         role_repository::PostgresRoleRepository,
@@ -155,6 +160,7 @@ use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use usecase::{
     DashboardUseCaseImpl,
+    DocumentUseCaseImpl,
     FolderUseCaseImpl,
     NotificationService,
     RoleUseCaseImpl,
@@ -202,8 +208,7 @@ async fn main() -> anyhow::Result<()> {
     // S3 クライアントの初期化
     let s3_client_inner =
         ringiflow_infra::s3::create_client(config.s3_endpoint_url.as_deref()).await;
-    // TODO(#881): AppState に注入してハンドラから使用する
-    let _s3_client: Arc<dyn ringiflow_infra::S3Client> = Arc::new(
+    let s3_client: Arc<dyn ringiflow_infra::S3Client> = Arc::new(
         ringiflow_infra::AwsS3Client::new(s3_client_inner, config.s3_bucket_name.clone()),
     );
     tracing::info!("S3 クライアントを初期化しました");
@@ -228,6 +233,8 @@ async fn main() -> anyhow::Result<()> {
 
     let folder_repo: Arc<dyn FolderRepository> =
         Arc::new(PostgresFolderRepository::new(pool.clone()));
+    let document_repo: Arc<dyn DocumentRepository> =
+        Arc::new(PostgresDocumentRepository::new(pool.clone()));
 
     let role_repo: Arc<dyn RoleRepository> = Arc::new(PostgresRoleRepository::new(pool.clone()));
 
@@ -246,6 +253,12 @@ async fn main() -> anyhow::Result<()> {
     let folder_usecase = FolderUseCaseImpl::new(folder_repo, clock.clone());
     let folder_state = Arc::new(FolderState {
         usecase: folder_usecase,
+    });
+
+    // ドキュメント UseCase + State
+    let document_usecase = DocumentUseCaseImpl::new(document_repo, s3_client, clock.clone());
+    let document_state = Arc::new(DocumentState {
+        usecase: document_usecase,
     });
 
     // ロール UseCase + State
@@ -357,6 +370,16 @@ async fn main() -> anyhow::Result<()> {
          put(update_folder).delete(delete_folder),
       )
       .with_state(folder_state)
+      // ドキュメント管理 API
+      .route(
+         "/internal/documents/upload-url",
+         post(request_upload_url),
+      )
+      .route(
+         "/internal/documents/{document_id}/confirm",
+         post(confirm_upload),
+      )
+      .with_state(document_state)
       // ロール管理 API
       .route(
          "/internal/roles",
