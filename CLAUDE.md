@@ -279,7 +279,7 @@ lefthook により、ブランチ名が `feature/34-xxx` 形式なら Issue 番�
 PR 本文の形式:
 - 先頭に `## Issue` セクション: Story PR は `Closes #<Story番号>`、参照のみは `Related to #123`
 - Epic に対して `Closes` は使用しない
-- AI エージェントは `--body` で本文を直接指定し、末尾に署名: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+- AI エージェントは PR テンプレート（`.github/pull_request_template.md`）の構造に沿った本文を `--body` で直接指定し、末尾に署名: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
 
 **禁止:**
 
