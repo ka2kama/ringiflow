@@ -46,6 +46,7 @@ mod macros;
 
 pub mod audit_log;
 pub mod clock;
+pub mod document;
 pub mod error;
 pub mod folder;
 pub mod notification;
