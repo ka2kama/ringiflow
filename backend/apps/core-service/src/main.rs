@@ -199,6 +199,15 @@ async fn main() -> anyhow::Result<()> {
         .expect("マイグレーションの実行に失敗しました");
     tracing::info!("マイグレーションを適用しました");
 
+    // S3 クライアントの初期化
+    let s3_client_inner =
+        ringiflow_infra::s3::create_client(config.s3_endpoint_url.as_deref()).await;
+    // TODO(#881): AppState に注入してハンドラから使用する
+    let _s3_client: Arc<dyn ringiflow_infra::S3Client> = Arc::new(
+        ringiflow_infra::AwsS3Client::new(s3_client_inner, config.s3_bucket_name.clone()),
+    );
+    tracing::info!("S3 クライアントを初期化しました");
+
     // Readiness Check 用 State
     let readiness_state = Arc::new(ReadinessState { pool: pool.clone() });
 

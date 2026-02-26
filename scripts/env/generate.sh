@@ -31,6 +31,8 @@ fi
 BASE_POSTGRES_PORT=15432
 BASE_REDIS_PORT=16379
 BASE_DYNAMODB_PORT=18000
+BASE_MINIO_API_PORT=19000
+BASE_MINIO_CONSOLE_PORT=19001
 BASE_BFF_PORT=13000
 BASE_CORE_PORT=13001
 BASE_AUTH_PORT=13002
@@ -42,6 +44,8 @@ BASE_MAILPIT_UI_PORT=18025
 BASE_API_TEST_POSTGRES_PORT=15433
 BASE_API_TEST_REDIS_PORT=16380
 BASE_API_TEST_DYNAMODB_PORT=18001
+BASE_API_TEST_MINIO_API_PORT=19002
+BASE_API_TEST_MINIO_CONSOLE_PORT=19003
 BASE_API_TEST_BFF_PORT=14000
 BASE_API_TEST_CORE_PORT=14001
 BASE_API_TEST_AUTH_PORT=14002
@@ -56,6 +60,8 @@ OFFSET=$((PORT_OFFSET * 100))
 POSTGRES_PORT=$((BASE_POSTGRES_PORT + OFFSET))
 REDIS_PORT=$((BASE_REDIS_PORT + OFFSET))
 DYNAMODB_PORT=$((BASE_DYNAMODB_PORT + OFFSET))
+MINIO_API_PORT=$((BASE_MINIO_API_PORT + OFFSET))
+MINIO_CONSOLE_PORT=$((BASE_MINIO_CONSOLE_PORT + OFFSET))
 BFF_PORT=$((BASE_BFF_PORT + OFFSET))
 CORE_PORT=$((BASE_CORE_PORT + OFFSET))
 AUTH_PORT=$((BASE_AUTH_PORT + OFFSET))
@@ -67,6 +73,8 @@ MAILPIT_UI_PORT=$((BASE_MAILPIT_UI_PORT + OFFSET))
 API_TEST_POSTGRES_PORT=$((BASE_API_TEST_POSTGRES_PORT + OFFSET))
 API_TEST_REDIS_PORT=$((BASE_API_TEST_REDIS_PORT + OFFSET))
 API_TEST_DYNAMODB_PORT=$((BASE_API_TEST_DYNAMODB_PORT + OFFSET))
+API_TEST_MINIO_API_PORT=$((BASE_API_TEST_MINIO_API_PORT + OFFSET))
+API_TEST_MINIO_CONSOLE_PORT=$((BASE_API_TEST_MINIO_CONSOLE_PORT + OFFSET))
 API_TEST_BFF_PORT=$((BASE_API_TEST_BFF_PORT + OFFSET))
 API_TEST_CORE_PORT=$((BASE_API_TEST_CORE_PORT + OFFSET))
 API_TEST_AUTH_PORT=$((BASE_API_TEST_AUTH_PORT + OFFSET))
@@ -88,6 +96,8 @@ cat > "$PROJECT_ROOT/.env" << EOF
 POSTGRES_PORT=$POSTGRES_PORT
 REDIS_PORT=$REDIS_PORT
 DYNAMODB_PORT=$DYNAMODB_PORT
+MINIO_API_PORT=$MINIO_API_PORT
+MINIO_CONSOLE_PORT=$MINIO_CONSOLE_PORT
 MAILPIT_SMTP_PORT=$MAILPIT_SMTP_PORT
 MAILPIT_UI_PORT=$MAILPIT_UI_PORT
 
@@ -97,6 +107,8 @@ MAILPIT_UI_PORT=$MAILPIT_UI_PORT
 API_TEST_POSTGRES_PORT=$API_TEST_POSTGRES_PORT
 API_TEST_REDIS_PORT=$API_TEST_REDIS_PORT
 API_TEST_DYNAMODB_PORT=$API_TEST_DYNAMODB_PORT
+API_TEST_MINIO_API_PORT=$API_TEST_MINIO_API_PORT
+API_TEST_MINIO_CONSOLE_PORT=$API_TEST_MINIO_CONSOLE_PORT
 API_TEST_MAILPIT_SMTP_PORT=$API_TEST_MAILPIT_SMTP_PORT
 API_TEST_MAILPIT_UI_PORT=$API_TEST_MAILPIT_UI_PORT
 
@@ -156,6 +168,16 @@ AUTH_URL=http://localhost:$AUTH_PORT
 # DynamoDB 接続（監査ログ）
 # -----------------------------------------------------------------------------
 DYNAMODB_ENDPOINT=http://localhost:$DYNAMODB_PORT
+
+# -----------------------------------------------------------------------------
+# S3 接続（ドキュメント管理）
+# ローカル: MinIO に接続（S3_ENDPOINT_URL 設定あり）
+# 本番: AWS S3（S3_ENDPOINT_URL 未設定 → SDK デフォルト）
+# -----------------------------------------------------------------------------
+S3_ENDPOINT_URL=http://localhost:$MINIO_API_PORT
+S3_BUCKET_NAME=ringiflow-dev-documents
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
 
 # -----------------------------------------------------------------------------
 # ログ・環境設定
@@ -235,6 +257,14 @@ AUTH_URL=http://localhost:$API_TEST_AUTH_PORT
 DYNAMODB_ENDPOINT=http://localhost:$API_TEST_DYNAMODB_PORT
 
 # -----------------------------------------------------------------------------
+# S3 接続（ドキュメント管理、API テスト専用）
+# -----------------------------------------------------------------------------
+S3_ENDPOINT_URL=http://localhost:$API_TEST_MINIO_API_PORT
+S3_BUCKET_NAME=ringiflow-dev-documents
+AWS_ACCESS_KEY_ID=minioadmin
+AWS_SECRET_ACCESS_KEY=minioadmin
+
+# -----------------------------------------------------------------------------
 # E2E テスト用 Vite ポート
 # -----------------------------------------------------------------------------
 E2E_VITE_PORT=$API_TEST_VITE_PORT
@@ -260,6 +290,8 @@ echo "  [開発環境]"
 echo "    PostgreSQL:     $POSTGRES_PORT"
 echo "    Redis:          $REDIS_PORT"
 echo "    DynamoDB:       $DYNAMODB_PORT"
+echo "    MinIO API:      $MINIO_API_PORT"
+echo "    MinIO Console:  $MINIO_CONSOLE_PORT"
 echo "    BFF:            $BFF_PORT"
 echo "    Core Service:   $CORE_PORT"
 echo "    Auth Service:   $AUTH_PORT"
@@ -270,6 +302,8 @@ echo "  [API テスト環境]"
 echo "    PostgreSQL:     $API_TEST_POSTGRES_PORT"
 echo "    Redis:          $API_TEST_REDIS_PORT"
 echo "    DynamoDB:       $API_TEST_DYNAMODB_PORT"
+echo "    MinIO API:      $API_TEST_MINIO_API_PORT"
+echo "    MinIO Console:  $API_TEST_MINIO_CONSOLE_PORT"
 echo "    BFF:            $API_TEST_BFF_PORT"
 echo "    Core Service:   $API_TEST_CORE_PORT"
 echo "    Auth Service:   $API_TEST_AUTH_PORT"

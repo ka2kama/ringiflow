@@ -69,6 +69,7 @@ wildcards = "allow"
 skip = [
     # rand / getrandom エコシステム（sqlx, argon2 経由）
     { crate = "getrandom@0.2", reason = "sqlx / argon2 が旧 rand エコシステムに依存" },
+    { crate = "getrandom@0.3", reason = "aws-sdk-s3 (crc-fast → rand 0.9) が中間バージョンに依存" },
     { crate = "rand@0.8", reason = "sqlx / argon2 が旧 rand に依存" },
     { crate = "rand_chacha@0.3", reason = "rand 0.8 の推移的依存" },
     { crate = "rand_core@0.6", reason = "rand 0.8 の推移的依存" },
@@ -82,6 +83,9 @@ skip = [
     { crate = "rustls@0.21", reason = "AWS SDK がまだ rustls 0.23 に移行していない" },
     { crate = "rustls-webpki@0.101", reason = "rustls 0.21 の推移的依存" },
     { crate = "tokio-rustls@0.24", reason = "rustls 0.21 の推移的依存" },
+    # AWS SDK 内部の smithy バージョン断層（aws-sdk-s3 が旧 smithy に依存）
+    { crate = "aws-smithy-http@0.62", reason = "aws-sdk-s3 が旧 smithy-http に依存" },
+    { crate = "aws-smithy-json@0.61", reason = "aws-sdk-s3 が旧 smithy-json に依存" },
     # 暗号エコシステム（AWS SDK 経由）
     { crate = "crypto-bigint@0.4", reason = "AWS SDK (aws-sigv4 → p256 → elliptic-curve) が旧バージョンに依存" },
     # その他

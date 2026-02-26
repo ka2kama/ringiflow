@@ -230,6 +230,10 @@ jobs:
       DATABASE_URL: postgres://ringiflow:ringiflow@localhost:15432/ringiflow
       REDIS_URL: redis://localhost:16379
       DYNAMODB_ENDPOINT: http://localhost:18000
+      S3_ENDPOINT_URL: http://localhost:19000
+      S3_BUCKET_NAME: ringiflow-dev-documents
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
 
     steps:
       - name: Checkout
@@ -267,6 +271,9 @@ jobs:
       - name: Run migrations
         run: sqlx migrate run
         working-directory: backend
+
+      - name: Start MinIO
+        run: ./scripts/ci/start-minio.sh
 
       - name: Install PostgreSQL 17 client
         run: |

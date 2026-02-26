@@ -59,9 +59,11 @@ pub mod notification;
 pub mod password;
 pub mod redis;
 pub mod repository;
+pub mod s3;
 pub mod session;
 
 pub use db::{PgTransactionManager, TransactionManager, TxContext};
 pub use error::InfraError;
 pub use password::{Argon2PasswordChecker, PasswordChecker};
+pub use s3::{AwsS3Client, S3Client};
 pub use session::{RedisSessionManager, SessionData, SessionManager};
