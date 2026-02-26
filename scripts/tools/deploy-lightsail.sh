@@ -25,7 +25,7 @@ set -euo pipefail
 mkdir -p ~/.ssh
 echo "$SSH_KEY" > ~/.ssh/deploy_key
 chmod 600 ~/.ssh/deploy_key
-SSH_OPTS="-i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new"
+SSH_OPTS="-i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ServerAliveCountMax=10"
 
 # 設定ファイルを転送（tar over SSH）
 STAGING=$(mktemp -d)
