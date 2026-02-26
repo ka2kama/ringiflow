@@ -64,12 +64,44 @@ pub(super) mod test_helpers {
             Arc::new(instance_repo.clone()),
             Arc::new(step_repo.clone()),
             Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
             notification_service,
         )
+    }
+
+    /// SUT を構築する（通知検証用）
+    ///
+    /// `MockNotificationSender` を返すため、テスト側で `sent_emails()` を確認できる。
+    /// ユーザー情報を返すモックを使用するため、通知のユーザー情報取得が成功する。
+    pub fn build_sut_with_notification(
+        definition_repo: &MockWorkflowDefinitionRepository,
+        instance_repo: &MockWorkflowInstanceRepository,
+        step_repo: &MockWorkflowStepRepository,
+        user_repo: Arc<dyn ringiflow_infra::repository::UserRepository>,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> (WorkflowUseCaseImpl, MockNotificationSender) {
+        let sender = MockNotificationSender::new();
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(sender.clone()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+        let sut = WorkflowUseCaseImpl::new(
+            Arc::new(definition_repo.clone()),
+            Arc::new(instance_repo.clone()),
+            Arc::new(step_repo.clone()),
+            Arc::new(MockWorkflowCommentRepository::new()),
+            user_repo,
+            Arc::new(MockDisplayIdCounterRepository::new()),
+            Arc::new(FixedClock::new(now)),
+            Arc::new(MockTransactionManager),
+            notification_service,
+        );
+        (sut, sender)
     }
 
     /// テスト用の1段階承認定義 JSON

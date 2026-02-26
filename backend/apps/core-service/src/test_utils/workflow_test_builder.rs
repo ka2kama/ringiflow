@@ -176,7 +176,7 @@ impl WorkflowTestBuilder {
             instance_repo.clone(),
             step_repo.clone(),
             comment_repo.clone(),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(self.now)),
             Arc::new(MockTransactionManager),

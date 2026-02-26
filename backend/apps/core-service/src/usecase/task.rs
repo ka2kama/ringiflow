@@ -312,7 +312,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -370,7 +370,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -429,7 +429,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act: 別のユーザーで取得
@@ -452,7 +452,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -508,7 +508,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -535,7 +535,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act: 存在しない step_id で取得
@@ -593,7 +593,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act: 別のユーザーで取得
@@ -652,7 +652,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -681,7 +681,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -726,7 +726,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
@@ -791,7 +791,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
         );
 
         // Act
