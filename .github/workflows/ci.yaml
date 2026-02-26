@@ -521,6 +521,7 @@ jobs:
           # テスト実行
           hurl --test --jobs 1 \
             --variable "bff_url=http://localhost:$BFF_PORT" \
+            --variable "mailpit_url=http://localhost:$MAILPIT_UI_PORT" \
             --variables-file tests/api/hurl/vars.env \
             tests/api/hurl/**/*.hurl
 
