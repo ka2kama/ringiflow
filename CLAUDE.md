@@ -69,7 +69,7 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 
 品質戦略:
 - Validation: 正しい問題を解いているか → [問題解決フレームワーク](.claude/rules/problem-solving.md)
-- Verification: 正しく作っているか → 守り（品質チェックリスト）+ 攻め（[設計原則レンズ](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ)）
+- Verification: 正しく作っているか → 守り（品質チェックリスト）+ 攻め（[設計原則レンズ](.claude/rules/dev-flow-tdd.md#設計原則レンズ)）
 
 → 詳細: [KB: V&V](docs/06_ナレッジベース/methodology/V&V.md)
 
@@ -111,7 +111,7 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 
 | タイミング | 俯瞰の内容 |
 |-----------|-----------|
-| TDD の Refactor ステップ | [設計原則レンズ](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ)で設計品質を評価 |
+| TDD の Refactor ステップ | [設計原則レンズ](.claude/rules/dev-flow-tdd.md#設計原則レンズ)で設計品質を評価 |
 | 予期しないエッジケース発見時 | 局所対処か全体設計への統合かの判断 |
 | Phase の区切り | 全レンズ + 品質チェックリストで全体確認 |
 
@@ -203,11 +203,7 @@ Insight ブロック形式:
 
 ## Issue 駆動開発
 
-機能実装前に必ず [手順書](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md) を読み、記載されたフローに従うこと。
-
-**禁止:** 手順書を読まずに実装を開始すること
-
-設計フェーズ完了後は [TDD 開発フロー](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md) に従い、テストから書き始めること。
+開発フローは [`.claude/rules/dev-flow-issue.md`](.claude/rules/dev-flow-issue.md)（自動注入）に従う。TDD は [`.claude/rules/dev-flow-tdd.md`](.claude/rules/dev-flow-tdd.md)（自動注入）に従う。
 
 **禁止:** テストを書かずにプロダクションコードを書き始めること
 
@@ -252,7 +248,7 @@ Claude Code のシステムプロンプト（「Executing actions with care」�
 
 ## Git 操作ルール
 
-→ 詳細手順: [手順書: Issue 駆動開発](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md)
+→ 詳細: [dev-flow-issue.md](.claude/rules/dev-flow-issue.md)
 → ブランチ戦略: [ADR-046](docs/05_ADR/046_Story-per-PRブランチ戦略.md)
 
 ### ブランチ命名
@@ -277,8 +273,8 @@ lefthook により、ブランチ名が `feature/34-xxx` 形式なら Issue 番�
 
 ### PR ワークフロー
 
-→ 作成: [手順書 #3](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#3-draft-pr-を作成)
-→ 完了フロー: [手順書 #6](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#6-品質ゲートと-ready-for-review)
+→ 作成: [dev-flow-issue.md #3](.claude/rules/dev-flow-issue.md#3-draft-pr-作成)
+→ 完了フロー: [dev-flow-issue.md #6](.claude/rules/dev-flow-issue.md#6-品質ゲート)
 
 PR 本文の形式:
 - 先頭に `## Issue` セクション: Story PR は `Closes #<Story番号>`、参照のみは `Related to #123`

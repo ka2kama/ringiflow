@@ -9,7 +9,7 @@
 - 改善記録の対策を実行するとき — 対策案も「仮説」として検証する
 - 設計判断を行うとき
 
-→ Issue の精査: [Issue 駆動開発 > 既存 Issue の精査](../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査)
+→ Issue の精査: [Issue 駆動開発 > Issue 精査](dev-flow-issue.md#1-issue-精査)
 → 対策の性質: [改善記録 > 対策セクションの性質](../../process/improvements/README.md#対策セクションの性質)
 
 ### 問題の性質による前段分類

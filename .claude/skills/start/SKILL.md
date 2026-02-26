@@ -110,7 +110,7 @@ gh issue view <Issue番号>
 
 **4a-2: Issue 精査**
 
-[Issue 駆動開発 > 既存 Issue の精査](../../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査) に従い、精査を実施する。精査結果を Issue コメントとして記録する。
+[Issue 駆動開発 > Issue 精査](../../../.claude/rules/dev-flow-issue.md#1-issue-精査) に従い、精査を実施する。精査結果を Issue コメントとして記録する。
 
 | 精査結果 | アクション |
 |---------|-----------|
@@ -140,7 +140,7 @@ git checkout -b feature/<Issue番号>-<slug>
 
 **4a-4: Draft PR 作成**
 
-[Issue 駆動開発 > Draft PR を作成](../../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#3-draft-pr-を作成) に従い、Draft PR を作成する。
+[Issue 駆動開発 > Draft PR 作成](../../../.claude/rules/dev-flow-issue.md#3-draft-pr-作成) に従い、Draft PR を作成する。
 
 ```bash
 # 空コミットで Draft PR を作成

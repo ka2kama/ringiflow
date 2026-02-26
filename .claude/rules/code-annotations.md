@@ -82,7 +82,7 @@ TODO/FIXME に Issue 番号を付けた場合、参照先 Issue のクローズ�
 | アノテーションの内容が解消済み | アノテーションを削除 |
 | 未解消（Issue のスコープ外だった） | 新 Issue を作成し、参照番号を更新 |
 
-棚卸しの手順: [Issue 駆動開発 > TODO/FIXME の棚卸し](../../docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#todofixme-の棚卸し)
+棚卸しの手順: [Issue 駆動開発 > TODO/FIXME の棚卸し](dev-flow-issue.md#todofixme-の棚卸し)
 
 <!-- 改善: process/improvements/2026-02/2026-02-24_1500_TODO-FIXMEのライフサイクル管理不在.md -->
 
