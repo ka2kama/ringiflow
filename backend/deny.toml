@@ -69,6 +69,7 @@ wildcards = "allow"
 skip = [
     # rand / getrandom エコシステム（sqlx, argon2 経由）
     { crate = "getrandom@0.2", reason = "sqlx / argon2 が旧 rand エコシステムに依存" },
+    { crate = "getrandom@0.3", reason = "aws-sdk-s3 (crc-fast → rand 0.9) が中間バージョンに依存" },
     { crate = "rand@0.8", reason = "sqlx / argon2 が旧 rand に依存" },
     { crate = "rand_chacha@0.3", reason = "rand 0.8 の推移的依存" },
     { crate = "rand_core@0.6", reason = "rand 0.8 の推移的依存" },
