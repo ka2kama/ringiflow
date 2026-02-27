@@ -8,7 +8,7 @@ use ringiflow_domain::{
     tenant::TenantId,
     user::UserId,
 };
-use ringiflow_infra::repository::FolderRepository;
+use ringiflow_infra::{TransactionManager, repository::FolderRepository};
 use uuid::Uuid;
 
 use crate::error::CoreError;
@@ -37,13 +37,19 @@ pub struct UpdateFolderInput {
 pub struct FolderUseCaseImpl {
     folder_repository: Arc<dyn FolderRepository>,
     clock: Arc<dyn Clock>,
+    tx_manager: Arc<dyn TransactionManager>,
 }
 
 impl FolderUseCaseImpl {
-    pub fn new(folder_repository: Arc<dyn FolderRepository>, clock: Arc<dyn Clock>) -> Self {
+    pub fn new(
+        folder_repository: Arc<dyn FolderRepository>,
+        clock: Arc<dyn Clock>,
+        tx_manager: Arc<dyn TransactionManager>,
+    ) -> Self {
         Self {
             folder_repository,
             clock,
+            tx_manager,
         }
     }
 
@@ -189,24 +195,44 @@ impl FolderUseCaseImpl {
             folder
         };
 
-        // DB 更新
-        self.folder_repository.update(&folder).await.map_err(|e| {
-            if let ringiflow_infra::InfraError::Database(ref db_err) = e
-                && let Some(constraint) = db_err.as_database_error().and_then(|d| d.constraint())
-                && constraint == "folders_tenant_id_parent_id_name_key"
-            {
-                return CoreError::Conflict("同名のフォルダが既に存在します".to_string());
-            }
-            CoreError::Database(e)
-        })?;
+        // トランザクション内で DB 更新
+        let mut tx = self
+            .tx_manager
+            .begin()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
+
+        self.folder_repository
+            .update(&mut tx, &folder)
+            .await
+            .map_err(|e| {
+                if let ringiflow_infra::InfraError::Database(ref db_err) = e
+                    && let Some(constraint) =
+                        db_err.as_database_error().and_then(|d| d.constraint())
+                    && constraint == "folders_tenant_id_parent_id_name_key"
+                {
+                    return CoreError::Conflict("同名のフォルダが既に存在します".to_string());
+                }
+                CoreError::Database(e)
+            })?;
 
         // サブツリーの path/depth 更新（path が変わった場合のみ）
         if old_path != folder.path() {
             let depth_delta = folder.depth() - old_depth;
             self.folder_repository
-                .update_subtree_paths(&old_path, folder.path(), depth_delta, &input.tenant_id)
+                .update_subtree_paths(
+                    &mut tx,
+                    &old_path,
+                    folder.path(),
+                    depth_delta,
+                    &input.tenant_id,
+                )
                 .await?;
         }
+
+        tx.commit()
+            .await
+            .map_err(|e| CoreError::Internal(format!("トランザクションコミットに失敗: {}", e)))?;
 
         Ok(folder)
     }

@@ -258,12 +258,17 @@ mod tests {
             Ok(())
         }
 
-        async fn update(&self, _folder: &Folder) -> Result<(), InfraError> {
+        async fn update(
+            &self,
+            _tx: &mut ringiflow_infra::TxContext,
+            _folder: &Folder,
+        ) -> Result<(), InfraError> {
             Ok(())
         }
 
         async fn update_subtree_paths(
             &self,
+            _tx: &mut ringiflow_infra::TxContext,
             _old_path: &str,
             _new_path: &str,
             _depth_delta: i32,
@@ -302,7 +307,11 @@ mod tests {
 
     fn create_test_app(repo: StubFolderRepository) -> Router {
         let repo_arc = Arc::new(repo) as Arc<dyn FolderRepository>;
-        let usecase = FolderUseCaseImpl::new(repo_arc, Arc::new(StubClock) as Arc<dyn Clock>);
+        let usecase = FolderUseCaseImpl::new(
+            repo_arc,
+            Arc::new(StubClock) as Arc<dyn Clock>,
+            Arc::new(ringiflow_infra::mock::MockTransactionManager),
+        );
         let state = Arc::new(FolderState { usecase });
 
         Router::new()

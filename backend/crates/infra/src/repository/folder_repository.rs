@@ -18,7 +18,7 @@ use ringiflow_domain::{
 };
 use sqlx::PgPool;
 
-use crate::error::InfraError;
+use crate::{db::TxContext, error::InfraError};
 
 /// フォルダリポジトリトレイト
 ///
@@ -39,14 +39,24 @@ pub trait FolderRepository: Send + Sync {
     async fn insert(&self, folder: &Folder) -> Result<(), InfraError>;
 
     /// フォルダを更新する（名前変更・移動後の状態を反映）
-    async fn update(&self, folder: &Folder) -> Result<(), InfraError>;
+    ///
+    /// # 引数
+    ///
+    /// - `tx`: トランザクションコンテキスト（構造的強制）
+    /// - `folder`: 更新後のフォルダエンティティ
+    async fn update(&self, tx: &mut TxContext, folder: &Folder) -> Result<(), InfraError>;
 
     /// フォルダとサブツリーの path/depth を一括更新する（名前変更・移動時）
     ///
     /// `old_path` で始まるすべてのフォルダの path を `new_path` に置換し、
     /// depth に `depth_delta` を加算する。
+    ///
+    /// # 引数
+    ///
+    /// - `tx`: トランザクションコンテキスト（構造的強制）
     async fn update_subtree_paths(
         &self,
+        tx: &mut TxContext,
         old_path: &str,
         new_path: &str,
         depth_delta: i32,
@@ -194,7 +204,7 @@ impl FolderRepository for PostgresFolderRepository {
     }
 
     #[tracing::instrument(skip_all, level = "debug")]
-    async fn update(&self, folder: &Folder) -> Result<(), InfraError> {
+    async fn update(&self, tx: &mut TxContext, folder: &Folder) -> Result<(), InfraError> {
         sqlx::query!(
             r#"
             UPDATE folders
@@ -209,7 +219,7 @@ impl FolderRepository for PostgresFolderRepository {
             folder.updated_at(),
             folder.tenant_id().as_uuid()
         )
-        .execute(&self.pool)
+        .execute(tx.conn())
         .await?;
 
         Ok(())
@@ -218,6 +228,7 @@ impl FolderRepository for PostgresFolderRepository {
     #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
     async fn update_subtree_paths(
         &self,
+        tx: &mut TxContext,
         old_path: &str,
         new_path: &str,
         depth_delta: i32,
@@ -242,7 +253,7 @@ impl FolderRepository for PostgresFolderRepository {
             depth_delta,
             tenant_id.as_uuid()
         )
-        .execute(&self.pool)
+        .execute(tx.conn())
         .await?;
 
         Ok(())
