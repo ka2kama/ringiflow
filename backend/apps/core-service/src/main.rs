@@ -128,6 +128,7 @@ use handler::{
 use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
     PgTransactionManager,
+    TransactionManager,
     db,
     notification::{NoopNotificationSender, NotificationSender, SmtpNotificationSender},
     repository::{
@@ -244,6 +245,9 @@ async fn main() -> anyhow::Result<()> {
     // Clock（複数ユースケースで共有）
     let clock: Arc<dyn ringiflow_domain::clock::Clock> = Arc::new(SystemClock);
 
+    // TransactionManager（複数ユースケースで共有）
+    let tx_manager: Arc<dyn TransactionManager> = Arc::new(PgTransactionManager::new(pool.clone()));
+
     // ユーザー UseCase + State
     let user_usecase = UserUseCaseImpl::new(user_repo.clone(), counter_repo.clone(), clock.clone());
     let user_state = Arc::new(UserState {
@@ -253,7 +257,7 @@ async fn main() -> anyhow::Result<()> {
     });
 
     // フォルダ UseCase + State
-    let folder_usecase = FolderUseCaseImpl::new(folder_repo, clock.clone());
+    let folder_usecase = FolderUseCaseImpl::new(folder_repo, clock.clone(), tx_manager.clone());
     let folder_state = Arc::new(FolderState {
         usecase: folder_usecase,
     });
@@ -312,7 +316,6 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     // ワークフロー UseCase
-    let tx_manager = Arc::new(PgTransactionManager::new(pool.clone()));
     let workflow_usecase = WorkflowUseCaseImpl::new(
         definition_repo,
         instance_repo.clone(),
