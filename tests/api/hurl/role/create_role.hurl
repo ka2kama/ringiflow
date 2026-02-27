@@ -78,3 +78,26 @@ Content-Type: application/json
 HTTP 409
 [Asserts]
 jsonpath "$.status" == 409
+
+# =============================================================================
+# 正常系: 入力値境界 — 空文字名でもロール作成できる
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 空文字の名前でロールを作成する
+# Then: 201 Created が返される（ロール名にドメインバリデーションなし）
+# Note: Role.name は String 型（値オブジェクトなし）
+
+POST {{bff_url}}/api/v1/roles
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "name": "",
+    "permissions": ["workflow:read"]
+}
+
+HTTP 201
+[Asserts]
+jsonpath "$.data.name" == ""
+jsonpath "$.data.is_system" == false

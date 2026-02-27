@@ -137,3 +137,50 @@ HTTP 404
 [Asserts]
 jsonpath "$.type" == "https://ringiflow.example.com/errors/workflow-definition-not-found"
 jsonpath "$.status" == 404
+
+# =============================================================================
+# 正常系: 入力値境界 — 空文字タイトルでも作成できる
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 空文字のタイトルでワークフローを作成する
+# Then: 201 Created が返される（ワークフロータイトルにドメインバリデーションなし）
+# Note: WorkflowInstance.title は String 型（値オブジェクトなし）
+
+POST {{bff_url}}/api/v1/workflows
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "definition_id": "{{workflow_definition_id}}",
+    "title": "",
+    "form_data": {}
+}
+
+HTTP 201
+[Asserts]
+jsonpath "$.data.title" == ""
+jsonpath "$.data.status" == "Draft"
+
+# =============================================================================
+# 正常系: 入力値境界 — 改行を含むタイトル（500 にならないことを確認）
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 改行文字を含むタイトルでワークフローを作成する
+# Then: 201 Created が返される
+
+POST {{bff_url}}/api/v1/workflows
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "definition_id": "{{workflow_definition_id}}",
+    "title": "テスト申請\n改行含む",
+    "form_data": {}
+}
+
+HTTP 201
+[Asserts]
+jsonpath "$.data.title" == "テスト申請\n改行含む"
+jsonpath "$.data.status" == "Draft"
