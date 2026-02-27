@@ -195,6 +195,25 @@ mod tests {
             let result = CommentBody::new(body);
             assert!(result.is_err());
         }
+
+        #[rstest]
+        fn test_htmlタグを含む文字列を受け入れる() {
+            let result = CommentBody::new("<script>alert('xss')</script>コメント");
+            assert!(result.is_ok());
+        }
+
+        #[rstest]
+        fn test_改行を含む文字列を受け入れる() {
+            let result = CommentBody::new("1行目\n2行目\n3行目");
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().as_str(), "1行目\n2行目\n3行目");
+        }
+
+        #[rstest]
+        fn test_タブを含む文字列を受け入れる() {
+            let result = CommentBody::new("項目1\t値1");
+            assert!(result.is_ok());
+        }
     }
 
     mod workflow_comment {

@@ -101,3 +101,47 @@ HTTP 200
 jsonpath "$.data" isCollection
 jsonpath "$.data" count == 1
 jsonpath "$.next_cursor" != null
+
+# =============================================================================
+# 異常系: ページネーション無効値 — limit=0
+# =============================================================================
+# Given: 監査ログが存在する
+# When: limit=0 で GET /api/v1/audit-logs にリクエストする
+# Then: 安全なデフォルト値にフォールバックして 200 で応答する
+
+GET {{bff_url}}/api/v1/audit-logs?limit=0
+X-Tenant-ID: {{tenant_id}}
+Cookie: session_id={{session_cookie}}
+
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+# =============================================================================
+# 異常系: ページネーション無効値 — limit=-1
+# =============================================================================
+# Given: 監査ログが存在する
+# When: limit=-1 で GET /api/v1/audit-logs にリクエストする
+# Then: 安全なデフォルト値にフォールバックして 200 で応答する
+
+GET {{bff_url}}/api/v1/audit-logs?limit=-1
+X-Tenant-ID: {{tenant_id}}
+Cookie: session_id={{session_cookie}}
+
+HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
+
+# =============================================================================
+# 異常系: ページネーション無効値 — 不正な cursor
+# =============================================================================
+# Given: 監査ログが存在する
+# When: 不正な cursor 文字列で GET /api/v1/audit-logs にリクエストする
+# Then: 500 が返される（既知の問題: BFF が DynamoDB の base64 デコードエラーを
+#        適切にハンドリングしていない。本来は 400/422 で返すべき）
+
+GET {{bff_url}}/api/v1/audit-logs?cursor=invalid-cursor-string
+X-Tenant-ID: {{tenant_id}}
+Cookie: session_id={{session_cookie}}
+
+HTTP 500

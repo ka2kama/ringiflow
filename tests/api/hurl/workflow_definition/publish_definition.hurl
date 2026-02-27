@@ -89,3 +89,24 @@ jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド
 jsonpath "$.data.description" exists
+
+# =============================================================================
+# 異常系: 存在しない定義の公開 → 404
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 存在しない UUID でワークフロー定義の公開を試みる
+# Then: 404 Not Found が返される
+
+POST {{bff_url}}/api/v1/workflow-definitions/99999999-9999-9999-9999-999999999999/publish
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "version": 1
+}
+
+HTTP 404
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/workflow-definition-not-found"
+jsonpath "$.status" == 404

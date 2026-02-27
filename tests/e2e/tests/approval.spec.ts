@@ -16,6 +16,46 @@ import {
 } from "../helpers/workflow";
 
 test.describe("承認フロー", () => {
+  test("承認ボタンをクリックすると確認ダイアログが表示される", async ({
+    page,
+  }) => {
+    // Given: ワークフロー申請を作成・提出し、タスク詳細を開く
+    const uniqueTitle = `ダイアログ確認テスト ${Date.now()}`;
+    await createAndSubmitWorkflow(page, uniqueTitle, ADMIN_USER.name);
+    await openTaskDetail(page, uniqueTitle);
+
+    // When: 承認ボタンをクリックする
+    await page.getByRole("button", { name: "承認", exact: true }).click();
+
+    // Then: 確認ダイアログが表示され、タイトルとメッセージが適切であること
+    const dialog = page.locator("#confirm-dialog");
+    await expect(dialog).toBeVisible();
+    await expect(page.locator("#confirm-dialog-title")).toHaveText(
+      "承認の確認",
+    );
+    await expect(page.locator("#confirm-dialog-message")).toHaveText(
+      "この申請を承認しますか？",
+    );
+  });
+
+  test("確認ダイアログのキャンセルで操作が実行されない", async ({ page }) => {
+    // Given: ワークフロー申請を作成・提出し、タスク詳細を開く
+    const uniqueTitle = `キャンセルテスト ${Date.now()}`;
+    await createAndSubmitWorkflow(page, uniqueTitle, ADMIN_USER.name);
+    await openTaskDetail(page, uniqueTitle);
+
+    // When: 承認ボタン → 確認ダイアログのキャンセルボタンをクリック
+    await page.getByRole("button", { name: "承認", exact: true }).click();
+    await expect(page.locator("#confirm-dialog")).toBeVisible();
+    await page.getByRole("button", { name: "キャンセル" }).click();
+
+    // Then: ダイアログが閉じ、承認ボタンがまだ有効（操作が実行されていない）
+    await expect(page.locator("#confirm-dialog")).not.toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "承認", exact: true }),
+    ).toBeVisible();
+  });
+
   test("申請を作成すると承認者のタスク一覧に表示される", async ({ page }) => {
     // Given: ワークフロー申請を作成・提出する
     const uniqueTitle = `承認テスト ${Date.now()}`;

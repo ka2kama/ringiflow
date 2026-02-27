@@ -590,6 +590,34 @@ mod tests {
         assert_eq!(name.as_str(), "山田太郎");
     }
 
+    // UserName の特殊文字テスト
+
+    #[rstest]
+    #[case("テスト<script>alert('xss')</script>", "HTMLタグ")]
+    #[case("テスト\nユーザー", "改行")]
+    #[case("テスト\tユーザー", "タブ")]
+    fn test_ユーザー名は特殊文字を含む文字列を受け入れる(
+        #[case] input: &str,
+        #[case] _description: &str,
+    ) {
+        let result = UserName::new(input);
+        assert!(result.is_ok());
+    }
+
+    // WorkflowName の特殊文字テスト
+
+    #[rstest]
+    #[case("申請<b>太字</b>テスト", "HTMLタグ")]
+    #[case("申請\n改行テスト", "改行")]
+    #[case("申請\tタブテスト", "タブ")]
+    fn test_ワークフロー名は特殊文字を含む文字列を受け入れる(
+        #[case] input: &str,
+        #[case] _description: &str,
+    ) {
+        let result = WorkflowName::new(input);
+        assert!(result.is_ok());
+    }
+
     // WorkflowName 既存動作維持のテスト
 
     #[test]

@@ -100,6 +100,9 @@ Content-Type: application/json
   "comment": "差し戻します"
 }
 HTTP 404
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/step-not-found"
+jsonpath "$.status" == 404
 
 # ===== 正常系テスト: user がステップを差し戻す =====
 
@@ -159,3 +162,47 @@ jsonpath "$.data.steps[0].version" == 2
 jsonpath "$.data.steps[0].decision" == "RequestChanges"
 jsonpath "$.data.steps[0].comment" == "フォームデータに不備があります。修正をお願いします。"
 jsonpath "$.data.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# =============================================================================
+# 異常系: 状態遷移 — 差し戻し後の完了済みステップを承認
+# =============================================================================
+# Given: ワークフローが差し戻し済み（ChangesRequested）、ステップは Completed
+# When: 完了済みステップの承認を試みる
+# Then: 400 Bad Request が返される（無効な状態遷移 → DomainError::Validation）
+
+POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step_display_number}}/approve
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{user_csrf_token}}
+Cookie: session_id={{user_session_id}}
+Content-Type: application/json
+{
+    "version": 2,
+    "comment": "承認します"
+}
+
+HTTP 400
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
+jsonpath "$.status" == 400
+
+# =============================================================================
+# 異常系: 状態遷移 — 差し戻し後の完了済みステップを却下
+# =============================================================================
+# Given: ワークフローが差し戻し済み（ChangesRequested）、ステップは Completed
+# When: 完了済みステップの却下を試みる
+# Then: 400 Bad Request が返される（無効な状態遷移 → DomainError::Validation）
+
+POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step_display_number}}/reject
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{user_csrf_token}}
+Cookie: session_id={{user_session_id}}
+Content-Type: application/json
+{
+    "version": 2,
+    "comment": "却下します"
+}
+
+HTTP 400
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
+jsonpath "$.status" == 400
