@@ -668,15 +668,11 @@ impl crate::repository::FolderRepository for MockFolderRepository {
         Ok(())
     }
 
-    async fn max_subtree_depth(
-        &self,
-        path: &str,
-        _tenant_id: &TenantId,
-    ) -> Result<i32, InfraError> {
+    async fn max_subtree_depth(&self, path: &str, tenant_id: &TenantId) -> Result<i32, InfraError> {
         let folders = self.folders.lock().unwrap();
         let max = folders
             .iter()
-            .filter(|f| f.path().starts_with(path))
+            .filter(|f| f.tenant_id() == tenant_id && f.path().starts_with(path))
             .map(|f| f.depth())
             .max()
             .unwrap_or(0);
