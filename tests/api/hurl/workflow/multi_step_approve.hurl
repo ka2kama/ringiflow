@@ -148,6 +148,10 @@ retry-interval: 1000
 HTTP 200
 [Asserts]
 jsonpath "$.messages_count" == 2
+jsonpath "$.messages[*].To[*].Address" includes "{{admin_email}}"
+jsonpath "$.messages[*].To[*].Address" includes "{{user_email}}"
+jsonpath "$.messages[*].Subject" includes "[RingiFlow] ステップ承認: 2段階承認テスト {{workflow_display_id}}"
+jsonpath "$.messages[*].Subject" includes "[RingiFlow] 承認依頼: 2段階承認テスト {{workflow_display_id}}"
 
 # =============================================================================
 # ステップ2: user が経理承認する（最終ステップ）
