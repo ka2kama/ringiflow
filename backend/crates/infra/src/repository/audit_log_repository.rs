@@ -35,6 +35,7 @@ pub struct AuditLogFilter {
 }
 
 /// 監査ログのページ
+#[derive(Debug)]
 pub struct AuditLogPage {
     pub items:       Vec<AuditLog>,
     pub next_cursor: Option<String>,
@@ -240,10 +241,10 @@ impl AuditLogRepository for DynamoDbAuditLogRepository {
         if let Some(cursor_str) = cursor {
             let decoded = BASE64
                 .decode(cursor_str)
-                .map_err(|e| InfraError::DynamoDb(format!("カーソルのデコードに失敗: {e}")))?;
+                .map_err(|e| InfraError::InvalidInput(format!("カーソルのデコードに失敗: {e}")))?;
             let key_strings: HashMap<String, String> =
                 serde_json::from_slice(&decoded).map_err(|e| {
-                    InfraError::DynamoDb(format!("カーソルのデシリアライズに失敗: {e}"))
+                    InfraError::InvalidInput(format!("カーソルのデシリアライズに失敗: {e}"))
                 })?;
             let last_key: HashMap<String, AttributeValue> = key_strings
                 .into_iter()
