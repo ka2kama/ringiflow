@@ -21,7 +21,44 @@ tracing-subscriber が自動的に付与するフィールド。アプリケー�
 | `level` | string | ログレベル（INFO, WARN, ERROR） |
 | `target` | string | Rust モジュールパス |
 | `request_id` | string | UUID v7 ベースの Request ID（スパンフィールド） |
+| `tenant_id` | string | テナント ID（`X-Tenant-ID` ヘッダーから取得、不在時 `"-"`） |
+| `user_id` | string | ユーザー ID（BFF: 認証成功後に `record_user_id` で記録） |
 | `span.service` | string | サービス名（bff, core-service, auth-service） |
+
+## Canonical Log Line フィールド
+
+リクエスト完了時に `CanonicalLogLineLayer`（[canonical_log.rs](../../../backend/crates/shared/src/canonical_log.rs)）が出力するサマリログのフィールド。`log.type = "canonical"` マーカーで識別する。
+
+スパンフィールド（`request_id`, `tenant_id`, `user_id` 等）は `with_current_span(true)` により自動的にフラット化される。
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `log.type` | string | 常に `"canonical"`（Canonical Log Line の識別マーカー） |
+| `http.status_code` | u16 | HTTP レスポンスステータスコード |
+| `http.latency_ms` | u64 | リクエスト処理時間（ミリ秒） |
+| `error.message` | string | Service エラー時のみ出力（ERROR レベル） |
+
+ヘルスチェックパス（`/health`, `/health/ready`）は出力対象外。
+
+JSON 出力例（正常系）:
+
+```json
+{
+  "timestamp": "2026-02-27T12:34:56.789Z",
+  "level": "INFO",
+  "target": "ringiflow_shared::canonical_log",
+  "message": "リクエスト完了",
+  "span": { "name": "request", "service": "bff" },
+  "request_id": "019501a0-1234-7abc-8000-000000000001",
+  "method": "POST",
+  "uri": "/api/v1/workflows",
+  "tenant_id": "019501a0-0000-7000-8000-000000000001",
+  "user_id": "019501a0-9abc-7012-8000-000000000003",
+  "log.type": "canonical",
+  "http.status_code": 201,
+  "http.latency_ms": 45
+}
+```
 
 ## ビジネスイベントフィールド
 
@@ -77,6 +114,15 @@ tracing-subscriber が自動的に付与するフィールド。アプリケー�
 ## jq クエリ例
 
 ```bash
+# Canonical Log Line（リクエスト完了サマリ）
+jq 'select(.["log.type"] == "canonical")'
+
+# 遅いリクエスト（100ms 以上）
+jq 'select(.["log.type"] == "canonical" and .["http.latency_ms"] >= 100)'
+
+# エラーレスポンス（4xx/5xx）のサマリ
+jq 'select(.["log.type"] == "canonical" and .["http.status_code"] >= 400)'
+
 # 全ビジネスイベント
 jq 'select(.["event.kind"] == "business_event")'
 
@@ -153,6 +199,7 @@ tracing::error!("DB error: {}", e);
 
 ## プロジェクトでの使用箇所
 
+- Canonical Log Line: [`backend/crates/shared/src/canonical_log.rs`](../../../backend/crates/shared/src/canonical_log.rs)
 - マクロ定義: [`backend/crates/shared/src/event_log.rs`](../../../backend/crates/shared/src/event_log.rs)
 - ワークフローイベント: `backend/apps/core-service/src/usecase/workflow/command/` 配下
 - 認証イベント: `backend/apps/bff/src/handler/auth/login.rs`

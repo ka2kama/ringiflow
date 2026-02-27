@@ -135,7 +135,10 @@ use ringiflow_infra::{
     redis,
     repository::DynamoDbAuditLogRepository,
 };
-use ringiflow_shared::observability::{MakeRequestUuidV7, TracingConfig, make_request_span};
+use ringiflow_shared::{
+    canonical_log::CanonicalLogLineLayer,
+    observability::{MakeRequestUuidV7, TracingConfig, make_request_span},
+};
 use tokio::net::TcpListener;
 use tower_http::{
     request_id::{PropagateRequestIdLayer, SetRequestIdLayer},
@@ -491,10 +494,12 @@ async fn main() -> anyhow::Result<()> {
         // Request ID レイヤー（レイヤー順序が重要: 下に書いたものが外側）
         // 1. SetRequestIdLayer（最外）: リクエスト受信時に UUID v7 を生成（またはクライアント提供値を使用）
         // 2. TraceLayer: カスタムスパンに request_id を含め、全ログに自動注入
-        // 3. PropagateRequestIdLayer: レスポンスヘッダーに X-Request-Id をコピー
-        // 4. store_request_id: task-local に保存し、BFF → 内部サービスのヘッダー伝播に使用
+        // 3. CanonicalLogLineLayer: リクエスト完了時に1行サマリログを出力（スパン内）
+        // 4. PropagateRequestIdLayer: レスポンスヘッダーに X-Request-Id をコピー
+        // 5. store_request_id: task-local に保存し、BFF → 内部サービスのヘッダー伝播に使用
         .layer(from_fn(store_request_id))
         .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(CanonicalLogLineLayer)
         .layer(TraceLayer::new_for_http().make_span_with(make_request_span))
         .layer(SetRequestIdLayer::x_request_id(MakeRequestUuidV7));
 

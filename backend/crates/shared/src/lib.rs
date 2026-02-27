@@ -10,6 +10,8 @@
 //! - 外部クレートへの依存は最小限に抑える
 
 pub mod api_response;
+#[cfg(feature = "observability")]
+pub mod canonical_log;
 pub mod error_response;
 #[cfg(feature = "observability")]
 pub mod event_log;

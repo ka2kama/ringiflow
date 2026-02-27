@@ -97,7 +97,9 @@ pub async fn authenticate(
     jar: &CookieJar,
 ) -> Result<SessionData, Response> {
     let tenant_id = extract_tenant_id(headers).map_err(IntoResponse::into_response)?;
-    get_session(session_manager, jar, tenant_id).await
+    let session = get_session(session_manager, jar, tenant_id).await?;
+    ringiflow_shared::observability::record_user_id(session.user_id());
+    Ok(session)
 }
 
 // --- IntoResponse for CoreServiceError ---
