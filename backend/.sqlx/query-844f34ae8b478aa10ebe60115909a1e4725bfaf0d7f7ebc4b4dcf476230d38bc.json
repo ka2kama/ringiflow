@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                COUNT(*)::bigint as \"count!\",\n                COALESCE(SUM(size), 0)::bigint as \"total_size!\"\n            FROM documents\n            WHERE workflow_instance_id = $1 AND tenant_id = $2 AND status != 'deleted'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "total_size!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "844f34ae8b478aa10ebe60115909a1e4725bfaf0d7f7ebc4b4dcf476230d38bc"
+}

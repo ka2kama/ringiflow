@@ -29,6 +29,10 @@ pub enum CoreServiceError {
     #[error("フォルダが見つかりません")]
     FolderNotFound,
 
+    /// ドキュメントが見つからない（404）
+    #[error("ドキュメントが見つかりません")]
+    DocumentNotFound,
+
     /// バリデーションエラー（400）
     #[error("バリデーションエラー: {0}")]
     ValidationError(String),

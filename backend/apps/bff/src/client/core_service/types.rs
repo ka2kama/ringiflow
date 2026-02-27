@@ -359,6 +359,39 @@ pub struct UpdateFolderCoreRequest {
     pub parent_id: Option<Option<Uuid>>,
 }
 
+// --- ドキュメント関連の型 ---
+
+/// Upload URL 発行リクエスト（Core Service 内部 API 用）
+#[derive(Debug, Serialize)]
+pub struct RequestUploadUrlCoreRequest {
+    pub tenant_id: Uuid,
+    pub filename: String,
+    pub content_type: String,
+    pub content_length: i64,
+    pub folder_id: Option<Uuid>,
+    pub workflow_instance_id: Option<Uuid>,
+    pub uploaded_by: Uuid,
+}
+
+/// Upload URL レスポンス DTO（Core Service からのデシリアライズ用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct UploadUrlCoreDto {
+    pub document_id: Uuid,
+    pub upload_url:  String,
+    pub expires_in:  u64,
+}
+
+/// ドキュメント詳細 DTO（Core Service からのデシリアライズ用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct DocumentDetailCoreDto {
+    pub id:           Uuid,
+    pub filename:     String,
+    pub content_type: String,
+    pub size:         i64,
+    pub status:       String,
+    pub created_at:   String,
+}
+
 // --- ダッシュボード関連の型 ---
 
 /// ダッシュボード統計 DTO

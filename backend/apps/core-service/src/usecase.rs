@@ -14,6 +14,7 @@
 pub(crate) mod helpers;
 
 pub mod dashboard;
+pub mod document;
 pub mod folder;
 pub mod notification;
 pub mod role;
@@ -25,6 +26,7 @@ pub mod workflow_definition;
 use std::collections::HashMap;
 
 pub use dashboard::DashboardUseCaseImpl;
+pub use document::DocumentUseCaseImpl;
 pub use folder::FolderUseCaseImpl;
 pub use notification::{NotificationService, TemplateRenderer};
 use ringiflow_domain::user::UserId;

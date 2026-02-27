@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE documents\n            SET status = $2, updated_at = $3\n            WHERE id = $1 AND tenant_id = $4\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9a3cc4088bfb47c4232aa57e397c9d947b61b0ebc2eceee5846ccded36a5b961"
+}

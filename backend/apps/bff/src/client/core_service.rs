@@ -18,6 +18,7 @@
 //! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
 
 mod client_impl;
+mod document_client;
 mod error;
 mod folder_client;
 mod response;
@@ -28,6 +29,7 @@ mod user_client;
 mod workflow_client;
 
 pub use client_impl::*;
+pub use document_client::*;
 pub use error::*;
 pub use folder_client::*;
 pub use role_client::*;

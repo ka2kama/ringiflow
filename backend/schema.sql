@@ -142,6 +142,27 @@ COMMENT ON COLUMN public.display_id_counters.entity_type IS 'エンティティ�
 COMMENT ON COLUMN public.display_id_counters.last_number IS '最後に採番した番号（0 は未採番）';
 
 --
+-- Name: documents; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.documents (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    filename character varying(255) NOT NULL,
+    content_type character varying(100) NOT NULL,
+    size bigint NOT NULL,
+    s3_key character varying(1000) NOT NULL,
+    folder_id uuid,
+    workflow_instance_id uuid,
+    status character varying(20) DEFAULT 'uploading'::character varying NOT NULL,
+    uploaded_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone,
+    CONSTRAINT documents_context_check CHECK ((((folder_id IS NOT NULL) AND (workflow_instance_id IS NULL)) OR ((folder_id IS NULL) AND (workflow_instance_id IS NOT NULL))))
+);
+
+--
 -- Name: folders; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -786,6 +807,13 @@ ALTER TABLE ONLY public.display_id_counters
     ADD CONSTRAINT display_id_counters_pkey PRIMARY KEY (tenant_id, entity_type);
 
 --
+-- Name: documents documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_pkey PRIMARY KEY (id);
+
+--
 -- Name: folders folders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -901,6 +929,30 @@ CREATE INDEX idx_credentials_tenant_id ON auth.credentials USING btree (tenant_i
 --
 
 CREATE INDEX idx_credentials_user_id ON auth.credentials USING btree (user_id);
+
+--
+-- Name: idx_documents_folder_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_folder_id ON public.documents USING btree (folder_id) WHERE (folder_id IS NOT NULL);
+
+--
+-- Name: idx_documents_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_status ON public.documents USING btree (status) WHERE ((status)::text <> 'deleted'::text);
+
+--
+-- Name: idx_documents_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_tenant_id ON public.documents USING btree (tenant_id);
+
+--
+-- Name: idx_documents_workflow_instance_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_documents_workflow_instance_id ON public.documents USING btree (workflow_instance_id) WHERE (workflow_instance_id IS NOT NULL);
 
 --
 -- Name: idx_folders_parent_id; Type: INDEX; Schema: public; Owner: -
@@ -1096,6 +1148,34 @@ ALTER TABLE ONLY public.display_id_counters
     ADD CONSTRAINT display_id_counters_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 --
+-- Name: documents documents_folder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE RESTRICT;
+
+--
+-- Name: documents documents_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+--
+-- Name: documents documents_uploaded_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+--
+-- Name: documents documents_workflow_instance_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.documents
+    ADD CONSTRAINT documents_workflow_instance_id_fkey FOREIGN KEY (workflow_instance_id) REFERENCES public.workflow_instances(id) ON DELETE CASCADE;
+
+--
 -- Name: folders folders_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1261,6 +1341,12 @@ CREATE POLICY tenant_isolation ON auth.credentials TO ringiflow_app USING ((tena
 ALTER TABLE public.display_id_counters ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: documents; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: folders; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1289,6 +1375,12 @@ ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.display_id_counters TO ringiflow_app USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+--
+-- Name: documents tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.documents TO ringiflow_app USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 --
 -- Name: folders tenant_isolation; Type: POLICY; Schema: public; Owner: -

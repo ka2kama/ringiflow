@@ -133,6 +133,11 @@ impl IntoResponse for CoreServiceError {
                 "Folder Not Found",
                 "フォルダが見つかりません",
             ),
+            CoreServiceError::DocumentNotFound => not_found_response(
+                "document-not-found",
+                "Document Not Found",
+                "ドキュメントが見つかりません",
+            ),
             CoreServiceError::ValidationError(ref detail) => validation_error_response(detail),
             CoreServiceError::Forbidden(ref detail) => forbidden_response(detail),
             CoreServiceError::EmailAlreadyExists => {
