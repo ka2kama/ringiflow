@@ -74,10 +74,12 @@ impl WorkflowUseCaseImpl {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use ringiflow_domain::{
         tenant::TenantId,
-        user::UserId,
-        value_objects::{DisplayNumber, Version, WorkflowName},
+        user::{Email, User, UserId},
+        value_objects::{DisplayNumber, UserName, Version, WorkflowName},
         workflow::{
             NewWorkflowDefinition,
             NewWorkflowInstance,
@@ -92,6 +94,7 @@ mod tests {
     };
     use ringiflow_infra::{
         mock::{
+            MockUserRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
@@ -101,6 +104,7 @@ mod tests {
 
     use super::super::super::test_helpers::{
         build_sut,
+        build_sut_with_notification,
         setup_two_step_approval,
         single_approval_definition_json,
     };
@@ -529,5 +533,176 @@ mod tests {
             result_step2.status(),
             ringiflow_domain::workflow::WorkflowStepStatus::Completed
         );
+    }
+
+    // ===== 通知テスト =====
+
+    #[tokio::test]
+    async fn test_reject_step_却下通知が申請者に送信される() {
+        // Arrange
+        let tenant_id = TenantId::new();
+        let user_id = UserId::new(); // 申請者
+        let approver_id = UserId::new();
+        let now = chrono::Utc::now();
+
+        let definition_repo = MockWorkflowDefinitionRepository::new();
+        let instance_repo = MockWorkflowInstanceRepository::new();
+        let step_repo = MockWorkflowStepRepository::new();
+
+        let instance = WorkflowInstance::new(NewWorkflowInstance {
+            id: WorkflowInstanceId::new(),
+            tenant_id: tenant_id.clone(),
+            definition_id: WorkflowDefinitionId::new(),
+            definition_version: Version::initial(),
+            display_number: DisplayNumber::new(100).unwrap(),
+            title: "テスト申請".to_string(),
+            form_data: serde_json::json!({}),
+            initiated_by: user_id.clone(),
+            now,
+        })
+        .submitted(now)
+        .unwrap()
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
+
+        let step = WorkflowStep::new(NewWorkflowStep {
+            id: WorkflowStepId::new(),
+            instance_id: instance.id().clone(),
+            display_number: DisplayNumber::new(1).unwrap(),
+            step_id: "approval".to_string(),
+            step_name: "承認".to_string(),
+            step_type: "approval".to_string(),
+            assigned_to: Some(approver_id.clone()),
+            now,
+        })
+        .activated(now);
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
+
+        // ユーザー情報をモックに登録
+        let user_repo = MockUserRepository::new();
+        user_repo.add_user(User::new(
+            user_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(1).unwrap(),
+            Email::new("tanaka@example.com").unwrap(),
+            UserName::new("田中太郎").unwrap(),
+            now,
+        ));
+
+        let (sut, sender) = build_sut_with_notification(
+            &definition_repo,
+            &instance_repo,
+            &step_repo,
+            Arc::new(user_repo),
+            now,
+        );
+
+        let input = ApproveRejectInput {
+            version: step.version(),
+            comment: Some("領収書が添付されていません".to_string()),
+        };
+
+        // Act
+        let result = sut
+            .reject_step(
+                input,
+                step.id().clone(),
+                tenant_id.clone(),
+                approver_id.clone(),
+            )
+            .await;
+
+        // Assert: ワークフロー操作は成功
+        assert!(result.is_ok());
+
+        // Assert: 却下通知が申請者に送信されている
+        let sent = sender.sent_emails();
+        assert_eq!(sent.len(), 1, "却下メールが1通送信されるべき");
+        assert_eq!(sent[0].to, "tanaka@example.com");
+        assert!(
+            sent[0].subject.contains("却下"),
+            "件名に「却下」が含まれるべき: {}",
+            sent[0].subject
+        );
+        assert!(
+            sent[0].text_body.contains("領収書が添付されていません"),
+            "本文に却下コメントが含まれるべき"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_reject_step_ユーザー情報取得失敗でも却下操作は成功する() {
+        // Arrange
+        let tenant_id = TenantId::new();
+        let user_id = UserId::new();
+        let approver_id = UserId::new();
+        let now = chrono::Utc::now();
+
+        let definition_repo = MockWorkflowDefinitionRepository::new();
+        let instance_repo = MockWorkflowInstanceRepository::new();
+        let step_repo = MockWorkflowStepRepository::new();
+
+        let instance = WorkflowInstance::new(NewWorkflowInstance {
+            id: WorkflowInstanceId::new(),
+            tenant_id: tenant_id.clone(),
+            definition_id: WorkflowDefinitionId::new(),
+            definition_version: Version::initial(),
+            display_number: DisplayNumber::new(100).unwrap(),
+            title: "テスト申請".to_string(),
+            form_data: serde_json::json!({}),
+            initiated_by: user_id.clone(),
+            now,
+        })
+        .submitted(now)
+        .unwrap()
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
+
+        let step = WorkflowStep::new(NewWorkflowStep {
+            id: WorkflowStepId::new(),
+            instance_id: instance.id().clone(),
+            display_number: DisplayNumber::new(1).unwrap(),
+            step_id: "approval".to_string(),
+            step_name: "承認".to_string(),
+            step_type: "approval".to_string(),
+            assigned_to: Some(approver_id.clone()),
+            now,
+        })
+        .activated(now);
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
+
+        // ユーザー情報を登録しない（空の MockUserRepository）
+        let user_repo = MockUserRepository::new();
+        let (sut, sender) = build_sut_with_notification(
+            &definition_repo,
+            &instance_repo,
+            &step_repo,
+            Arc::new(user_repo),
+            now,
+        );
+
+        let input = ApproveRejectInput {
+            version: step.version(),
+            comment: Some("却下理由".to_string()),
+        };
+
+        // Act
+        let result = sut
+            .reject_step(
+                input,
+                step.id().clone(),
+                tenant_id.clone(),
+                approver_id.clone(),
+            )
+            .await;
+
+        // Assert: ワークフロー操作自体は成功する（fire-and-forget）
+        assert!(result.is_ok());
+
+        // Assert: 通知は送信されない（ユーザー情報がないため）
+        let sent = sender.sent_emails();
+        assert_eq!(sent.len(), 0, "ユーザー情報がない場合、通知は送信されない");
     }
 }
