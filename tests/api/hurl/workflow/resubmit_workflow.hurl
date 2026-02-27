@@ -228,7 +228,7 @@ retry: 3
 retry-interval: 1000
 HTTP 200
 [Asserts]
-jsonpath "$.messages_count" >= 1
+jsonpath "$.messages_count" == 1
 jsonpath "$.messages[0].To[0].Address" == "{{user_email}}"
 jsonpath "$.messages[0].Subject" contains "[RingiFlow] 承認依頼"
 jsonpath "$.messages[0].Subject" contains "再申請テスト申請"
