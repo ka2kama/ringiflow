@@ -1,0 +1,398 @@
+//! # Core Service アプリケーション構築
+//!
+//! DI（リポジトリ・UseCase・State）の初期化とルーター構築を担当する。
+//! `main.rs` はインフラ初期化とサーバー起動に集中する。
+
+use std::sync::Arc;
+
+use axum::{
+    Router,
+    routing::{get, patch, post, put},
+};
+use ringiflow_domain::clock::SystemClock;
+use ringiflow_infra::{
+    PgTransactionManager,
+    S3Client,
+    TransactionManager,
+    notification::{NoopNotificationSender, NotificationSender, SmtpNotificationSender},
+    repository::{
+        DisplayIdCounterRepository,
+        DocumentRepository,
+        FolderRepository,
+        NotificationLogRepository,
+        RoleRepository,
+        TenantRepository,
+        UserRepository,
+        WorkflowCommentRepository,
+        WorkflowDefinitionRepository,
+        WorkflowInstanceRepository,
+        WorkflowStepRepository,
+        display_id_counter_repository::PostgresDisplayIdCounterRepository,
+        document_repository::PostgresDocumentRepository,
+        folder_repository::PostgresFolderRepository,
+        notification_log_repository::PostgresNotificationLogRepository,
+        role_repository::PostgresRoleRepository,
+        tenant_repository::PostgresTenantRepository,
+        user_repository::PostgresUserRepository,
+        workflow_comment_repository::PostgresWorkflowCommentRepository,
+        workflow_definition_repository::PostgresWorkflowDefinitionRepository,
+        workflow_instance_repository::PostgresWorkflowInstanceRepository,
+        workflow_step_repository::PostgresWorkflowStepRepository,
+    },
+};
+use ringiflow_shared::{canonical_log::CanonicalLogLineLayer, observability::make_request_span};
+use tower_http::trace::TraceLayer;
+
+use crate::{
+    config::CoreConfig,
+    handler::{
+        DashboardState,
+        DocumentState,
+        FolderState,
+        ReadinessState,
+        RoleState,
+        TaskState,
+        UserState,
+        WorkflowDefinitionState,
+        WorkflowState,
+        approve_step,
+        approve_step_by_display_number,
+        archive_definition,
+        confirm_upload,
+        create_definition,
+        create_folder,
+        create_role,
+        create_user,
+        create_workflow,
+        delete_definition,
+        delete_folder,
+        delete_role,
+        get_dashboard_stats,
+        get_definition,
+        get_role,
+        get_task,
+        get_task_by_display_numbers,
+        get_user,
+        get_user_by_display_number,
+        get_user_by_email,
+        get_workflow,
+        get_workflow_by_display_number,
+        health_check,
+        list_comments,
+        list_definitions,
+        list_folders,
+        list_my_tasks,
+        list_my_workflows,
+        list_roles,
+        list_users,
+        post_comment,
+        publish_definition,
+        readiness_check,
+        reject_step,
+        reject_step_by_display_number,
+        request_changes_step,
+        request_changes_step_by_display_number,
+        request_upload_url,
+        resubmit_workflow,
+        resubmit_workflow_by_display_number,
+        submit_workflow,
+        submit_workflow_by_display_number,
+        update_definition,
+        update_folder,
+        update_role,
+        update_user,
+        update_user_status,
+        validate_definition,
+    },
+    usecase::{
+        DashboardUseCaseImpl,
+        DocumentUseCaseImpl,
+        FolderUseCaseImpl,
+        NotificationService,
+        RoleUseCaseImpl,
+        TaskUseCaseImpl,
+        TemplateRenderer,
+        UserUseCaseImpl,
+        WorkflowDefinitionUseCaseImpl,
+        WorkflowUseCaseImpl,
+        workflow::WorkflowUseCaseDeps,
+    },
+};
+
+/// DI コンテナの構築とルーター定義を行う
+///
+/// インフラ初期化済みの依存を受け取り、リポジトリ → UseCase → State → Router の
+/// 順に組み立てる。
+pub(crate) fn build_app(
+    pool: sqlx::PgPool,
+    s3_client: Arc<dyn S3Client>,
+    config: &CoreConfig,
+) -> Router {
+    // Readiness Check 用 State
+    let readiness_state = Arc::new(ReadinessState { pool: pool.clone() });
+
+    // 共有リポジトリインスタンスを初期化
+    let user_repo: Arc<dyn UserRepository> = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let tenant_repo: Arc<dyn TenantRepository> =
+        Arc::new(PostgresTenantRepository::new(pool.clone()));
+    let definition_repo: Arc<dyn WorkflowDefinitionRepository> =
+        Arc::new(PostgresWorkflowDefinitionRepository::new(pool.clone()));
+    let instance_repo: Arc<dyn WorkflowInstanceRepository> =
+        Arc::new(PostgresWorkflowInstanceRepository::new(pool.clone()));
+    let step_repo: Arc<dyn WorkflowStepRepository> =
+        Arc::new(PostgresWorkflowStepRepository::new(pool.clone()));
+    let comment_repo: Arc<dyn WorkflowCommentRepository> =
+        Arc::new(PostgresWorkflowCommentRepository::new(pool.clone()));
+    let counter_repo: Arc<dyn DisplayIdCounterRepository> =
+        Arc::new(PostgresDisplayIdCounterRepository::new(pool.clone()));
+
+    let folder_repo: Arc<dyn FolderRepository> =
+        Arc::new(PostgresFolderRepository::new(pool.clone()));
+    let document_repo: Arc<dyn DocumentRepository> =
+        Arc::new(PostgresDocumentRepository::new(pool.clone()));
+
+    let role_repo: Arc<dyn RoleRepository> = Arc::new(PostgresRoleRepository::new(pool.clone()));
+
+    // Clock（複数ユースケースで共有）
+    let clock: Arc<dyn ringiflow_domain::clock::Clock> = Arc::new(SystemClock);
+
+    // TransactionManager（複数ユースケースで共有）
+    let tx_manager: Arc<dyn TransactionManager> = Arc::new(PgTransactionManager::new(pool.clone()));
+
+    // ユーザー UseCase + State
+    let user_usecase = UserUseCaseImpl::new(user_repo.clone(), counter_repo.clone(), clock.clone());
+    let user_state = Arc::new(UserState {
+        user_repository:   user_repo.clone(),
+        tenant_repository: tenant_repo,
+        usecase:           user_usecase,
+    });
+
+    // フォルダ UseCase + State
+    let folder_usecase = FolderUseCaseImpl::new(folder_repo, clock.clone(), tx_manager.clone());
+    let folder_state = Arc::new(FolderState {
+        usecase: folder_usecase,
+    });
+
+    // ドキュメント UseCase + State
+    let document_usecase = DocumentUseCaseImpl::new(document_repo, s3_client, clock.clone());
+    let document_state = Arc::new(DocumentState {
+        usecase: document_usecase,
+    });
+
+    // ロール UseCase + State
+    let role_usecase = RoleUseCaseImpl::new(role_repo.clone(), clock.clone());
+    let role_state = Arc::new(RoleState {
+        role_repository: role_repo,
+        usecase:         role_usecase,
+    });
+
+    // ワークフロー定義管理 UseCase + State
+    let definition_usecase =
+        WorkflowDefinitionUseCaseImpl::new(definition_repo.clone(), clock.clone());
+    let definition_state = Arc::new(WorkflowDefinitionState {
+        usecase: definition_usecase,
+    });
+
+    // 通知サービス
+    // NOTIFICATION_BACKEND 環境変数で送信バックエンドを切り替える
+    let notification_sender: Arc<dyn NotificationSender> =
+        match config.notification.backend.as_str() {
+            "smtp" => {
+                tracing::info!(
+                    host = %config.notification.smtp_host,
+                    port = config.notification.smtp_port,
+                    "SMTP バックエンドで通知サービスを初期化します"
+                );
+                Arc::new(SmtpNotificationSender::new(
+                    &config.notification.smtp_host,
+                    config.notification.smtp_port,
+                    config.notification.from_address.clone(),
+                ))
+            }
+            // SES バックエンドは #879 で有効化
+            // "ses" => { ... }
+            _ => {
+                tracing::info!("Noop バックエンドで通知サービスを初期化します");
+                Arc::new(NoopNotificationSender)
+            }
+        };
+    let notification_log_repo: Arc<dyn NotificationLogRepository> =
+        Arc::new(PostgresNotificationLogRepository::new(pool));
+    let template_renderer = TemplateRenderer::new().expect("テンプレートエンジンの初期化に失敗");
+    let notification_service = Arc::new(NotificationService::new(
+        notification_sender,
+        template_renderer,
+        notification_log_repo,
+        config.notification.base_url.clone(),
+    ));
+
+    // ワークフロー UseCase
+    let workflow_usecase = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+        definition_repo,
+        instance_repo: instance_repo.clone(),
+        step_repo: step_repo.clone(),
+        comment_repo,
+        user_repo: user_repo.clone(),
+        counter_repo,
+        clock,
+        tx_manager,
+        notification_service,
+    });
+    let workflow_state = Arc::new(WorkflowState {
+        usecase: workflow_usecase,
+    });
+
+    // タスク UseCase
+    let task_usecase = TaskUseCaseImpl::new(instance_repo.clone(), step_repo.clone(), user_repo);
+    let task_state = Arc::new(TaskState {
+        usecase: task_usecase,
+    });
+
+    // ダッシュボード UseCase
+    let dashboard_usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+    let dashboard_state = Arc::new(DashboardState {
+        usecase: dashboard_usecase,
+    });
+
+    // ルーター構築
+    Router::new()
+      .route("/health", get(health_check))
+      .merge(
+          Router::new()
+              .route("/health/ready", get(readiness_check))
+              .with_state(readiness_state),
+      )
+      .route("/internal/users", get(list_users).post(create_user))
+      .route("/internal/users/by-email", get(get_user_by_email))
+      .route(
+         "/internal/users/{user_id}",
+         get(get_user).patch(update_user),
+      )
+      .route(
+         "/internal/users/{user_id}/status",
+         patch(update_user_status),
+      )
+      .route(
+         "/internal/users/by-display-number/{display_number}",
+         get(get_user_by_display_number),
+      )
+      .with_state(user_state)
+      // フォルダ管理 API
+      .route(
+         "/internal/folders",
+         get(list_folders).post(create_folder),
+      )
+      .route(
+         "/internal/folders/{folder_id}",
+         put(update_folder).delete(delete_folder),
+      )
+      .with_state(folder_state)
+      // ドキュメント管理 API
+      .route(
+         "/internal/documents/upload-url",
+         post(request_upload_url),
+      )
+      .route(
+         "/internal/documents/{document_id}/confirm",
+         post(confirm_upload),
+      )
+      .with_state(document_state)
+      // ロール管理 API
+      .route(
+         "/internal/roles",
+         get(list_roles).post(create_role),
+      )
+      .route(
+         "/internal/roles/{role_id}",
+         get(get_role).patch(update_role).delete(delete_role),
+      )
+      .with_state(role_state)
+      // ワークフロー定義管理 API
+      .route(
+         "/internal/workflow-definitions",
+         get(list_definitions).post(create_definition),
+      )
+      .route(
+         "/internal/workflow-definitions/{id}",
+         get(get_definition).put(update_definition).delete(delete_definition),
+      )
+      .route(
+         "/internal/workflow-definitions/{id}/publish",
+         post(publish_definition),
+      )
+      .route(
+         "/internal/workflow-definitions/{id}/archive",
+         post(archive_definition),
+      )
+      .route(
+         "/internal/workflow-definitions/validate",
+         post(validate_definition),
+      )
+      .with_state(definition_state)
+      // ワークフローインスタンス API
+      .route(
+         "/internal/workflows",
+         get(list_my_workflows).post(create_workflow),
+      )
+      .route("/internal/workflows/{id}", get(get_workflow))
+      .route("/internal/workflows/{id}/submit", post(submit_workflow))
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/approve",
+         post(approve_step),
+      )
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/reject",
+         post(reject_step),
+      )
+      .route(
+         "/internal/workflows/{id}/steps/{step_id}/request-changes",
+         post(request_changes_step),
+      )
+      .route(
+         "/internal/workflows/{id}/resubmit",
+         post(resubmit_workflow),
+      )
+      // display_number 対応 API
+      .route(
+         "/internal/workflows/by-display-number/{display_number}",
+         get(get_workflow_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/submit",
+         post(submit_workflow_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/approve",
+         post(approve_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/reject",
+         post(reject_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/steps/by-display-number/{step_display_number}/request-changes",
+         post(request_changes_step_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/resubmit",
+         post(resubmit_workflow_by_display_number),
+      )
+      .route(
+         "/internal/workflows/by-display-number/{display_number}/comments",
+         get(list_comments).post(post_comment),
+      )
+      .with_state(workflow_state)
+      // タスク API
+      .route("/internal/tasks/my", get(list_my_tasks))
+      .route("/internal/tasks/{id}", get(get_task))
+      .route(
+         "/internal/workflows/by-display-number/{workflow_display_number}/tasks/{step_display_number}",
+         get(get_task_by_display_numbers),
+      )
+      .with_state(task_state)
+      // ダッシュボード API
+      .route("/internal/dashboard/stats", get(get_dashboard_stats))
+      .with_state(dashboard_state)
+      .layer(CanonicalLogLineLayer)
+      .layer(TraceLayer::new_for_http().make_span_with(make_request_span))
+}
