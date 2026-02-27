@@ -40,6 +40,7 @@ trap 'rm -f "$non_rust_log"' EXIT
     just lint-improvements-sanitize
     just lint-plans
     just lint-plan-test-layers
+    just lint-plan-filenames
     just lint-rules
     just lint-openapi-handlers
     just check-doc-links

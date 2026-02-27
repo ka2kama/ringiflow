@@ -34,6 +34,10 @@ pre-commit:
       # 改善記録のサニタイズ違反検出（ユーザー発言の直接引用）
       glob: "process/improvements/**/*.md"
       run: ./scripts/check/sanitize-improvements.sh {staged_files}
+    check-plan-filenames:
+      # 計画ファイルの命名規則違反検出（ランダム名のブロック）
+      glob: "prompts/plans/*.md"
+      run: ./scripts/check/check-plan-filenames.sh {staged_files}
 
 # プッシュ前のチェック（lint + unit test、DB 不要）
 pre-push:
