@@ -193,6 +193,10 @@ jsonpath "$.status" == 409
 # When: 正しいバージョンで承認する
 # Then: ワークフローが Approved になり、ステップが Completed になる
 
+# Mailpit のメールをクリア（通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
+
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step_display_number}}/approve
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{user_csrf_token}}
@@ -235,3 +239,18 @@ jsonpath "$.data.steps[0].assigned_to.name" == "{{user_name}}"
 jsonpath "$.data.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.steps[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.steps[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# =============================================================================
+# 通知検証: 承認完了メールが申請者（admin）に送信されている
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" == 1
+jsonpath "$.messages[0].To[0].Address" == "{{admin_email}}"
+jsonpath "$.messages[0].Subject" contains "[RingiFlow] 承認完了"
+jsonpath "$.messages[0].Subject" contains "経費申請（承認テスト用）"

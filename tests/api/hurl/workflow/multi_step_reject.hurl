@@ -129,6 +129,10 @@ user_csrf_token: jsonpath "$.data.token"
 # When: user がステップ2を却下する
 # Then: インスタンスが Rejected になる（スキップ対象のステップなし）
 
+# Mailpit のメールをクリア（却下通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
+
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step2_display_number}}/reject
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{user_csrf_token}}
@@ -163,3 +167,18 @@ jsonpath "$.data.steps[1].status" == "Completed"
 jsonpath "$.data.steps[1].decision" == "Rejected"
 jsonpath "$.data.steps[1].comment" == "予算超過のため却下"
 jsonpath "$.data.steps[1].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# =============================================================================
+# 通知検証: 却下メールが申請者（admin）に送信されている
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" == 1
+jsonpath "$.messages[0].To[0].Address" == "{{admin_email}}"
+jsonpath "$.messages[0].Subject" contains "[RingiFlow] 却下"
+jsonpath "$.messages[0].Subject" contains "2段階却下テスト"

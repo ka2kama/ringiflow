@@ -4,9 +4,11 @@
 //! イベント）を `StepTerminationType` enum で切り替える。
 
 use ringiflow_domain::{
+    notification::WorkflowNotification,
     tenant::TenantId,
     user::UserId,
-    workflow::{WorkflowStep, WorkflowStepId, WorkflowStepStatus},
+    value_objects::{DisplayId, display_prefix},
+    workflow::{WorkflowInstance, WorkflowStep, WorkflowStepId, WorkflowStepStatus},
 };
 use ringiflow_shared::{event_log::event, log_business_event};
 
@@ -133,6 +135,15 @@ impl WorkflowUseCaseImpl {
 
         Self::log_termination_event(&termination, &step_id, &user_id, &tenant_id);
 
+        // 9. 通知送信（fire-and-forget）
+        self.send_termination_notification(
+            &completed_instance,
+            &terminated_step,
+            &termination,
+            &tenant_id,
+        )
+        .await;
+
         Ok(WorkflowWithSteps {
             instance: completed_instance,
             steps,
@@ -174,6 +185,89 @@ impl WorkflowUseCaseImpl {
             skipped_steps.push((skipped, version));
         }
         Ok(skipped_steps)
+    }
+
+    /// 終了通知を送信する（fire-and-forget）
+    ///
+    /// 却下・差し戻しの通知を申請者に送信する。
+    /// ユーザー情報の取得失敗や通知送信の失敗はログ出力のみで、
+    /// ワークフロー操作の結果には影響しない。
+    async fn send_termination_notification(
+        &self,
+        instance: &WorkflowInstance,
+        terminated_step: &WorkflowStep,
+        termination: &StepTerminationType,
+        tenant_id: &TenantId,
+    ) {
+        // 申請者の情報を取得
+        let applicant = match self
+            .deps
+            .user_repo
+            .find_by_id(instance.initiated_by())
+            .await
+        {
+            Ok(Some(user)) => user,
+            Ok(None) => {
+                tracing::warn!(
+                    user_id = %instance.initiated_by(),
+                    "通知用の申請者情報が見つかりません"
+                );
+                return;
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    user_id = %instance.initiated_by(),
+                    "通知用の申請者情報の取得に失敗"
+                );
+                return;
+            }
+        };
+
+        let workflow_display_id =
+            DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
+                .to_string();
+
+        let notification = Self::build_termination_notification(
+            termination,
+            instance.title(),
+            &workflow_display_id,
+            terminated_step.comment().map(|s| s.to_string()),
+            applicant.email().as_str().to_string(),
+            applicant.id().clone(),
+        );
+
+        self.deps
+            .notification_service
+            .notify(notification, tenant_id, instance.id())
+            .await;
+    }
+
+    /// 終了種別に応じた通知バリアントを構築する
+    fn build_termination_notification(
+        termination: &StepTerminationType,
+        workflow_title: &str,
+        workflow_display_id: &str,
+        comment: Option<String>,
+        applicant_email: String,
+        applicant_user_id: UserId,
+    ) -> WorkflowNotification {
+        match termination {
+            StepTerminationType::Reject => WorkflowNotification::Rejected {
+                workflow_title: workflow_title.to_string(),
+                workflow_display_id: workflow_display_id.to_string(),
+                comment,
+                applicant_email,
+                applicant_user_id,
+            },
+            StepTerminationType::RequestChanges => WorkflowNotification::ChangesRequested {
+                workflow_title: workflow_title.to_string(),
+                workflow_display_id: workflow_display_id.to_string(),
+                comment,
+                applicant_email,
+                applicant_user_id,
+            },
+        }
     }
 
     /// イベントログを記録する

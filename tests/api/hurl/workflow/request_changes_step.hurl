@@ -126,6 +126,10 @@ HTTP 200
 [Captures]
 user_csrf_token: jsonpath "$.data.token"
 
+# Mailpit のメールをクリア（通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
+
 # ステップ差し戻し
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step_display_number}}/request-changes
 X-Tenant-ID: {{tenant_id}}
@@ -162,6 +166,21 @@ jsonpath "$.data.steps[0].version" == 2
 jsonpath "$.data.steps[0].decision" == "RequestChanges"
 jsonpath "$.data.steps[0].comment" == "フォームデータに不備があります。修正をお願いします。"
 jsonpath "$.data.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# =============================================================================
+# 通知検証: 差し戻しメールが申請者（admin）に送信されている
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" == 1
+jsonpath "$.messages[0].To[0].Address" == "{{admin_email}}"
+jsonpath "$.messages[0].Subject" contains "[RingiFlow] 要修正"
+jsonpath "$.messages[0].Subject" contains "差し戻しテスト申請"
 
 # =============================================================================
 # 異常系: 状態遷移 — 差し戻し後の完了済みステップを承認

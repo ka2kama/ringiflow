@@ -101,6 +101,10 @@ jsonpath "$.data.steps[1].assigned_to.id" == "{{user_id}}"
 # Then: ステップ1が Completed になり、ステップ2が Active になる
 #       インスタンスは InProgress のまま
 
+# Mailpit のメールをクリア（ステップ1通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
+
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step1_display_number}}/approve
 X-Tenant-ID: {{tenant_id}}
 X-CSRF-Token: {{admin_csrf_token}}
@@ -134,6 +138,22 @@ jsonpath "$.data.steps[1].step_id" == "finance_approval"
 jsonpath "$.data.steps[1].status" == "Active"
 
 # =============================================================================
+# 通知検証: 中間ステップ承認で StepApproved + ApprovalRequest の2通
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" == 2
+jsonpath "$.messages[*].To[*].Address" includes "{{admin_email}}"
+jsonpath "$.messages[*].To[*].Address" includes "{{user_email}}"
+jsonpath "$.messages[*].Subject" includes "[RingiFlow] ステップ承認: 2段階承認テスト {{workflow_display_id}}"
+jsonpath "$.messages[*].Subject" includes "[RingiFlow] 承認依頼: 2段階承認テスト {{workflow_display_id}}"
+
+# =============================================================================
 # ステップ2: user が経理承認する（最終ステップ）
 # =============================================================================
 
@@ -162,6 +182,10 @@ user_csrf_token: jsonpath "$.data.token"
 # Given: user に割り当てられた Active なステップ2が存在する
 # When: user がステップ2を承認する
 # Then: インスタンスが Approved になる
+
+# Mailpit のメールをクリア（最終ステップ通知テスト用）
+DELETE {{mailpit_url}}/api/v1/messages
+HTTP 200
 
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step2_display_number}}/approve
 X-Tenant-ID: {{tenant_id}}
@@ -196,3 +220,18 @@ jsonpath "$.data.steps[1].status" == "Completed"
 jsonpath "$.data.steps[1].decision" == "Approved"
 jsonpath "$.data.steps[1].comment" == "経理承認します"
 jsonpath "$.data.steps[1].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# =============================================================================
+# 通知検証: 最終ステップ承認で承認完了メールが申請者（admin）に送信
+# =============================================================================
+
+GET {{mailpit_url}}/api/v1/messages
+[Options]
+retry: 3
+retry-interval: 1000
+HTTP 200
+[Asserts]
+jsonpath "$.messages_count" == 1
+jsonpath "$.messages[0].To[0].Address" == "{{admin_email}}"
+jsonpath "$.messages[0].Subject" contains "[RingiFlow] 承認完了"
+jsonpath "$.messages[0].Subject" contains "2段階承認テスト"
