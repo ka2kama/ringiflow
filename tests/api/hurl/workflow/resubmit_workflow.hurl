@@ -166,6 +166,9 @@ Content-Type: application/json
   "version": 2
 }
 HTTP 400
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
+jsonpath "$.status" == 400
 
 # ===== 正常系テスト: admin が再申請する =====
 

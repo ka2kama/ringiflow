@@ -101,7 +101,7 @@ Content-Type: application/json
 }
 HTTP 404
 [Asserts]
-jsonpath "$.type" exists
+jsonpath "$.type" == "https://ringiflow.example.com/errors/step-not-found"
 jsonpath "$.status" == 404
 
 # ===== 正常系テスト: user がステップを差し戻す =====
