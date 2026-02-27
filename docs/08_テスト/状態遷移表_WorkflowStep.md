@@ -57,7 +57,7 @@ WorkflowStep の全状態 × 全操作のマトリクス。各セルに遷移先
 | Active → Completed(custom) | `completed()` を使用するテスト | ✅ |
 | Pending → Skipped | `test_スキップ_待機中から成功` | ✅ |
 
-### 異常遷移（Error セル: 12 セル）
+### 異常遷移（Error セル: 15 セル）
 
 `activated()` はガードなしのため Error セルは approve/reject/request_changes/completed/skipped の 5 操作 × (対象外の状態) で構成される。
 
@@ -72,6 +72,9 @@ WorkflowStep の全状態 × 全操作のマトリクス。各セルに遷移先
 | Pending | `request_changes()` | `test_アクティブ以外で差し戻しするとエラー` (rstest) | ✅ |
 | Completed | `request_changes()` | 同上 | ✅ |
 | Skipped | `request_changes()` | 同上 | ✅ |
+| Pending | `completed()` | — | ❌ |
+| Completed | `completed()` | — | ❌ |
+| Skipped | `completed()` | — | ❌ |
 | Active | `skipped()` | `test_スキップ_待機中以外ではエラー` (rstest) | ✅ |
 | Completed | `skipped()` | 同上 | ✅ |
 | Skipped | `skipped()` | 同上 | ✅ |
@@ -81,10 +84,10 @@ WorkflowStep の全状態 × 全操作のマトリクス。各セルに遷移先
 | カテゴリ | 総数 | テスト済み | カバー率 |
 |---------|------|-----------|---------|
 | 正常遷移 | 6 | 6 | 100% |
-| 異常遷移 | 12 | 12 | 100% |
-| **合計** | **18** | **18** | **100%** |
+| 異常遷移 | 15 | 12 | 80% |
+| **合計** | **21** | **18** | **86%** |
 
-注: `activated()` の呼び出し（4 セル）はガードなしのため Error セルに含めない。呼び出し元のユースケース層でのテストでカバーされる。
+注: `activated()` の呼び出し（4 セル）はガードなしのため Error セルに含めない。呼び出し元のユースケース層でのテストでカバーされる。`completed()` の Error セルは `approve()` 等と同一のガードロジック（Active 以外はエラー）だが、専用テストは未作成。
 
 ## 不変条件
 

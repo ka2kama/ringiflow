@@ -51,7 +51,7 @@ WorkflowInstance の全状態 × 全操作のマトリクス。各セルに遷�
 
 ## ユニットテストカバレッジ
 
-### 正常遷移（成功セル: 10 セル）
+### 正常遷移（成功セル: 11 セル）
 
 | 遷移 | テスト名 | カバー |
 |------|---------|--------|
@@ -67,7 +67,7 @@ WorkflowInstance の全状態 × 全操作のマトリクス。各セルに遷�
 | InProgress → Cancelled(FromActive) | `test_処理中からの取消後の状態` | ✅ |
 | ChangesRequested → Cancelled(FromActive) | `test_要修正状態からの取消後の状態` | ✅ |
 
-### 異常遷移（Error セル: 46 セル）
+### 異常遷移（Error セル: 45 セル）
 
 テスト済みの Error セルを以下に示す。テスト名のない行は未テスト。
 
