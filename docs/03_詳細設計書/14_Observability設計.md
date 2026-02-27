@@ -34,6 +34,7 @@ RingiFlow の Observability（可観測性）基盤の設計を定義する。�
 | アプリケーション計装（`tracing::instrument`） | アラート・Runbook |
 | ビジネスイベントログ | サンプリング戦略 |
 | エラーコンテキスト構造化 | |
+| Canonical Log Line | |
 
 ---
 
@@ -76,6 +77,7 @@ flowchart LR
 
     subgraph Shared["共通モジュール"]
         Obs["shared::observability"]
+        Canon["shared::canonical_log"]
         Evt["shared::event_log"]
     end
 
@@ -87,13 +89,16 @@ flowchart LR
     BFF --> Obs
     Core --> Obs
     Auth --> Obs
+    BFF --> Canon
+    Core --> Canon
+    Auth --> Canon
     BFF --> Evt
     Core --> Evt
     Obs --> Pretty
     Obs --> JSON
 ```
 
-3 サービスが `shared::observability` モジュールを共有し、環境変数 `LOG_FORMAT` で出力形式を切り替える。`shared::event_log` はビジネスイベントとエラーコンテキストの構造化ヘルパーを提供する。
+3 サービスが `shared::observability` モジュールを共有し、環境変数 `LOG_FORMAT` で出力形式を切り替える。`shared::canonical_log` はリクエスト完了時の Canonical Log Line を、`shared::event_log` はビジネスイベントとエラーコンテキストの構造化ヘルパーを提供する。
 
 ### Phase 4 の構成
 
@@ -408,6 +413,8 @@ pub async fn handler(...) -> ... { ... }
 | `level` | string | INFO / WARN / ERROR 等 | tracing-subscriber |
 | `target` | string | Rust モジュールパス | tracing-subscriber |
 | `request_id` | string | UUID v7 | `make_request_span` |
+| `tenant_id` | string | テナント ID（`X-Tenant-ID` ヘッダー、不在時 `"-"`） | `make_request_span` |
+| `user_id` | string | ユーザー ID（BFF: 認証後に `record_user_id` で記録） | `make_request_span` + `record_user_id` |
 | `span.service` | string | bff / core-service / auth-service | main.rs の `info_span!` |
 
 ### Request ID 伝播
@@ -450,6 +457,52 @@ sequenceDiagram
 | `current_request_id` | `bff/src/middleware/request_id.rs` | task-local からの Request ID 取得 |
 
 BFF の task-local 伝播: Request ID を引数として全関数に渡す方法は 34 箇所のシグネチャ変更が必要で侵襲的なため、task-local による暗黙的伝播を選択した。
+
+---
+
+## Canonical Log Line 設計
+
+Stripe が提唱した [Canonical Log Lines パターン](https://brandur.org/canonical-log-lines) に基づき、HTTP リクエスト完了時に1行で全重要情報を集約するサマリログを出力する。
+
+### 責務分離
+
+| 層 | 責務 | レベル |
+|---|------|--------|
+| TraceLayer | スパン作成（method, uri, request_id, tenant_id, user_id）。リクエストスコープのコンテキスト管理 | スパン |
+| CanonicalLogLineLayer | リクエスト完了サマリ（status, latency）。1行で全体像を提供 | INFO イベント |
+
+TraceLayer のデフォルト `on_request`/`on_response` は DEBUG レベル。Canonical Log Line は INFO レベルで `log.type = "canonical"` マーカー付き。
+
+### レイヤー配置
+
+CanonicalLogLineLayer は TraceLayer の内側（スパン内）に配置し、スパンフィールドを活用する。
+
+BFF:
+
+```
+SetRequestIdLayer（最外）→ TraceLayer → CanonicalLogLineLayer → PropagateRequestIdLayer → store_request_id → no_cache → csrf → authz → handler
+```
+
+Core Service / Auth Service:
+
+```
+TraceLayer → CanonicalLogLineLayer → handler
+```
+
+### フィールド
+
+Canonical Log Line イベント自体は `http.status_code`, `http.latency_ms`, `log.type` のみを追加する。`request_id`, `method`, `uri`, `tenant_id`, `user_id` はスパンから `with_current_span(true)` + `flatten_event(true)` により自動供給される。
+
+フィールドスキーマの詳細は [ログスキーマ > Canonical Log Line フィールド](../06_ナレッジベース/backend/log-schema.md#canonical-log-line-フィールド) を参照。
+
+### ヘルスチェックの除外
+
+`path.starts_with("/health")` で判定し、`/health`（liveness）と `/health/ready`（readiness）を出力対象外とする。[高頻度イベントの抑制基準](#高頻度イベントの抑制基準)に基づく。
+
+### user_id のスパン注入
+
+- `tenant_id`: `make_request_span` で `X-Tenant-ID` ヘッダーから取得（ヘッダー不在時は `"-"`）
+- `user_id`: `make_request_span` で `tracing::field::Empty` として宣言。BFF の `authenticate()` 成功後に `record_user_id` で記録
 
 ---
 
@@ -687,6 +740,7 @@ backend/
 ├── crates/
 │   ├── shared/src/
 │   │   ├── observability.rs     # トレーシング初期化、Request ID 生成、スパン作成
+│   │   ├── canonical_log.rs     # Canonical Log Line ミドルウェア（tower Layer/Service）
 │   │   └── event_log.rs         # ビジネスイベントマクロ、フィールド定数
 │   └── domain/src/
 │       ├── macros.rs            # PII マスキングマクロ（define_validated_string!）
@@ -706,15 +760,18 @@ docs/
 ```mermaid
 flowchart TB
     Obs["shared::observability"]
+    Canon["shared::canonical_log"]
     Evt["shared::event_log"]
     Macros["domain::macros<br/>（PII マスキング）"]
     ReqId["bff::middleware::request_id"]
     Schema["log-schema.md"]
 
     Obs -->|"feature gate:<br/>observability"| Subscriber["tracing-subscriber<br/>tower-http<br/>uuid"]
+    Canon -->|"feature gate:<br/>observability"| Tower["tower<br/>http<br/>tracing"]
     Evt -->|"re-export"| Tracing["tracing::info!"]
     ReqId -->|"使用"| Obs
     Schema -.->|"文書化"| Obs
+    Schema -.->|"文書化"| Canon
     Schema -.->|"文書化"| Evt
     Macros -->|"Debug 出力に影響"| Tracing
 ```
@@ -729,3 +786,4 @@ flowchart TB
 |------|---------|
 | 2026-02-19 | 初版作成（#655） |
 | 2026-02-27 | ログポリシーセクション追加（#941） |
+| 2026-02-27 | Canonical Log Line セクション追加、tenant_id/user_id スパンフィールド追加（#942） |
