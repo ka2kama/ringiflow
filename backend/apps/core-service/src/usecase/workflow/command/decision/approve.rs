@@ -1,9 +1,10 @@
 //! ワークフローステップの承認
 
 use ringiflow_domain::{
+    notification::WorkflowNotification,
     tenant::TenantId,
     user::UserId,
-    value_objects::DisplayNumber,
+    value_objects::{DisplayId, DisplayNumber, display_prefix},
     workflow::WorkflowStepId,
 };
 use ringiflow_shared::{event_log::event, log_business_event};
@@ -150,6 +151,16 @@ impl WorkflowUseCaseImpl {
             "承認ステップ完了"
         );
 
+        // 通知送信（fire-and-forget）
+        self.send_approval_notifications(
+            &updated_instance,
+            &approved_step,
+            activated_next_step.as_ref().map(|(s, _)| s),
+            &steps,
+            &tenant_id,
+        )
+        .await;
+
         Ok(WorkflowWithSteps {
             instance: updated_instance,
             steps,
@@ -188,14 +199,104 @@ impl WorkflowUseCaseImpl {
         self.approve_step(input, step.id().clone(), tenant_id, user_id)
             .await
     }
+
+    /// 承認操作後の通知を送信する（fire-and-forget）
+    ///
+    /// 最終ステップか中間ステップかで送信する通知が異なる:
+    /// - 最終ステップ: `Approved` → 申請者
+    /// - 中間ステップ: `StepApproved` → 申請者 + `ApprovalRequest` → 次の承認者
+    async fn send_approval_notifications(
+        &self,
+        instance: &ringiflow_domain::workflow::WorkflowInstance,
+        approved_step: &ringiflow_domain::workflow::WorkflowStep,
+        activated_next_step: Option<&ringiflow_domain::workflow::WorkflowStep>,
+        all_steps: &[ringiflow_domain::workflow::WorkflowStep],
+        tenant_id: &TenantId,
+    ) {
+        let workflow_display_id =
+            DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
+                .to_string();
+
+        // 申請者の情報を取得
+        let applicant = match self
+            .deps
+            .user_repo
+            .find_by_id(instance.initiated_by())
+            .await
+        {
+            Ok(Some(user)) => user,
+            Ok(None) => {
+                tracing::warn!(
+                    user_id = %instance.initiated_by(),
+                    "通知用の申請者情報が見つかりません"
+                );
+                return;
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    user_id = %instance.initiated_by(),
+                    "通知用の申請者情報の取得に失敗"
+                );
+                return;
+            }
+        };
+
+        if activated_next_step.is_some() {
+            // 中間ステップ: StepApproved → 申請者
+            let step_approved = WorkflowNotification::StepApproved {
+                workflow_title:      instance.title().to_string(),
+                workflow_display_id: workflow_display_id.clone(),
+                step_name:           approved_step.step_name().to_string(),
+                approver_name:       self.resolve_user_name(approved_step.assigned_to()).await,
+                applicant_email:     applicant.email().as_str().to_string(),
+                applicant_user_id:   applicant.id().clone(),
+            };
+            self.deps
+                .notification_service
+                .notify(step_approved, tenant_id, instance.id())
+                .await;
+
+            // ApprovalRequest → 次の承認者（既存ヘルパーを再利用）
+            self.send_approval_request_notification(instance, all_steps, tenant_id)
+                .await;
+        } else {
+            // 最終ステップ: Approved → 申請者
+            let approved = WorkflowNotification::Approved {
+                workflow_title: instance.title().to_string(),
+                workflow_display_id,
+                applicant_email: applicant.email().as_str().to_string(),
+                applicant_user_id: applicant.id().clone(),
+            };
+            self.deps
+                .notification_service
+                .notify(approved, tenant_id, instance.id())
+                .await;
+        }
+    }
+
+    /// ユーザー ID からユーザー名を解決する（通知用）
+    ///
+    /// 取得できない場合は空文字を返す。
+    async fn resolve_user_name(&self, user_id: Option<&UserId>) -> String {
+        let Some(user_id) = user_id else {
+            return String::new();
+        };
+        match self.deps.user_repo.find_by_id(user_id).await {
+            Ok(Some(user)) => user.name().as_str().to_string(),
+            _ => String::new(),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use ringiflow_domain::{
         tenant::TenantId,
-        user::UserId,
-        value_objects::{DisplayNumber, Version, WorkflowName},
+        user::{Email, User, UserId},
+        value_objects::{DisplayNumber, UserName, Version, WorkflowName},
         workflow::{
             NewWorkflowDefinition,
             NewWorkflowInstance,
@@ -210,6 +311,7 @@ mod tests {
     };
     use ringiflow_infra::{
         mock::{
+            MockUserRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
@@ -219,6 +321,7 @@ mod tests {
 
     use super::super::super::test_helpers::{
         build_sut,
+        build_sut_with_notification,
         setup_two_step_approval,
         single_approval_definition_json,
     };
@@ -639,5 +742,311 @@ mod tests {
             result_step2.status(),
             ringiflow_domain::workflow::WorkflowStepStatus::Completed
         );
+    }
+
+    // ===== 通知テスト =====
+
+    #[tokio::test]
+    async fn test_approve_step_最終承認で承認完了通知が申請者に送信される() {
+        // Arrange
+        let tenant_id = TenantId::new();
+        let user_id = UserId::new(); // 申請者
+        let approver_id = UserId::new(); // 承認者
+        let now = chrono::Utc::now();
+
+        let definition_repo = MockWorkflowDefinitionRepository::new();
+        let instance_repo = MockWorkflowInstanceRepository::new();
+        let step_repo = MockWorkflowStepRepository::new();
+
+        // 1段階承認の定義を追加
+        let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+            id: WorkflowDefinitionId::new(),
+            tenant_id: tenant_id.clone(),
+            name: WorkflowName::new("経費精算申請").unwrap(),
+            description: Some("テスト用定義".to_string()),
+            definition: single_approval_definition_json(),
+            created_by: user_id.clone(),
+            now,
+        })
+        .published(now)
+        .unwrap();
+        definition_repo.add_definition(definition.clone());
+
+        let instance = WorkflowInstance::new(NewWorkflowInstance {
+            id: WorkflowInstanceId::new(),
+            tenant_id: tenant_id.clone(),
+            definition_id: definition.id().clone(),
+            definition_version: Version::initial(),
+            display_number: DisplayNumber::new(100).unwrap(),
+            title: "テスト申請".to_string(),
+            form_data: serde_json::json!({}),
+            initiated_by: user_id.clone(),
+            now,
+        })
+        .submitted(now)
+        .unwrap()
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
+
+        let step = WorkflowStep::new(NewWorkflowStep {
+            id: WorkflowStepId::new(),
+            instance_id: instance.id().clone(),
+            display_number: DisplayNumber::new(1).unwrap(),
+            step_id: "approval".to_string(),
+            step_name: "承認".to_string(),
+            step_type: "approval".to_string(),
+            assigned_to: Some(approver_id.clone()),
+            now,
+        })
+        .activated(now);
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
+
+        // ユーザー情報をモックに登録
+        let user_repo = MockUserRepository::new();
+        user_repo.add_user(User::new(
+            user_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(1).unwrap(),
+            Email::new("tanaka@example.com").unwrap(),
+            UserName::new("田中太郎").unwrap(),
+            now,
+        ));
+
+        let (sut, sender) = build_sut_with_notification(
+            &definition_repo,
+            &instance_repo,
+            &step_repo,
+            Arc::new(user_repo),
+            now,
+        );
+
+        let input = ApproveRejectInput {
+            version: step.version(),
+            comment: Some("承認します".to_string()),
+        };
+
+        // Act
+        let result = sut
+            .approve_step(
+                input,
+                step.id().clone(),
+                tenant_id.clone(),
+                approver_id.clone(),
+            )
+            .await;
+
+        // Assert: ワークフロー操作は成功
+        assert!(result.is_ok());
+
+        // Assert: 承認完了通知が申請者に送信されている
+        let sent = sender.sent_emails();
+        assert_eq!(sent.len(), 1, "承認完了メールが1通送信されるべき");
+        assert_eq!(sent[0].to, "tanaka@example.com");
+        assert!(
+            sent[0].subject.contains("承認完了"),
+            "件名に「承認完了」が含まれるべき: {}",
+            sent[0].subject
+        );
+        assert!(
+            sent[0].subject.contains("テスト申請"),
+            "件名にワークフロータイトルが含まれるべき: {}",
+            sent[0].subject
+        );
+    }
+
+    #[tokio::test]
+    async fn test_approve_step_中間ステップで通知2通が送信される() {
+        // Arrange
+        let tenant_id = TenantId::new();
+        let user_id = UserId::new(); // 申請者
+        let approver1_id = UserId::new(); // ステップ1の承認者
+        let approver2_id = UserId::new(); // ステップ2の承認者
+        let now = chrono::Utc::now();
+
+        let (definition, instance, step1, step2) =
+            setup_two_step_approval(&tenant_id, &user_id, &approver1_id, &approver2_id, now);
+
+        let definition_repo = MockWorkflowDefinitionRepository::new();
+        let instance_repo = MockWorkflowInstanceRepository::new();
+        let step_repo = MockWorkflowStepRepository::new();
+
+        definition_repo.add_definition(definition);
+        instance_repo.insert_for_test(&instance).await.unwrap();
+        step_repo.insert_for_test(&step1, &tenant_id).await.unwrap();
+        step_repo.insert_for_test(&step2, &tenant_id).await.unwrap();
+
+        // ユーザー情報をモックに登録
+        let user_repo = MockUserRepository::new();
+        user_repo.add_user(User::new(
+            user_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(1).unwrap(),
+            Email::new("tanaka@example.com").unwrap(),
+            UserName::new("田中太郎").unwrap(),
+            now,
+        ));
+        user_repo.add_user(User::new(
+            approver1_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(2).unwrap(),
+            Email::new("suzuki@example.com").unwrap(),
+            UserName::new("鈴木一郎").unwrap(),
+            now,
+        ));
+        user_repo.add_user(User::new(
+            approver2_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(3).unwrap(),
+            Email::new("yamada@example.com").unwrap(),
+            UserName::new("山田花子").unwrap(),
+            now,
+        ));
+
+        let (sut, sender) = build_sut_with_notification(
+            &definition_repo,
+            &instance_repo,
+            &step_repo,
+            Arc::new(user_repo),
+            now,
+        );
+
+        let input = ApproveRejectInput {
+            version: step1.version(),
+            comment: Some("上長承認OK".to_string()),
+        };
+
+        // Act
+        let result = sut
+            .approve_step(
+                input,
+                step1.id().clone(),
+                tenant_id.clone(),
+                approver1_id.clone(),
+            )
+            .await;
+
+        // Assert: ワークフロー操作は成功
+        assert!(result.is_ok());
+
+        // Assert: 2通の通知が送信されている
+        // 1. StepApproved → 申請者
+        // 2. ApprovalRequest → 次の承認者
+        let sent = sender.sent_emails();
+        assert_eq!(
+            sent.len(),
+            2,
+            "ステップ承認通知と承認依頼通知の計2通が送信されるべき"
+        );
+
+        // 申請者への StepApproved 通知
+        let step_approved_mail = sent
+            .iter()
+            .find(|m| m.to == "tanaka@example.com")
+            .expect("申請者への通知があるべき");
+        assert!(
+            step_approved_mail.subject.contains("ステップ承認"),
+            "件名に「ステップ承認」が含まれるべき: {}",
+            step_approved_mail.subject
+        );
+
+        // 次の承認者への ApprovalRequest 通知
+        let approval_request_mail = sent
+            .iter()
+            .find(|m| m.to == "yamada@example.com")
+            .expect("次の承認者への通知があるべき");
+        assert!(
+            approval_request_mail.subject.contains("承認依頼"),
+            "件名に「承認依頼」が含まれるべき: {}",
+            approval_request_mail.subject
+        );
+    }
+
+    #[tokio::test]
+    async fn test_approve_step_ユーザー情報取得失敗でも承認操作は成功する() {
+        // Arrange
+        let tenant_id = TenantId::new();
+        let user_id = UserId::new();
+        let approver_id = UserId::new();
+        let now = chrono::Utc::now();
+
+        let definition_repo = MockWorkflowDefinitionRepository::new();
+        let instance_repo = MockWorkflowInstanceRepository::new();
+        let step_repo = MockWorkflowStepRepository::new();
+
+        let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+            id: WorkflowDefinitionId::new(),
+            tenant_id: tenant_id.clone(),
+            name: WorkflowName::new("経費精算申請").unwrap(),
+            description: Some("テスト用定義".to_string()),
+            definition: single_approval_definition_json(),
+            created_by: user_id.clone(),
+            now,
+        })
+        .published(now)
+        .unwrap();
+        definition_repo.add_definition(definition.clone());
+
+        let instance = WorkflowInstance::new(NewWorkflowInstance {
+            id: WorkflowInstanceId::new(),
+            tenant_id: tenant_id.clone(),
+            definition_id: definition.id().clone(),
+            definition_version: Version::initial(),
+            display_number: DisplayNumber::new(100).unwrap(),
+            title: "テスト申請".to_string(),
+            form_data: serde_json::json!({}),
+            initiated_by: user_id.clone(),
+            now,
+        })
+        .submitted(now)
+        .unwrap()
+        .with_current_step("approval".to_string(), now)
+        .unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
+
+        let step = WorkflowStep::new(NewWorkflowStep {
+            id: WorkflowStepId::new(),
+            instance_id: instance.id().clone(),
+            display_number: DisplayNumber::new(1).unwrap(),
+            step_id: "approval".to_string(),
+            step_name: "承認".to_string(),
+            step_type: "approval".to_string(),
+            assigned_to: Some(approver_id.clone()),
+            now,
+        })
+        .activated(now);
+        step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
+
+        // ユーザー情報を登録しない（空の MockUserRepository）
+        let user_repo = MockUserRepository::new();
+        let (sut, sender) = build_sut_with_notification(
+            &definition_repo,
+            &instance_repo,
+            &step_repo,
+            Arc::new(user_repo),
+            now,
+        );
+
+        let input = ApproveRejectInput {
+            version: step.version(),
+            comment: Some("承認します".to_string()),
+        };
+
+        // Act
+        let result = sut
+            .approve_step(
+                input,
+                step.id().clone(),
+                tenant_id.clone(),
+                approver_id.clone(),
+            )
+            .await;
+
+        // Assert: ワークフロー操作自体は成功する（fire-and-forget）
+        assert!(result.is_ok());
+
+        // Assert: 通知は送信されない（ユーザー情報がないため）
+        let sent = sender.sent_emails();
+        assert_eq!(sent.len(), 0, "ユーザー情報がない場合、通知は送信されない");
     }
 }

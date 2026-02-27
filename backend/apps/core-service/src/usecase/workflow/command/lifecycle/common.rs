@@ -96,7 +96,7 @@ impl WorkflowUseCaseImpl {
     /// 最初の Active ステップの承認者に対して通知メールを送信する。
     /// ユーザー情報の取得失敗や通知送信の失敗はログ出力のみで、
     /// ワークフロー操作の結果には影響しない。
-    pub(super) async fn send_approval_request_notification(
+    pub(in crate::usecase::workflow::command) async fn send_approval_request_notification(
         &self,
         instance: &WorkflowInstance,
         steps: &[WorkflowStep],
