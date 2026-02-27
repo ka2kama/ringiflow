@@ -165,6 +165,26 @@ mod tests {
         assert!(TenantName::new(name).is_ok());
     }
 
+    // TenantName の特殊文字テスト
+
+    #[test]
+    fn test_テナント名はhtmlタグを含む文字列を受け入れる() {
+        let name = TenantName::new("Test<script>alert('xss')</script>Tenant");
+        assert!(name.is_ok());
+    }
+
+    #[test]
+    fn test_テナント名は改行を含む文字列を受け入れる() {
+        let name = TenantName::new("Test\nTenant");
+        assert!(name.is_ok());
+    }
+
+    #[test]
+    fn test_テナント名はタブを含む文字列を受け入れる() {
+        let name = TenantName::new("Test\tTenant");
+        assert!(name.is_ok());
+    }
+
     // Tenant のテスト
 
     #[test]
