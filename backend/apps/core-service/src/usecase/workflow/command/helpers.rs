@@ -16,7 +16,8 @@ use crate::error::CoreError;
 impl WorkflowUseCaseImpl {
     /// トランザクションを開始する
     pub(super) async fn begin_tx(&self) -> Result<TxContext, CoreError> {
-        self.tx_manager
+        self.deps
+            .tx_manager
             .begin()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))
@@ -37,7 +38,8 @@ impl WorkflowUseCaseImpl {
         expected_version: Version,
         tenant_id: &TenantId,
     ) -> Result<(), CoreError> {
-        self.step_repo
+        self.deps
+            .step_repo
             .update_with_version_check(tx, step, expected_version, tenant_id)
             .await
             .map_err(|e| match e {
@@ -56,7 +58,8 @@ impl WorkflowUseCaseImpl {
         expected_version: Version,
         tenant_id: &TenantId,
     ) -> Result<(), CoreError> {
-        self.instance_repo
+        self.deps
+            .instance_repo
             .update_with_version_check(tx, instance, expected_version, tenant_id)
             .await
             .map_err(|e| match e {
@@ -74,7 +77,8 @@ impl WorkflowUseCaseImpl {
         instance_id: &WorkflowInstanceId,
         tenant_id: &TenantId,
     ) -> Result<Vec<WorkflowStep>, CoreError> {
-        self.step_repo
+        self.deps
+            .step_repo
             .find_by_instance(instance_id, tenant_id)
             .await
             .map_err(|e| CoreError::Internal(format!("ステップの取得に失敗: {}", e)))

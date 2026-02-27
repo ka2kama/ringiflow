@@ -35,7 +35,7 @@ use ringiflow_infra::{
 
 use crate::usecase::{
     notification::{NotificationService, TemplateRenderer},
-    workflow::WorkflowUseCaseImpl,
+    workflow::{WorkflowUseCaseDeps, WorkflowUseCaseImpl},
 };
 
 /// ワークフローテストのセットアップデータ
@@ -171,17 +171,17 @@ impl WorkflowTestBuilder {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            definition_repo.clone(),
-            instance_repo.clone(),
-            step_repo.clone(),
-            comment_repo.clone(),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(self.now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: definition_repo.clone(),
+            instance_repo: instance_repo.clone(),
+            step_repo: step_repo.clone(),
+            comment_repo: comment_repo.clone(),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(self.now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         WorkflowTestSetup {
             sut,

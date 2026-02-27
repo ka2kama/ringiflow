@@ -46,6 +46,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowInstance, CoreError> {
         // 1. ワークフローインスタンスを取得
         let instance = self
+            .deps
             .instance_repo
             .find_by_id(&instance_id, &tenant_id)
             .await
@@ -60,6 +61,7 @@ impl WorkflowUseCaseImpl {
 
         // 3. ワークフロー定義を取得
         let definition = self
+            .deps
             .definition_repo
             .find_by_id(instance.definition_id(), &tenant_id)
             .await
@@ -74,7 +76,7 @@ impl WorkflowUseCaseImpl {
         validate_approvers(&input.approvers, &approval_step_defs)?;
 
         // 5. 各承認ステップを作成
-        let now = self.clock.now();
+        let now = self.deps.clock.now();
         let steps = self
             .create_approval_steps(
                 &instance_id,
@@ -102,7 +104,8 @@ impl WorkflowUseCaseImpl {
         self.save_instance(&mut tx, &in_progress_instance, expected_version, &tenant_id)
             .await?;
         for step in &steps {
-            self.step_repo
+            self.deps
+                .step_repo
                 .insert(&mut tx, step, &tenant_id)
                 .await
                 .map_err(|e| CoreError::Internal(format!("ステップの保存に失敗: {}", e)))?;
@@ -153,6 +156,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowInstance, CoreError> {
         // display_number → WorkflowInstanceId を解決
         let instance = self
+            .deps
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await

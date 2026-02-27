@@ -52,6 +52,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowWithSteps, CoreError> {
         // display_number → WorkflowInstanceId を解決
         let instance = self
+            .deps
             .instance_repo
             .find_by_display_number(workflow_display_number, &tenant_id)
             .await
@@ -59,6 +60,7 @@ impl WorkflowUseCaseImpl {
 
         // display_number → WorkflowStepId を解決
         let step = self
+            .deps
             .step_repo
             .find_by_display_number(step_display_number, instance.id(), &tenant_id)
             .await

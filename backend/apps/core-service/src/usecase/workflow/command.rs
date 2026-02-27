@@ -40,7 +40,7 @@ pub(super) mod test_helpers {
 
     use crate::usecase::{
         notification::{NotificationService, TemplateRenderer},
-        workflow::WorkflowUseCaseImpl,
+        workflow::{WorkflowUseCaseDeps, WorkflowUseCaseImpl},
     };
 
     /// SUT（WorkflowUseCaseImpl）を構築する
@@ -59,17 +59,17 @@ pub(super) mod test_helpers {
             Arc::new(MockNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
-        WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo.clone()),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo.clone()),
+            instance_repo: Arc::new(instance_repo.clone()),
+            step_repo: Arc::new(step_repo.clone()),
+            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        )
+        })
     }
 
     /// SUT を構築する（通知検証用）
@@ -90,17 +90,17 @@ pub(super) mod test_helpers {
             Arc::new(MockNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo.clone()),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo.clone()),
-            Arc::new(MockWorkflowCommentRepository::new()),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo.clone()),
+            instance_repo: Arc::new(instance_repo.clone()),
+            step_repo: Arc::new(step_repo.clone()),
+            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
             user_repo,
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
         (sut, sender)
     }
 

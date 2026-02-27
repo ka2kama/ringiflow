@@ -66,6 +66,7 @@ impl WorkflowUseCaseImpl {
 
         for (i, (step_def, approver)) in approval_step_defs.iter().zip(approvers).enumerate() {
             let display_number = self
+                .deps
                 .counter_repo
                 .next_display_number(tenant_id, DisplayIdEntityType::WorkflowStep)
                 .await
@@ -115,7 +116,12 @@ impl WorkflowUseCaseImpl {
         };
 
         // 申請者の情報を取得
-        let applicant = match self.user_repo.find_by_id(instance.initiated_by()).await {
+        let applicant = match self
+            .deps
+            .user_repo
+            .find_by_id(instance.initiated_by())
+            .await
+        {
             Ok(Some(user)) => user,
             Ok(None) => {
                 tracing::warn!(
@@ -135,7 +141,7 @@ impl WorkflowUseCaseImpl {
         };
 
         // 承認者の情報を取得
-        let approver = match self.user_repo.find_by_id(approver_id).await {
+        let approver = match self.deps.user_repo.find_by_id(approver_id).await {
             Ok(Some(user)) => user,
             Ok(None) => {
                 tracing::warn!(
@@ -167,7 +173,8 @@ impl WorkflowUseCaseImpl {
             approver_user_id: approver_id.clone(),
         };
 
-        self.notification_service
+        self.deps
+            .notification_service
             .notify(notification, tenant_id, instance.id())
             .await;
     }

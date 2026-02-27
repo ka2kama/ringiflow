@@ -173,6 +173,7 @@ use usecase::{
     UserUseCaseImpl,
     WorkflowDefinitionUseCaseImpl,
     WorkflowUseCaseImpl,
+    workflow::WorkflowUseCaseDeps,
 };
 
 /// Core Service サーバーのエントリーポイント
@@ -316,17 +317,17 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     // ワークフロー UseCase
-    let workflow_usecase = WorkflowUseCaseImpl::new(
+    let workflow_usecase = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
         definition_repo,
-        instance_repo.clone(),
-        step_repo.clone(),
+        instance_repo: instance_repo.clone(),
+        step_repo: step_repo.clone(),
         comment_repo,
-        user_repo.clone(),
+        user_repo: user_repo.clone(),
         counter_repo,
         clock,
         tx_manager,
         notification_service,
-    );
+    });
     let workflow_state = Arc::new(WorkflowState {
         usecase: workflow_usecase,
     });

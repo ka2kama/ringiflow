@@ -59,6 +59,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowWithSteps, CoreError> {
         // 1. ステップを取得
         let step = self
+            .deps
             .step_repo
             .find_by_id(&step_id, &tenant_id)
             .await
@@ -75,7 +76,7 @@ impl WorkflowUseCaseImpl {
         }
 
         // 4. ステップにドメイン操作を適用（種別で分岐）
-        let now = self.clock.now();
+        let now = self.deps.clock.now();
         let step_expected_version = step.version();
         let terminated_step = Self::apply_step_termination(step, &termination, &input, now)?;
 
@@ -88,6 +89,7 @@ impl WorkflowUseCaseImpl {
 
         // 6. インスタンスを取得して終了状態に遷移（トランザクション開始前にドメインロジック実行）
         let instance = self
+            .deps
             .instance_repo
             .find_by_id(terminated_step.instance_id(), &tenant_id)
             .await

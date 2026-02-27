@@ -108,47 +108,30 @@ pub struct PostCommentInput {
     pub body: String,
 }
 
+/// ワークフローユースケースの依存関係
+pub(crate) struct WorkflowUseCaseDeps {
+    pub definition_repo: Arc<dyn WorkflowDefinitionRepository>,
+    pub instance_repo: Arc<dyn WorkflowInstanceRepository>,
+    pub step_repo: Arc<dyn WorkflowStepRepository>,
+    pub comment_repo: Arc<dyn WorkflowCommentRepository>,
+    pub user_repo: Arc<dyn UserRepository>,
+    pub counter_repo: Arc<dyn DisplayIdCounterRepository>,
+    pub clock: Arc<dyn Clock>,
+    pub tx_manager: Arc<dyn TransactionManager>,
+    pub notification_service: Arc<NotificationService>,
+}
+
 /// ワークフローユースケース実装
 ///
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
 pub struct WorkflowUseCaseImpl {
-    definition_repo: Arc<dyn WorkflowDefinitionRepository>,
-    instance_repo: Arc<dyn WorkflowInstanceRepository>,
-    step_repo: Arc<dyn WorkflowStepRepository>,
-    comment_repo: Arc<dyn WorkflowCommentRepository>,
-    user_repo: Arc<dyn UserRepository>,
-    counter_repo: Arc<dyn DisplayIdCounterRepository>,
-    clock: Arc<dyn Clock>,
-    tx_manager: Arc<dyn TransactionManager>,
-    notification_service: Arc<NotificationService>,
+    deps: WorkflowUseCaseDeps,
 }
 
 impl WorkflowUseCaseImpl {
     /// 新しいワークフローユースケースを作成
-    // FIXME(#888): deps 構造体への統合で too_many_arguments を解消する
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        definition_repo: Arc<dyn WorkflowDefinitionRepository>,
-        instance_repo: Arc<dyn WorkflowInstanceRepository>,
-        step_repo: Arc<dyn WorkflowStepRepository>,
-        comment_repo: Arc<dyn WorkflowCommentRepository>,
-        user_repo: Arc<dyn UserRepository>,
-        counter_repo: Arc<dyn DisplayIdCounterRepository>,
-        clock: Arc<dyn Clock>,
-        tx_manager: Arc<dyn TransactionManager>,
-        notification_service: Arc<NotificationService>,
-    ) -> Self {
-        Self {
-            definition_repo,
-            instance_repo,
-            step_repo,
-            comment_repo,
-            user_repo,
-            counter_repo,
-            clock,
-            tx_manager,
-            notification_service,
-        }
+    pub(crate) fn new(deps: WorkflowUseCaseDeps) -> Self {
+        Self { deps }
     }
 
     /// ユーザー ID のリストからユーザー名を一括解決する
@@ -156,6 +139,6 @@ impl WorkflowUseCaseImpl {
         &self,
         user_ids: &[UserId],
     ) -> Result<HashMap<UserId, String>, CoreError> {
-        crate::usecase::resolve_user_names(self.user_repo.as_ref(), user_ids).await
+        crate::usecase::resolve_user_names(self.deps.user_repo.as_ref(), user_ids).await
     }
 }

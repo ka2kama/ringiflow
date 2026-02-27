@@ -31,7 +31,8 @@ impl WorkflowUseCaseImpl {
         tenant_id: TenantId,
         user_id: UserId,
     ) -> Result<Vec<ringiflow_domain::workflow::WorkflowInstance>, CoreError> {
-        self.instance_repo
+        self.deps
+            .instance_repo
             .find_by_initiated_by(&tenant_id, &user_id)
             .await
             .map_err(|e| CoreError::Internal(format!("申請一覧の取得に失敗: {}", e)))
@@ -57,12 +58,14 @@ impl WorkflowUseCaseImpl {
         tenant_id: TenantId,
     ) -> Result<WorkflowWithSteps, CoreError> {
         let instance = self
+            .deps
             .instance_repo
             .find_by_id(&id, &tenant_id)
             .await
             .or_not_found("ワークフローインスタンス")?;
 
         let steps = self
+            .deps
             .step_repo
             .find_by_instance(&id, &tenant_id)
             .await
@@ -94,12 +97,14 @@ impl WorkflowUseCaseImpl {
         tenant_id: TenantId,
     ) -> Result<WorkflowWithSteps, CoreError> {
         let instance = self
+            .deps
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
             .or_not_found("ワークフローインスタンス")?;
 
         let steps = self
+            .deps
             .step_repo
             .find_by_instance(instance.id(), &tenant_id)
             .await
@@ -132,13 +137,15 @@ impl WorkflowUseCaseImpl {
     ) -> Result<Vec<WorkflowComment>, CoreError> {
         // 1. ワークフローインスタンスの存在確認
         let instance = self
+            .deps
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
             .or_not_found("ワークフローインスタンス")?;
 
         // 2. コメント一覧を取得
-        self.comment_repo
+        self.deps
+            .comment_repo
             .find_by_instance(instance.id(), &tenant_id)
             .await
             .map_err(|e| CoreError::Internal(format!("コメントの取得に失敗: {}", e)))
@@ -180,7 +187,7 @@ mod tests {
         repository::{WorkflowCommentRepository, WorkflowInstanceRepositoryTestExt},
     };
 
-    use super::super::WorkflowUseCaseImpl;
+    use super::super::{WorkflowUseCaseDeps, WorkflowUseCaseImpl};
     use crate::{
         error::CoreError,
         usecase::notification::{NotificationService, TemplateRenderer},
@@ -242,17 +249,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(comment_repo),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(comment_repo),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         // Act
         let result = sut
@@ -285,17 +292,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(comment_repo),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(comment_repo),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         // Act
         let result = sut
