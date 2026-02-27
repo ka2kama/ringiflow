@@ -262,6 +262,7 @@ impl Document {
     /// アップロード中のドキュメントを作成する
     ///
     /// Presigned URL 発行時にステータス `uploading` で作成される。
+    // FIXME: 引数が多い。作成パラメータを値オブジェクトにまとめて引数を削減する
     #[allow(clippy::too_many_arguments)]
     pub fn new_uploading(
         id: DocumentId,
@@ -309,6 +310,7 @@ impl Document {
     }
 
     /// DB からエンティティを復元する（バリデーションをスキップ）
+    // FIXME: 引数が多い。DB 行データの中間構造体を経由して引数を削減する
     #[allow(clippy::too_many_arguments)]
     pub fn from_db(
         id: DocumentId,

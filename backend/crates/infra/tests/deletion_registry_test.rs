@@ -57,6 +57,7 @@ fn test_期待リストの具体的な内容() {
 
     let required = HashSet::from([
         "postgres:notification_logs",
+        "postgres:documents",
         "postgres:users",
         "postgres:roles",
         "postgres:workflows",

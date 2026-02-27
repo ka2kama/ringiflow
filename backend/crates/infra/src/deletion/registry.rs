@@ -15,6 +15,7 @@ use super::{
     DeletionReport,
     DynamoDbAuditLogDeleter,
     PostgresDisplayIdCounterDeleter,
+    PostgresDocumentDeleter,
     PostgresFoldersDeleter,
     PostgresNotificationLogDeleter,
     PostgresRoleDeleter,
@@ -68,6 +69,9 @@ impl DeletionRegistry {
         registry.register(Box::new(PostgresNotificationLogDeleter::new(
             pg_pool.clone(),
         )));
+        // documents.workflow_instance_id → workflow_instances(id) ON DELETE CASCADE
+        // → documents を workflows より先に削除し、正確な件数を記録する
+        registry.register(Box::new(PostgresDocumentDeleter::new(pg_pool.clone())));
         // workflow_definitions.created_by → users(id) (NO CASCADE)
         // workflow_instances.initiated_by → users(id) (NO CASCADE)
         // → workflows を users より先に削除する必要がある
@@ -92,6 +96,7 @@ impl DeletionRegistry {
     pub fn expected_deleter_names() -> Vec<&'static str> {
         vec![
             "postgres:notification_logs",
+            "postgres:documents",
             "postgres:workflows",
             "auth:credentials",
             "postgres:display_id_counters",
