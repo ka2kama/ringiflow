@@ -155,7 +155,10 @@ use ringiflow_infra::{
         workflow_step_repository::PostgresWorkflowStepRepository,
     },
 };
-use ringiflow_shared::observability::{TracingConfig, make_request_span};
+use ringiflow_shared::{
+    canonical_log::CanonicalLogLineLayer,
+    observability::{TracingConfig, make_request_span},
+};
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use usecase::{
@@ -476,6 +479,7 @@ async fn main() -> anyhow::Result<()> {
       // ダッシュボード API
       .route("/internal/dashboard/stats", get(get_dashboard_stats))
       .with_state(dashboard_state)
+      .layer(CanonicalLogLineLayer)
       .layer(TraceLayer::new_for_http().make_span_with(make_request_span));
 
     // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
