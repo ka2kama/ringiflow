@@ -45,6 +45,11 @@
 //! CORE_PORT=3001 DATABASE_URL=postgres://... cargo run -p ringiflow-core-service --release
 //! ```
 //!
+//! ## ファイルサイズについて
+//!
+//! DI 設定とルーター定義を同一ファイルに持つエントリーポイントのため 500 行を超える。
+//! structural-review.md の「ルーター定義は例外として許容」に該当。
+//!
 //! ## BFF との違い
 //!
 //! | 項目 | BFF | Core Service |
