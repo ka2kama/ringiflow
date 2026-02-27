@@ -112,9 +112,8 @@ pub async fn request_upload_url(
 /// ## レスポンス
 ///
 /// - `200 OK`: active になったドキュメント
-/// - `400 Bad Request`: ステータスが uploading ではない
+/// - `400 Bad Request`: ステータスが uploading ではない / S3 にファイルが存在しない
 /// - `404 Not Found`: ドキュメントが見つからない
-/// - `500 Internal Server Error`: S3 にファイルが存在しない
 #[tracing::instrument(skip_all, fields(%document_id))]
 pub async fn confirm_upload(
     State(state): State<Arc<DocumentState>>,
@@ -589,7 +588,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_post_confirm_s3にファイルなしで500が返る() {
+    async fn test_post_confirm_s3にファイルなしで400が返る() {
         // Given
         let tenant_id = TenantId::new();
         let doc = make_uploading_document(&tenant_id);
@@ -615,6 +614,6 @@ mod tests {
         let response = sut.oneshot(request).await.unwrap();
 
         // Then
-        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 }

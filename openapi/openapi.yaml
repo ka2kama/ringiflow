@@ -276,7 +276,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponse_DocumentData'
         '400':
-          description: ステータスエラー
+          description: ステータスエラー / S3 にファイルが存在しない
           content:
             application/json:
               schema:
@@ -289,12 +289,6 @@ paths:
                 $ref: '#/components/schemas/ProblemDetails'
         '404':
           description: ドキュメントが見つからない
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '500':
-          description: S3 エラー
           content:
             application/json:
               schema:

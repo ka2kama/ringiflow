@@ -131,10 +131,9 @@ pub async fn request_upload_url(
    params(("document_id" = Uuid, Path, description = "ドキュメントID")),
    responses(
       (status = 200, description = "アップロード確認成功", body = ApiResponse<DocumentData>),
-      (status = 400, description = "ステータスエラー", body = ErrorResponse),
+      (status = 400, description = "ステータスエラー / S3 にファイルが存在しない", body = ErrorResponse),
       (status = 401, description = "認証エラー", body = ErrorResponse),
-      (status = 404, description = "ドキュメントが見つからない", body = ErrorResponse),
-      (status = 500, description = "S3 エラー", body = ErrorResponse)
+      (status = 404, description = "ドキュメントが見つからない", body = ErrorResponse)
    )
 )]
 #[tracing::instrument(skip_all, fields(%document_id))]

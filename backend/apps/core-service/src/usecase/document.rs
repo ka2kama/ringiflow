@@ -179,7 +179,7 @@ impl DocumentUseCaseImpl {
             .await
             .map_err(|e| CoreError::Internal(e.to_string()))?;
         if !exists {
-            return Err(CoreError::Internal(
+            return Err(CoreError::BadRequest(
                 "S3 上にファイルが見つかりません。アップロードが完了していない可能性があります"
                     .to_string(),
             ));
