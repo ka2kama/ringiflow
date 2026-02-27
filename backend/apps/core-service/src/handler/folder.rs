@@ -277,6 +277,14 @@ mod tests {
             Ok(())
         }
 
+        async fn max_subtree_depth(
+            &self,
+            _path: &str,
+            _tenant_id: &TenantId,
+        ) -> Result<i32, InfraError> {
+            Ok(1) // スタブ: 常に depth 1 を返す
+        }
+
         async fn delete(&self, _id: &FolderId, _tenant_id: &TenantId) -> Result<(), InfraError> {
             Ok(())
         }

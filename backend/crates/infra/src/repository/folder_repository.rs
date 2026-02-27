@@ -63,6 +63,12 @@ pub trait FolderRepository: Send + Sync {
         tenant_id: &TenantId,
     ) -> Result<(), InfraError>;
 
+    /// サブツリー内の最大 depth を取得する
+    ///
+    /// `path` で始まるすべてのフォルダの中で最大の depth を返す。
+    /// サブツリーが空（自身のみ）の場合は自身の depth を返す。
+    async fn max_subtree_depth(&self, path: &str, tenant_id: &TenantId) -> Result<i32, InfraError>;
+
     /// フォルダを削除する
     async fn delete(&self, id: &FolderId, tenant_id: &TenantId) -> Result<(), InfraError>;
 
@@ -257,6 +263,24 @@ impl FolderRepository for PostgresFolderRepository {
         .await?;
 
         Ok(())
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
+    async fn max_subtree_depth(&self, path: &str, tenant_id: &TenantId) -> Result<i32, InfraError> {
+        let max_depth = sqlx::query_scalar!(
+            r#"
+            SELECT COALESCE(MAX(depth), 0)::int4 as "max_depth!"
+            FROM folders
+            WHERE tenant_id = $1
+              AND starts_with(path, $2)
+            "#,
+            tenant_id.as_uuid(),
+            path
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(max_depth)
     }
 
     #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]

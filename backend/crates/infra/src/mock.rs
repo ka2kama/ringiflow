@@ -587,6 +587,128 @@ impl WorkflowCommentRepository for MockWorkflowCommentRepository {
     }
 }
 
+// ===== MockFolderRepository =====
+
+/// テスト用の MockFolderRepository
+///
+/// フォルダをインメモリで管理する。`max_subtree_depth` は
+/// 格納されたフォルダの path プレフィックスマッチで計算する。
+#[derive(Clone, Default)]
+pub struct MockFolderRepository {
+    folders: Arc<Mutex<Vec<ringiflow_domain::folder::Folder>>>,
+}
+
+impl MockFolderRepository {
+    pub fn new() -> Self {
+        Self {
+            folders: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    pub fn add_folder(&self, folder: ringiflow_domain::folder::Folder) {
+        self.folders.lock().unwrap().push(folder);
+    }
+}
+
+#[async_trait]
+impl crate::repository::FolderRepository for MockFolderRepository {
+    async fn find_all_by_tenant(
+        &self,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<ringiflow_domain::folder::Folder>, InfraError> {
+        Ok(self
+            .folders
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|f| f.tenant_id() == tenant_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn find_by_id(
+        &self,
+        id: &ringiflow_domain::folder::FolderId,
+        _tenant_id: &TenantId,
+    ) -> Result<Option<ringiflow_domain::folder::Folder>, InfraError> {
+        Ok(self
+            .folders
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|f| f.id() == id)
+            .cloned())
+    }
+
+    async fn insert(&self, folder: &ringiflow_domain::folder::Folder) -> Result<(), InfraError> {
+        self.folders.lock().unwrap().push(folder.clone());
+        Ok(())
+    }
+
+    async fn update(
+        &self,
+        _tx: &mut TxContext,
+        folder: &ringiflow_domain::folder::Folder,
+    ) -> Result<(), InfraError> {
+        let mut folders = self.folders.lock().unwrap();
+        if let Some(pos) = folders.iter().position(|f| f.id() == folder.id()) {
+            folders[pos] = folder.clone();
+        }
+        Ok(())
+    }
+
+    async fn update_subtree_paths(
+        &self,
+        _tx: &mut TxContext,
+        _old_path: &str,
+        _new_path: &str,
+        _depth_delta: i32,
+        _tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
+        Ok(())
+    }
+
+    async fn max_subtree_depth(
+        &self,
+        path: &str,
+        _tenant_id: &TenantId,
+    ) -> Result<i32, InfraError> {
+        let folders = self.folders.lock().unwrap();
+        let max = folders
+            .iter()
+            .filter(|f| f.path().starts_with(path))
+            .map(|f| f.depth())
+            .max()
+            .unwrap_or(0);
+        Ok(max)
+    }
+
+    async fn delete(
+        &self,
+        id: &ringiflow_domain::folder::FolderId,
+        _tenant_id: &TenantId,
+    ) -> Result<(), InfraError> {
+        let mut folders = self.folders.lock().unwrap();
+        folders.retain(|f| f.id() != id);
+        Ok(())
+    }
+
+    async fn count_children(
+        &self,
+        parent_id: &ringiflow_domain::folder::FolderId,
+        _tenant_id: &TenantId,
+    ) -> Result<i64, InfraError> {
+        let count = self
+            .folders
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|f| f.parent_id() == Some(parent_id))
+            .count() as i64;
+        Ok(count)
+    }
+}
+
 // ===== MockTransactionManager =====
 
 /// テスト用の MockTransactionManager

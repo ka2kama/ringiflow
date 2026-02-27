@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use ringiflow_domain::{
     clock::Clock,
-    folder::{Folder, FolderId, FolderName},
+    folder::{Folder, FolderId, FolderName, MAX_FOLDER_DEPTH},
     tenant::TenantId,
     user::UserId,
 };
@@ -195,6 +195,22 @@ impl FolderUseCaseImpl {
             folder
         };
 
+        // サブツリーの最大 depth 事前検証（CHECK 制約違反のユーザーフレンドリーなエラー化）
+        if old_path != folder.path() {
+            let depth_delta = folder.depth() - old_depth;
+            if depth_delta > 0 {
+                let max_subtree_depth = self
+                    .folder_repository
+                    .max_subtree_depth(&old_path, &input.tenant_id)
+                    .await?;
+                if max_subtree_depth + depth_delta > MAX_FOLDER_DEPTH {
+                    return Err(CoreError::BadRequest(
+                        "移動先ではサブツリーの階層が上限（5 階層）を超えます".to_string(),
+                    ));
+                }
+            }
+        }
+
         // トランザクション内で DB 更新
         let mut tx = self
             .tx_manager
@@ -265,5 +281,118 @@ impl FolderUseCaseImpl {
         self.folder_repository.delete(folder_id, tenant_id).await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ringiflow_domain::{clock::FixedClock, folder::FolderName};
+    use ringiflow_infra::mock::{MockFolderRepository, MockTransactionManager};
+
+    use super::*;
+
+    fn fixed_now() -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap()
+    }
+
+    fn create_sut(repo: MockFolderRepository) -> FolderUseCaseImpl {
+        FolderUseCaseImpl::new(
+            Arc::new(repo),
+            Arc::new(FixedClock::new(fixed_now())),
+            Arc::new(MockTransactionManager),
+        )
+    }
+
+    /// テスト用ルートフォルダを作成する
+    fn create_root_folder(tenant_id: &TenantId, name: &str) -> Folder {
+        let name = FolderName::new(name).unwrap();
+        Folder::new(
+            FolderId::new(),
+            tenant_id.clone(),
+            name,
+            None,
+            None,
+            None,
+            None,
+            fixed_now(),
+        )
+        .unwrap()
+    }
+
+    /// テスト用子フォルダを作成する
+    fn create_child_folder(tenant_id: &TenantId, name: &str, parent: &Folder) -> Folder {
+        let name = FolderName::new(name).unwrap();
+        Folder::new(
+            FolderId::new(),
+            tenant_id.clone(),
+            name,
+            Some(parent.id().clone()),
+            Some(parent.path()),
+            Some(parent.depth()),
+            None,
+            fixed_now(),
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_update_folder_サブツリーdepth超過時にエラーを返す() {
+        // Arrange:
+        // depth 1: /l1/         (移動対象)
+        // depth 2: /l1/l2/      (サブツリー)
+        // depth 3: /l1/l2/l3/   (サブツリー)
+        // depth 1: /target/     (移動先 — depth 4 に位置)
+        // depth 2: /target/l2/
+        // depth 3: /target/l2/l3/
+        // depth 4: /target/l2/l3/l4/
+        //
+        // /l1/ を /target/l2/l3/l4/ の下に移動すると:
+        // /l1/ → depth 5, /l1/l2/ → depth 6, /l1/l2/l3/ → depth 7
+        // depth_delta = +4, max_subtree_depth = 3, 3 + 4 = 7 > 5 → エラー
+        let tenant_id = TenantId::new();
+        let repo = MockFolderRepository::new();
+
+        // 移動対象のフォルダツリー（3 階層）
+        let l1 = create_root_folder(&tenant_id, "l1");
+        let l2 = create_child_folder(&tenant_id, "l2", &l1);
+        let l3 = create_child_folder(&tenant_id, "l3", &l2);
+
+        // 移動先のフォルダツリー（4 階層）
+        let target = create_root_folder(&tenant_id, "target");
+        let t2 = create_child_folder(&tenant_id, "t2", &target);
+        let t3 = create_child_folder(&tenant_id, "t3", &t2);
+        let t4 = create_child_folder(&tenant_id, "t4", &t3);
+
+        let l1_id = l1.id().clone();
+        let t4_id = *t4.id().as_uuid();
+
+        repo.add_folder(l1);
+        repo.add_folder(l2);
+        repo.add_folder(l3);
+        repo.add_folder(target);
+        repo.add_folder(t2);
+        repo.add_folder(t3);
+        repo.add_folder(t4);
+
+        let sut = create_sut(repo);
+
+        // Act
+        let result = sut
+            .update_folder(UpdateFolderInput {
+                folder_id: l1_id,
+                tenant_id,
+                name: None,
+                parent_id: Some(Some(t4_id)),
+            })
+            .await;
+
+        // Assert: サブツリー depth 超過でエラー
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, CoreError::BadRequest(ref msg) if msg.contains("階層")),
+            "expected BadRequest with 階層 message, got: {:?}",
+            err
+        );
     }
 }
