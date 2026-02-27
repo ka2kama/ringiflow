@@ -121,6 +121,7 @@ Content-Type: application/json
 
 HTTP 400
 [Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
 jsonpath "$.status" == 400
 
 # =============================================================================
@@ -143,6 +144,7 @@ Content-Type: application/json
 
 HTTP 400
 [Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
 jsonpath "$.status" == 400
 
 # =============================================================================

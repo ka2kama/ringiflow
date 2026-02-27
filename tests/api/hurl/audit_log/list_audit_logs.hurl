@@ -114,6 +114,8 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 
 HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
 
 # =============================================================================
 # 異常系: ページネーション無効値 — limit=-1
@@ -127,6 +129,8 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 
 HTTP 200
+[Asserts]
+jsonpath "$.data" isCollection
 
 # =============================================================================
 # 異常系: ページネーション無効値 — 不正な cursor
