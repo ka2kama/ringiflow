@@ -4,8 +4,14 @@
 # Draft PR は除外。
 #
 # 責務分離:
-# - このワークフロー: Verification（コード品質、設計、セキュリティ）+ Validation（完了基準との整合）
+# - このワークフロー:
+#   - Verification（コード品質、設計、セキュリティ）→ Opus
+#   - Validation（完了基準との整合）→ Sonnet
 # - claude-rules-check.yaml: .claude/rules/ のルール準拠チェック
+#
+# ジョブ構成:
+#   setup → verification (並列) → finalize
+#         → validation  (並列) →
 #
 # 設計判断: [ADR-011](../../docs/05_ADR/011_Claude_Code_Action導入.md)
 #
@@ -34,14 +40,25 @@ permissions:
   id-token: write
 
 jobs:
-  auto-review:
-    name: Claude Auto Review
+  # ──────────────────────────────────────────────
+  # setup: 共通前処理（draft check, コンテキスト収集）
+  # ──────────────────────────────────────────────
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
     # PR 起因かつ CI 成功の場合のみ実行（Draft チェックはステップ内で実施）
     if: >
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.pull_requests[0] != null
+
+    outputs:
+      is_draft: ${{ steps.check-draft.outputs.is_draft }}
+      pr_number: ${{ steps.set-pr-number.outputs.pr_number }}
+      PR_COMMENTS: ${{ steps.pr-comments.outputs.PR_COMMENTS }}
+      REVIEW_COMMENTS: ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
+      REVIEW_MODE: ${{ steps.review-context.outputs.REVIEW_MODE }}
+      VALIDATION_CONTEXT: ${{ steps.validation-context.outputs.VALIDATION_CONTEXT }}
 
     env:
       STATUS_URL: repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.head_sha }}
@@ -58,6 +75,11 @@ jobs:
             -f context="Claude Auto Review" \
             -f description="Running auto review..." \
             -f target_url="$RUN_URL" || true
+
+      - name: Set PR number
+        id: set-pr-number
+        run: |
+          echo "pr_number=${{ github.event.workflow_run.pull_requests[0].number }}" >> "$GITHUB_OUTPUT"
 
       - name: Check if PR is draft
         id: check-draft
@@ -163,19 +185,32 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: ./scripts/ci/fetch-validation-context.sh
 
-      - name: Run Claude Code Review
-        id: review
-        if: steps.check-draft.outputs.is_draft == 'false'
+  # ──────────────────────────────────────────────
+  # verification: コード品質レビュー（Opus）
+  # ──────────────────────────────────────────────
+  verification:
+    name: Verification
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.is_draft == 'false'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Run Claude Verification
+        id: verification
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # workflow_run イベントでは track_progress はサポートされていない
           track_progress: false
-          # Dependabot などの Bot からの PR を許可
           allowed_bots: "dependabot[bot]"
           prompt: |
             REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+            PR NUMBER: ${{ needs.setup.outputs.pr_number }}
 
             ## PR コメント（議論の文脈）
 
@@ -183,24 +218,17 @@ jobs:
 
             ### PR コメント
             ```json
-            ${{ steps.pr-comments.outputs.PR_COMMENTS }}
+            ${{ needs.setup.outputs.PR_COMMENTS }}
             ```
 
             ### レビューコメント（インラインコメント）
             ```json
-            ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
+            ${{ needs.setup.outputs.REVIEW_COMMENTS }}
             ```
 
             ## レビューモード
 
-            ${{ steps.review-context.outputs.REVIEW_MODE }}
-
-            ## Validation コンテキスト
-
-            以下は PR に関連する Issue、PR 本文、計画ファイルの情報です。
-            Validation チェックの入力として使用してください。
-
-            ${{ steps.validation-context.outputs.VALIDATION_CONTEXT }}
+            ${{ needs.setup.outputs.REVIEW_MODE }}
 
             ## 言語
 
@@ -214,7 +242,7 @@ jobs:
             - 理念1: 学習効果の最大化
             - 理念2: 品質の追求
 
-            ## レビュー観点（CLAUDE.md を補完）
+            ## レビュー観点
 
             ### Verification チェック（コードの品質）
 
@@ -226,38 +254,7 @@ jobs:
             6. 設計: 責務の混在、依存関係の方向違反、過度な複雑さ
 
             注: ルール準拠チェック（.claude/rules/）は別ワークフローで実施。
-
-            ### Validation チェック（書かれていないことの検出）
-
-            Validation コンテキストを参照し、以下を確認する。
-            Issue や計画ファイルが存在しない場合（ドキュメント修正等）、PR 本文の検証のみ実施する。
-
-            #### 欠落（Omission）の検出
-
-            Issue の完了基準に対して:
-            - 完了基準の各項目に対応する実装が diff に含まれているか
-            - 実装計画の Phase に対応する変更がすべて含まれているか
-
-            計画ファイルのテストリストに対して:
-            - テストリストの各項目に対応するテストコードが存在するか
-            - 操作パスの全分類（正常系・準正常系・異常系）がテストでカバーされているか
-
-            #### 乖離（Divergence）の検出
-
-            Issue・計画ファイルとの一致:
-            - 実装が完了基準の意図する動作と異なっていないか
-            - 計画で「対象外」とされた範囲に変更が含まれていないか
-
-            PR 本文の品質確認セクションの検証:
-            - 「設計・ドキュメント」で挙げられたファイルパスが実際に変更されているか
-            - 「テスト」の記載内容と実際のテストファイルの対応
-            - 「N/A（理由）」の理由の妥当性
-
-            #### 注意事項
-
-            - Validation は確信度が Verification より低い場合がある。確信度を明示すること
-            - 完了基準の「解釈の幅」を考慮し、字句一致ではなく意図レベルで判断する
-            - 実装者が意図的にスコープを調整している可能性を考慮する
+            注: 完了基準との整合チェック（Validation）は別ジョブで実施。
 
             ### 学習機会の提供
 
@@ -298,21 +295,8 @@ jobs:
             ## Verification（コード品質）
 
             [Verification の指摘・サマリー]
-
-            ## Validation（完了基準との整合）
-
-            ### 確認済み
-            - [突合して問題なかった項目を簡潔に列挙]
-
-            ### 欠落
-            - [severity] [指摘内容]（確信度: 高/中/低）
-
-            ### 乖離
-            - [severity] [指摘内容]（確信度: 高/中/低）
             ```
 
-            Validation の指摘がない場合は「確認済み」のみ記載する。
-            Issue 参照がない場合は Validation セクションを「Issue 参照なし — PR 本文の品質確認セクションのみ検証」と記載する。
             学習機会があれば Verification セクション内で解説を含める。
 
             3. 承認/却下: `gh pr review` で承認判断を実行
@@ -334,15 +318,7 @@ jobs:
             |---------|--------|-----------|
             | Verification: Critical/High | マージ前に必ず修正が必要 | `gh pr review --request-changes` |
             | Verification: Medium/Low | 改善推奨だがマージ可能 | `gh pr review --approve` + コメント |
-            | Validation: 全重大度 | 確認推奨だがマージ可能 | `gh pr review --approve` + コメント |
             | None | 問題なし | `gh pr review --approve` |
-
-            Validation 指摘は常に approve する。理由:
-            - Validation は「書かれていないこと」の検出であり、偽陽性の可能性がある
-            - 品質ゲート（実装者セルフチェック）が主であり、Auto Review は補完的な役割
-
-            ただし、Validation で完了基準のセキュリティ関連項目が完全に欠落している場合は、
-            Verification の Critical として扱い request-changes とする。
 
             学習のための解説コメントは承認判断に影響しない。
             問題がなければ、躊躇なく承認してください。
@@ -353,13 +329,11 @@ jobs:
 
             ```html
             <!-- review-metadata
-            type: auto-review
+            type: verification
             severity-critical: <数値>
             severity-high: <数値>
             severity-medium: <数値>
             severity-low: <数値>
-            validation-omission: <数値>
-            validation-divergence: <数値>
             action-required: true | false
             -->
             ```
@@ -368,79 +342,20 @@ jobs:
 
             | フィールド | 型 | 説明 | 例 |
             |-----------|-----|------|-----|
-            | `type` | enum | レビュータイプ。`auto-review` 固定 | `type: auto-review` |
-            | `severity-critical` | int | Verification: Critical 指摘の件数 | `severity-critical: 0` |
-            | `severity-high` | int | Verification: High 指摘の件数 | `severity-high: 1` |
-            | `severity-medium` | int | Verification: Medium 指摘の件数 | `severity-medium: 2` |
-            | `severity-low` | int | Verification: Low 指摘の件数 | `severity-low: 3` |
-            | `validation-omission` | int | Validation: 欠落の指摘件数 | `validation-omission: 1` |
-            | `validation-divergence` | int | Validation: 乖離の指摘件数 | `validation-divergence: 0` |
-            | `action-required` | boolean | Verification の Critical/High が 1 件以上なら true | `action-required: false` |
+            | `type` | enum | レビュータイプ。`verification` 固定 | `type: verification` |
+            | `severity-critical` | int | Critical 指摘の件数 | `severity-critical: 0` |
+            | `severity-high` | int | High 指摘の件数 | `severity-high: 1` |
+            | `severity-medium` | int | Medium 指摘の件数 | `severity-medium: 2` |
+            | `severity-low` | int | Low 指摘の件数 | `severity-low: 3` |
+            | `action-required` | boolean | Critical/High が 1 件以上なら true | `action-required: false` |
 
             ### 指摘件数のカウント方法
 
-            `severity-*` フィールドには Verification 指摘のみをカウントする:
-
-            1. インラインコメントで指摘した Verification の箇所をすべて数える
+            1. インラインコメントで指摘した箇所をすべて数える
             2. PR コメント本文の Verification セクションに記載した全体的な指摘もカウントする
             3. 学習のための解説コメント（指摘を含まないもの）はカウントしない
 
-            `validation-*` フィールドには Validation 指摘をカウントする:
-
-            4. Validation セクションの「欠落」に記載した指摘を `validation-omission` にカウントする
-            5. Validation セクションの「乖離」に記載した指摘を `validation-divergence` にカウントする
-            6. 「確認済み」の項目はカウントしない
-
-            ### 配置場所
-
-            メタデータブロックは PR コメント本文の**末尾**に配置する。他のテキストの後に配置すること。
-
-            ### フォーマット例
-
-            **例1: 指摘なし（APPROVED）**
-
-            ```html
-            <!-- review-metadata
-            type: auto-review
-            severity-critical: 0
-            severity-high: 0
-            severity-medium: 0
-            severity-low: 0
-            validation-omission: 0
-            validation-divergence: 0
-            action-required: false
-            -->
-            ```
-
-            **例2: 軽微な Verification 指摘 + Validation 欠落あり（APPROVED）**
-
-            ```html
-            <!-- review-metadata
-            type: auto-review
-            severity-critical: 0
-            severity-high: 0
-            severity-medium: 2
-            severity-low: 1
-            validation-omission: 1
-            validation-divergence: 0
-            action-required: false
-            -->
-            ```
-
-            **例3: 重大な Verification 指摘あり（CHANGES_REQUESTED）**
-
-            ```html
-            <!-- review-metadata
-            type: auto-review
-            severity-critical: 1
-            severity-high: 2
-            severity-medium: 0
-            severity-low: 0
-            validation-omission: 0
-            validation-divergence: 0
-            action-required: true
-            -->
-            ```
+            メタデータブロックは PR コメント本文の**末尾**に配置する。
 
             ## 承認メッセージの書き方
 
@@ -449,17 +364,6 @@ jobs:
             構成:
             - 1行目: 結論（LGTM / 軽微な指摘あり など）
             - 2行目以降（任意）: 軽微な指摘がある場合のみ、箇条書きで要約
-
-            良い例:
-            ```
-            LGTM
-            ```
-
-            ```
-            軽微な指摘をコメントしました
-            - 変数名の改善提案（任意）
-            - ドキュメントの typo
-            ```
 
             書かないこと:
             - インラインコメントで既に詳述した内容の繰り返し
@@ -479,51 +383,213 @@ jobs:
             ```
           claude_args: |
             --model claude-opus-4-6
-            --max-turns 40
+            --max-turns 30
             --allowedTools "Bash(cat:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh issue view:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git status:*),mcp__github_inline_comment__create_inline_comment"
 
+  # ──────────────────────────────────────────────
+  # validation: 完了基準との整合チェック（Sonnet）
+  # ──────────────────────────────────────────────
+  validation:
+    name: Validation
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.is_draft == 'false'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Run Claude Validation
+        id: validation
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: false
+          allowed_bots: "dependabot[bot]"
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ needs.setup.outputs.pr_number }}
+
+            ## PR コメント（議論の文脈）
+
+            以下は PR 上でのこれまでの議論です。チェック前に必ず目を通し、文脈を理解してください。
+
+            ### PR コメント
+            ```json
+            ${{ needs.setup.outputs.PR_COMMENTS }}
+            ```
+
+            ### レビューコメント（インラインコメント）
+            ```json
+            ${{ needs.setup.outputs.REVIEW_COMMENTS }}
+            ```
+
+            ## レビューモード
+
+            ${{ needs.setup.outputs.REVIEW_MODE }}
+
+            ## Validation コンテキスト
+
+            以下は PR に関連する Issue、PR 本文、計画ファイルの情報です。
+            Validation チェックの入力として使用してください。
+
+            ${{ needs.setup.outputs.VALIDATION_CONTEXT }}
+
+            ## 言語
+
+            コメントは日本語で記述する。
+            CLAUDE.md の「応答は英語」はCLI対話に限定され、PRレビューには適用されない。
+
+            ## 基本方針
+
+            CLAUDE.md に記載されたプロジェクト理念と品質基準に基づいてチェックしてください。
+
+            ## チェック観点
+
+            ### Validation チェック（書かれていないことの検出）
+
+            Validation コンテキストを参照し、以下を確認する。
+            Issue や計画ファイルが存在しない場合（ドキュメント修正等）、PR 本文の検証のみ実施する。
+
+            #### 欠落（Omission）の検出
+
+            Issue の完了基準に対して:
+            - 完了基準の各項目に対応する実装が diff に含まれているか
+            - 実装計画の Phase に対応する変更がすべて含まれているか
+
+            計画ファイルのテストリストに対して:
+            - テストリストの各項目に対応するテストコードが存在するか
+            - 操作パスの全分類（正常系・準正常系・異常系）がテストでカバーされているか
+
+            #### 乖離（Divergence）の検出
+
+            Issue・計画ファイルとの一致:
+            - 実装が完了基準の意図する動作と異なっていないか
+            - 計画で「対象外」とされた範囲に変更が含まれていないか
+
+            PR 本文の品質確認セクションの検証:
+            - 「設計・ドキュメント」で挙げられたファイルパスが実際に変更されているか
+            - 「テスト」の記載内容と実際のテストファイルの対応
+            - 「N/A（理由）」の理由の妥当性
+
+            #### 注意事項
+
+            - Validation は確信度が Verification より低い場合がある。確信度を明示すること
+            - 完了基準の「解釈の幅」を考慮し、字句一致ではなく意図レベルで判断する
+            - 実装者が意図的にスコープを調整している可能性を考慮する
+
+            ### 過去の議論を踏まえた判断
+
+            PR コメントで既に議論された内容については、以下のように判断する:
+
+            | コメントの内容 | 対応 |
+            |---------------|------|
+            | 正当な理由が説明されている（設計意図、別のルールでカバー済み等） | 尊重し、再指摘しない |
+            | 単なる質問、未解決の議論 | 必要に応じて追加コメント |
+            | 「後で直す」「TODO」などの保留 | 必要に応じてリマインド |
+
+            ## フィードバック方法
+
+            重要: このジョブは `gh pr review` を**使用しない**。承認判断は Verification ジョブが行う。
+
+            1. インラインコメント: 欠落・乖離が特定のコード箇所に関連する場合は `mcp__github_inline_comment__create_inline_comment` でコメント
+            2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿。以下の構成で記載する:
+
+            ### 全体フィードバックの構成
+
+            ```
+            ## Validation（完了基準との整合）
+
+            ### 確認済み
+            - [突合して問題なかった項目を簡潔に列挙]
+
+            ### 欠落
+            - [指摘内容]（確信度: 高/中/低）
+
+            ### 乖離
+            - [指摘内容]（確信度: 高/中/低）
+            ```
+
+            Validation の指摘がない場合は「確認済み」のみ記載する。
+            Issue 参照がない場合は「Issue 参照なし — PR 本文の品質確認セクションのみ検証」と記載する。
+
+            ## メタデータ埋め込み（必須）
+
+            PR コメント投稿時には、本文の末尾に以下の形式でメタデータを埋め込むこと:
+
+            ```html
+            <!-- review-metadata
+            type: validation
+            validation-omission: <数値>
+            validation-divergence: <数値>
+            -->
+            ```
+
+            | フィールド | 型 | 説明 |
+            |-----------|-----|------|
+            | `type` | enum | `validation` 固定 |
+            | `validation-omission` | int | 欠落の指摘件数 |
+            | `validation-divergence` | int | 乖離の指摘件数 |
+
+            メタデータブロックは PR コメント本文の**末尾**に配置する。
+
+            ## コマンド実行時の注意
+
+            長いコメントを投稿する際は HEREDOC 形式を使用すること:
+            ```bash
+            gh pr comment 93 --body "$(cat <<'EOF'
+            複数行のコメント
+            EOF
+            )"
+            ```
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 15
+            --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
+
+  # ──────────────────────────────────────────────
+  # finalize: 結果集約 + ステータス報告
+  # ──────────────────────────────────────────────
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs: [setup, verification, validation]
+    if: always() && needs.setup.outputs.is_draft == 'false'
+
+    env:
+      STATUS_URL: repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.head_sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
       - name: Check review decision
         id: review-decision
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.review.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
-          # claude[bot] の最新レビュー状態を取得
+          PR_NUMBER=${{ needs.setup.outputs.pr_number }}
+          # claude[bot] の最新レビュー状態を取得（Verification ジョブが投稿）
           REVIEW_STATE=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews" \
             --jq '[.[] | select(.user.login == "claude[bot]")] | last | .state // "NONE"')
           echo "review_state=$REVIEW_STATE" >> "$GITHUB_OUTPUT"
           echo "Claude review state: $REVIEW_STATE"
 
-      - name: Report success status
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.review.outcome == 'success' && steps.review-decision.outputs.review_state != 'CHANGES_REQUESTED'
+      - name: Determine final status
+        id: final-status
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "$STATUS_URL" \
-            -f state=success \
-            -f context="Claude Auto Review" \
-            -f description="Review completed" \
-            -f target_url="$RUN_URL" || true
+          VERIFICATION_RESULT: ${{ needs.verification.result }}
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+          REVIEW_STATE: ${{ steps.review-decision.outputs.review_state }}
+        run: ./scripts/ci/determine-review-status.sh
 
-      - name: Report failure status (changes requested)
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.review.outcome == 'success' && steps.review-decision.outputs.review_state == 'CHANGES_REQUESTED'
+      - name: Report status
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api "$STATUS_URL" \
-            -f state=failure \
+            -f state="${{ steps.final-status.outputs.state }}" \
             -f context="Claude Auto Review" \
-            -f description="Changes requested" \
-            -f target_url="$RUN_URL" || true
-
-      - name: Report failure status (action failed)
-        if: always() && steps.check-draft.outputs.is_draft == 'false' && steps.review.outcome == 'failure'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "$STATUS_URL" \
-            -f state=failure \
-            -f context="Claude Auto Review" \
-            -f description="Review failed" \
+            -f description="${{ steps.final-status.outputs.description }}" \
             -f target_url="$RUN_URL" || true

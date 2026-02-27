@@ -3,15 +3,19 @@
 //! [dependencies]
 //! globset = "0.4"
 //! tempfile = "3"
+//! pretty_assertions = "1"
 //! ```
 
 // PR の変更ファイルにマッチする .claude/rules/ のルールを特定し、内容を出力する。
 //
 // 使い方:
 //     rust-script match-rules.rs <changed-files.txt>
+//     rust-script match-rules.rs --groups N <changed-files.txt>
 //
 // 入力: 変更ファイル一覧（1 行 1 パス）
-// 出力: マッチしたルールの名前リスト + 各ルールの本文（フロントマター除去済み）
+// 出力:
+//   通常モード: マッチしたルールの名前リスト + 各ルールの本文（フロントマター除去済み）
+//   グループモード: ルールを N グループに分割して出力（各グループは <!-- group:N --> で区切り）
 
 use globset::{GlobBuilder, GlobMatcher};
 use std::fs;
@@ -164,20 +168,107 @@ fn match_rules(changed_files: &[String], rules_dir: &Path) -> Vec<MatchedRule> {
     matched
 }
 
-fn main() {
+/// マッチしたルールを N グループに分割する（LPT アルゴリズム）。
+///
+/// body サイズの大きいルールから順に、現在の合計サイズが最小のグループに割り当てる。
+fn split_into_groups(rules: Vec<MatchedRule>, n: usize) -> Vec<Vec<MatchedRule>> {
+    let mut groups: Vec<Vec<MatchedRule>> = (0..n).map(|_| Vec::new()).collect();
+    let mut group_sizes: Vec<usize> = vec![0; n];
+
+    // サイズ降順でソート（LPT: Longest Processing Time first）
+    let mut sorted: Vec<_> = rules.into_iter().collect();
+    sorted.sort_by(|a, b| b.body.len().cmp(&a.body.len()));
+
+    for rule in sorted {
+        // 最小サイズのグループを選択
+        let min_idx = group_sizes
+            .iter()
+            .enumerate()
+            .min_by_key(|&(_, &size)| size)
+            .map(|(idx, _)| idx)
+            .unwrap_or(0);
+
+        group_sizes[min_idx] += rule.body.len();
+        groups[min_idx].push(rule);
+    }
+
+    groups
+}
+
+/// ルール一覧のサマリーと本文を出力する。
+fn format_rules(rules: &[MatchedRule]) -> String {
+    let mut out = String::new();
+
+    out.push_str(&format!("マッチしたルール: {} 件\n\n", rules.len()));
+    for rule in rules {
+        out.push_str(&format!("- `{}`\n", rule.path));
+    }
+    out.push('\n');
+
+    for rule in rules {
+        out.push_str(&format!("### {}\n\n", rule.path));
+        out.push_str(&rule.body);
+        out.push_str("\n\n");
+    }
+
+    out
+}
+
+/// CLI 引数をパースする。
+struct CliArgs {
+    groups: Option<usize>,
+    changed_files_path: String,
+}
+
+fn parse_args() -> CliArgs {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: match-rules.rs <changed-files.txt>");
+    let mut groups = None;
+    let mut positional = Vec::new();
+
+    let mut i = 1;
+    while i < args.len() {
+        if args[i] == "--groups" {
+            i += 1;
+            if i >= args.len() {
+                eprintln!("エラー: --groups にはグループ数を指定してください");
+                std::process::exit(1);
+            }
+            groups = Some(args[i].parse::<usize>().unwrap_or_else(|_| {
+                eprintln!(
+                    "エラー: --groups の値は正の整数を指定してください: {}",
+                    args[i]
+                );
+                std::process::exit(1);
+            }));
+            if groups == Some(0) {
+                eprintln!("エラー: --groups は 1 以上を指定してください");
+                std::process::exit(1);
+            }
+        } else {
+            positional.push(args[i].clone());
+        }
+        i += 1;
+    }
+
+    if positional.is_empty() {
+        eprintln!("Usage: match-rules.rs [--groups N] <changed-files.txt>");
         std::process::exit(1);
     }
 
-    let changed_files_path = &args[1];
+    CliArgs {
+        groups,
+        changed_files_path: positional[0].clone(),
+    }
+}
+
+fn main() {
+    let cli = parse_args();
     let rules_dir = Path::new(".claude/rules");
 
-    let content = match fs::read_to_string(changed_files_path) {
+    let content = match fs::read_to_string(&cli.changed_files_path) {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("エラー: {changed_files_path} の読み込みに失敗: {e}");
+            eprintln!("エラー: {} の読み込みに失敗: {e}", cli.changed_files_path);
             std::process::exit(1);
         }
     };
@@ -201,24 +292,30 @@ fn main() {
         return;
     }
 
-    // サマリー
-    println!("マッチしたルール: {} 件\n", matched.len());
-    for rule in &matched {
-        println!("- `{}`", rule.path);
-    }
-    println!();
-
-    // 各ルールの本文
-    for rule in &matched {
-        println!("### {}\n", rule.path);
-        println!("{}", rule.body);
-        println!();
+    match cli.groups {
+        Some(n) => {
+            // グループ分割モード
+            let groups = split_into_groups(matched, n);
+            for (i, group) in groups.iter().enumerate() {
+                println!("<!-- group:{} -->", i + 1);
+                if group.is_empty() {
+                    println!("<!-- no-matching-rules -->");
+                } else {
+                    print!("{}", format_rules(group));
+                }
+            }
+        }
+        None => {
+            // 通常モード（後方互換）
+            print!("{}", format_rules(&matched));
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use std::io::Write;
 
     // --- parse_frontmatter_paths ---
@@ -360,5 +457,78 @@ paths:
         let matched = match_rules(&changed, &rules_dir);
         assert_eq!(matched.len(), 1);
         assert!(matched[0].path.ends_with("with_paths.md"));
+    }
+
+    // --- split_into_groups ---
+
+    /// テスト用ヘルパー: MatchedRule を生成する
+    fn make_rule(path: &str, body_size: usize) -> MatchedRule {
+        MatchedRule {
+            path: path.to_string(),
+            body: "x".repeat(body_size),
+        }
+    }
+
+    #[test]
+    fn test_split_into_groups_2グループに均等分割() {
+        // 100, 80, 60, 40 → グループ1: [100, 40]=140, グループ2: [80, 60]=140
+        let rules = vec![
+            make_rule("a.md", 100),
+            make_rule("b.md", 80),
+            make_rule("c.md", 60),
+            make_rule("d.md", 40),
+        ];
+        let groups = split_into_groups(rules, 2);
+        assert_eq!(groups.len(), 2);
+
+        let size0: usize = groups[0].iter().map(|r| r.body.len()).sum();
+        let size1: usize = groups[1].iter().map(|r| r.body.len()).sum();
+        // LPT: 100→G1, 80→G2, 60→G2, 40→G1 → [140, 140]
+        assert_eq!(size0, 140);
+        assert_eq!(size1, 140);
+    }
+
+    #[test]
+    fn test_split_into_groups_1件でグループ1のみ() {
+        let rules = vec![make_rule("only.md", 100)];
+        let groups = split_into_groups(rules, 2);
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0].len(), 1);
+        assert!(groups[1].is_empty());
+    }
+
+    #[test]
+    fn test_split_into_groups_0件で両グループ空() {
+        let rules: Vec<MatchedRule> = vec![];
+        let groups = split_into_groups(rules, 2);
+        assert_eq!(groups.len(), 2);
+        assert!(groups[0].is_empty());
+        assert!(groups[1].is_empty());
+    }
+
+    #[test]
+    fn test_split_into_groups_lptでサイズバランス() {
+        // 200, 150, 100, 50, 30, 20 → LPT:
+        // 200→G1(200), 150→G2(150), 100→G2(250), 50→G1(250), 30→G1(280), 20→G2(270)
+        let rules = vec![
+            make_rule("a.md", 200),
+            make_rule("b.md", 150),
+            make_rule("c.md", 100),
+            make_rule("d.md", 50),
+            make_rule("e.md", 30),
+            make_rule("f.md", 20),
+        ];
+        let groups = split_into_groups(rules, 2);
+        assert_eq!(groups.len(), 2);
+
+        let size0: usize = groups[0].iter().map(|r| r.body.len()).sum();
+        let size1: usize = groups[1].iter().map(|r| r.body.len()).sum();
+        // 差が小さいことを確認（LPT の保証: 最適の 4/3 以内）
+        let diff = size0.abs_diff(size1);
+        let total = size0 + size1;
+        assert!(
+            diff * 3 <= total,
+            "groups too imbalanced: {size0} vs {size1}"
+        );
     }
 }
