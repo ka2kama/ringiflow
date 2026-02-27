@@ -90,3 +90,21 @@ jsonpath "$.data.id" exists
 jsonpath "$.data.name" == "更新後ユーザー"
 jsonpath "$.data.email" == "update-test-user@example.com"
 jsonpath "$.data.status" == "active"
+
+# =============================================================================
+# 異常系: 存在しないユーザーの更新 → 404
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 存在しない display_number でユーザー更新を試みる
+# Then: 404 Not Found が返される
+
+PATCH {{bff_url}}/api/v1/users/99999999
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "name": "存在しないユーザー"
+}
+
+HTTP 404

@@ -90,3 +90,21 @@ jsonpath "$.data.id" exists
 jsonpath "$.data.name" == "ステータステスト"
 jsonpath "$.data.email" == "status-test-user@example.com"
 jsonpath "$.data.status" == "active"
+
+# =============================================================================
+# 異常系: 存在しないユーザーのステータス変更 → 404
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 存在しない display_number でステータス変更を試みる
+# Then: 404 Not Found が返される
+
+PATCH {{bff_url}}/api/v1/users/99999999/status
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "status": "inactive"
+}
+
+HTTP 404

@@ -110,3 +110,21 @@ jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド
 jsonpath "$.data.description" exists
+
+# =============================================================================
+# 異常系: 存在しない定義のアーカイブ → 404
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 存在しない UUID でワークフロー定義のアーカイブを試みる
+# Then: 404 Not Found が返される
+
+POST {{bff_url}}/api/v1/workflow-definitions/99999999-9999-9999-9999-999999999999/archive
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "version": 1
+}
+
+HTTP 404

@@ -73,3 +73,22 @@ jsonpath "$.data.permissions" count == 3
 jsonpath "$.data.is_system" == false
 jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# =============================================================================
+# 異常系: 存在しないロールの更新 → 404
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 存在しない UUID でロール更新を試みる
+# Then: 404 Not Found が返される
+
+PATCH {{bff_url}}/api/v1/roles/99999999-9999-9999-9999-999999999999
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{csrf_token}}
+Cookie: session_id={{session_cookie}}
+Content-Type: application/json
+{
+    "name": "存在しないロール",
+    "permissions": ["workflow:read"]
+}
+
+HTTP 404

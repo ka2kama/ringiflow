@@ -232,3 +232,30 @@ jsonpath "$.messages_count" == 1
 jsonpath "$.messages[0].To[0].Address" == "{{user_email}}"
 jsonpath "$.messages[0].Subject" contains "[RingiFlow] 承認依頼"
 jsonpath "$.messages[0].Subject" contains "再申請テスト申請"
+
+# =============================================================================
+# 異常系: 存在しないワークフローの再申請 → 404
+# =============================================================================
+# Given: 管理者でログインしている
+# When: 存在しない display_number でワークフロー再申請を試みる
+# Then: 404 Not Found が返される
+
+POST {{bff_url}}/api/v1/workflows/99999999/resubmit
+X-Tenant-ID: {{tenant_id}}
+X-CSRF-Token: {{admin_csrf_token}}
+Cookie: session_id={{admin_session_id}}
+Content-Type: application/json
+{
+    "form_data": {
+        "reason": "テスト"
+    },
+    "approvers": [
+        {
+            "step_id": "approval",
+            "assigned_to": "{{user_id}}"
+        }
+    ],
+    "version": 1
+}
+
+HTTP 404
