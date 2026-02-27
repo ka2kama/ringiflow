@@ -446,6 +446,10 @@ lint-plans:
 lint-plan-test-layers:
     ./scripts/check/plan-test-layers.sh
 
+# 計画ファイルの命名規則違反検出
+lint-plan-filenames:
+    ./scripts/check/check-plan-filenames.sh
+
 # OpenAPI ハンドラ登録照合（#[utoipa::path] と openapi.rs の paths() の一致確認）
 lint-openapi-handlers:
     ./scripts/check/openapi-handler-registration.sh
