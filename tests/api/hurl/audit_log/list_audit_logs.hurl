@@ -145,7 +145,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 400
 [Asserts]
-jsonpath "$.type" endsWith "/validation-error"
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
 jsonpath "$.title" == "Validation Error"
 jsonpath "$.status" == 400
 jsonpath "$.detail" == "カーソルの形式が不正です"
