@@ -12,7 +12,7 @@ CREATE TABLE documents (
     content_type          VARCHAR(100) NOT NULL,
     size                  BIGINT NOT NULL,
     s3_key                VARCHAR(1000) NOT NULL,
-    folder_id             UUID REFERENCES folders(id) ON DELETE SET NULL,
+    folder_id             UUID REFERENCES folders(id) ON DELETE RESTRICT,
     workflow_instance_id  UUID REFERENCES workflow_instances(id) ON DELETE CASCADE,
     status                VARCHAR(20) NOT NULL DEFAULT 'uploading',
     uploaded_by           UUID REFERENCES users(id) ON DELETE SET NULL,
