@@ -39,6 +39,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowInstance, CoreError> {
         // 1. ワークフロー定義を取得
         let definition = self
+            .deps
             .definition_repo
             .find_by_id(&input.definition_id, &tenant_id)
             .await
@@ -52,8 +53,9 @@ impl WorkflowUseCaseImpl {
         }
 
         // 3. WorkflowInstance を draft として作成
-        let now = self.clock.now();
+        let now = self.deps.clock.now();
         let display_number = self
+            .deps
             .counter_repo
             .next_display_number(&tenant_id, DisplayIdEntityType::WorkflowInstance)
             .await
@@ -72,11 +74,13 @@ impl WorkflowUseCaseImpl {
 
         // 4. リポジトリに保存
         let mut tx = self
+            .deps
             .tx_manager
             .begin()
             .await
             .map_err(|e| CoreError::Internal(format!("トランザクション開始に失敗: {}", e)))?;
-        self.instance_repo
+        self.deps
+            .instance_repo
             .insert(&mut tx, &instance)
             .await
             .map_err(|e| CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)))?;
@@ -135,7 +139,7 @@ mod tests {
         error::CoreError,
         usecase::{
             notification::{NotificationService, TemplateRenderer},
-            workflow::{CreateWorkflowInput, WorkflowUseCaseImpl},
+            workflow::{CreateWorkflowInput, WorkflowUseCaseDeps, WorkflowUseCaseImpl},
         },
     };
 
@@ -170,17 +174,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo.clone()),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo.clone()),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         let input = CreateWorkflowInput {
             definition_id: published_definition.id().clone(),
@@ -237,17 +241,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(MockWorkflowCommentRepository::new()),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         let input = CreateWorkflowInput {
             definition_id: WorkflowDefinitionId::new(),

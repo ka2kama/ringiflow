@@ -26,6 +26,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowWithSteps, CoreError> {
         // 1. ステップを取得
         let step = self
+            .deps
             .step_repo
             .find_by_id(&step_id, &tenant_id)
             .await
@@ -42,7 +43,7 @@ impl WorkflowUseCaseImpl {
         }
 
         // 4. ステップを承認
-        let now = self.clock.now();
+        let now = self.deps.clock.now();
         let step_expected_version = step.version();
         let current_step_id = step.step_id().to_string();
         let approved_step = step
@@ -51,6 +52,7 @@ impl WorkflowUseCaseImpl {
 
         // 5. インスタンスを取得
         let instance = self
+            .deps
             .instance_repo
             .find_by_id(approved_step.instance_id(), &tenant_id)
             .await
@@ -60,6 +62,7 @@ impl WorkflowUseCaseImpl {
 
         // 6. 定義から承認ステップの順序を取得し、次ステップを判定
         let definition = self
+            .deps
             .definition_repo
             .find_by_id(instance.definition_id(), &tenant_id)
             .await
@@ -167,6 +170,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowWithSteps, CoreError> {
         // display_number → WorkflowInstanceId を解決
         let instance = self
+            .deps
             .instance_repo
             .find_by_display_number(workflow_display_number, &tenant_id)
             .await
@@ -174,6 +178,7 @@ impl WorkflowUseCaseImpl {
 
         // display_number → WorkflowStepId を解決
         let step = self
+            .deps
             .step_repo
             .find_by_display_number(step_display_number, instance.id(), &tenant_id)
             .await

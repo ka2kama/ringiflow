@@ -46,6 +46,7 @@ impl WorkflowUseCaseImpl {
     ) -> Result<WorkflowComment, CoreError> {
         // 1. ワークフローインスタンスを取得
         let instance = self
+            .deps
             .instance_repo
             .find_by_display_number(display_number, &tenant_id)
             .await
@@ -63,7 +64,7 @@ impl WorkflowUseCaseImpl {
             CommentBody::new(input.body).map_err(|e| CoreError::BadRequest(e.to_string()))?;
 
         // 4. コメントを作成して保存
-        let now = self.clock.now();
+        let now = self.deps.clock.now();
         let comment = WorkflowComment::new(NewWorkflowComment {
             id: WorkflowCommentId::new(),
             tenant_id: tenant_id.clone(),
@@ -73,7 +74,8 @@ impl WorkflowUseCaseImpl {
             now,
         });
 
-        self.comment_repo
+        self.deps
+            .comment_repo
             .insert(&comment, &tenant_id)
             .await
             .map_err(|e| CoreError::Internal(format!("コメントの保存に失敗: {}", e)))?;
@@ -97,6 +99,7 @@ impl WorkflowUseCaseImpl {
 
         // 承認者チェック
         let steps = self
+            .deps
             .step_repo
             .find_by_instance(instance.id(), tenant_id)
             .await
@@ -144,7 +147,7 @@ mod tests {
         error::CoreError,
         usecase::{
             notification::{NotificationService, TemplateRenderer},
-            workflow::{PostCommentInput, WorkflowUseCaseImpl},
+            workflow::{PostCommentInput, WorkflowUseCaseDeps, WorkflowUseCaseImpl},
         },
     };
 
@@ -185,17 +188,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(comment_repo),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(comment_repo),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         let input = PostCommentInput {
             body: "テストコメント".to_string(),
@@ -264,17 +267,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(comment_repo),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(comment_repo),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         let input = PostCommentInput {
             body: "承認者のコメント".to_string(),
@@ -333,17 +336,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(comment_repo),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(comment_repo),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         let input = PostCommentInput {
             body: "無関係なコメント".to_string(),
@@ -384,17 +387,17 @@ mod tests {
             "http://localhost:5173".to_string(),
         ));
 
-        let sut = WorkflowUseCaseImpl::new(
-            Arc::new(definition_repo),
-            Arc::new(instance_repo),
-            Arc::new(step_repo),
-            Arc::new(comment_repo),
-            Arc::new(MockUserRepository::new()),
-            Arc::new(MockDisplayIdCounterRepository::new()),
-            Arc::new(FixedClock::new(now)),
-            Arc::new(MockTransactionManager),
+        let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
+            definition_repo: Arc::new(definition_repo),
+            instance_repo: Arc::new(instance_repo),
+            step_repo: Arc::new(step_repo),
+            comment_repo: Arc::new(comment_repo),
+            user_repo: Arc::new(MockUserRepository::new()),
+            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            clock: Arc::new(FixedClock::new(now)),
+            tx_manager: Arc::new(MockTransactionManager),
             notification_service,
-        );
+        });
 
         let input = PostCommentInput {
             body: "存在しないワークフローへのコメント".to_string(),
