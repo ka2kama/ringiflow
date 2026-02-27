@@ -14,8 +14,8 @@
 //! TraceLayer のスパン内に配置することで、スパンフィールド（request_id, tenant_id, user_id）が
 //! JSON ログに自動的に含まれる。
 //!
-//! → 設計: [Observability 設計書](../../docs/03_詳細設計書/14_Observability設計.md)
-//! → スキーマ: [ログスキーマ](../../docs/06_ナレッジベース/backend/log-schema.md)
+//! → 設計: [Observability 設計書](../../../../docs/03_詳細設計書/14_Observability設計.md)
+//! → スキーマ: [ログスキーマ](../../../../docs/06_ナレッジベース/backend/log-schema.md)
 
 use std::{
     future::Future,
