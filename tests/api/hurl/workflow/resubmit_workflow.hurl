@@ -259,3 +259,6 @@ Content-Type: application/json
 }
 
 HTTP 404
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/workflow-instance-not-found"
+jsonpath "$.status" == 404

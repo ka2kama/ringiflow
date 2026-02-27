@@ -100,6 +100,9 @@ Content-Type: application/json
   "comment": "差し戻します"
 }
 HTTP 404
+[Asserts]
+jsonpath "$.type" exists
+jsonpath "$.status" == 404
 
 # ===== 正常系テスト: user がステップを差し戻す =====
 
@@ -178,6 +181,9 @@ Content-Type: application/json
 }
 
 HTTP 400
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
+jsonpath "$.status" == 400
 
 # =============================================================================
 # 異常系: 状態遷移 — 差し戻し後の完了済みステップを却下
@@ -197,3 +203,6 @@ Content-Type: application/json
 }
 
 HTTP 400
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
+jsonpath "$.status" == 400
