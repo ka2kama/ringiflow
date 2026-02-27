@@ -392,6 +392,13 @@ pub struct DocumentDetailCoreDto {
     pub created_at:   String,
 }
 
+/// ダウンロード URL DTO（Core Service からのデシリアライズ用）
+#[derive(Debug, Clone, Deserialize)]
+pub struct DownloadUrlCoreDto {
+    pub download_url: String,
+    pub expires_in:   u64,
+}
+
 // --- ダッシュボード関連の型 ---
 
 /// ダッシュボード統計 DTO

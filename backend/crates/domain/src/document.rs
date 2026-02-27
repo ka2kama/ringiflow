@@ -309,6 +309,24 @@ impl Document {
         })
     }
 
+    /// ソフトデリートを実行し、ステータスを `deleted` に遷移する
+    ///
+    /// `active` 以外のステータスからの遷移はエラーになる。
+    pub fn soft_delete(self, now: DateTime<Utc>) -> Result<Self, DomainError> {
+        if self.status != DocumentStatus::Active {
+            return Err(DomainError::Validation(format!(
+                "ドキュメントのステータスが active ではありません: {}",
+                self.status
+            )));
+        }
+        Ok(Self {
+            status: DocumentStatus::Deleted,
+            updated_at: now,
+            deleted_at: Some(now),
+            ..self
+        })
+    }
+
     /// DB からエンティティを復元する（バリデーションをスキップ）
     // FIXME: 引数が多い。DB 行データの中間構造体を経由して引数を削減する
     #[allow(clippy::too_many_arguments)]
@@ -588,6 +606,79 @@ mod tests {
         let confirmed = doc.confirm(later).unwrap();
         assert_eq!(confirmed.status(), DocumentStatus::Active);
         assert_eq!(confirmed.updated_at(), later);
+    }
+
+    // --- Document::soft_delete ---
+
+    #[test]
+    fn test_document_soft_deleteでactiveからdeletedに遷移する() {
+        let now = fixed_now();
+        let later = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+
+        let doc = Document::from_db(
+            DocumentId::new(),
+            TenantId::new(),
+            "test.pdf".to_string(),
+            "application/pdf".to_string(),
+            1024,
+            "key".to_string(),
+            UploadContext::Folder(FolderId::new()),
+            DocumentStatus::Active,
+            Some(UserId::new()),
+            now,
+            now,
+            None,
+        );
+
+        let deleted = doc.soft_delete(later).unwrap();
+        assert_eq!(deleted.status(), DocumentStatus::Deleted);
+        assert_eq!(deleted.updated_at(), later);
+        assert_eq!(deleted.deleted_at(), Some(later));
+    }
+
+    #[test]
+    fn test_document_soft_deleteでuploadingステータスからの遷移を拒否する() {
+        let now = fixed_now();
+        let later = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+
+        let doc = Document::new_uploading(
+            DocumentId::new(),
+            TenantId::new(),
+            "test.pdf".to_string(),
+            "application/pdf".to_string(),
+            1024,
+            "key".to_string(),
+            UploadContext::Folder(FolderId::new()),
+            None,
+            now,
+        );
+
+        let result = doc.soft_delete(later);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_document_soft_deleteでdeletedステータスからの遷移を拒否する() {
+        let now = fixed_now();
+        let later = DateTime::from_timestamp(1_700_001_000, 0).unwrap();
+
+        let doc = Document::from_db(
+            DocumentId::new(),
+            TenantId::new(),
+            "test.pdf".to_string(),
+            "application/pdf".to_string(),
+            1024,
+            "key".to_string(),
+            UploadContext::Folder(FolderId::new()),
+            DocumentStatus::Deleted,
+            None,
+            now,
+            now,
+            Some(now),
+        );
+
+        let result = doc.soft_delete(later);
+        assert!(result.is_err());
     }
 
     #[test]

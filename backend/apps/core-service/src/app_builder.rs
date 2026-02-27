@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
-    routing::{get, patch, post, put},
+    routing::{delete, get, patch, post, put},
 };
 use ringiflow_domain::clock::SystemClock;
 use ringiflow_infra::{
@@ -65,8 +65,10 @@ use crate::{
         create_user,
         create_workflow,
         delete_definition,
+        delete_document,
         delete_folder,
         delete_role,
+        generate_download_url,
         get_dashboard_stats,
         get_definition,
         get_role,
@@ -80,11 +82,13 @@ use crate::{
         health_check,
         list_comments,
         list_definitions,
+        list_documents,
         list_folders,
         list_my_tasks,
         list_my_workflows,
         list_roles,
         list_users,
+        list_workflow_attachments,
         post_comment,
         publish_definition,
         readiness_check,
@@ -174,7 +178,12 @@ pub(crate) fn build_app(
     });
 
     // ドキュメント UseCase + State
-    let document_usecase = DocumentUseCaseImpl::new(document_repo, s3_client, clock.clone());
+    let document_usecase = DocumentUseCaseImpl::new(
+        document_repo,
+        instance_repo.clone(),
+        s3_client,
+        clock.clone(),
+    );
     let document_state = Arc::new(DocumentState {
         usecase: document_usecase,
     });
@@ -289,12 +298,28 @@ pub(crate) fn build_app(
       .with_state(folder_state)
       // ドキュメント管理 API
       .route(
+         "/internal/documents",
+         get(list_documents),
+      )
+      .route(
          "/internal/documents/upload-url",
          post(request_upload_url),
       )
       .route(
          "/internal/documents/{document_id}/confirm",
          post(confirm_upload),
+      )
+      .route(
+         "/internal/documents/{document_id}/download-url",
+         post(generate_download_url),
+      )
+      .route(
+         "/internal/documents/{document_id}",
+         delete(delete_document),
+      )
+      .route(
+         "/internal/workflows/{workflow_instance_id}/attachments",
+         get(list_workflow_attachments),
       )
       .with_state(document_state)
       // ロール管理 API
