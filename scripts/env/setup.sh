@@ -19,9 +19,9 @@ cd "$PROJECT_ROOT"
 echo "環境変数ファイルを確認中..."
 
 # 全ファイルが揃っており、必須変数も存在する場合のみスキップ
-# API_TEST_POSTGRES_PORT は #624 で追加された sentinel キー
+# MINIO_API_PORT は #917 で追加された sentinel キー（S3 インフラ導入）
 if [[ -f .env && -f backend/.env && -f backend/.env.api-test ]]; then
-    if grep -q '^API_TEST_POSTGRES_PORT=' .env 2>/dev/null; then
+    if grep -q '^MINIO_API_PORT=' .env 2>/dev/null; then
         echo "  確認: .env"
         echo "  確認: backend/.env"
         echo "  確認: backend/.env.api-test"
