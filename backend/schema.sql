@@ -1152,7 +1152,7 @@ ALTER TABLE ONLY public.display_id_counters
 --
 
 ALTER TABLE ONLY public.documents
-    ADD CONSTRAINT documents_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE SET NULL;
+    ADD CONSTRAINT documents_folder_id_fkey FOREIGN KEY (folder_id) REFERENCES public.folders(id) ON DELETE RESTRICT;
 
 --
 -- Name: documents documents_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
