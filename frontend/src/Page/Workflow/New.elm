@@ -793,18 +793,13 @@ submitWorkflow shared workflowDisplayNumber approvers =
 
 {-| 保存と申請を連続実行
 
-未保存の場合、まず下書き保存し、成功したら申請を行う。
-MVP では保存結果を GotSaveResult で受け取り、そこから申請を行うフローに。
-ただし、この実装では簡略化のため保存→申請を一度に行う。
-
-将来的には Task.andThen パターンで連結する方がエレガント。
+未保存のワークフローを下書き保存する。
+保存成功時は GotSaveAndSubmitResult ハンドラで submitWorkflow にチェーンし、
+保存→申請の連続処理を実現する。
 
 -}
 saveAndSubmit : Shared -> String -> String -> Dict String String -> List WorkflowApi.StepApproverRequest -> Cmd Msg
 saveAndSubmit shared definitionId title formValues approvers =
-    -- MVP では簡略化: 保存のみ行い、保存成功後にユーザーが再度申請ボタンを押す
-    -- 理由: Elm で Cmd のチェーンは Task 変換が必要で複雑になるため
-    -- TODO(#889): 将来的には保存→申請の連続処理を実装
     WorkflowApi.createWorkflow
         { config = Shared.toRequestConfig shared
         , body =
