@@ -43,9 +43,15 @@ flowchart LR
 
 Issue 本文の現状分析は作成時点の仮説。着手時に最新の As-Is で検証する。
 
+前提: コード実測の前に `origin/main` を最新化する。
+
+```bash
+git fetch origin main
+```
+
 1. `gh issue view <number> --json createdAt` で作成日時を確認
 2. `gh pr list --search "#<Issue番号>"` で作成後の関連 PR を検索
-3. 最新の As-Is を実測・確認（Issue 本文を鵜呑みにしない）
+3. 最新の As-Is を `origin/main` 基準で実測・確認（Issue 本文を鵜呑みにしない）
 4. Issue の前提が現在も有効か判断
 
 → 詳細: [問題解決フレームワーク > Issue 精査時の As-Is 確認](problem-solving.md#issue-精査時の-as-is-確認)
@@ -89,10 +95,15 @@ EOF
 
 ## 2. ブランチ作成
 
-ブランチ作成前に main を最新化する:
+ブランチ作成前に main を最新化し、最新 main からブランチを作成する:
 
 ```bash
+# 通常
 git checkout main && git pull origin main
+
+# worktree 等で main がロックされている場合
+git fetch origin main
+git checkout -b <branch-name> origin/main
 ```
 
 命名規則:

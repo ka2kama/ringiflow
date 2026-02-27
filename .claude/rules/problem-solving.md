@@ -33,9 +33,11 @@ Issue 本文の現状分析は「作成時点の仮説」。着手時に最新�
 
 確認手順:
 
+前提: コード実測の前に `git fetch origin main` で `origin/main` を最新化する。
+
 1. Issue 作成日時を確認（`gh issue view <number> --json createdAt`）
 2. 作成後の関連 PR を検索（`gh pr list --search "#<Issue番号>"`）
-3. 最新の As-Is を測定・確認（可能な限り実測で検証）
+3. 最新の As-Is を `origin/main` 基準で実測・確認（可能な限り実測で検証）
 4. Issue の前提が現在も有効か判断
    - 既に改善済み → 残る課題を特定、Issue クローズを提案
    - まだ未改善 → Issue の現状分析を信頼して進める
