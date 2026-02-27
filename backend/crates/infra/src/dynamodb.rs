@@ -95,7 +95,7 @@ pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result
                 .map(|e| e.is_resource_not_found_exception())
                 .unwrap_or(false)
             {
-                return Err(InfraError::DynamoDb(format!(
+                return Err(InfraError::dynamo_db(format!(
                     "テーブル '{}' の確認に失敗: {}",
                     table_name, err
                 )));
@@ -114,14 +114,14 @@ pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result
                 .attribute_name("tenant_id")
                 .key_type(KeyType::Hash)
                 .build()
-                .map_err(|e| InfraError::DynamoDb(format!("KeySchema 構築エラー: {}", e)))?,
+                .map_err(|e| InfraError::dynamo_db(format!("KeySchema 構築エラー: {}", e)))?,
         )
         .key_schema(
             KeySchemaElement::builder()
                 .attribute_name("sk")
                 .key_type(KeyType::Range)
                 .build()
-                .map_err(|e| InfraError::DynamoDb(format!("KeySchema 構築エラー: {}", e)))?,
+                .map_err(|e| InfraError::dynamo_db(format!("KeySchema 構築エラー: {}", e)))?,
         )
         .attribute_definitions(
             AttributeDefinition::builder()
@@ -129,7 +129,7 @@ pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result
                 .attribute_type(ScalarAttributeType::S)
                 .build()
                 .map_err(|e| {
-                    InfraError::DynamoDb(format!("AttributeDefinition 構築エラー: {}", e))
+                    InfraError::dynamo_db(format!("AttributeDefinition 構築エラー: {}", e))
                 })?,
         )
         .attribute_definitions(
@@ -138,7 +138,7 @@ pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result
                 .attribute_type(ScalarAttributeType::S)
                 .build()
                 .map_err(|e| {
-                    InfraError::DynamoDb(format!("AttributeDefinition 構築エラー: {}", e))
+                    InfraError::dynamo_db(format!("AttributeDefinition 構築エラー: {}", e))
                 })?,
         )
         .billing_mode(BillingMode::PayPerRequest)
@@ -155,7 +155,7 @@ pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result
                 .map(|e| e.is_resource_in_use_exception())
                 .unwrap_or(false);
             if !is_resource_in_use {
-                return Err(InfraError::DynamoDb(format!(
+                return Err(InfraError::dynamo_db(format!(
                     "テーブル '{}' の作成に失敗: {}",
                     table_name, err
                 )));
@@ -177,12 +177,12 @@ pub async fn ensure_audit_log_table(client: &Client, table_name: &str) -> Result
                 .enabled(true)
                 .attribute_name("ttl")
                 .build()
-                .map_err(|e| InfraError::DynamoDb(format!("TTL 設定の構築に失敗: {}", e)))?,
+                .map_err(|e| InfraError::dynamo_db(format!("TTL 設定の構築に失敗: {}", e)))?,
         )
         .send()
         .await
         .map_err(|e| {
-            InfraError::DynamoDb(format!(
+            InfraError::dynamo_db(format!(
                 "テーブル '{}' の TTL 設定に失敗: {}",
                 table_name, e
             ))

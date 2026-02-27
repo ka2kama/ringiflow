@@ -22,7 +22,7 @@ use ringiflow_domain::{
     user::UserId,
 };
 use ringiflow_infra::{
-    InfraError,
+    InfraErrorKind,
     SessionManager,
     repository::audit_log_repository::{AuditLogFilter, AuditLogRepository},
 };
@@ -166,12 +166,12 @@ pub async fn list_audit_logs(
             };
             Ok((StatusCode::OK, Json(response)).into_response())
         }
-        Err(InfraError::InvalidInput(msg)) => {
-            tracing::warn!("監査ログの検索でバリデーションエラー: {}", msg);
+        Err(e) if matches!(e.kind(), InfraErrorKind::InvalidInput(_)) => {
+            tracing::warn!("監査ログの検索でバリデーションエラー: {}", e);
             Err(validation_error_response("カーソルの形式が不正です"))
         }
         Err(e) => {
-            tracing::error!("監査ログの検索に失敗: {}", e);
+            tracing::error!(error.span_trace = %e.span_trace(), "監査ログの検索に失敗: {}", e);
             Err(internal_error_response())
         }
     }
@@ -191,6 +191,7 @@ mod tests {
     use ringiflow_domain::tenant::TenantId;
     use ringiflow_infra::{
         InfraError,
+        InfraErrorKind,
         SessionData,
         SessionManager,
         repository::audit_log_repository::{AuditLogFilter, AuditLogPage, AuditLogRepository},
@@ -241,10 +242,10 @@ mod tests {
                 Err(_) => {
                     // find_result を消費せずにエラーを再生成
                     // InfraError は Clone 非対応のため、パターンで再構築
-                    Err(match &self.find_result {
-                        Err(InfraError::InvalidInput(msg)) => InfraError::InvalidInput(msg.clone()),
-                        Err(InfraError::DynamoDb(msg)) => InfraError::DynamoDb(msg.clone()),
-                        _ => InfraError::Unexpected("unexpected error".to_string()),
+                    Err(match self.find_result.as_ref().unwrap_err().kind() {
+                        InfraErrorKind::InvalidInput(msg) => InfraError::invalid_input(msg.clone()),
+                        InfraErrorKind::DynamoDb(msg) => InfraError::dynamo_db(msg.clone()),
+                        _ => InfraError::unexpected("unexpected error"),
                     })
                 }
             }
@@ -357,7 +358,7 @@ mod tests {
     async fn test_リポジトリがinvalid_inputを返すとき400を返す() {
         // Given
         let sut = create_test_app(StubAuditLogRepository::with_error(
-            InfraError::InvalidInput("カーソルのデコードに失敗".to_string()),
+            InfraError::invalid_input("カーソルのデコードに失敗"),
         ));
 
         let request = Request::builder()
@@ -384,8 +385,8 @@ mod tests {
     #[tokio::test]
     async fn test_リポジトリがdynamo_dbエラーを返すとき500を返す() {
         // Given
-        let sut = create_test_app(StubAuditLogRepository::with_error(InfraError::DynamoDb(
-            "DynamoDB connection failed".to_string(),
+        let sut = create_test_app(StubAuditLogRepository::with_error(InfraError::dynamo_db(
+            "DynamoDB connection failed",
         )));
 
         let request = Request::builder()

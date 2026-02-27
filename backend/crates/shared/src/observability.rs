@@ -106,6 +106,7 @@ pub fn init_tracing(config: TracingConfig) {
     tracing_subscriber::registry()
         .with(env_filter)
         .with(fmt_layer)
+        .with(tracing_error::ErrorLayer::default())
         .init();
 }
 
@@ -321,6 +322,49 @@ mod tests {
             // X-Tenant-ID なしでもスパンが作成されること（tenant_id = "-"）
             assert_eq!(span.metadata().unwrap().name(), "request");
         });
+    }
+
+    // ===== ErrorLayer / SpanTrace テスト =====
+
+    #[test]
+    fn test_error_layer登録後にspan_traceがスパンを捕捉する() {
+        use tracing_error::SpanTrace;
+        use tracing_subscriber::layer::SubscriberExt as _;
+
+        let subscriber = tracing_subscriber::registry().with(tracing_error::ErrorLayer::default());
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let span = tracing::info_span!("test_operation", key = "value");
+        let _enter = span.enter();
+
+        let trace = SpanTrace::capture();
+        let trace_str = format!("{trace}");
+
+        assert!(
+            trace_str.contains("test_operation"),
+            "SpanTrace がスパン名を含むこと: {trace_str}",
+        );
+    }
+
+    #[test]
+    fn test_error_layerなしでspan_traceが空トレースを返す() {
+        use tracing_error::SpanTrace;
+
+        // ErrorLayer なしの subscriber
+        let subscriber = tracing_subscriber::registry();
+        let _guard = tracing::subscriber::set_default(subscriber);
+
+        let span = tracing::info_span!("test_span");
+        let _enter = span.enter();
+
+        let trace = SpanTrace::capture();
+        let trace_str = format!("{trace}");
+
+        // ErrorLayer がないため、空（またはスパン情報なし）
+        assert!(
+            !trace_str.contains("test_span"),
+            "ErrorLayer なしではスパン名を含まないこと: {trace_str}",
+        );
     }
 
     // ===== record_user_id テスト =====

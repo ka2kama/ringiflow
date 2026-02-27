@@ -250,7 +250,7 @@ async fn test_update_with_version_check_バージョン不一致でconflictエ�
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(
-        matches!(err, ringiflow_infra::InfraError::Conflict { .. }),
+        matches!(err.kind(), ringiflow_infra::InfraErrorKind::Conflict { .. }),
         "InfraError::Conflict を期待したが {:?} が返った",
         err
     );
@@ -288,7 +288,7 @@ async fn test_update_with_version_check_別テナントのステップは更新�
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(
-        matches!(err, ringiflow_infra::InfraError::Conflict { .. }),
+        matches!(err.kind(), ringiflow_infra::InfraErrorKind::Conflict { .. }),
         "InfraError::Conflict を期待したが {:?} が返った",
         err
     );

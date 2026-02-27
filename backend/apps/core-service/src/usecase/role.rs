@@ -69,7 +69,7 @@ impl RoleUseCaseImpl {
 
         self.role_repository.insert(&role).await.map_err(|e| {
             // UNIQUE 制約違反（tenant_id, name）の場合は Conflict
-            if let ringiflow_infra::InfraError::Database(ref db_err) = e
+            if let ringiflow_infra::InfraErrorKind::Database(db_err) = e.kind()
                 && let Some(constraint) = db_err.as_database_error().and_then(|d| d.constraint())
                 && constraint == "roles_tenant_name_key"
             {

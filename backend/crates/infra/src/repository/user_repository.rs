@@ -162,12 +162,12 @@ impl TryFrom<UserRow> for User {
             UserId::from_uuid(row.id),
             TenantId::from_uuid(row.tenant_id),
             DisplayNumber::new(row.display_number)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            Email::new(&row.email).map_err(|e| InfraError::Unexpected(e.to_string()))?,
-            UserName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
+            Email::new(&row.email).map_err(|e| InfraError::unexpected(e.to_string()))?,
+            UserName::new(&row.name).map_err(|e| InfraError::unexpected(e.to_string()))?,
             row.status
                 .parse::<UserStatus>()
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             row.last_login_at,
             row.created_at,
             row.updated_at,

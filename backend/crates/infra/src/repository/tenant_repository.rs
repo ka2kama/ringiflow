@@ -56,7 +56,7 @@ impl TenantRepository for PostgresTenantRepository {
 
         let tenant = Tenant::from_db(
             TenantId::from_uuid(row.id),
-            TenantName::new(&row.name).map_err(|e| InfraError::Unexpected(e.to_string()))?,
+            TenantName::new(&row.name).map_err(|e| InfraError::unexpected(e.to_string()))?,
         );
 
         Ok(Some(tenant))

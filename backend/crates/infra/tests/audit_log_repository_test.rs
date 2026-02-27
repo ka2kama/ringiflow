@@ -420,8 +420,8 @@ async fn test_find_by_tenantが不正なbase64のcursorでinvalid_inputエラー
     assert!(result.is_err());
     assert!(
         matches!(
-            result.unwrap_err(),
-            ringiflow_infra::InfraError::InvalidInput(_)
+            result.unwrap_err().kind(),
+            ringiflow_infra::InfraErrorKind::InvalidInput(_)
         ),
         "base64 デコード不能な cursor は InvalidInput エラーであるべき"
     );
@@ -449,8 +449,8 @@ async fn test_find_by_tenantがbase64デコード可能だがjsonでないcursor
     assert!(result.is_err());
     assert!(
         matches!(
-            result.unwrap_err(),
-            ringiflow_infra::InfraError::InvalidInput(_)
+            result.unwrap_err().kind(),
+            ringiflow_infra::InfraErrorKind::InvalidInput(_)
         ),
         "JSON デシリアライズ不能な cursor は InvalidInput エラーであるべき"
     );

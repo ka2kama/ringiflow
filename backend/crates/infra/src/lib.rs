@@ -63,7 +63,7 @@ pub mod s3;
 pub mod session;
 
 pub use db::{PgTransactionManager, TransactionManager, TxContext};
-pub use error::InfraError;
+pub use error::{InfraError, InfraErrorKind};
 pub use password::{Argon2PasswordChecker, PasswordChecker};
 pub use s3::{AwsS3Client, S3Client};
 pub use session::{RedisSessionManager, SessionData, SessionManager};

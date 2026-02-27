@@ -34,6 +34,7 @@ RingiFlow の Observability（可観測性）基盤の設計を定義する。�
 | アプリケーション計装（`tracing::instrument`） | アラート・Runbook |
 | ビジネスイベントログ | サンプリング戦略 |
 | エラーコンテキスト構造化 | |
+| SpanTrace（エラー呼び出し経路トレース） | |
 | Canonical Log Line | |
 
 ---
@@ -558,6 +559,112 @@ Canonical Log Line イベント自体は `http.status_code`, `http.latency_ms`, 
 
 ---
 
+## SpanTrace 設計
+
+### 概要
+
+エラー発生時に論理的な呼び出しパス（スパントレース）を自動記録する。`tracing-error` クレートの `SpanTrace` を使用し、`tracing` のスパン階層から呼び出し経路を捕捉する。物理的な `std::backtrace::Backtrace` は async Rust で tokio ランタイムフレームにより汚染されるため、`SpanTrace` を採用する。
+
+### アーキテクチャ
+
+```mermaid
+flowchart TB
+    subgraph Subscriber["tracing-subscriber"]
+        FmtLayer["fmt layer"]
+        ErrLayer["ErrorLayer"]
+    end
+
+    subgraph Error["エラー型"]
+        InfraError["InfraError（struct）"]
+        Kind["InfraErrorKind（enum）"]
+        Trace["SpanTrace"]
+    end
+
+    subgraph App["アプリケーション層"]
+        CoreError["CoreError::Database"]
+        AuthError["AuthError::Database"]
+    end
+
+    ErrLayer -->|"SpanTrace::capture() を有効化"| Trace
+    InfraError --> Kind
+    InfraError --> Trace
+    CoreError -->|"#[from]"| InfraError
+    AuthError -->|"#[from]"| InfraError
+```
+
+### エラー型の構造
+
+`InfraError` を struct + enum パターンにリファクタリングし、全バリアントに一律で `SpanTrace` を付与する。`std::io::Error` と同じ Rust の標準パターン。
+
+| 型 | 役割 |
+|---|------|
+| `InfraError`（struct） | エラー種別（`InfraErrorKind`）と `SpanTrace` を保持するラッパー |
+| `InfraErrorKind`（enum） | 従来の `InfraError` バリアント（Database, Redis, Serialization 等） |
+
+`From<sqlx::Error>`, `From<redis::RedisError>`, `From<serde_json::Error>` の実装で `SpanTrace::capture()` を自動呼び出しする。手動構築バリアント（Conflict, DynamoDb, S3, InvalidInput, Unexpected）は convenience constructor で `SpanTrace` をキャプチャする。
+
+### SpanTrace の捕捉フロー
+
+```mermaid
+sequenceDiagram
+    participant Handler as HTTP ハンドラ
+    participant UC as ユースケース
+    participant Repo as リポジトリ
+    participant DB as PostgreSQL
+
+    Note over Handler: request スパン（自動）
+    Handler->>UC: ユースケース呼び出し
+    UC->>Repo: リポジトリ呼び出し
+    Repo->>DB: SQL クエリ
+    DB-->>Repo: sqlx::Error
+    Note over Repo: From<sqlx::Error> で<br/>SpanTrace::capture()
+    Repo-->>UC: InfraError（SpanTrace 付き）
+    UC-->>Handler: CoreError::Database（InfraError を保持）
+    Note over Handler: IntoResponse で<br/>SpanTrace をログ出力
+```
+
+### ログ出力
+
+#### Pretty モード（開発環境）
+
+```
+ERROR データベースエラー: connection refused
+  Span Trace:
+    0: ringiflow_core_service::handler::ringi::approve_ringi_step
+         with tenant_id=TNT-001, user_id=USR-002
+    1: request
+         with method=POST uri=/api/ringis/RNG-001/steps/STP-003/approve
+```
+
+#### JSON モード（本番環境）
+
+```json
+{
+  "level": "ERROR",
+  "message": "データベースエラー: connection refused",
+  "error.category": "infrastructure",
+  "error.kind": "database",
+  "error.span_trace": "0: ringiflow_core_service::handler::...\n1: request with ..."
+}
+```
+
+`error.span_trace` フィールドは `SpanTrace` の `Display` 出力を文字列として格納する。AI エージェントは `jq` で `select(.["error.span_trace"] != null)` によりスパントレース付きエラーをフィルタできる。
+
+### Graceful Degradation
+
+`ErrorLayer` が subscriber に登録されていない場合（テスト環境等）、`SpanTrace::capture()` は空のトレースを返す。パニックや実行時エラーは発生しない。`SpanTrace::status()` で捕捉状態を確認できる。
+
+### 実装コンポーネント
+
+| コンポーネント | 所在 | 責務 |
+|-------------|------|------|
+| `ErrorLayer` | `shared/src/observability.rs` | `init_tracing()` に追加。SpanTrace 捕捉を有効化 |
+| `InfraError` | `infra/src/error.rs` | struct wrapper。`InfraErrorKind` + `SpanTrace` を保持 |
+| `InfraErrorKind` | `infra/src/error.rs` | 従来の InfraError バリアント |
+| SpanTrace ログ出力 | `core-service/src/error.rs`, `auth-service/src/error.rs` | `IntoResponse` でスパントレースをログに含める |
+
+---
+
 ## メトリクス設計
 
 > **実装状態**: 未実装（Phase 4 で実装予定）
@@ -739,13 +846,19 @@ Phase 4 で検討する項目:
 backend/
 ├── crates/
 │   ├── shared/src/
-│   │   ├── observability.rs     # トレーシング初期化、Request ID 生成、スパン作成
+│   │   ├── observability.rs     # トレーシング初期化、Request ID 生成、スパン作成、ErrorLayer
 │   │   ├── canonical_log.rs     # Canonical Log Line ミドルウェア（tower Layer/Service）
 │   │   └── event_log.rs         # ビジネスイベントマクロ、フィールド定数
+│   ├── infra/src/
+│   │   └── error.rs             # InfraError（struct）+ InfraErrorKind（enum）+ SpanTrace
 │   └── domain/src/
 │       ├── macros.rs            # PII マスキングマクロ（define_validated_string!）
 │       └── lib.rs               # REDACTED 定数
 ├── apps/
+│   ├── core-service/src/
+│   │   └── error.rs             # CoreError（SpanTrace ログ出力）
+│   ├── auth-service/src/
+│   │   └── error.rs             # AuthError（SpanTrace ログ出力）
 │   └── bff/src/
 │       └── middleware/
 │           └── request_id.rs    # Request ID 伝播（task-local）
@@ -762,13 +875,15 @@ flowchart TB
     Obs["shared::observability"]
     Canon["shared::canonical_log"]
     Evt["shared::event_log"]
+    InfraErr["infra::error"]
     Macros["domain::macros<br/>（PII マスキング）"]
     ReqId["bff::middleware::request_id"]
     Schema["log-schema.md"]
 
-    Obs -->|"feature gate:<br/>observability"| Subscriber["tracing-subscriber<br/>tower-http<br/>uuid"]
+    Obs -->|"feature gate:<br/>observability"| Subscriber["tracing-subscriber<br/>tower-http<br/>uuid<br/>tracing-error"]
     Canon -->|"feature gate:<br/>observability"| Tower["tower<br/>http<br/>tracing"]
     Evt -->|"re-export"| Tracing["tracing::info!"]
+    InfraErr -->|"SpanTrace 捕捉"| TracingError["tracing-error"]
     ReqId -->|"使用"| Obs
     Schema -.->|"文書化"| Obs
     Schema -.->|"文書化"| Canon
@@ -787,3 +902,4 @@ flowchart TB
 | 2026-02-19 | 初版作成（#655） |
 | 2026-02-27 | ログポリシーセクション追加（#941） |
 | 2026-02-27 | Canonical Log Line セクション追加、tenant_id/user_id スパンフィールド追加（#942） |
+| 2026-02-27 | SpanTrace 設計セクション追加（#972） |

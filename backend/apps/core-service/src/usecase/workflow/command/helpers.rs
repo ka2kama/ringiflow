@@ -8,7 +8,7 @@ use ringiflow_domain::{
     value_objects::Version,
     workflow::{WorkflowInstance, WorkflowInstanceId, WorkflowStep},
 };
-use ringiflow_infra::{InfraError, TxContext};
+use ringiflow_infra::{InfraErrorKind, TxContext};
 
 use super::super::WorkflowUseCaseImpl;
 use crate::error::CoreError;
@@ -42,11 +42,11 @@ impl WorkflowUseCaseImpl {
             .step_repo
             .update_with_version_check(tx, step, expected_version, tenant_id)
             .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
+            .map_err(|e| match e.kind() {
+                InfraErrorKind::Conflict { .. } => CoreError::Conflict(
                     "ステップは既に更新されています。最新の情報を取得してください。".to_string(),
                 ),
-                other => CoreError::Internal(format!("ステップの保存に失敗: {}", other)),
+                _ => CoreError::Internal(format!("ステップの保存に失敗: {}", e)),
             })
     }
 
@@ -62,12 +62,12 @@ impl WorkflowUseCaseImpl {
             .instance_repo
             .update_with_version_check(tx, instance, expected_version, tenant_id)
             .await
-            .map_err(|e| match e {
-                InfraError::Conflict { .. } => CoreError::Conflict(
+            .map_err(|e| match e.kind() {
+                InfraErrorKind::Conflict { .. } => CoreError::Conflict(
                     "インスタンスは既に更新されています。最新の情報を取得してください。"
                         .to_string(),
                 ),
-                other => CoreError::Internal(format!("インスタンスの保存に失敗: {}", other)),
+                _ => CoreError::Internal(format!("インスタンスの保存に失敗: {}", e)),
             })
     }
 

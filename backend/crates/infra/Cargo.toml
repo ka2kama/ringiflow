@@ -19,10 +19,12 @@ serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
 uuid.workspace = true
+derive_more.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 argon2.workspace = true
 tracing.workspace = true
+tracing-error.workspace = true
 
 [lints]
 workspace = true
@@ -36,4 +38,5 @@ pretty_assertions.workspace = true
 reqwest.workspace = true
 rstest.workspace = true
 tokio-test.workspace = true
+tracing-subscriber.workspace = true
 uuid.workspace = true

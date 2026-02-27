@@ -200,17 +200,17 @@ impl TryFrom<WorkflowInstanceRow> for WorkflowInstance {
             tenant_id: TenantId::from_uuid(row.tenant_id),
             definition_id: WorkflowDefinitionId::from_uuid(row.definition_id),
             definition_version: Version::new(row.definition_version as u32)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             display_number: DisplayNumber::new(row.display_number)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             title: row.title,
             form_data: row.form_data,
             status: row
                 .status
                 .parse::<WorkflowInstanceStatus>()
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             version: Version::new(row.version as u32)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             current_step_id: row.current_step_id,
             initiated_by: UserId::from_uuid(row.initiated_by),
             submitted_at: row.submitted_at,
@@ -218,7 +218,7 @@ impl TryFrom<WorkflowInstanceRow> for WorkflowInstance {
             created_at: row.created_at,
             updated_at: row.updated_at,
         })
-        .map_err(|e| InfraError::Unexpected(e.to_string()))
+        .map_err(|e| InfraError::unexpected(e.to_string()))
     }
 }
 
@@ -314,10 +314,10 @@ impl WorkflowInstanceRepository for PostgresWorkflowInstanceRepository {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(InfraError::Conflict {
-                entity: "WorkflowInstance".to_string(),
-                id:     instance.id().as_uuid().to_string(),
-            });
+            return Err(InfraError::conflict(
+                "WorkflowInstance",
+                instance.id().as_uuid().to_string(),
+            ));
         }
 
         Ok(())

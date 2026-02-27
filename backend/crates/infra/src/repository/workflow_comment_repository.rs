@@ -69,7 +69,7 @@ impl TryFrom<WorkflowCommentRow> for WorkflowComment {
             instance_id: WorkflowInstanceId::from_uuid(row.instance_id),
             posted_by:   UserId::from_uuid(row.posted_by),
             body:        CommentBody::new(row.body)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             created_at:  row.created_at,
             updated_at:  row.updated_at,
         }))

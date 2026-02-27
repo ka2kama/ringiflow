@@ -197,7 +197,7 @@ mod tests {
 
         async fn delete(&self, _tenant_id: &TenantId) -> Result<DeletionResult, InfraError> {
             if self.should_fail {
-                return Err(InfraError::Unexpected(format!(
+                return Err(InfraError::unexpected(format!(
                     "{}: テスト用エラー",
                     self.name
                 )));

@@ -90,8 +90,7 @@ mod tests {
 
     #[test]
     fn test_or_not_found_errはinternalエラーを返す() {
-        let result: Result<Option<i32>, InfraError> =
-            Err(InfraError::Unexpected("接続失敗".to_string()));
+        let result: Result<Option<i32>, InfraError> = Err(InfraError::unexpected("接続失敗"));
 
         let err = result.or_not_found("インスタンス").unwrap_err();
 
