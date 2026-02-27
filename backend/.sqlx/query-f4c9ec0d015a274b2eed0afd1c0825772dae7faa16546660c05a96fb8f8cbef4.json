@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT COALESCE(MAX(depth), 0)::int4 as \"max_depth!\"\n            FROM folders\n            WHERE tenant_id = $1\n              AND starts_with(path, $2)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max_depth!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f4c9ec0d015a274b2eed0afd1c0825772dae7faa16546660c05a96fb8f8cbef4"
+}
