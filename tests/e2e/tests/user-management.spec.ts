@@ -36,6 +36,29 @@ test.describe("ユーザー管理", () => {
     await expect(row).toBeVisible();
   });
 
+  test("ユーザー作成の送信後にボタンが無効化される", async ({ page }) => {
+    const uniqueId = Date.now();
+    const email = `e2e-double-submit-${uniqueId}@example.com`;
+    const name = `E2E 二重送信テスト ${uniqueId}`;
+
+    // Given: ユーザー作成ページに移動しフォームを入力する
+    await page.goto("/users/new");
+    await page.getByLabel("メールアドレス").fill(email);
+    await page.getByLabel("名前").fill(name);
+    await page.getByLabel("ロール").selectOption({ label: "user" });
+
+    // When: 作成ボタンをクリックする
+    await page.getByRole("button", { name: "作成", exact: true }).click();
+
+    // Then: 送信中はボタンが disabled になること（テキストが「作成中...」に変わる）
+    await expect(
+      page.getByRole("button", { name: "作成中..." }),
+    ).toBeDisabled();
+
+    // And: 最終的に作成が完了すること
+    await expect(page.getByText("ユーザーを作成しました")).toBeVisible();
+  });
+
   test("管理者が作成したユーザーの名前を編集し変更が反映される", async ({
     page,
   }) => {
