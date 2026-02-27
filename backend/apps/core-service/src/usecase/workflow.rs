@@ -27,7 +27,7 @@ use ringiflow_infra::{
 };
 use serde_json::Value as JsonValue;
 
-use crate::error::CoreError;
+use crate::{error::CoreError, usecase::notification::NotificationService};
 
 /// ユースケースの出力: ワークフローインスタンスとステップの集約
 ///
@@ -113,13 +113,14 @@ pub struct PostCommentInput {
 /// ワークフローの作成・申請に関するビジネスロジックを実装する。
 pub struct WorkflowUseCaseImpl {
     definition_repo: Arc<dyn WorkflowDefinitionRepository>,
-    instance_repo:   Arc<dyn WorkflowInstanceRepository>,
-    step_repo:       Arc<dyn WorkflowStepRepository>,
-    comment_repo:    Arc<dyn WorkflowCommentRepository>,
-    user_repo:       Arc<dyn UserRepository>,
-    counter_repo:    Arc<dyn DisplayIdCounterRepository>,
-    clock:           Arc<dyn Clock>,
-    tx_manager:      Arc<dyn TransactionManager>,
+    instance_repo: Arc<dyn WorkflowInstanceRepository>,
+    step_repo: Arc<dyn WorkflowStepRepository>,
+    comment_repo: Arc<dyn WorkflowCommentRepository>,
+    user_repo: Arc<dyn UserRepository>,
+    counter_repo: Arc<dyn DisplayIdCounterRepository>,
+    clock: Arc<dyn Clock>,
+    tx_manager: Arc<dyn TransactionManager>,
+    notification_service: Arc<NotificationService>,
 }
 
 impl WorkflowUseCaseImpl {
@@ -135,6 +136,7 @@ impl WorkflowUseCaseImpl {
         counter_repo: Arc<dyn DisplayIdCounterRepository>,
         clock: Arc<dyn Clock>,
         tx_manager: Arc<dyn TransactionManager>,
+        notification_service: Arc<NotificationService>,
     ) -> Self {
         Self {
             definition_repo,
@@ -145,6 +147,7 @@ impl WorkflowUseCaseImpl {
             counter_repo,
             clock,
             tx_manager,
+            notification_service,
         }
     }
 

@@ -262,34 +262,6 @@ async fn main() -> anyhow::Result<()> {
         usecase: definition_usecase,
     });
 
-    // ワークフロー UseCase
-    let tx_manager = Arc::new(PgTransactionManager::new(pool.clone()));
-    let workflow_usecase = WorkflowUseCaseImpl::new(
-        definition_repo,
-        instance_repo.clone(),
-        step_repo.clone(),
-        comment_repo,
-        user_repo.clone(),
-        counter_repo,
-        clock,
-        tx_manager,
-    );
-    let workflow_state = Arc::new(WorkflowState {
-        usecase: workflow_usecase,
-    });
-
-    // タスク UseCase
-    let task_usecase = TaskUseCaseImpl::new(instance_repo.clone(), step_repo.clone(), user_repo);
-    let task_state = Arc::new(TaskState {
-        usecase: task_usecase,
-    });
-
-    // ダッシュボード UseCase
-    let dashboard_usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
-    let dashboard_state = Arc::new(DashboardState {
-        usecase: dashboard_usecase,
-    });
-
     // 通知サービス
     // NOTIFICATION_BACKEND 環境変数で送信バックエンドを切り替える
     let notification_sender: Arc<dyn NotificationSender> =
@@ -316,13 +288,41 @@ async fn main() -> anyhow::Result<()> {
     let notification_log_repo: Arc<dyn NotificationLogRepository> =
         Arc::new(PostgresNotificationLogRepository::new(pool.clone()));
     let template_renderer = TemplateRenderer::new().expect("テンプレートエンジンの初期化に失敗");
-    let _notification_service = Arc::new(NotificationService::new(
+    let notification_service = Arc::new(NotificationService::new(
         notification_sender,
         template_renderer,
         notification_log_repo,
         config.notification.base_url,
     ));
-    // → 後続 Story (#876-#879) で WorkflowUseCaseImpl に注入
+
+    // ワークフロー UseCase
+    let tx_manager = Arc::new(PgTransactionManager::new(pool.clone()));
+    let workflow_usecase = WorkflowUseCaseImpl::new(
+        definition_repo,
+        instance_repo.clone(),
+        step_repo.clone(),
+        comment_repo,
+        user_repo.clone(),
+        counter_repo,
+        clock,
+        tx_manager,
+        notification_service,
+    );
+    let workflow_state = Arc::new(WorkflowState {
+        usecase: workflow_usecase,
+    });
+
+    // タスク UseCase
+    let task_usecase = TaskUseCaseImpl::new(instance_repo.clone(), step_repo.clone(), user_repo);
+    let task_state = Arc::new(TaskState {
+        usecase: task_usecase,
+    });
+
+    // ダッシュボード UseCase
+    let dashboard_usecase = DashboardUseCaseImpl::new(instance_repo, step_repo);
+    let dashboard_state = Arc::new(DashboardState {
+        usecase: dashboard_usecase,
+    });
 
     // ルーター構築
     let app = Router::new()

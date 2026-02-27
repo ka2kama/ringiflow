@@ -136,6 +136,10 @@ impl WorkflowUseCaseImpl {
             "ワークフロー再申請"
         );
 
+        // 承認依頼通知を送信（fire-and-forget）
+        self.send_approval_request_notification(&resubmitted_instance, &steps, &tenant_id)
+            .await;
+
         Ok(WorkflowWithSteps {
             instance: resubmitted_instance,
             steps,
@@ -165,10 +169,12 @@ impl WorkflowUseCaseImpl {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use ringiflow_domain::{
         tenant::TenantId,
-        user::UserId,
-        value_objects::{DisplayNumber, Version, WorkflowName},
+        user::{Email, User, UserId},
+        value_objects::{DisplayNumber, UserName, Version, WorkflowName},
         workflow::{
             NewWorkflowDefinition,
             NewWorkflowInstance,
@@ -180,6 +186,7 @@ mod tests {
     };
     use ringiflow_infra::{
         mock::{
+            MockUserRepository,
             MockWorkflowDefinitionRepository,
             MockWorkflowInstanceRepository,
             MockWorkflowStepRepository,
@@ -187,7 +194,11 @@ mod tests {
         repository::WorkflowInstanceRepositoryTestExt,
     };
 
-    use super::super::super::test_helpers::{build_sut, single_approval_definition_json};
+    use super::super::super::test_helpers::{
+        build_sut,
+        build_sut_with_notification,
+        single_approval_definition_json,
+    };
     use crate::{
         error::CoreError,
         usecase::workflow::{ResubmitWorkflowInput, StepApprover},
@@ -281,6 +292,113 @@ mod tests {
         assert_eq!(
             result.steps[0].status(),
             ringiflow_domain::workflow::WorkflowStepStatus::Active
+        );
+    }
+
+    // ===== 通知テスト =====
+
+    #[tokio::test]
+    async fn test_resubmit_workflow_正常系で承認依頼通知が送信される() {
+        // Arrange
+        let tenant_id = TenantId::new();
+        let user_id = UserId::new();
+        let approver_id = UserId::new();
+        let now = chrono::Utc::now();
+
+        let definition_repo = MockWorkflowDefinitionRepository::new();
+        let instance_repo = MockWorkflowInstanceRepository::new();
+        let step_repo = MockWorkflowStepRepository::new();
+
+        let definition = WorkflowDefinition::new(NewWorkflowDefinition {
+            id: WorkflowDefinitionId::new(),
+            tenant_id: tenant_id.clone(),
+            name: WorkflowName::new("経費精算申請").unwrap(),
+            description: Some("テスト用定義".to_string()),
+            definition: single_approval_definition_json(),
+            created_by: user_id.clone(),
+            now,
+        })
+        .published(now)
+        .unwrap();
+        definition_repo.add_definition(definition.clone());
+
+        // ChangesRequested 状態のインスタンスを作成
+        let instance = WorkflowInstance::new(NewWorkflowInstance {
+            id: WorkflowInstanceId::new(),
+            tenant_id: tenant_id.clone(),
+            definition_id: definition.id().clone(),
+            definition_version: Version::initial(),
+            display_number: DisplayNumber::new(100).unwrap(),
+            title: "テスト申請".to_string(),
+            form_data: serde_json::json!({"note": "original"}),
+            initiated_by: user_id.clone(),
+            now,
+        })
+        .submitted(now)
+        .unwrap()
+        .with_current_step("approval".to_string(), now)
+        .unwrap()
+        .complete_with_request_changes(now)
+        .unwrap();
+        instance_repo.insert_for_test(&instance).await.unwrap();
+
+        // ユーザー情報をモックに登録
+        let user_repo = MockUserRepository::new();
+        user_repo.add_user(User::new(
+            user_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(1).unwrap(),
+            Email::new("tanaka@example.com").unwrap(),
+            UserName::new("田中太郎").unwrap(),
+            now,
+        ));
+        user_repo.add_user(User::new(
+            approver_id.clone(),
+            tenant_id.clone(),
+            DisplayNumber::new(2).unwrap(),
+            Email::new("suzuki@example.com").unwrap(),
+            UserName::new("鈴木一郎").unwrap(),
+            now,
+        ));
+
+        let (sut, sender) = build_sut_with_notification(
+            &definition_repo,
+            &instance_repo,
+            &step_repo,
+            Arc::new(user_repo),
+            now,
+        );
+
+        let input = ResubmitWorkflowInput {
+            form_data: serde_json::json!({"note": "updated"}),
+            approvers: vec![StepApprover {
+                step_id:     "approval".to_string(),
+                assigned_to: approver_id.clone(),
+            }],
+            version:   instance.version(),
+        };
+
+        // Act
+        let result = sut
+            .resubmit_workflow(
+                input,
+                instance.id().clone(),
+                tenant_id.clone(),
+                user_id.clone(),
+            )
+            .await;
+
+        // Assert: ワークフロー操作は成功
+        assert!(result.is_ok());
+
+        // Assert: 承認依頼通知が送信されている
+        let sent = sender.sent_emails();
+        assert_eq!(sent.len(), 1, "承認依頼メールが1通送信されるべき");
+        assert_eq!(sent[0].to, "suzuki@example.com");
+        assert!(
+            sent[0].subject.contains("テスト申請"),
+            "件名にワークフロータイトルが含まれるべき: {}",
+            sent[0].subject
         );
     }
 

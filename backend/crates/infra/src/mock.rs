@@ -379,24 +379,38 @@ impl WorkflowStepRepository for MockWorkflowStepRepository {
 
 /// テスト用のモック UserRepository
 ///
-/// ユーザー名解決テストが必要な場合に使用する。
-/// ワークフローユースケースのテストでは直接利用しないが、
-/// 型パラメータを満たすために必要。
-#[derive(Clone)]
-pub struct MockUserRepository;
+/// ユーザーを格納し、ID で検索できるインメモリ実装。
+/// `add_user()` でテストデータを追加する。
+#[derive(Clone, Default)]
+pub struct MockUserRepository {
+    users: Arc<Mutex<Vec<User>>>,
+}
+
+impl MockUserRepository {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// テスト用ユーザーを追加する
+    pub fn add_user(&self, user: User) {
+        self.users.lock().unwrap().push(user);
+    }
+}
 
 #[async_trait]
 impl UserRepository for MockUserRepository {
     async fn find_by_email(
         &self,
         _tenant_id: &TenantId,
-        _email: &Email,
+        email: &Email,
     ) -> Result<Option<User>, InfraError> {
-        Ok(None)
+        let users = self.users.lock().unwrap();
+        Ok(users.iter().find(|u| u.email() == email).cloned())
     }
 
-    async fn find_by_id(&self, _id: &UserId) -> Result<Option<User>, InfraError> {
-        Ok(None)
+    async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, InfraError> {
+        let users = self.users.lock().unwrap();
+        Ok(users.iter().find(|u| u.id() == id).cloned())
     }
 
     async fn find_with_roles(
@@ -406,8 +420,13 @@ impl UserRepository for MockUserRepository {
         Ok(None)
     }
 
-    async fn find_by_ids(&self, _ids: &[UserId]) -> Result<Vec<User>, InfraError> {
-        Ok(Vec::new())
+    async fn find_by_ids(&self, ids: &[UserId]) -> Result<Vec<User>, InfraError> {
+        let users = self.users.lock().unwrap();
+        Ok(users
+            .iter()
+            .filter(|u| ids.contains(u.id()))
+            .cloned()
+            .collect())
     }
 
     async fn find_all_active_by_tenant(
@@ -421,7 +440,8 @@ impl UserRepository for MockUserRepository {
         Ok(())
     }
 
-    async fn insert(&self, _user: &User) -> Result<(), InfraError> {
+    async fn insert(&self, user: &User) -> Result<(), InfraError> {
+        self.users.lock().unwrap().push(user.clone());
         Ok(())
     }
 

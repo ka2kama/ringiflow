@@ -30,6 +30,8 @@ set -a
 source .env.api-test
 set +a
 
+# MAILPIT_UI_PORT は .env.api-test から読み込み済み（テストからメール受信を検証するため）
+
 # cargo-watch 検知: 同一 workspace で実行中だとパッケージキャッシュのロック競合が発生するため
 for pid in $(pgrep -x cargo-watch 2>/dev/null); do
     cwd="$(readlink /proc/"$pid"/cwd 2>/dev/null)"
@@ -72,5 +74,6 @@ done
 echo "API テストを実行中..."
 hurl --test --jobs 1 \
     --variable "bff_url=http://localhost:$BFF_PORT" \
+    --variable "mailpit_url=http://localhost:${MAILPIT_UI_PORT}" \
     --variables-file tests/api/hurl/vars.env \
     tests/api/hurl/**/*.hurl

@@ -168,6 +168,8 @@ mod tests {
     use ringiflow_infra::{
         mock::{
             MockDisplayIdCounterRepository,
+            MockNotificationLogRepository,
+            MockNotificationSender,
             MockTransactionManager,
             MockUserRepository,
             MockWorkflowCommentRepository,
@@ -179,7 +181,10 @@ mod tests {
     };
 
     use super::super::WorkflowUseCaseImpl;
-    use crate::error::CoreError;
+    use crate::{
+        error::CoreError,
+        usecase::notification::{NotificationService, TemplateRenderer},
+    };
 
     #[tokio::test]
     async fn test_list_comments_コメント一覧を取得できる() {
@@ -230,15 +235,23 @@ mod tests {
         comment_repo.insert(&comment1, &tenant_id).await.unwrap();
         comment_repo.insert(&comment2, &tenant_id).await.unwrap();
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
             Arc::new(instance_repo),
             Arc::new(step_repo),
             Arc::new(comment_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         // Act
@@ -265,15 +278,23 @@ mod tests {
 
         // インスタンスを作成しない
 
+        let notification_service = Arc::new(NotificationService::new(
+            Arc::new(MockNotificationSender::new()),
+            TemplateRenderer::new().unwrap(),
+            Arc::new(MockNotificationLogRepository::new()),
+            "http://localhost:5173".to_string(),
+        ));
+
         let sut = WorkflowUseCaseImpl::new(
             Arc::new(definition_repo),
             Arc::new(instance_repo),
             Arc::new(step_repo),
             Arc::new(comment_repo),
-            Arc::new(MockUserRepository),
+            Arc::new(MockUserRepository::new()),
             Arc::new(MockDisplayIdCounterRepository::new()),
             Arc::new(FixedClock::new(now)),
             Arc::new(MockTransactionManager),
+            notification_service,
         );
 
         // Act
