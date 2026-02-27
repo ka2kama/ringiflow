@@ -1,6 +1,5 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 113
 expression: json
 ---
 {
@@ -97,6 +96,16 @@ expression: json
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginatedResponse_AuditLogItemData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "バリデーションエラー（不正なカーソル等）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }

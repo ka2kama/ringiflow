@@ -133,15 +133,19 @@ HTTP 200
 jsonpath "$.data" isCollection
 
 # =============================================================================
-# 異常系: ページネーション無効値 — 不正な cursor
+# 準正常系: 不正な cursor パラメータで 400 Bad Request が返る
 # =============================================================================
-# Given: 監査ログが存在する
+# Given: 認証済みユーザー
 # When: 不正な cursor 文字列で GET /api/v1/audit-logs にリクエストする
-# Then: 500 が返される（既知の問題: BFF が DynamoDB の base64 デコードエラーを
-#        適切にハンドリングしていない。本来は 400/422 で返すべき）
+# Then: 400 Bad Request（RFC 9457 形式）が返される
 
 GET {{bff_url}}/api/v1/audit-logs?cursor=invalid-cursor-string
 X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{session_cookie}}
 
-HTTP 500
+HTTP 400
+[Asserts]
+jsonpath "$.type" == "https://ringiflow.example.com/errors/validation-error"
+jsonpath "$.title" == "Validation Error"
+jsonpath "$.status" == 400
+jsonpath "$.detail" == "カーソルの形式が不正です"

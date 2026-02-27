@@ -398,3 +398,60 @@ async fn test_recordがdetailとsource_ipを正しく保存する() {
     assert_eq!(item.actor_name, "Admin User");
     assert_eq!(item.resource_type, "user");
 }
+
+// =============================================================================
+// 準正常系: 不正な cursor パラメータ
+// =============================================================================
+
+#[tokio::test]
+async fn test_find_by_tenantが不正なbase64のcursorでinvalid_inputエラーを返す() {
+    let repo = setup().await;
+    let tenant_id = TenantId::new();
+
+    let result = repo
+        .find_by_tenant(
+            &tenant_id,
+            Some("not-valid-base64!!!"),
+            10,
+            &AuditLogFilter::default(),
+        )
+        .await;
+
+    assert!(result.is_err());
+    assert!(
+        matches!(
+            result.unwrap_err(),
+            ringiflow_infra::InfraError::InvalidInput(_)
+        ),
+        "base64 デコード不能な cursor は InvalidInput エラーであるべき"
+    );
+}
+
+#[tokio::test]
+async fn test_find_by_tenantがbase64デコード可能だがjsonでないcursorでinvalid_inputエラーを返す() {
+    use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
+
+    let repo = setup().await;
+    let tenant_id = TenantId::new();
+
+    // base64 としては有効だが、JSON としてデシリアライズできない文字列
+    let invalid_json_cursor = BASE64.encode(b"this is not json");
+
+    let result = repo
+        .find_by_tenant(
+            &tenant_id,
+            Some(&invalid_json_cursor),
+            10,
+            &AuditLogFilter::default(),
+        )
+        .await;
+
+    assert!(result.is_err());
+    assert!(
+        matches!(
+            result.unwrap_err(),
+            ringiflow_infra::InfraError::InvalidInput(_)
+        ),
+        "JSON デシリアライズ不能な cursor は InvalidInput エラーであるべき"
+    );
+}
