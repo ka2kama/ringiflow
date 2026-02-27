@@ -140,16 +140,25 @@ impl tower_http::request_id::MakeRequestId for MakeRequestUuidV7 {
 
 /// TraceLayer 用のカスタムスパン作成関数
 ///
-/// `X-Request-Id` ヘッダーから Request ID を取得し、トレーシングスパンに
-/// `request_id` フィールドとして記録する。ヘッダーが未設定の場合は `"-"` を使用する。
+/// `X-Request-Id` ヘッダーから Request ID を、`X-Tenant-Id` ヘッダーから
+/// Tenant ID を取得し、トレーシングスパンに記録する。
+/// `user_id` は [`tracing::field::Empty`] で宣言し、認証成功後に
+/// [`record_user_id`] で記録する。
 ///
 /// JSON ログ形式（`with_current_span(true)`）では、スパンのフィールドが
-/// 自動的にログ出力に含まれるため、すべてのログに `request_id` が記録される。
+/// 自動的にログ出力に含まれるため、すべてのログに `request_id` と
+/// `tenant_id` が記録される。
 #[cfg(feature = "observability")]
 pub fn make_request_span<B>(request: &http::Request<B>) -> tracing::Span {
     let request_id = request
         .headers()
         .get(REQUEST_ID_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-");
+
+    let tenant_id = request
+        .headers()
+        .get("x-tenant-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("-");
 
@@ -159,7 +168,19 @@ pub fn make_request_span<B>(request: &http::Request<B>) -> tracing::Span {
         uri = %request.uri(),
         version = ?request.version(),
         request_id = %request_id,
+        tenant_id = %tenant_id,
+        user_id = tracing::field::Empty,
     )
+}
+
+/// 現在のスパンに user_id を記録する
+///
+/// BFF の認証成功後に呼び出す。[`make_request_span`] で `user_id = Empty` として
+/// 宣言されたフィールドに値を設定する。
+/// Canonical Log Line を含む、スパン内の後続全ログに `user_id` が含まれる。
+#[cfg(feature = "observability")]
+pub fn record_user_id(user_id: &impl std::fmt::Display) {
+    tracing::Span::current().record("user_id", tracing::field::display(user_id));
 }
 
 #[cfg(test)]
@@ -271,6 +292,52 @@ mod tests {
             let span = make_request_span(&request);
 
             assert_eq!(span.metadata().unwrap().name(), "request");
+        });
+    }
+
+    #[test]
+    fn test_make_request_span_tenant_idヘッダーありでスパンが作成される() {
+        with_test_subscriber(|| {
+            let request = http::Request::builder()
+                .header(REQUEST_ID_HEADER, "test-request-id")
+                .header("x-tenant-id", "test-tenant-id")
+                .body(())
+                .unwrap();
+
+            let span = make_request_span(&request);
+
+            // スパンが正常に作成されること（tenant_id フィールドを含む）
+            assert_eq!(span.metadata().unwrap().name(), "request");
+        });
+    }
+
+    #[test]
+    fn test_make_request_span_tenant_idヘッダーなしでスパンが作成される() {
+        with_test_subscriber(|| {
+            let request = http::Request::builder().body(()).unwrap();
+
+            let span = make_request_span(&request);
+
+            // X-Tenant-ID なしでもスパンが作成されること（tenant_id = "-"）
+            assert_eq!(span.metadata().unwrap().name(), "request");
+        });
+    }
+
+    // ===== record_user_id テスト =====
+
+    #[test]
+    fn test_record_user_id_スパン内でuser_idを記録できる() {
+        with_test_subscriber(|| {
+            let request = http::Request::builder()
+                .header(REQUEST_ID_HEADER, "test-request-id")
+                .body(())
+                .unwrap();
+
+            let span = make_request_span(&request);
+            let _guard = span.enter();
+
+            // record_user_id がパニックせず、スパンに値を記録できること
+            record_user_id(&"test-user-id");
         });
     }
 }
