@@ -51,6 +51,7 @@ http = "1"
 
 # ロギング・トレーシング
 tracing = "0.1"
+tracing-error = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # エラーハンドリング
