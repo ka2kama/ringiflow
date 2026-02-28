@@ -9,7 +9,7 @@
 //! - **型安全なクエリ**: sqlx のコンパイル時検証を活用
 //!
 //! 詳細: [Auth Service
-//! 設計](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! 設計](../../../../docs/40_詳細設計書/08_AuthService設計.md)
 
 use std::str::FromStr;
 

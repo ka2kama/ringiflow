@@ -1,6 +1,6 @@
 # Dependabot 依存関係自動更新設定
 #
-# 技術詳細: [Dependabot](../docs/06_ナレッジベース/devtools/Dependabot.md)
+# 技術詳細: [Dependabot](../docs/80_ナレッジベース/devtools/Dependabot.md)
 
 version: 2
 updates:

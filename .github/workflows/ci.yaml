@@ -1,7 +1,7 @@
 # RingiFlow CI ワークフロー
 #
-# 設計判断: [ADR-004](../../docs/05_ADR/004_CI並列化と変更検出.md)
-# 技術詳細: [GitHub Actions](../../docs/06_ナレッジベース/devtools/GitHubActions.md)
+# 設計判断: [ADR-004](../../docs/70_ADR/004_CI並列化と変更検出.md)
+# 技術詳細: [GitHub Actions](../../docs/80_ナレッジベース/devtools/GitHubActions.md)
 
 name: CI
 
@@ -713,7 +713,7 @@ jobs:
 
   # 構造品質チェック: コード重複の検出
   # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
-  # 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
+  # 選定理由: docs/70_ADR/042_コピペ検出ツールの選定.md
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest

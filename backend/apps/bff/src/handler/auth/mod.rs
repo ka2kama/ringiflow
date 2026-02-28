@@ -9,7 +9,7 @@
 //! - `GET /api/v1/auth/me` - 現在のユーザー情報を取得
 //! - `GET /api/v1/auth/csrf` - CSRF トークン取得
 //!
-//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/40_詳細設計書/08_AuthService設計.md)
 
 mod login;
 mod session;

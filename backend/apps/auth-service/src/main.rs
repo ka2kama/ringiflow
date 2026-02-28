@@ -47,7 +47,7 @@
 //!
 //! ## 設計詳細
 //!
-//! → [Auth Service 設計](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! → [Auth Service 設計](../../../../docs/40_詳細設計書/08_AuthService設計.md)
 
 mod config;
 mod error;

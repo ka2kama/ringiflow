@@ -52,5 +52,5 @@ Issue #494 の精査により、`cargo-audit` は ADR-033 で選択した `cargo
 ### 変更ファイル
 
 - `justfile` — check-tools に cargo-outdated 追加、outdated タスク新設
-- `docs/04_手順書/01_開発参画/01_開発環境構築.md` — セクション 21 新設、リナンバリング
+- `docs/60_手順書/01_開発参画/01_開発環境構築.md` — セクション 21 新設、リナンバリング
 - `.claude/skills/assess/SKILL.md` — セキュリティ監査コマンド修正

@@ -8,7 +8,7 @@
 //! - **件名パターン**: `[RingiFlow] {イベント種別}: {title} {display_id}`
 //! - **ワークフロー詳細リンク**: `{base_url}/workflows/{display_id}` をテンプレートに渡す
 //!
-//! → 詳細設計: `docs/03_詳細設計書/16_通知機能設計.md`
+//! → 詳細設計: `docs/40_詳細設計書/16_通知機能設計.md`
 
 use ringiflow_domain::notification::{EmailMessage, NotificationError, WorkflowNotification};
 use tera::{Context, Tera};

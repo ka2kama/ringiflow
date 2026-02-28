@@ -81,10 +81,10 @@ gh pr create --draft ...
 ### Step 7: Design Documents
 
 以下の Living docs のパス参照を更新:
-- `docs/03_詳細設計書/03_API設計.md` — Mermaid 図、エンドポイント記載
-- `docs/03_詳細設計書/07_認証機能設計.md` — シーケンス図、エンドポイント参照
-- `docs/03_詳細設計書/08_AuthService設計.md` — BFF パス参照（⚠️ `/internal/auth/*` は変更しない）
-- `docs/01_要件定義書/01_コア要件.md` — エンドポイント表
+- `docs/40_詳細設計書/03_API設計.md` — Mermaid 図、エンドポイント記載
+- `docs/40_詳細設計書/07_認証機能設計.md` — シーケンス図、エンドポイント参照
+- `docs/40_詳細設計書/08_AuthService設計.md` — BFF パス参照（⚠️ `/internal/auth/*` は変更しない）
+- `docs/10_要件定義書/01_コア要件.md` — エンドポイント表
 
 **変更しないもの:**
 - `/internal/auth/*`（Auth Service 内部 API）
@@ -95,7 +95,7 @@ gh pr create --draft ...
 
 - `/internal/auth/*` paths — Auth Service の内部 API、BFF 公開 API とは別
 - `/health` — インフラ用エンドポイント、バージョニング対象外
-- Historical docs (`docs/05_ADR/`, `docs/07_実装解説/`, `prompts/`) — 時点記録は改変しない
+- Historical docs (`docs/70_ADR/`, `docs/90_実装解説/`, `prompts/`) — 時点記録は改変しない
 
 ## Risk
 

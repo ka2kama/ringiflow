@@ -1,6 +1,6 @@
 -- workflow_steps に表示用連番カラムを追加し、既存データをマイグレーション
 --
--- 参照: docs/03_詳細設計書/12_表示用ID設計.md#workflow_steps-テーブルへのカラム追加phase-b
+-- 参照: docs/40_詳細設計書/12_表示用ID設計.md#workflow_steps-テーブルへのカラム追加phase-b
 --
 -- 設計判断:
 --   - 採番スコープ: テナント単位（display_id_counters の entity_type = 'workflow_step'）

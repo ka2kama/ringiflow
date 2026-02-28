@@ -84,7 +84,7 @@ AI 主導の開発において、コンテキストウィンドウの制約に�
 ```just
 # 構造品質チェック セクションに追加
 # コード重複（コピー＆ペースト）を検出（jscpd）
-# 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
+# 選定理由: docs/70_ADR/042_コピペ検出ツールの選定.md
 check-duplicates:
     npx --yes jscpd@latest .
 ```
@@ -153,13 +153,13 @@ code-quality:
 ### Phase 3: ADR 作成
 
 #### 確認事項
-- パターン: ADR-038 の構造 → `docs/05_ADR/038_未使用依存検出ツールの選定.md`
-- パターン: ADR テンプレート → `docs/05_ADR/template.md`
+- パターン: ADR-038 の構造 → `docs/70_ADR/038_未使用依存検出ツールの選定.md`
+- パターン: ADR テンプレート → `docs/70_ADR/template.md`
 - 連番: 最新 041 → `042_コピペ検出ツールの選定.md`
 
 #### 成果物
 
-`docs/05_ADR/042_コピペ検出ツールの選定.md` を ADR-038 と同じ構造で作成:
+`docs/70_ADR/042_コピペ検出ツールの選定.md` を ADR-038 と同じ構造で作成:
 - コンテキスト: AI のコンテキストウィンドウ制約による DRY 違反の構造的発生
 - 選択肢: jscpd / duplicate_code / PMD CPD
 - 決定: jscpd（理由: 多言語対応、既存エコシステム、成熟度）
@@ -175,7 +175,7 @@ Phase 1 の実行結果（検出精度、Elm サポート状況）を反映し�
 ### Phase 4: プロセス改善
 
 #### 確認事項
-- 型: 設計原則レンズの現在の記述 → `docs/04_手順書/04_開発フロー/02_TDD開発フロー.md` L130-137
+- 型: 設計原則レンズの現在の記述 → `docs/60_手順書/04_開発フロー/02_TDD開発フロー.md` L130-137
 - パターン: structural-review.md の構造 → `.claude/rules/structural-review.md`
 
 #### 4a: 設計原則レンズの具体化
@@ -246,8 +246,8 @@ Phase 1 の jscpd 実行結果をもとに、以下の Issue を作成:
 | `.jscpd.json`（新規） | jscpd 設定ファイル |
 | `justfile` | `check-duplicates` タスク追加、`check` に統合 |
 | `.github/workflows/ci.yaml` | `code-quality` ジョブ追加 |
-| `docs/05_ADR/042_コピペ検出ツールの選定.md`（新規） | ツール選定の ADR |
-| `docs/04_手順書/04_開発フロー/02_TDD開発フロー.md` | 設計原則レンズ更新 |
+| `docs/70_ADR/042_コピペ検出ツールの選定.md`（新規） | ツール選定の ADR |
+| `docs/60_手順書/04_開発フロー/02_TDD開発フロー.md` | 設計原則レンズ更新 |
 | `.claude/rules/structural-review.md` | 重複検出セクション追加 |
 
 ## 検証方法

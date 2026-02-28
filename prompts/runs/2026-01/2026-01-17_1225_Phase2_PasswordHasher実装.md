@@ -22,8 +22,8 @@ Issue #34（ユーザー認証）の Phase 2 として、パスワードハッ�
 | `backend/crates/domain/src/password.rs` | RawPassword, PasswordHash, PasswordVerifyResult |
 | `backend/crates/infra/src/password.rs` | PasswordHasher トレイト + Argon2PasswordHasher |
 | `backend/migrations/20260115000009_update_seed_password_hash.sql` | シードデータのパスワード更新 |
-| `docs/07_実装解説/01_認証機能/02_Phase2_PasswordHasher.md` | 実装解説ドキュメント |
-| `docs/04_手順書/04_開発フロー/03_マイグレーション運用.md` | マイグレーション運用手順書 |
+| `docs/90_実装解説/01_認証機能/02_Phase2_PasswordHasher.md` | 実装解説ドキュメント |
+| `docs/60_手順書/04_開発フロー/03_マイグレーション運用.md` | マイグレーション運用手順書 |
 
 ### 変更したファイル
 
@@ -109,6 +109,6 @@ OWASP 推奨（RFC 9106）に従う:
 ## 関連
 
 - Issue: [#34](https://github.com/ka2kama/ringiflow/issues/34)
-- 設計書: [07_認証機能設計.md](../../../docs/03_詳細設計書/07_認証機能設計.md)
-- 技術ノート: [パスワードハッシュ.md](../../../docs/06_ナレッジベース/security/パスワードハッシュ.md)
-- 実装解説: [02_認証機能_コード解説.md](../../../docs/07_実装解説/PR46_認証機能/02_認証機能_コード解説.md)
+- 設計書: [07_認証機能設計.md](../../../docs/40_詳細設計書/07_認証機能設計.md)
+- 技術ノート: [パスワードハッシュ.md](../../../docs/80_ナレッジベース/security/パスワードハッシュ.md)
+- 実装解説: [02_認証機能_コード解説.md](../../../docs/90_実装解説/PR46_認証機能/02_認証機能_コード解説.md)

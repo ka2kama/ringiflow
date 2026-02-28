@@ -14,7 +14,7 @@
 // - ファイル名: NN_<トピック>_{機能解説,コード解説}.md パターンに合致すること
 // - ペアチェック: トピック単位で機能解説とコード解説がペアで存在すること
 //
-// 命名規則の定義: [命名規則](../../docs/07_実装解説/README.md)
+// 命名規則の定義: [命名規則](../../docs/90_実装解説/README.md)
 //
 // Usage: rust-script ./scripts/check/impl-docs.rs
 
@@ -116,7 +116,7 @@ fn validate_dir(dir: &DirFiles) -> ValidationResult {
 fn run() -> i32 {
     let mut all_errors = Vec::new();
 
-    let pattern = "docs/07_実装解説/*/";
+    let pattern = "docs/90_実装解説/*/";
     let paths = glob::glob(pattern).unwrap_or_else(|e| {
         panic!("glob パターンの解析に失敗: {e}");
     });
@@ -183,7 +183,7 @@ mod tests {
     fn make_dir(dir_name: &str, file_names: &[&str]) -> DirFiles {
         DirFiles {
             dir_name: dir_name.to_string(),
-            dir_path: format!("docs/07_実装解説/{}", dir_name),
+            dir_path: format!("docs/90_実装解説/{}", dir_name),
             file_names: file_names.iter().map(|s| s.to_string()).collect(),
         }
     }

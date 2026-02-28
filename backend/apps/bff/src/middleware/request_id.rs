@@ -15,7 +15,7 @@
 //! 引数として明示的に渡す方法（型安全）は 34 箇所のメソッドシグネチャ変更が必要で
 //! 侵襲的であるため、task-local による暗黙的な伝播を選択した。
 //!
-//! → ナレッジベース: [Observability > Request ID 伝播](../../docs/06_ナレッジベース/backend/observability.md)
+//! → ナレッジベース: [Observability > Request ID 伝播](../../docs/80_ナレッジベース/backend/observability.md)
 
 use axum::{body::Body, http::Request, middleware::Next, response::Response};
 use ringiflow_shared::observability::REQUEST_ID_HEADER;

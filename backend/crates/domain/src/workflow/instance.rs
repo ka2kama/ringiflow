@@ -4,7 +4,7 @@
 //! フォームデータと進捗状態を保持し、申請・承認・却下のライフサイクルを持つ。
 //!
 //! 状態遷移は型安全ステートマシンで管理し、不正な状態を型レベルで防止する。
-//! 詳細: [ADR-054: 型安全ステートマシンパターンの標準化](../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md)
+//! 詳細: [ADR-054: 型安全ステートマシンパターンの標準化](../../docs/70_ADR/054_型安全ステートマシンパターンの標準化.md)
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -70,8 +70,8 @@ impl std::str::FromStr for WorkflowInstanceStatus {
 /// ワークフローインスタンスの状態（型安全ステートマシン）
 ///
 /// 各状態で有効なフィールドのみを持たせることで、不正な状態を型レベルで防止する。
-/// 詳細: [ADR-054](../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md),
-/// [エンティティ影響マップ](../../docs/03_詳細設計書/エンティティ影響マップ/WorkflowInstance.md) INV-I1〜I9
+/// 詳細: [ADR-054](../../docs/70_ADR/054_型安全ステートマシンパターンの標準化.md),
+/// [エンティティ影響マップ](../../docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md) INV-I1〜I9
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorkflowInstanceState {
     /// 下書き
@@ -194,7 +194,7 @@ pub struct ChangesRequestedState {
 /// 定義から生成された実行中の申請案件。
 /// フォームデータと進捗状態を保持する。
 ///
-/// [ADR-054](../../docs/05_ADR/054_型安全ステートマシンパターンの標準化.md) Pattern A:
+/// [ADR-054](../../docs/70_ADR/054_型安全ステートマシンパターンの標準化.md) Pattern A:
 /// 共通フィールドを外側に、状態固有フィールドを `state` enum に分離。
 ///
 /// ## 楽観的ロック

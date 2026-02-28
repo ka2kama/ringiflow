@@ -120,7 +120,7 @@ pub const REQUEST_ID_HEADER: &str = "x-request-id";
 /// tower-http の [`MakeRequestUuid`](tower_http::request_id::MakeRequestUuid) は UUID v4 を使用するが、
 /// UUID v7 は時系列ソート可能で運用時のログ分析に有利なため、独自実装を使用する。
 ///
-/// → ナレッジベース: [Observability > Request ID](../../docs/06_ナレッジベース/backend/observability.md)
+/// → ナレッジベース: [Observability > Request ID](../../docs/80_ナレッジベース/backend/observability.md)
 #[cfg(feature = "observability")]
 #[derive(Clone, Copy, Default)]
 pub struct MakeRequestUuidV7;

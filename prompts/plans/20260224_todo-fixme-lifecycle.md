@@ -16,7 +16,7 @@
 - `scripts/check/stale-annotations.sh` 新規作成
 - `justfile` / `scripts/check/parallel.sh` への組み込み
 - `.claude/rules/code-annotations.md` にライフサイクルルール追加
-- `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` に棚卸しステップ追加
+- `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` に棚卸しステップ追加
 - 改善記録の作成
 
 ## 対象外
@@ -56,7 +56,7 @@
 
 #### 確認事項
 - パターン: 改善記録のフォーマット → `process/improvements/README.md`
-- パターン: Issue 作成のフォーマット → `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md`
+- パターン: Issue 作成のフォーマット → `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md`
 
 #### 操作パス
 該当なし（ドキュメント・Issue 管理のみ）
@@ -159,7 +159,7 @@ TODO/FIXME に Issue 番号を付けた場合、参照先 Issue のクローズ�
 
 ### 3.2 Issue 駆動開発フロー Step 9 に棚卸しステップ追加
 
-`docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` の「改善記録の検証」セクション（L713）の後に追加:
+`docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` の「改善記録の検証」セクション（L713）の後に追加:
 
 ```markdown
 #### TODO/FIXME の棚卸し

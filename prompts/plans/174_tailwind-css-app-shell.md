@@ -203,7 +203,7 @@ KPI カードのデザイン（`Page/Home.elm`）は既存 TODO(human) がある
 
 ## Phase 4: ADR-027
 
-**Create**: `docs/05_ADR/027_Tailwind_CSS導入.md`
+**Create**: `docs/70_ADR/027_Tailwind_CSS導入.md`
 
 - Context: MVP 完了後の UI/UX 改善、CORE-06 デザインシステム要件
 - Options: Tailwind v3, Tailwind v4, elm-css, Plain CSS with BEM
@@ -251,4 +251,4 @@ KPI カードのデザイン（`Page/Home.elm`）は既存 TODO(human) がある
 | `frontend/src/Page/Workflow/Detail.elm` | MODIFY — CSS classes → Tailwind |
 | `frontend/src/Page/Task/List.elm` | MODIFY — CSS classes → Tailwind |
 | `frontend/src/Page/Task/Detail.elm` | MODIFY — CSS classes → Tailwind |
-| `docs/05_ADR/027_Tailwind_CSS導入.md` | **CREATE** — ADR |
+| `docs/70_ADR/027_Tailwind_CSS導入.md` | **CREATE** — ADR |

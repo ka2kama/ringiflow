@@ -8,7 +8,7 @@
 //!   `UploadContext` enum へ変換（Repository 層の責務）
 //! - **RLS 二重防御**: WHERE 句で明示的にテナント条件を指定
 //!
-//! 詳細: [ドキュメント管理設計](../../../../docs/03_詳細設計書/17_ドキュメント管理設計.md)
+//! 詳細: [ドキュメント管理設計](../../../../docs/40_詳細設計書/17_ドキュメント管理設計.md)
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};

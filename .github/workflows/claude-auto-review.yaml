@@ -13,7 +13,7 @@
 #   setup → verification (並列) → finalize
 #         → validation  (並列) →
 #
-# 設計判断: [ADR-011](../../docs/05_ADR/011_Claude_Code_Action導入.md)
+# 設計判断: [ADR-011](../../docs/70_ADR/011_Claude_Code_Action導入.md)
 #
 # 注意: workflow_run イベントは PR のステータスチェックに自動で紐付かないため、
 # GitHub Status API を使って明示的にステータスを報告している。

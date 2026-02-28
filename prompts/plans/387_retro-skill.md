@@ -4,7 +4,7 @@
 
 Phase 1 完了後、品質改善に注力する中で「改善システム自体が機能しているか」を定期的に検証する仕組みが必要になった。現状、個別の改善記録（`prompts/improvements/`）と定点診断（`/assess`）は存在するが、これらを横断的に分析し、改善サイクル全体の有効性を評価する仕組みがない。
 
-`AI思考特性の分析ガイド`（`docs/06_ナレッジベース/methodology/AI思考特性の分析ガイド.md`）が分析手法を定義しているが、スキル化されておらず実行トリガーが曖昧。SRE 的な運用改善の観点（再発率、Toil、エラーバジェット）も未導入。
+`AI思考特性の分析ガイド`（`docs/80_ナレッジベース/methodology/AI思考特性の分析ガイド.md`）が分析手法を定義しているが、スキル化されておらず実行トリガーが曖昧。SRE 的な運用改善の観点（再発率、Toil、エラーバジェット）も未導入。
 
 ## 方針
 
@@ -22,7 +22,7 @@ Phase 1 完了後、品質改善に注力する中で「改善システム自体
 ## 対象
 
 - `.claude/skills/retro/SKILL.md` — 新規作成
-- `docs/06_ナレッジベース/methodology/SRE的アプローチ.md` — 新規作成
+- `docs/80_ナレッジベース/methodology/SRE的アプローチ.md` — 新規作成
 - `prompts/reports/README.md` — レポート種類にレトロスペクティブを追加
 
 ## 対象外
@@ -69,7 +69,7 @@ SRE の概念をそのまま適用するのではなく、AI エージェント�
 ### 確認事項
 
 - パターン: 既存スキルの SKILL.md 構造 → `.claude/skills/assess/SKILL.md`, `.claude/skills/wrap-up/SKILL.md`（確認済み）
-- パターン: 改善記録の分析手法 → `docs/06_ナレッジベース/methodology/AI思考特性の分析ガイド.md`（確認済み）
+- パターン: 改善記録の分析手法 → `docs/80_ナレッジベース/methodology/AI思考特性の分析ガイド.md`（確認済み）
 - パターン: レポート出力形式 → `prompts/reports/README.md`（確認済み）
 
 ### 作成ファイル
@@ -191,11 +191,11 @@ Step 構成:
 
 ### 確認事項
 
-- パターン: ナレッジベースの構造 → `docs/06_ナレッジベース/methodology/` 配下の既存ファイル（確認済み）
+- パターン: ナレッジベースの構造 → `docs/80_ナレッジベース/methodology/` 配下の既存ファイル（確認済み）
 
 ### 作成ファイル
 
-`docs/06_ナレッジベース/methodology/SRE的アプローチ.md`
+`docs/80_ナレッジベース/methodology/SRE的アプローチ.md`
 
 内容:
 - SRE の核心概念（SLO、Error Budget、Toil、Blameless Postmortem）

@@ -382,7 +382,7 @@ E2E テスト（該当なし）
 | `backend/apps/bff/src/main.rs` | 5 | ルーティング追加 |
 | `backend/apps/bff/src/openapi.rs` | 5 | 4 パス追加 |
 | `openapi/openapi.yaml` | 5 | `just openapi-generate` で再生成 |
-| `docs/03_詳細設計書/17_ドキュメント管理設計.md` | 5 | 実装状態マーカー更新 |
+| `docs/40_詳細設計書/17_ドキュメント管理設計.md` | 5 | 実装状態マーカー更新 |
 
 ## 検証
 

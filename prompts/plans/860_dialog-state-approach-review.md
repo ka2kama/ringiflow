@@ -173,5 +173,5 @@ E2E テスト（該当なし）
 |---------|------|
 | `frontend/src/Page/WorkflowDefinition/List.elm` | リファクタリング対象 |
 | `frontend/src/Page/Workflow/Detail.elm` L138-154 | 参照パターン（EditState） |
-| `docs/05_ADR/054_型安全ステートマシンパターンの標準化.md` | 設計判断の根拠 |
+| `docs/70_ADR/054_型安全ステートマシンパターンの標準化.md` | 設計判断の根拠 |
 | `tests/e2e/tests/workflow-definition-management.spec.ts` | リグレッション検証 |

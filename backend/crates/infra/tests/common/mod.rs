@@ -224,7 +224,7 @@ pub async fn assign_role(pool: &PgPool, user_id: &UserId, tenant_id: &TenantId) 
 /// - INV-S1〜S4: WorkflowStep の不変条件
 /// - INV-X1〜X3: クロスエンティティ不変条件
 ///
-/// 参照: `docs/03_詳細設計書/エンティティ影響マップ/`
+/// 参照: `docs/40_詳細設計書/エンティティ影響マップ/`
 pub async fn assert_workflow_invariants(
     pool: &PgPool,
     instance_id: &WorkflowInstanceId,

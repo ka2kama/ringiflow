@@ -5,7 +5,7 @@
 # ESM の import で解決できない問題がある（NODE_PATH は ESM で無視される）。
 # 回避策として、決定論的なディレクトリにインストールし、そこを cwd にして起動する。
 #
-# 詳細: docs/05_ADR/028_MCPサーバー導入（PostgreSQL）.md
+# 詳細: docs/70_ADR/028_MCPサーバー導入（PostgreSQL）.md
 set -euo pipefail
 
 # プロジェクトルートの .env からポート設定を読み込む（worktree 対応）

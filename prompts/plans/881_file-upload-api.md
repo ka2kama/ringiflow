@@ -4,7 +4,7 @@
 
 Epic #406（ドキュメント管理）の Story。#880（S3 基盤）が完了し、S3Client trait + MinIO Docker が利用可能になった。Presigned URL 方式の Upload URL 発行 + Confirm の 2 エンドポイントを全レイヤー（Domain → Migration → Repository → UseCase → Core Handler → BFF Handler）で実装する。
 
-詳細設計: `docs/03_詳細設計書/17_ドキュメント管理設計.md`
+詳細設計: `docs/40_詳細設計書/17_ドキュメント管理設計.md`
 
 ## スコープ
 

@@ -56,9 +56,9 @@ body:
       label: 関連ドキュメント
       description: 要件定義書、設計書、ADR へのリンク
       placeholder: |
-        - 要件: docs/01_要件定義書/xxx
-        - 設計: docs/02_基本設計書/xxx
-        - ADR: docs/05_ADR/xxx
+        - 要件: docs/10_要件定義書/xxx
+        - 設計: docs/30_基本設計書/xxx
+        - ADR: docs/70_ADR/xxx
     validations:
       required: false
 

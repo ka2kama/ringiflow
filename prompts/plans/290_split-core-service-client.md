@@ -167,7 +167,7 @@ where
 | `backend/apps/bff/src/handler/auth.rs` | 3 | AuthState 型変更 + スタブ簡素化 |
 | `backend/apps/bff/src/main.rs` | 3 | クライアント生成パターン変更 |
 | `backend/apps/bff/tests/auth_integration_test.rs` | 3 | スタブ簡素化 |
-| `docs/05_ADR/040_*.md` | 4 | 新規 ADR |
+| `docs/70_ADR/040_*.md` | 4 | 新規 ADR |
 | `.claude/rules/structural-review.md` | 4 | 閾値基準の改善 |
 
 ## 検証

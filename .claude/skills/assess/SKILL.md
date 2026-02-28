@@ -36,19 +36,19 @@ $ARGUMENTS
 
 実装ロードマップを読み、現在の Phase と完了状況を把握する:
 
-→ Read: `docs/03_詳細設計書/00_実装ロードマップ.md`
+→ Read: `docs/40_詳細設計書/00_実装ロードマップ.md`
 
 #### 1-2. 未実装セクションの特定
 
 設計書の実装状態マーカーを検索する:
 
-→ Grep: `実装状態` in `docs/02_基本設計書/`, `docs/03_詳細設計書/`
+→ Grep: `実装状態` in `docs/30_基本設計書/`, `docs/40_詳細設計書/`
 
 #### 1-3. 機能仕様書の突合
 
 定義済み機能仕様と実装状況を照合する:
 
-→ Glob: `docs/01_要件定義書/機能仕様書/*.md`
+→ Glob: `docs/20_機能仕様書/*.md`
 
 各仕様書の内容を確認し、実装済みかどうかをロードマップの完了基準と突合する。
 
@@ -109,7 +109,7 @@ gh issue list --state closed --json number,title,labels,closedAt --limit 20
 | チェック | 手法 | 基準 |
 |---------|------|------|
 | 未実装マーカー | Grep `実装状態` in `docs/` | 未実装マーカーの一覧（Discovery の 1-2 と共有可） |
-| ADR 記録状況 | Glob `docs/05_ADR/*.md` の件数 | 情報提供 |
+| ADR 記録状況 | Glob `docs/70_ADR/*.md` の件数 | 情報提供 |
 | 改善記録の状況 | Glob `process/improvements/` 直近月の件数 | 情報提供 |
 | README 鮮度 | 下記の突合チェック | 乖離件数 |
 
@@ -123,7 +123,7 @@ README.md と README.ja.md のハードコードされた数値・バージョ�
 | ルールファイル数 | Glob `.claude/rules/*.md` のファイル数 | 「N rule files」「N のルールファイル」 |
 | Rust バージョン | Read `backend/rust-toolchain.toml` の channel | バッジ `Rust-N.NN` |
 | Elm バージョン | Read `frontend/elm.json` の elm-version | バッジ `Elm-N.NN` |
-| Phase 進捗 | Read `docs/03_詳細設計書/00_実装ロードマップ.md` | 開発状況テーブル |
+| Phase 進捗 | Read `docs/40_詳細設計書/00_実装ロードマップ.md` | 開発状況テーブル |
 | EN/JA 整合 | README.md と README.ja.md の数値・構造比較 | 両ファイルの対応セクション |
 
 乖離が検出された場合、推奨アクションに修正を含める。優先度は Low（他に影響しないが、外部への情報提供が不正確になる）。

@@ -10,7 +10,7 @@
 #   プロジェクト名を変えることで、複数のインスタンスを並行起動可能
 #   docker compose --env-file .env -p ringiflow-api-test up -d
 #   → コンテナ名: ringiflow-api-test-postgres-1 等
-#   詳細: docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md
+#   詳細: docs/60_手順書/04_開発フロー/04_並行開発（Worktree）.md
 
 services:
   # PostgreSQL データベース（API テスト用）

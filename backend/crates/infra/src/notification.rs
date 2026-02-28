@@ -8,7 +8,7 @@
 //! - **3 つの実装**: SMTP（Mailpit 開発用）、SES（本番用）、Noop（テスト用）
 //! - **環境変数切替**: `NOTIFICATION_BACKEND` でランタイム選択
 //!
-//! → 詳細設計: `docs/03_詳細設計書/16_通知機能設計.md`
+//! → 詳細設計: `docs/40_詳細設計書/16_通知機能設計.md`
 
 mod noop;
 mod ses;

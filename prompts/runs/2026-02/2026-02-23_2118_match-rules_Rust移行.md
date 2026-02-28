@@ -49,7 +49,7 @@ Issue #815（CI スクリプトの言語選定）に基づき、`.github/scripts
 | `.github/scripts/match-rules.rs` | 新規作成 |
 | `.github/scripts/match-rules.py` | 削除 |
 | `.github/workflows/claude-rules-check.yaml` | 変更 |
-| `docs/05_ADR/056_CIスクリプトの言語選定方針.md` | 新規作成 |
+| `docs/70_ADR/056_CIスクリプトの言語選定方針.md` | 新規作成 |
 
 ### PR
 

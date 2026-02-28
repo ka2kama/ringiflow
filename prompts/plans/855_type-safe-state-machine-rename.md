@@ -36,7 +36,7 @@ CLAUDE.md の「Want と How」原則: 手段を Want に昇格させない。�
 ADR-054 がパターンの定義文書。ここが全変更の起点。
 
 ファイルリネーム:
-- `docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md` → `docs/05_ADR/054_型安全ステートマシンパターンの標準化.md`
+- `docs/70_ADR/054_ADTベースステートマシンパターンの標準化.md` → `docs/70_ADR/054_型安全ステートマシンパターンの標準化.md`
 
 内容の修正:
 - タイトル: `ADR-054: ADT ベースステートマシンパターンの標準化` → `ADR-054: 型安全ステートマシンパターンの標準化`
@@ -74,7 +74,7 @@ ADR-054 を参照している Living documents の用語とリンクを更新。
    - 本文: 「ADT ベースステートマシン」→「型安全ステートマシン」
    - ADR-054 リンクのファイル名を更新
 
-3. `docs/04_手順書/04_開発フロー/02_TDD開発フロー.md`
+3. `docs/60_手順書/04_開発フロー/02_TDD開発フロー.md`
    - 設計原則レンズ「型の活用」: ADR-054 リンクのファイル名を更新
 
 確認事項:
@@ -92,7 +92,7 @@ ADR-054 を参照している Living documents の用語とリンクを更新。
 
 ### 3a. 設計書
 
-`docs/03_詳細設計書/エンティティ影響マップ/WorkflowInstance.md`:
+`docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md`:
 - 「ADT ベースステートマシン」→「型安全ステートマシン」
 - ADR-054 リンクのファイル名を更新
 
@@ -122,23 +122,23 @@ ADR-054 を参照している Living documents の用語とリンクを更新。
 
 ディレクトリリネーム + 内容更新。3 PR 分:
 
-1. `docs/07_実装解説/PR802_Designer-ADTステートマシン/` → `docs/07_実装解説/PR802_Designer-型安全ステートマシン/`
+1. `docs/90_実装解説/PR802_Designer-ADTステートマシン/` → `docs/90_実装解説/PR802_Designer-型安全ステートマシン/`
    - `01_Designer-ADTステートマシン_機能解説.md` → `01_Designer-型安全ステートマシン_機能解説.md`
    - `01_Designer-ADTステートマシン_コード解説.md` → `01_Designer-型安全ステートマシン_コード解説.md`
    - 内容中の用語 + ADR-054 リンクを更新
 
-2. `docs/07_実装解説/PR839_WorkflowDetail_ADTステートマシン/` → `docs/07_実装解説/PR839_WorkflowDetail_型安全ステートマシン/`
+2. `docs/90_実装解説/PR839_WorkflowDetail_ADTステートマシン/` → `docs/90_実装解説/PR839_WorkflowDetail_型安全ステートマシン/`
    - `01_ADTステートマシン_機能解説.md` → `01_型安全ステートマシン_機能解説.md`
    - `01_ADTステートマシン_コード解説.md` → `01_型安全ステートマシン_コード解説.md`
    - 内容中の用語 + ADR-054 リンクを更新
 
-3. `docs/07_実装解説/PR840_WorkflowStep-ADTステートマシン/` → `docs/07_実装解説/PR840_WorkflowStep-型安全ステートマシン/`
+3. `docs/90_実装解説/PR840_WorkflowStep-ADTステートマシン/` → `docs/90_実装解説/PR840_WorkflowStep-型安全ステートマシン/`
    - `01_WorkflowStep-ADTステートマシン_機能解説.md` → `01_WorkflowStep-型安全ステートマシン_機能解説.md`
    - `01_WorkflowStep-ADTステートマシン_コード解説.md` → `01_WorkflowStep-型安全ステートマシン_コード解説.md`
    - 内容中の用語 + ADR-054 リンクを更新
 
 確認事項:
-- パターン: 実装解説の命名規則 → `docs/07_実装解説/README.md`
+- パターン: 実装解説の命名規則 → `docs/90_実装解説/README.md`
 
 #### 操作パス
 

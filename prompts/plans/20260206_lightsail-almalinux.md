@@ -16,7 +16,7 @@ PR #91（`feature/lightsail-deploy`）の Lightsail デプロイ構成で、OS �
 | 4 | `infra/lightsail/.env.example` | `LIGHTSAIL_USER` を `ec2-user` に変更 | 低 |
 | 5 | `infra/lightsail/backup.sh` | cron 例のパスを `ec2-user` に変更 | 低 |
 | 6 | `infra/lightsail/README.md` | OS 名・ユーザー名の全置換、SELinux 注意事項追加 | 中 |
-| 7 | `docs/05_ADR/030_Lightsail個人環境の構築.md` | OS 名変更、変更履歴追加 | 低 |
+| 7 | `docs/70_ADR/030_Lightsail個人環境の構築.md` | OS 名変更、変更履歴追加 | 低 |
 
 ## 変更詳細
 
@@ -105,7 +105,7 @@ LIGHTSAIL_USER=ec2-user
 - setup.sh の curl URL のブランチ名: `main` のまま（マージ後に使う前提）
 - SELinux に関する注意事項を追加（トラブルシューティングセクション）
 
-### 7. `docs/05_ADR/030_Lightsail個人環境の構築.md`
+### 7. `docs/70_ADR/030_Lightsail個人環境の構築.md`
 
 - 構成図の `Lightsail ($10/月)` 内に変更なし（OS 名は記載されていない）
 - README への参照パスも変更なし

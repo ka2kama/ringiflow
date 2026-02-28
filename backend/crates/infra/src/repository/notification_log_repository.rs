@@ -7,7 +7,7 @@
 //! - **fire-and-forget ログ**: 送信成功・失敗どちらも記録する
 //! - **テナント分離**: RLS + tenant_id で分離
 //!
-//! → 詳細設計: `docs/03_詳細設計書/16_通知機能設計.md`
+//! → 詳細設計: `docs/40_詳細設計書/16_通知機能設計.md`
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};

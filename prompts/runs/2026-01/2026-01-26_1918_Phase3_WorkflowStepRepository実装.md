@@ -13,9 +13,9 @@
 
 Phase 1-2 の実装解説ドキュメントが未作成だったため、以下を作成:
 
-- `docs/07_実装解説/04_ワークフロー申請機能/00_概要.md`
-- `docs/07_実装解説/04_ワークフロー申請機能/01_Phase1_WorkflowDefinitionRepository.md`
-- `docs/07_実装解説/04_ワークフロー申請機能/02_Phase2_WorkflowInstanceRepository.md`
+- `docs/90_実装解説/04_ワークフロー申請機能/00_概要.md`
+- `docs/90_実装解説/04_ワークフロー申請機能/01_Phase1_WorkflowDefinitionRepository.md`
+- `docs/90_実装解説/04_ワークフロー申請機能/02_Phase2_WorkflowInstanceRepository.md`
 
 各 Phase の設計判断、代替案、トレードオフを文書化。
 
@@ -46,7 +46,7 @@ Phase 1-2 で確立したプロセスを適用:
 
 ### 3. Phase 3 実装解説ドキュメント作成（19:26）
 
-`docs/07_実装解説/04_ワークフロー申請機能/03_Phase3_WorkflowStepRepository.md` を作成。
+`docs/90_実装解説/04_ワークフロー申請機能/03_Phase3_WorkflowStepRepository.md` を作成。
 
 設計判断の文書化:
 - JOIN によるテナント分離

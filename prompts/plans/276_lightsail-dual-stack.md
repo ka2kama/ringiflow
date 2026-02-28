@@ -18,7 +18,7 @@
 - `infra/lightsail/deploy.sh` の IPv6 ワークアラウンド簡略化
 - `scripts/deploy-lightsail.sh` のコメント更新
 - `infra/lightsail/README.md` の更新（コスト、DNS レコード、IPv6 注意事項、マイグレーション手順）
-- `docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md` にアーカイブ注記追加
+- `docs/80_ナレッジベース/infra/IPv6-only環境でのDocker運用.md` にアーカイブ注記追加
 
 ### 対象外
 
@@ -30,12 +30,12 @@
 
 ### 確認事項
 
-- [x] パターン: ADR テンプレート → `docs/05_ADR/template.md`
+- [x] パターン: ADR テンプレート → `docs/70_ADR/template.md`
 - [x] 既存: ADR-030（Lightsail 個人環境の構築）→ 変更履歴に追記
 
 ### 作業内容
 
-`docs/05_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md` を作成。
+`docs/70_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md` を作成。
 
 選択肢:
 1. 現状維持（IPv6-only, $5/月）
@@ -131,10 +131,10 @@ E2E テスト（該当なし）
 
 ### 作業内容
 
-`docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md` の冒頭にアーカイブ注記を追加:
+`docs/80_ナレッジベース/infra/IPv6-only環境でのDocker運用.md` の冒頭にアーカイブ注記を追加:
 
 ```markdown
-> **注記**: [ADR-047](../../docs/05_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md) により、Lightsail はデュアルスタックに切り替え済み。本ドキュメントは IPv6-only 環境での知見の記録として残す。
+> **注記**: [ADR-047](../../docs/70_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md) により、Lightsail はデュアルスタックに切り替え済み。本ドキュメントは IPv6-only 環境での知見の記録として残す。
 ```
 
 `## プロジェクトでの使用箇所` セクションも更新（deploy.sh の SCP_TARGET 分離は廃止された旨）。

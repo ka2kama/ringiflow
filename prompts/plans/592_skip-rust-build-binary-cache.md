@@ -8,7 +8,7 @@
 
 **対象**:
 1. `.github/workflows/ci.yaml` — `api-test` ジョブ（L465-467）と `e2e-test` ジョブ（L574-575）にバイナリキャッシュを追加
-2. `docs/06_ナレッジベース/devtools/GitHubActions.md` — バイナリキャッシュ戦略セクションを追記
+2. `docs/80_ナレッジベース/devtools/GitHubActions.md` — バイナリキャッシュ戦略セクションを追記
 
 **対象外**:
 - `rust-test` / `rust-lint` / `rust-integration`: `rust == 'true'` でジョブ単位スキップ済み

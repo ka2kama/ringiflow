@@ -4,7 +4,7 @@
 -- Auth Service が所有するスキーマ。
 -- 認証情報（パスワード、将来の TOTP/OIDC/SAML）を管理する。
 --
--- 設計詳細: docs/03_詳細設計書/08_AuthService設計.md
+-- 設計詳細: docs/40_詳細設計書/08_AuthService設計.md
 
 -- auth スキーマの作成
 CREATE SCHEMA IF NOT EXISTS auth;

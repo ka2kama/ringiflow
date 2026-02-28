@@ -64,5 +64,5 @@ pub async fn handler(...) -> ... { ... }
 
 ## 参照
 
-- Observability 設計: [docs/03_詳細設計書/14_Observability設計.md](../../docs/03_詳細設計書/14_Observability設計.md)
-- ログスキーマ: [docs/06_ナレッジベース/backend/log-schema.md](../../docs/06_ナレッジベース/backend/log-schema.md)
+- Observability 設計: [docs/40_詳細設計書/14_Observability設計.md](../../docs/40_詳細設計書/14_Observability設計.md)
+- ログスキーマ: [docs/80_ナレッジベース/backend/log-schema.md](../../docs/80_ナレッジベース/backend/log-schema.md)

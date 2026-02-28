@@ -15,7 +15,7 @@
 
 ### 1. 全体方針の配置先
 
-既存ルールファイル（api-test.md, e2e-test.md）への追記 + `docs/08_テスト/` に新規ドキュメント。
+既存ルールファイル（api-test.md, e2e-test.md）への追記 + `docs/50_テスト/` に新規ドキュメント。
 
 理由: 層ごとの責務分担表は参照用ドキュメントとして集約、各層固有の方針は AI ディレクティブとしてルールファイルに配置。
 
@@ -35,7 +35,7 @@ ADR で正式に評価・判断する。推奨は「導入」。
 
 ### Phase 1: テスト層間の責務分担と原則の定義
 
-**成果物:** `docs/08_テスト/テスト戦略_エッジケース方針.md`（新規）
+**成果物:** `docs/50_テスト/テスト戦略_エッジケース方針.md`（新規）
 
 内容:
 - テスト層ごとのエッジケース責務分担表
@@ -84,15 +84,15 @@ ADR で正式に評価・判断する。推奨は「導入」。
 ### Phase 3: 状態遷移表の作成
 
 **成果物:**
-- `docs/08_テスト/状態遷移表_WorkflowInstance.md`（新規）— 7 状態 × 8 操作
-- `docs/08_テスト/状態遷移表_WorkflowStep.md`（新規）— 4 状態 × 6 操作
+- `docs/50_テスト/状態遷移表_WorkflowInstance.md`（新規）— 7 状態 × 8 操作
+- `docs/50_テスト/状態遷移表_WorkflowStep.md`（新規）— 4 状態 × 6 操作
 
 各セルに「成功 → 遷移先」または「Error」を記載。型安全ステートマシンのカバー範囲と既存テストカバレッジを注記。
 
 **確認事項:**
 - 型: `WorkflowInstanceState` → `backend/crates/domain/src/workflow/instance.rs`
 - 型: `WorkflowStepState` → `backend/crates/domain/src/workflow/step.rs`
-- パターン: エンティティ影響マップ → `docs/03_詳細設計書/エンティティ影響マップ/WorkflowInstance.md`
+- パターン: エンティティ影響マップ → `docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md`
 
 **対応する完了基準:** 6
 
@@ -104,7 +104,7 @@ ADR で正式に評価・判断する。推奨は「導入」。
 
 ### Phase 4: proptest 導入判断の ADR
 
-**成果物:** `docs/05_ADR/058_プロパティベーステスト導入.md`（新規）
+**成果物:** `docs/70_ADR/058_プロパティベーステスト導入.md`（新規）
 
 選択肢:
 1. proptest 導入（推奨）
@@ -112,7 +112,7 @@ ADR で正式に評価・判断する。推奨は「導入」。
 3. 見送り
 
 **確認事項:**
-- パターン: ADR テンプレート → `docs/05_ADR/template.md`
+- パターン: ADR テンプレート → `docs/70_ADR/template.md`
 - パターン: 既存の技術選定 ADR → ADR-035、ADR-038
 - ライブラリ: proptest → docs.rs で最新版 API 確認
 - 型: `assert_workflow_invariants()` → `backend/crates/infra/tests/common/mod.rs`
@@ -132,9 +132,9 @@ ADR で正式に評価・判断する。推奨は「導入」。
 | `backend/crates/domain/src/workflow/instance.rs` | Phase 3 の情報源（状態遷移） |
 | `backend/crates/domain/src/workflow/step.rs` | Phase 3 の情報源（状態遷移） |
 | `backend/crates/infra/tests/common/mod.rs` | 既存 `assert_workflow_invariants()` |
-| `docs/03_詳細設計書/エンティティ影響マップ/WorkflowInstance.md` | 不変条件定義（INV-I, INV-X） |
-| `docs/03_詳細設計書/エンティティ影響マップ/WorkflowStep.md` | 不変条件定義（INV-S） |
-| `docs/05_ADR/032_テスト設計方針.md` | 既存テスト設計方針 |
+| `docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md` | 不変条件定義（INV-I, INV-X） |
+| `docs/40_詳細設計書/エンティティ影響マップ/WorkflowStep.md` | 不変条件定義（INV-S） |
+| `docs/70_ADR/032_テスト設計方針.md` | 既存テスト設計方針 |
 
 ## ブラッシュアップループの記録
 

@@ -18,7 +18,7 @@
 
 - `justfile` の `check-impl-docs` タスクを `rust-script` 呼び出しに更新
 - `scripts/check/impl-docs.sh` を削除
-- `docs/07_実装解説/` 内のリンク切れ（`.sh` → `.rs`）を修正
+- `docs/90_実装解説/` 内のリンク切れ（`.sh` → `.rs`）を修正
 
 ## 判断ログ
 
@@ -34,7 +34,7 @@
 
 更新:
 - `justfile`
-- `docs/07_実装解説/PR697_Observability構造的担保/01_Observability構造的担保_コード解説.md`
+- `docs/90_実装解説/PR697_Observability構造的担保/01_Observability構造的担保_コード解説.md`
 
 削除:
 - `scripts/check/impl-docs.sh`

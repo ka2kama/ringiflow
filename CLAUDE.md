@@ -65,13 +65,13 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 
 ### 理念2: 品質の追求
 
-[ISO/IEC 25010](https://iso25000.com/en/iso-25000-standards/iso-25010) に基づく品質追求。→ 詳細: [KB: ISO25010](docs/06_ナレッジベース/methodology/ISO25010.md)
+[ISO/IEC 25010](https://iso25000.com/en/iso-25000-standards/iso-25010) に基づく品質追求。→ 詳細: [KB: ISO25010](docs/80_ナレッジベース/methodology/ISO25010.md)
 
 品質戦略:
 - Validation: 正しい問題を解いているか → [問題解決フレームワーク](.claude/rules/problem-solving.md)
 - Verification: 正しく作っているか → 守り（品質チェックリスト）+ 攻め（[設計原則レンズ](.claude/rules/dev-flow-tdd.md#設計原則レンズ)）
 
-→ 詳細: [KB: V&V](docs/06_ナレッジベース/methodology/V&V.md)
+→ 詳細: [KB: V&V](docs/80_ナレッジベース/methodology/V&V.md)
 
 ### 設計原則
 
@@ -141,19 +141,21 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 
 | 知りたいこと | 参照先 |
 |-------------|--------|
-| 要件・機能仕様 | [`docs/01_要件定義書/`](docs/01_要件定義書/) |
-| 設計（基本/詳細） | [`docs/02_基本設計書/`](docs/02_基本設計書/) / [`docs/03_詳細設計書/`](docs/03_詳細設計書/) |
-| 操作手順 | [`docs/04_手順書/`](docs/04_手順書/) |
-| 意思決定 | [`docs/05_ADR/`](docs/05_ADR/) |
-| 技術知識 / 実装解説 / テスト | [`docs/06_ナレッジベース/`](docs/06_ナレッジベース/) / [`docs/07_実装解説/`](docs/07_実装解説/) / [`docs/08_テスト/`](docs/08_テスト/) |
+| 要件（ビジネス） | [`docs/10_要件定義書/`](docs/10_要件定義書/) |
+| 機能仕様（ユーザー視点） | [`docs/20_機能仕様書/`](docs/20_機能仕様書/) |
+| 設計（基本/詳細） | [`docs/30_基本設計書/`](docs/30_基本設計書/) / [`docs/40_詳細設計書/`](docs/40_詳細設計書/) |
+| テスト仕様 | [`docs/50_テスト/`](docs/50_テスト/) |
+| 操作手順 | [`docs/60_手順書/`](docs/60_手順書/) |
+| 意思決定 | [`docs/70_ADR/`](docs/70_ADR/) |
+| 技術知識 / 実装解説 | [`docs/80_ナレッジベース/`](docs/80_ナレッジベース/) / [`docs/90_実装解説/`](docs/90_実装解説/) |
 | セッションログ | [`prompts/runs/`](prompts/runs/) |
 | 改善・調査記録 | [`process/`](process/) |
 
-作業開始時は [`docs/01_要件定義書/00_はじめに.md`](docs/01_要件定義書/00_はじめに.md) から読むこと。
+作業開始時は [`docs/10_要件定義書/00_はじめに.md`](docs/10_要件定義書/00_はじめに.md) から読むこと。
 
 ### 情報管理: ローカルファースト
 
-→ [ADR-025](docs/05_ADR/025_情報管理とローカル知識集約の方針.md)
+→ [ADR-025](docs/70_ADR/025_情報管理とローカル知識集約の方針.md)
 
 GitHub Issues/PR は一時的なワークフロー用。判断・学びはローカル docs に記録する。
 
@@ -175,10 +177,10 @@ GitHub Issues/PR は一時的なワークフロー用。判断・学びはロー
 
 | 活動 | ドキュメント | 出力先 |
 |------|------------|--------|
-| 技術選定・方針選択・見送り | ADR | `docs/05_ADR/` |
-| 新ツール・パターン導入 | ナレッジベース | `docs/06_ナレッジベース/` |
+| 技術選定・方針選択・見送り | ADR | `docs/70_ADR/` |
+| 新ツール・パターン導入 | ナレッジベース | `docs/80_ナレッジベース/` |
 | コード変更・設計判断 | セッションログ | `prompts/runs/` |
-| PR 単位の機能解説 | 実装解説（`/explain`） | `docs/07_実装解説/` |
+| PR 単位の機能解説 | 実装解説（`/explain`） | `docs/90_実装解説/` |
 | 非自明な問題解決 | 操作レシピ | `prompts/recipes/` |
 | プロセスの問題と対策 | 改善記録 | `process/improvements/` |
 | 仮説検証 2 回以上の調査 | 調査記録 | `process/investigations/` |
@@ -268,7 +270,7 @@ Claude Code のシステムプロンプト（「Executing actions with care」�
 ## Git 操作ルール
 
 → 詳細: [dev-flow-issue.md](.claude/rules/dev-flow-issue.md)
-→ ブランチ戦略: [ADR-046](docs/05_ADR/046_Story-per-PRブランチ戦略.md)
+→ ブランチ戦略: [ADR-046](docs/70_ADR/046_Story-per-PRブランチ戦略.md)
 
 ### ブランチ命名
 

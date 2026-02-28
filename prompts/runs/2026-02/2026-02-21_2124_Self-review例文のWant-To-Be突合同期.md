@@ -11,7 +11,7 @@
    - 6.3 Self-review 例文: 「完了基準・実装計画すべて達成」のみで Want/To-Be が欠落
    - PR テンプレート: 空欄テンプレートのため問題なし
 2. 例文の修正（2 ファイル）
-   - `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` L516
+   - `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` L516
    - `.claude/rules/zoom-rhythm.md` L259
    - 修正内容: 「Want/To-Be 突合で過不足なし」を追加
 3. Draft PR #754 を作成

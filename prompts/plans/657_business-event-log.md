@@ -42,7 +42,7 @@ tracing のフィールド名は `$($field:ident).+` パターンでドット区
 
 対象:
 - `log_business_event!` マクロと定数モジュール（`shared` クレート）
-- ログスキーマ文書（`docs/06_ナレッジベース/backend/`）
+- ログスキーマ文書（`docs/80_ナレッジベース/backend/`）
 - ワークフロー操作のビジネスイベントログ（6 ユースケース）
 - 認証操作のビジネスイベントログ（login/logout）
 - エラーコンテキスト強化（中央エラーハンドリング + auth login ハンドラ）
@@ -156,7 +156,7 @@ pub mod error {
 pub mod event_log;
 ```
 
-3. **`docs/06_ナレッジベース/backend/log-schema.md`（新規）**: ビジネスイベントとエラーコンテキストのフィールドスキーマ、jq クエリ例を記載
+3. **`docs/80_ナレッジベース/backend/log-schema.md`（新規）**: ビジネスイベントとエラーコンテキストのフィールドスキーマ、jq クエリ例を記載
 
 #### テストリスト
 
@@ -321,7 +321,7 @@ E2E テスト（該当なし — 手動検証で代替）
 
 新規:
 - `backend/crates/shared/src/event_log.rs`
-- `docs/06_ナレッジベース/backend/log-schema.md`
+- `docs/80_ナレッジベース/backend/log-schema.md`
 
 変更:
 - `backend/crates/shared/src/lib.rs`

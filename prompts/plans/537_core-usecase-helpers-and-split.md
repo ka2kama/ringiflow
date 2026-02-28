@@ -129,7 +129,7 @@ use crate::error::CoreError;
 /// `find_by_id` 等の `Option` を返すリポジトリメソッドの結果を、
 /// `CoreError::NotFound` または `CoreError::Internal` に変換する。
 ///
-/// → ナレッジベース: [FindResultExt パターン](../../docs/06_ナレッジベース/backend/FindResultExt.md)
+/// → ナレッジベース: [FindResultExt パターン](../../docs/80_ナレッジベース/backend/FindResultExt.md)
 pub(crate) trait FindResultExt<T> {
     fn or_not_found(self, entity_name: &str) -> Result<T, CoreError>;
 }

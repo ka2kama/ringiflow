@@ -95,7 +95,7 @@ just sync-epic <Issue番号>
 
 ### 5. Issue 駆動開発手順書更新
 
-`docs/04_手順書/04_開発フロー/01_Issue駆動開発.md`:
+`docs/60_手順書/04_開発フロー/01_Issue駆動開発.md`:
 
 - セクション 6.2（品質チェックリスト）の「Issue との整合」に `just check-issue` の実行を追加
 - Epic 管理セクション（Story PR マージ時）を `just sync-epic` に置き換え

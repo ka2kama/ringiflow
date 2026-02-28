@@ -24,9 +24,9 @@ git checkout -b feature/106-test-design-policy
 
 ### Step 2: ADR-032 作成
 
-ファイル: `docs/05_ADR/032_テスト設計方針.md`
+ファイル: `docs/70_ADR/032_テスト設計方針.md`
 
-テンプレート（`docs/05_ADR/template.md`）に準拠した構造で、以下の5つの論点を含む ADR を作成する。
+テンプレート（`docs/70_ADR/template.md`）に準拠した構造で、以下の5つの論点を含む ADR を作成する。
 
 #### 論点1: BDD（cucumber-rs）の採用判断
 
@@ -84,7 +84,7 @@ git checkout -b feature/106-test-design-policy
 ### Step 3: Draft PR 作成
 
 ```bash
-git add docs/05_ADR/032_テスト設計方針.md
+git add docs/70_ADR/032_テスト設計方針.md
 git commit -m "#106 Add ADR-032: Test design policy"
 git push -u origin HEAD
 gh pr create --draft --title "#106 Add ADR-032: Test design policy" ...
@@ -100,7 +100,7 @@ Issue #106 の完了条件を更新。
 
 ## 対象ファイル
 
-- 新規: `docs/05_ADR/032_テスト設計方針.md`
+- 新規: `docs/70_ADR/032_テスト設計方針.md`
 
 ## 対象外
 

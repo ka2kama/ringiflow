@@ -18,7 +18,7 @@
 //! ドット記法（`event.category`、`error.kind`）を使用。tracing の
 //! `$($field:ident).+` パターンでサポートされ、JSON 出力でフラットなキーになる。
 //!
-//! → 詳細: [ログスキーマ](../../../docs/06_ナレッジベース/backend/log-schema.md)
+//! → 詳細: [ログスキーマ](../../../docs/80_ナレッジベース/backend/log-schema.md)
 
 /// ビジネスイベントを構造化ログとして出力する。
 ///

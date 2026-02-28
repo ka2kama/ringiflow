@@ -162,7 +162,7 @@ Flexible モードの理由:
 - オリジン（Lightsail）側に SSL 設定がないため
 - Full にすると Cloudflare がポート 443 に接続しようとし、522 エラーになる
 
-→ 詳細: [IPv6-only 環境での Docker 運用 > SSL モードの選択](../../docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md#ssl-モードの選択)
+→ 詳細: [IPv6-only 環境での Docker 運用 > SSL モードの選択](../../docs/80_ナレッジベース/infra/IPv6-only環境でのDocker運用.md#ssl-モードの選択)
 
 #### 5.3 キャッシュルールの設定
 
@@ -443,6 +443,6 @@ find ~/ringiflow/backup -mtime +7 -delete
 
 ## 関連ドキュメント
 
-- [ADR-030: Lightsail 個人環境の構築](../../docs/05_ADR/030_Lightsail個人環境の構築.md)
-- [IPv6-only 環境での Docker 運用](../../docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md)
+- [ADR-030: Lightsail 個人環境の構築](../../docs/70_ADR/030_Lightsail個人環境の構築.md)
+- [IPv6-only 環境での Docker 運用](../../docs/80_ナレッジベース/infra/IPv6-only環境でのDocker運用.md)
 - [docker-compose.yaml](./docker-compose.yaml)

@@ -173,13 +173,13 @@ docker build \
 ### Phase 5: ドキュメント更新
 
 #### 確認事項
-- パターン: 既存ナレッジベースの構造 → `docs/06_ナレッジベース/security/DevAuth.md`
+- パターン: 既存ナレッジベースの構造 → `docs/80_ナレッジベース/security/DevAuth.md`
 
 **変更ファイル**:
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `docs/06_ナレッジベース/security/DevAuth.md` | デモ環境での有効化手順を追記 |
+| `docs/80_ナレッジベース/security/DevAuth.md` | デモ環境での有効化手順を追記 |
 
 ## 検証
 
