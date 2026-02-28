@@ -3,6 +3,7 @@
 //! [dependencies]
 //! globset = "0.4"
 //! tempfile = "3"
+//! pretty_assertions = "1"
 //! ```
 
 // PR の変更ファイルにマッチする .claude/rules/ のルールを特定し、内容を出力する。
@@ -175,10 +176,10 @@ fn split_into_groups(rules: Vec<MatchedRule>, n: usize) -> Vec<Vec<MatchedRule>>
     let mut group_sizes: Vec<usize> = vec![0; n];
 
     // サイズ降順でソート（LPT: Longest Processing Time first）
-    let mut sorted: Vec<_> = rules.into_iter().enumerate().collect();
-    sorted.sort_by(|a, b| b.1.body.len().cmp(&a.1.body.len()));
+    let mut sorted: Vec<_> = rules.into_iter().collect();
+    sorted.sort_by(|a, b| b.body.len().cmp(&a.body.len()));
 
-    for (_original_idx, rule) in sorted {
+    for rule in sorted {
         // 最小サイズのグループを選択
         let min_idx = group_sizes
             .iter()
@@ -314,6 +315,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use std::io::Write;
 
     // --- parse_frontmatter_paths ---

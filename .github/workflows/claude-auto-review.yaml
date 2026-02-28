@@ -578,25 +578,11 @@ jobs:
 
       - name: Determine final status
         id: final-status
-        run: |
-          VERIFICATION_RESULT="${{ needs.verification.result }}"
-          VALIDATION_RESULT="${{ needs.validation.result }}"
-          REVIEW_STATE="${{ steps.review-decision.outputs.review_state }}"
-
-          echo "Verification result: $VERIFICATION_RESULT"
-          echo "Validation result: $VALIDATION_RESULT"
-          echo "Review state: $REVIEW_STATE"
-
-          if [[ "$VERIFICATION_RESULT" == "failure" || "$VALIDATION_RESULT" == "failure" ]]; then
-            echo "state=failure" >> "$GITHUB_OUTPUT"
-            echo "description=Review job failed" >> "$GITHUB_OUTPUT"
-          elif [[ "$REVIEW_STATE" == "CHANGES_REQUESTED" ]]; then
-            echo "state=failure" >> "$GITHUB_OUTPUT"
-            echo "description=Changes requested" >> "$GITHUB_OUTPUT"
-          else
-            echo "state=success" >> "$GITHUB_OUTPUT"
-            echo "description=Review completed" >> "$GITHUB_OUTPUT"
-          fi
+        env:
+          VERIFICATION_RESULT: ${{ needs.verification.result }}
+          VALIDATION_RESULT: ${{ needs.validation.result }}
+          REVIEW_STATE: ${{ steps.review-decision.outputs.review_state }}
+        run: ./scripts/ci/determine-review-status.sh
 
       - name: Report status
         env:

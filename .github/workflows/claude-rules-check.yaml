@@ -222,32 +222,8 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: sccache
         run: |
-          # ルールマッチ + 2グループに分割
           rust-script .github/scripts/match-rules.rs --groups 2 /tmp/changed-files.txt > /tmp/rules-output.txt
-
-          # マッチルールの有無を判定（グループマーカーなしの no-matching-rules は全体が空）
-          if head -1 /tmp/rules-output.txt | grep -q '^<!-- no-matching-rules -->$'; then
-            echo "has_matching_rules=false" >> "$GITHUB_OUTPUT"
-            {
-              echo "RULES_GROUP_1<<EOF_GROUP_1"
-              echo "<!-- no-matching-rules -->"
-              echo "EOF_GROUP_1"
-              echo "RULES_GROUP_2<<EOF_GROUP_2"
-              echo "<!-- no-matching-rules -->"
-              echo "EOF_GROUP_2"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "has_matching_rules=true" >> "$GITHUB_OUTPUT"
-            # グループマーカーで分割
-            {
-              echo "RULES_GROUP_1<<EOF_GROUP_1"
-              awk '/^<!-- group:1 -->$/{p=1;next}/^<!-- group:2 -->$/{p=0}p' /tmp/rules-output.txt
-              echo "EOF_GROUP_1"
-              echo "RULES_GROUP_2<<EOF_GROUP_2"
-              awk '/^<!-- group:2 -->$/{p=1;next}p' /tmp/rules-output.txt
-              echo "EOF_GROUP_2"
-            } >> "$GITHUB_OUTPUT"
-          fi
+          ./scripts/ci/split-rule-groups.sh /tmp/rules-output.txt
 
       - name: Report skipped status for no matching rules
         if: >
@@ -586,53 +562,12 @@ jobs:
         id: final-status
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          HAS_MATCHING_RULES="${{ needs.setup.outputs.has_matching_rules }}"
-          GROUP1_RESULT="${{ needs.rules-group-1.result }}"
-          GROUP2_RESULT="${{ needs.rules-group-2.result }}"
-          PR_NUMBER="${{ needs.setup.outputs.pr_number }}"
-
-          echo "has_matching_rules=$HAS_MATCHING_RULES"
-          echo "group1_result=$GROUP1_RESULT"
-          echo "group2_result=$GROUP2_RESULT"
-
-          # マッチルールなし → setup で既に skipped 報告済み
-          if [[ "$HAS_MATCHING_RULES" == "false" ]]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-
-          # アクションレベルの失敗
-          if [[ "$GROUP1_RESULT" == "failure" || "$GROUP2_RESULT" == "failure" ]]; then
-            echo "state=failure" >> "$GITHUB_OUTPUT"
-            echo "description=Rules check job failed" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # 成功したグループ数をカウント
-          GROUPS_RAN=0
-          [[ "$GROUP1_RESULT" == "success" ]] && GROUPS_RAN=$((GROUPS_RAN + 1))
-          [[ "$GROUP2_RESULT" == "success" ]] && GROUPS_RAN=$((GROUPS_RAN + 1))
-
-          if [[ "$GROUPS_RAN" == "0" ]]; then
-            echo "state=success" >> "$GITHUB_OUTPUT"
-            echo "description=Rules check completed" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # 最新 GROUPS_RAN 件の結果マーカーを確認
-          HAS_FAIL=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
-            --jq "[.[] | select(.user.login == \"claude[bot]\" and (.body | test(\"<!-- rules-check-result:(pass|fail) -->\")))] | .[-${GROUPS_RAN}:] | any(.[]; .body | contains(\"<!-- rules-check-result:fail -->\"))")
-
-          if [[ "$HAS_FAIL" == "true" ]]; then
-            echo "state=failure" >> "$GITHUB_OUTPUT"
-            echo "description=Rule violations found" >> "$GITHUB_OUTPUT"
-          else
-            echo "state=success" >> "$GITHUB_OUTPUT"
-            echo "description=Rules check completed" >> "$GITHUB_OUTPUT"
-          fi
+          HAS_MATCHING_RULES: ${{ needs.setup.outputs.has_matching_rules }}
+          GROUP1_RESULT: ${{ needs.rules-group-1.result }}
+          GROUP2_RESULT: ${{ needs.rules-group-2.result }}
+          PR_NUMBER: ${{ needs.setup.outputs.pr_number }}
+          GH_REPO: ${{ github.repository }}
+        run: ./scripts/ci/determine-rules-check-status.sh
 
       - name: Report status
         if: steps.final-status.outputs.skip != 'true'
