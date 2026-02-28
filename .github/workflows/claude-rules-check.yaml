@@ -7,6 +7,13 @@
 # - このワークフロー: ルール準拠チェック（gh pr comment でフィードバック）
 # - claude-auto-review.yaml: コード品質レビュー + 承認判断（approve/request-changes）
 #
+# ジョブ構成:
+#   setup → rules-group-1 (並列) → finalize
+#         → rules-group-2 (並列) →
+#
+# マッチしたルールを内容サイズで2グループに分割（LPT アルゴリズム）し、
+# 各グループを別の Claude ジョブで並列チェックする。
+#
 # 重要: このワークフローは gh pr review を使用しない。
 # フィードバックは gh pr comment で投稿し、Auto Review のレビュー状態と競合しないようにする。
 # 結果の判定は PR コメント内のマーカー（<!-- rules-check-result:pass/fail -->）で行う。
@@ -33,13 +40,26 @@ permissions:
   id-token: write
 
 jobs:
-  rules-check:
-    name: Claude Rules Check
+  # ──────────────────────────────────────────────
+  # setup: 共通前処理（draft check, ルールマッチ + グループ分割）
+  # ──────────────────────────────────────────────
+  setup:
+    name: Setup
     runs-on: ubuntu-latest
     if: >
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.pull_requests[0] != null
+
+    outputs:
+      is_draft: ${{ steps.check-draft.outputs.is_draft }}
+      pr_number: ${{ steps.set-pr-number.outputs.pr_number }}
+      has_matching_rules: ${{ steps.split-groups.outputs.has_matching_rules }}
+      PR_COMMENTS: ${{ steps.pr-comments.outputs.PR_COMMENTS }}
+      REVIEW_COMMENTS: ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
+      REVIEW_MODE: ${{ steps.review-context.outputs.REVIEW_MODE }}
+      RULES_GROUP_1: ${{ steps.split-groups.outputs.RULES_GROUP_1 }}
+      RULES_GROUP_2: ${{ steps.split-groups.outputs.RULES_GROUP_2 }}
 
     env:
       STATUS_URL: repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.head_sha }}
@@ -55,6 +75,11 @@ jobs:
             -f context="Claude Rules Check" \
             -f description="Checking rules compliance..." \
             -f target_url="$RUN_URL" || true
+
+      - name: Set PR number
+        id: set-pr-number
+        run: |
+          echo "pr_number=${{ github.event.workflow_run.pull_requests[0].number }}" >> "$GITHUB_OUTPUT"
 
       - name: Check if PR is draft
         id: check-draft
@@ -190,23 +215,44 @@ jobs:
           PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
           gh pr diff "$PR_NUMBER" --name-only > /tmp/changed-files.txt
 
-      - name: Match rules to changed files
-        id: match-rules
+      - name: Match rules and split into groups
+        id: split-groups
         if: steps.check-draft.outputs.is_draft == 'false'
         env:
           SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: sccache
         run: |
-          {
-            echo "MATCHED_RULES<<EOF_MATCHED_RULES"
-            rust-script .github/scripts/match-rules.rs /tmp/changed-files.txt
-            echo "EOF_MATCHED_RULES"
-          } >> "$GITHUB_OUTPUT"
+          # ルールマッチ + 2グループに分割
+          rust-script .github/scripts/match-rules.rs --groups 2 /tmp/changed-files.txt > /tmp/rules-output.txt
+
+          # マッチルールの有無を判定（グループマーカーなしの no-matching-rules は全体が空）
+          if head -1 /tmp/rules-output.txt | grep -q '^<!-- no-matching-rules -->$'; then
+            echo "has_matching_rules=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "RULES_GROUP_1<<EOF_GROUP_1"
+              echo "<!-- no-matching-rules -->"
+              echo "EOF_GROUP_1"
+              echo "RULES_GROUP_2<<EOF_GROUP_2"
+              echo "<!-- no-matching-rules -->"
+              echo "EOF_GROUP_2"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "has_matching_rules=true" >> "$GITHUB_OUTPUT"
+            # グループマーカーで分割
+            {
+              echo "RULES_GROUP_1<<EOF_GROUP_1"
+              awk '/^<!-- group:1 -->$/{p=1;next}/^<!-- group:2 -->$/{p=0}p' /tmp/rules-output.txt
+              echo "EOF_GROUP_1"
+              echo "RULES_GROUP_2<<EOF_GROUP_2"
+              awk '/^<!-- group:2 -->$/{p=1;next}p' /tmp/rules-output.txt
+              echo "EOF_GROUP_2"
+            } >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Report skipped status for no matching rules
         if: >
           steps.check-draft.outputs.is_draft == 'false' &&
-          contains(steps.match-rules.outputs.MATCHED_RULES, '<!-- no-matching-rules -->')
+          steps.split-groups.outputs.has_matching_rules == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -216,20 +262,35 @@ jobs:
             -f description="Skipped (no matching rules)" \
             -f target_url="$RUN_URL" || true
 
-      - name: Run Claude Rules Check
+  # ──────────────────────────────────────────────
+  # rules-group-1: グループ1のルール準拠チェック
+  # ──────────────────────────────────────────────
+  rules-group-1:
+    name: Rules Group 1
+    runs-on: ubuntu-latest
+    needs: setup
+    if: >
+      needs.setup.outputs.is_draft == 'false' &&
+      needs.setup.outputs.has_matching_rules == 'true' &&
+      !contains(needs.setup.outputs.RULES_GROUP_1, '<!-- no-matching-rules -->')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Run Claude Rules Check (Group 1)
         id: check
-        if: >
-          steps.check-draft.outputs.is_draft == 'false' &&
-          !contains(steps.match-rules.outputs.MATCHED_RULES, '<!-- no-matching-rules -->')
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: false
-          # Dependabot などの Bot からの PR を許可
           allowed_bots: "dependabot[bot]"
           prompt: |
             REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+            PR NUMBER: ${{ needs.setup.outputs.pr_number }}
 
             ## PR コメント（議論の文脈）
 
@@ -237,17 +298,17 @@ jobs:
 
             ### PR コメント
             ```json
-            ${{ steps.pr-comments.outputs.PR_COMMENTS }}
+            ${{ needs.setup.outputs.PR_COMMENTS }}
             ```
 
             ### レビューコメント（インラインコメント）
             ```json
-            ${{ steps.pr-comments.outputs.REVIEW_COMMENTS }}
+            ${{ needs.setup.outputs.REVIEW_COMMENTS }}
             ```
 
             ## チェックモード
 
-            ${{ steps.review-context.outputs.REVIEW_MODE }}
+            ${{ needs.setup.outputs.REVIEW_MODE }}
 
             ## 言語
 
@@ -259,12 +320,15 @@ jobs:
             この PR が `.claude/rules/` に定義されたルールに準拠しているかチェックする。
             コードの品質や設計に関する詳細なレビューは別のワークフロー（Code Review）で行う。
 
+            これはルールチェックのグループ 1 です。
+            別のジョブがグループ 2 のルールを並列チェックしています。
+
             ## マッチしたルール
 
             以下のルールが今回の PR の変更ファイルにマッチしました。
             ルールファイルを自分で読む必要はありません。以下の内容のみに基づいてチェックしてください。
 
-            ${{ steps.match-rules.outputs.MATCHED_RULES }}
+            ${{ needs.setup.outputs.RULES_GROUP_1 }}
 
             ## 手順
 
@@ -296,7 +360,7 @@ jobs:
                - 該当ルールを引用して指摘
             2. 全体フィードバック: `gh pr comment` で PR コメントを投稿
                - ルール違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
-               - ルール違反なし → "Rules Check: LGTM ✅" + チェックしたルール一覧 + 結果マーカー `<!-- rules-check-result:pass -->`
+               - ルール違反なし → "Rules Check (Group 1): LGTM ✅" + チェックしたルール一覧 + 結果マーカー `<!-- rules-check-result:pass -->`
 
             **重要:**
             - `gh pr review` は使用しない（Auto Review の承認判断との競合を防ぐため）
@@ -335,46 +399,158 @@ jobs:
 
             の順で、末尾に両方を配置する。
 
-            ### フォーマット例
+            ## 注意
 
-            **例1: ルール違反なし（pass）**
+            - コードの品質、設計、セキュリティ、パフォーマンスについては指摘しない（Code Review の責務）
+            - ルールに明記されていない「好み」の指摘はしない
+            - 長いコメントを投稿する際は HEREDOC 形式を使用すること:
+              ```bash
+              gh pr comment 93 --body "$(cat <<'EOF'
+              複数行のコメント
+              EOF
+              )"
+              ```
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 15
+            --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
+  # ──────────────────────────────────────────────
+  # rules-group-2: グループ2のルール準拠チェック
+  # ──────────────────────────────────────────────
+  rules-group-2:
+    name: Rules Group 2
+    runs-on: ubuntu-latest
+    needs: setup
+    if: >
+      needs.setup.outputs.is_draft == 'false' &&
+      needs.setup.outputs.has_matching_rules == 'true' &&
+      !contains(needs.setup.outputs.RULES_GROUP_2, '<!-- no-matching-rules -->')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Run Claude Rules Check (Group 2)
+        id: check
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          track_progress: false
+          allowed_bots: "dependabot[bot]"
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ needs.setup.outputs.pr_number }}
+
+            ## PR コメント（議論の文脈）
+
+            以下は PR 上でのこれまでの議論です。チェック前に必ず目を通し、文脈を理解してください。
+
+            ### PR コメント
+            ```json
+            ${{ needs.setup.outputs.PR_COMMENTS }}
             ```
-            Rules Check: LGTM ✅
 
-            チェックしたルール:
-            - xxx.md
-            - yyy.md
+            ### レビューコメント（インラインコメント）
+            ```json
+            ${{ needs.setup.outputs.REVIEW_COMMENTS }}
+            ```
 
-            <!-- rules-check-result:pass -->
+            ## チェックモード
+
+            ${{ needs.setup.outputs.REVIEW_MODE }}
+
+            ## 言語
+
+            コメントは日本語で記述する。
+            CLAUDE.md の「応答は英語」はCLI対話に限定され、PRレビューには適用されない。
+
+            ## 目的
+
+            この PR が `.claude/rules/` に定義されたルールに準拠しているかチェックする。
+            コードの品質や設計に関する詳細なレビューは別のワークフロー（Code Review）で行う。
+
+            これはルールチェックのグループ 2 です。
+            別のジョブがグループ 1 のルールを並列チェックしています。
+
+            ## マッチしたルール
+
+            以下のルールが今回の PR の変更ファイルにマッチしました。
+            ルールファイルを自分で読む必要はありません。以下の内容のみに基づいてチェックしてください。
+
+            ${{ needs.setup.outputs.RULES_GROUP_2 }}
+
+            ## 手順
+
+            1. `gh pr diff` で変更内容を確認
+            2. 上記のマッチしたルールに基づいて、変更がルールに準拠しているかチェック
+
+            ## チェック観点
+
+            各ルールファイルに記載された内容のみをチェックする:
+            - コーディング規約（命名、構造、スタイル）
+            - 必須の手順（テスト、ドキュメント更新など）
+            - 禁止事項
+
+            ### 過去の議論を踏まえた判断
+
+            PR コメントで既に議論された内容については、以下のように判断する:
+
+            | コメントの内容 | 対応 |
+            |---------------|------|
+            | 正当な理由が説明されている（設計意図、別のルールでカバー済み等） | 尊重し、再指摘しない |
+            | 単なる質問、未解決の議論 | 必要に応じて追加コメント |
+            | 「後で直す」「TODO」などの保留 | 必要に応じてリマインド |
+
+            過去の議論を踏まえた上で、なお指摘が必要と判断した場合は、その理由を明記する。
+
+            ## フィードバック方法
+
+            1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
+               - 該当ルールを引用して指摘
+            2. 全体フィードバック: `gh pr comment` で PR コメントを投稿
+               - ルール違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
+               - ルール違反なし → "Rules Check (Group 2): LGTM ✅" + チェックしたルール一覧 + 結果マーカー `<!-- rules-check-result:pass -->`
+
+            **重要:**
+            - `gh pr review` は使用しない（Auto Review の承認判断との競合を防ぐため）
+            - 結果マーカー（HTML コメント）を必ずコメント末尾に含めること
+
+            ## メタデータ埋め込み（必須）
+
+            PR コメント投稿時には、結果マーカー `<!-- rules-check-result:pass/fail -->` に加えて、
+            以下のメタデータブロックを本文の末尾に配置すること:
+
+            ```html
             <!-- review-metadata
             type: rules-check
-            severity-critical: 0
+            severity-critical: <数値>
             severity-high: 0
             severity-medium: 0
             severity-low: 0
-            action-required: false
+            action-required: true | false
             -->
             ```
 
-            **例2: ルール違反あり（fail）**
+            ### Rules Check でのメタデータルール
 
-            ```
-            Rules Check: 以下のルール違反が見つかりました
+            Rules Check では以下のルールに従う:
 
-            - xxx.md: 違反内容1
-            - yyy.md: 違反内容2
+            - `type`: `rules-check` 固定
+            - `severity-critical`: ルール違反の件数（ルール違反はすべて Critical 扱い）
+            - `severity-high`, `severity-medium`, `severity-low`: 常に `0`（Rules Check では使用しない）
+            - `action-required`: ルール違反がある場合は `true`、ない場合は `false`
 
-            <!-- rules-check-result:fail -->
-            <!-- review-metadata
-            type: rules-check
-            severity-critical: 2
-            severity-high: 0
-            severity-medium: 0
-            severity-low: 0
-            action-required: true
-            -->
-            ```
+            ### 配置場所
+
+            1. PR コメント本文
+            2. 結果マーカー `<!-- rules-check-result:pass/fail -->`
+            3. メタデータブロック（このブロック）
+
+            の順で、末尾に両方を配置する。
 
             ## 注意
 
@@ -389,57 +565,82 @@ jobs:
               ```
           claude_args: |
             --model claude-sonnet-4-6
-            --max-turns 20
+            --max-turns 15
             --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
-      - name: Check rules result
-        id: rules-result
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success'
+  # ──────────────────────────────────────────────
+  # finalize: 結果集約 + ステータス報告
+  # ──────────────────────────────────────────────
+  finalize:
+    name: Finalize
+    runs-on: ubuntu-latest
+    needs: [setup, rules-group-1, rules-group-2]
+    if: always() && needs.setup.outputs.is_draft == 'false'
+
+    env:
+      STATUS_URL: repos/${{ github.repository }}/statuses/${{ github.event.workflow_run.head_sha }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+    steps:
+      - name: Determine final status
+        id: final-status
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
-          # Rules Check の結果マーカーを含む最新コメントを検索
-          RESULT=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
-            --jq '[.[] | select(.user.login == "claude[bot]" and (.body | test("<!-- rules-check-result:(pass|fail) -->")))] | last | .body // ""' 2>/dev/null || echo "")
+          HAS_MATCHING_RULES="${{ needs.setup.outputs.has_matching_rules }}"
+          GROUP1_RESULT="${{ needs.rules-group-1.result }}"
+          GROUP2_RESULT="${{ needs.rules-group-2.result }}"
+          PR_NUMBER="${{ needs.setup.outputs.pr_number }}"
 
-          if echo "$RESULT" | grep -q "<!-- rules-check-result:fail -->"; then
-            echo "has_violations=true" >> "$GITHUB_OUTPUT"
-            echo "Rules check result: violations found"
-          else
-            echo "has_violations=false" >> "$GITHUB_OUTPUT"
-            echo "Rules check result: pass"
+          echo "has_matching_rules=$HAS_MATCHING_RULES"
+          echo "group1_result=$GROUP1_RESULT"
+          echo "group2_result=$GROUP2_RESULT"
+
+          # マッチルールなし → setup で既に skipped 報告済み
+          if [[ "$HAS_MATCHING_RULES" == "false" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-      - name: Report success status
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success' && steps.rules-result.outputs.has_violations == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "$STATUS_URL" \
-            -f state=success \
-            -f context="Claude Rules Check" \
-            -f description="Rules check completed" \
-            -f target_url="$RUN_URL" || true
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
-      - name: Report failure status (violations found)
-        if: steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'success' && steps.rules-result.outputs.has_violations == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "$STATUS_URL" \
-            -f state=failure \
-            -f context="Claude Rules Check" \
-            -f description="Rule violations found" \
-            -f target_url="$RUN_URL" || true
+          # アクションレベルの失敗
+          if [[ "$GROUP1_RESULT" == "failure" || "$GROUP2_RESULT" == "failure" ]]; then
+            echo "state=failure" >> "$GITHUB_OUTPUT"
+            echo "description=Rules check job failed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Report failure status (action failed)
-        if: always() && steps.check-draft.outputs.is_draft == 'false' && steps.check.outcome == 'failure'
+          # 成功したグループ数をカウント
+          GROUPS_RAN=0
+          [[ "$GROUP1_RESULT" == "success" ]] && GROUPS_RAN=$((GROUPS_RAN + 1))
+          [[ "$GROUP2_RESULT" == "success" ]] && GROUPS_RAN=$((GROUPS_RAN + 1))
+
+          if [[ "$GROUPS_RAN" == "0" ]]; then
+            echo "state=success" >> "$GITHUB_OUTPUT"
+            echo "description=Rules check completed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # 最新 GROUPS_RAN 件の結果マーカーを確認
+          HAS_FAIL=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq "[.[] | select(.user.login == \"claude[bot]\" and (.body | test(\"<!-- rules-check-result:(pass|fail) -->\")))] | .[-${GROUPS_RAN}:] | any(.[]; .body | contains(\"<!-- rules-check-result:fail -->\"))")
+
+          if [[ "$HAS_FAIL" == "true" ]]; then
+            echo "state=failure" >> "$GITHUB_OUTPUT"
+            echo "description=Rule violations found" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=success" >> "$GITHUB_OUTPUT"
+            echo "description=Rules check completed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report status
+        if: steps.final-status.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api "$STATUS_URL" \
-            -f state=failure \
+            -f state="${{ steps.final-status.outputs.state }}" \
             -f context="Claude Rules Check" \
-            -f description="Rules check failed" \
+            -f description="${{ steps.final-status.outputs.description }}" \
             -f target_url="$RUN_URL" || true
