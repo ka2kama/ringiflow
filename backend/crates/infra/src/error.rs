@@ -16,7 +16,7 @@
 //! - [`InfraError`]: エラー種別（[`InfraErrorKind`]）と [`SpanTrace`] を保持するラッパー
 //! - [`InfraErrorKind`]: エラーの具体的な種別（Database, Redis, Conflict 等）
 //!
-//! → 設計判断の詳細: [Observability 設計 > SpanTrace 設計](../../docs/03_詳細設計書/14_Observability設計.md)
+//! → 設計判断の詳細: [Observability 設計 > SpanTrace 設計](../../../../docs/03_詳細設計書/14_Observability設計.md)
 
 use std::fmt;
 
