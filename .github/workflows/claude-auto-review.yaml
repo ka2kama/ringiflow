@@ -564,6 +564,9 @@ jobs:
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Check review decision
         id: review-decision
         env:
