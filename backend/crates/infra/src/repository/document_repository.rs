@@ -106,7 +106,7 @@ fn row_to_document(row: &DocumentRow) -> Result<Document, InfraError> {
         (None, Some(wid)) => UploadContext::Workflow(WorkflowInstanceId::from_uuid(wid)),
         // CHECK 制約が XOR を保証するため到達しない
         _ => {
-            return Err(InfraError::Unexpected(
+            return Err(InfraError::unexpected(
                 "documents テーブルの folder_id/workflow_instance_id が不正な状態です".to_string(),
             ));
         }
@@ -115,7 +115,7 @@ fn row_to_document(row: &DocumentRow) -> Result<Document, InfraError> {
     let status: DocumentStatus = row
         .status
         .parse()
-        .map_err(|e| InfraError::Unexpected(format!("DocumentStatus のパースに失敗: {}", e)))?;
+        .map_err(|e| InfraError::unexpected(format!("DocumentStatus のパースに失敗: {}", e)))?;
 
     Ok(Document::from_db(
         DocumentId::from_uuid(row.id),

@@ -104,7 +104,7 @@ impl FolderUseCaseImpl {
 
         self.folder_repository.insert(&folder).await.map_err(|e| {
             // UNIQUE 制約違反（tenant_id, parent_id, name）の場合は Conflict
-            if let ringiflow_infra::InfraError::Database(ref db_err) = e
+            if let ringiflow_infra::InfraErrorKind::Database(db_err) = e.kind()
                 && let Some(constraint) = db_err.as_database_error().and_then(|d| d.constraint())
                 && constraint == "folders_tenant_id_parent_id_name_key"
             {
@@ -222,7 +222,7 @@ impl FolderUseCaseImpl {
             .update(&mut tx, &folder)
             .await
             .map_err(|e| {
-                if let ringiflow_infra::InfraError::Database(ref db_err) = e
+                if let ringiflow_infra::InfraErrorKind::Database(db_err) = e.kind()
                     && let Some(constraint) =
                         db_err.as_database_error().and_then(|d| d.constraint())
                     && constraint == "folders_tenant_id_parent_id_name_key"

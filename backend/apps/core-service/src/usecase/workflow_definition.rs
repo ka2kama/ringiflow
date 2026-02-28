@@ -17,7 +17,7 @@ use ringiflow_domain::{
         validate_definition,
     },
 };
-use ringiflow_infra::{InfraError, repository::WorkflowDefinitionRepository};
+use ringiflow_infra::{InfraErrorKind, repository::WorkflowDefinitionRepository};
 use serde_json::Value as JsonValue;
 
 use super::helpers::FindResultExt;
@@ -213,13 +213,13 @@ impl WorkflowDefinitionUseCaseImpl {
 }
 
 /// InfraError のバージョン競合を CoreError::Conflict にマッピング
-fn map_version_conflict(e: InfraError) -> CoreError {
-    match e {
-        InfraError::Conflict { .. } => CoreError::Conflict(
+fn map_version_conflict(e: ringiflow_infra::InfraError) -> CoreError {
+    match e.kind() {
+        InfraErrorKind::Conflict { .. } => CoreError::Conflict(
             "このワークフロー定義は既に更新されています。最新の状態を取得してください。"
                 .to_string(),
         ),
-        other => CoreError::Internal(format!("定義の保存に失敗: {}", other)),
+        _ => CoreError::Internal(format!("定義の保存に失敗: {}", e)),
     }
 }
 

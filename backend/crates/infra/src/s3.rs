@@ -115,7 +115,7 @@ impl S3Client for AwsS3Client {
         expires_in: Duration,
     ) -> Result<String, InfraError> {
         let presign_config = PresigningConfig::expires_in(expires_in)
-            .map_err(|e| InfraError::S3(format!("Presigned 設定の構築に失敗: {e}")))?;
+            .map_err(|e| InfraError::s3(format!("Presigned 設定の構築に失敗: {e}")))?;
 
         let presigned = self
             .client
@@ -126,7 +126,7 @@ impl S3Client for AwsS3Client {
             .content_length(content_length)
             .presigned(presign_config)
             .await
-            .map_err(|e| InfraError::S3(format!("Presigned PUT URL の生成に失敗: {e}")))?;
+            .map_err(|e| InfraError::s3(format!("Presigned PUT URL の生成に失敗: {e}")))?;
 
         Ok(presigned.uri().to_string())
     }
@@ -137,7 +137,7 @@ impl S3Client for AwsS3Client {
         expires_in: Duration,
     ) -> Result<String, InfraError> {
         let presign_config = PresigningConfig::expires_in(expires_in)
-            .map_err(|e| InfraError::S3(format!("Presigned 設定の構築に失敗: {e}")))?;
+            .map_err(|e| InfraError::s3(format!("Presigned 設定の構築に失敗: {e}")))?;
 
         let presigned = self
             .client
@@ -146,7 +146,7 @@ impl S3Client for AwsS3Client {
             .key(s3_key)
             .presigned(presign_config)
             .await
-            .map_err(|e| InfraError::S3(format!("Presigned GET URL の生成に失敗: {e}")))?;
+            .map_err(|e| InfraError::s3(format!("Presigned GET URL の生成に失敗: {e}")))?;
 
         Ok(presigned.uri().to_string())
     }
@@ -171,7 +171,7 @@ impl S3Client for AwsS3Client {
                 if is_not_found {
                     Ok(false)
                 } else {
-                    Err(InfraError::S3(format!("HEAD Object の実行に失敗: {err}")))
+                    Err(InfraError::s3(format!("HEAD Object の実行に失敗: {err}")))
                 }
             }
         }

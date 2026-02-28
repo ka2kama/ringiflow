@@ -72,7 +72,7 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
             let output = query
                 .send()
                 .await
-                .map_err(|e| InfraError::DynamoDb(format!("監査ログの検索に失敗: {e}")))?;
+                .map_err(|e| InfraError::dynamo_db(format!("監査ログの検索に失敗: {e}")))?;
 
             let items = output.items();
             if items.is_empty() {
@@ -123,7 +123,7 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
                         .request_items(&self.table_name, remaining_requests)
                         .send()
                         .await
-                        .map_err(|e| InfraError::DynamoDb(format!("監査ログの削除に失敗: {e}")))?;
+                        .map_err(|e| InfraError::dynamo_db(format!("監査ログの削除に失敗: {e}")))?;
 
                     let unprocessed = output
                         .unprocessed_items()
@@ -142,7 +142,7 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
                             unprocessed = unprocessed_count,
                             "DynamoDB BatchWriteItem: リトライ上限超過、未処理アイテムが残存"
                         );
-                        return Err(InfraError::DynamoDb(format!(
+                        return Err(InfraError::dynamo_db(format!(
                             "監査ログの削除でリトライ上限超過: {}件が未処理",
                             unprocessed_count
                         )));
@@ -185,7 +185,7 @@ impl TenantDeleter for DynamoDbAuditLogDeleter {
             let output = query
                 .send()
                 .await
-                .map_err(|e| InfraError::DynamoDb(format!("監査ログの件数取得に失敗: {e}")))?;
+                .map_err(|e| InfraError::dynamo_db(format!("監査ログの件数取得に失敗: {e}")))?;
 
             total += output.count() as u64;
 

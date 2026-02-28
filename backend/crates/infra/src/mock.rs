@@ -126,10 +126,10 @@ impl WorkflowDefinitionRepository for MockWorkflowDefinitionRepository {
         let mut definitions = self.definitions.lock().unwrap();
         if let Some(pos) = definitions.iter().position(|d| d.id() == definition.id()) {
             if definitions[pos].version() != expected_version {
-                return Err(InfraError::Conflict {
-                    entity: "WorkflowDefinition".to_string(),
-                    id:     definition.id().as_uuid().to_string(),
-                });
+                return Err(InfraError::conflict(
+                    "WorkflowDefinition",
+                    definition.id().as_uuid().to_string(),
+                ));
             }
             definitions[pos] = definition.clone();
         }
@@ -184,10 +184,10 @@ impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
         let mut instances = self.instances.lock().unwrap();
         if let Some(pos) = instances.iter().position(|i| i.id() == instance.id()) {
             if instances[pos].version() != expected_version {
-                return Err(InfraError::Conflict {
-                    entity: "WorkflowInstance".to_string(),
-                    id:     instance.id().as_uuid().to_string(),
-                });
+                return Err(InfraError::conflict(
+                    "WorkflowInstance",
+                    instance.id().as_uuid().to_string(),
+                ));
             }
             instances[pos] = instance.clone();
         }
@@ -305,10 +305,10 @@ impl WorkflowStepRepository for MockWorkflowStepRepository {
         let mut steps = self.steps.lock().unwrap();
         if let Some(pos) = steps.iter().position(|s| s.id() == step.id()) {
             if steps[pos].version() != expected_version {
-                return Err(InfraError::Conflict {
-                    entity: "WorkflowStep".to_string(),
-                    id:     step.id().as_uuid().to_string(),
-                });
+                return Err(InfraError::conflict(
+                    "WorkflowStep",
+                    step.id().as_uuid().to_string(),
+                ));
             }
             steps[pos] = step.clone();
         }

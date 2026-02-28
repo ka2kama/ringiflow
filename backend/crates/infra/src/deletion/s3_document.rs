@@ -50,7 +50,7 @@ impl S3DocumentDeleter {
             let output = list
                 .send()
                 .await
-                .map_err(|e| InfraError::S3(format!("オブジェクト一覧の取得に失敗: {e}")))?;
+                .map_err(|e| InfraError::s3(format!("オブジェクト一覧の取得に失敗: {e}")))?;
 
             for obj in output.contents() {
                 if let Some(key) = obj.key() {
@@ -102,7 +102,7 @@ impl TenantDeleter for S3DocumentDeleter {
                 .set_objects(Some(objects))
                 .quiet(true)
                 .build()
-                .map_err(|e| InfraError::S3(format!("Delete リクエストの構築に失敗: {e}")))?;
+                .map_err(|e| InfraError::s3(format!("Delete リクエストの構築に失敗: {e}")))?;
 
             let result = self
                 .client
@@ -111,7 +111,7 @@ impl TenantDeleter for S3DocumentDeleter {
                 .delete(delete)
                 .send()
                 .await
-                .map_err(|e| InfraError::S3(format!("オブジェクトの削除に失敗: {e}")))?;
+                .map_err(|e| InfraError::s3(format!("オブジェクトの削除に失敗: {e}")))?;
 
             // エラーが含まれる場合はログに記録
             let errors = result.errors();
@@ -120,7 +120,7 @@ impl TenantDeleter for S3DocumentDeleter {
                     error_count = errors.len(),
                     "S3 DeleteObjects: 一部のオブジェクト削除に失敗"
                 );
-                return Err(InfraError::S3(format!(
+                return Err(InfraError::s3(format!(
                     "{}件のオブジェクト削除に失敗",
                     errors.len()
                 )));

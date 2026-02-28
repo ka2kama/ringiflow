@@ -214,7 +214,7 @@ impl CredentialsRepository for PostgresCredentialsRepository {
         let cred_type: CredentialType = row
             .credential_type
             .parse()
-            .map_err(InfraError::Unexpected)?;
+            .map_err(|e| InfraError::unexpected(e))?;
 
         Ok(Some(Credential {
             id: row.id,

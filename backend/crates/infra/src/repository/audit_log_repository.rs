@@ -109,9 +109,7 @@ impl AuditLogRepository for DynamoDbAuditLogRepository {
         if let Some(detail) = &log.detail {
             item.insert(
                 "detail".to_string(),
-                AttributeValue::S(
-                    serde_json::to_string(detail).map_err(InfraError::Serialization)?,
-                ),
+                AttributeValue::S(serde_json::to_string(detail).map_err(InfraError::from)?),
             );
         }
 
@@ -130,7 +128,7 @@ impl AuditLogRepository for DynamoDbAuditLogRepository {
             .set_item(Some(item))
             .send()
             .await
-            .map_err(|e| InfraError::DynamoDb(format!("監査ログの記録に失敗: {e}")))?;
+            .map_err(|e| InfraError::dynamo_db(format!("監査ログの記録に失敗: {e}")))?;
 
         Ok(())
     }
@@ -241,10 +239,10 @@ impl AuditLogRepository for DynamoDbAuditLogRepository {
         if let Some(cursor_str) = cursor {
             let decoded = BASE64
                 .decode(cursor_str)
-                .map_err(|e| InfraError::InvalidInput(format!("カーソルのデコードに失敗: {e}")))?;
+                .map_err(|e| InfraError::invalid_input(format!("カーソルのデコードに失敗: {e}")))?;
             let key_strings: HashMap<String, String> =
                 serde_json::from_slice(&decoded).map_err(|e| {
-                    InfraError::InvalidInput(format!("カーソルのデシリアライズに失敗: {e}"))
+                    InfraError::invalid_input(format!("カーソルのデシリアライズに失敗: {e}"))
                 })?;
             let last_key: HashMap<String, AttributeValue> = key_strings
                 .into_iter()
@@ -256,7 +254,7 @@ impl AuditLogRepository for DynamoDbAuditLogRepository {
         let output = query
             .send()
             .await
-            .map_err(|e| InfraError::DynamoDb(format!("監査ログの検索に失敗: {e}")))?;
+            .map_err(|e| InfraError::dynamo_db(format!("監査ログの検索に失敗: {e}")))?;
 
         // レスポンスをドメインモデルに変換
         let items = output
@@ -299,27 +297,27 @@ fn convert_item_to_audit_log(
         .and_then(|v| v.as_s().ok())
         .map(|s| serde_json::from_str(s))
         .transpose()
-        .map_err(InfraError::Serialization)?;
+        .map_err(InfraError::from)?;
 
     let source_ip = item.get("source_ip").and_then(|v| v.as_s().ok()).cloned();
 
     let tenant_id = TenantId::from_uuid(
         uuid::Uuid::parse_str(&tenant_id_str)
-            .map_err(|e| InfraError::DynamoDb(format!("tenant_id のパースに失敗: {e}")))?,
+            .map_err(|e| InfraError::dynamo_db(format!("tenant_id のパースに失敗: {e}")))?,
     );
     let actor_id = UserId::from_uuid(
         uuid::Uuid::parse_str(&actor_id_str)
-            .map_err(|e| InfraError::DynamoDb(format!("actor_id のパースに失敗: {e}")))?,
+            .map_err(|e| InfraError::dynamo_db(format!("actor_id のパースに失敗: {e}")))?,
     );
     let action: AuditAction = action_str
         .parse()
-        .map_err(|e: String| InfraError::DynamoDb(e))?;
+        .map_err(|e: String| InfraError::dynamo_db(e))?;
     let result: AuditResult = result_str
         .parse()
-        .map_err(|e: String| InfraError::DynamoDb(e))?;
+        .map_err(|e: String| InfraError::dynamo_db(e))?;
     let ttl: i64 = ttl_str
         .parse()
-        .map_err(|e| InfraError::DynamoDb(format!("ttl のパースに失敗: {e}")))?;
+        .map_err(|e| InfraError::dynamo_db(format!("ttl のパースに失敗: {e}")))?;
 
     AuditLog::from_stored(
         tenant_id,
@@ -334,7 +332,7 @@ fn convert_item_to_audit_log(
         source_ip,
         ttl,
     )
-    .map_err(InfraError::DynamoDb)
+    .map_err(|e| InfraError::dynamo_db(e))
 }
 
 /// DynamoDB アイテムから文字列属性を取得する
@@ -342,7 +340,7 @@ fn get_s(item: &HashMap<String, AttributeValue>, key: &str) -> Result<String, In
     item.get(key)
         .and_then(|v| v.as_s().ok())
         .cloned()
-        .ok_or_else(|| InfraError::DynamoDb(format!("属性 '{key}' が見つかりません")))
+        .ok_or_else(|| InfraError::dynamo_db(format!("属性 '{key}' が見つかりません")))
 }
 
 /// DynamoDB アイテムから数値属性を取得する
@@ -350,5 +348,5 @@ fn get_n(item: &HashMap<String, AttributeValue>, key: &str) -> Result<String, In
     item.get(key)
         .and_then(|v| v.as_n().ok())
         .cloned()
-        .ok_or_else(|| InfraError::DynamoDb(format!("数値属性 '{key}' が見つかりません")))
+        .ok_or_else(|| InfraError::dynamo_db(format!("数値属性 '{key}' が見つかりません")))
 }

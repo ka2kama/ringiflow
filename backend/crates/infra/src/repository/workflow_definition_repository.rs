@@ -118,15 +118,15 @@ impl TryFrom<WorkflowDefinitionRow> for WorkflowDefinition {
             id:          WorkflowDefinitionId::from_uuid(row.id),
             tenant_id:   TenantId::from_uuid(row.tenant_id),
             name:        WorkflowName::new(&row.name)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             description: row.description,
             version:     Version::new(row.version as u32)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             definition:  row.definition,
             status:      row
                 .status
                 .parse::<WorkflowDefinitionStatus>()
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             created_by:  UserId::from_uuid(row.created_by),
             created_at:  row.created_at,
             updated_at:  row.updated_at,
@@ -303,10 +303,10 @@ impl WorkflowDefinitionRepository for PostgresWorkflowDefinitionRepository {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(InfraError::Conflict {
-                entity: "WorkflowDefinition".to_string(),
-                id:     definition.id().as_uuid().to_string(),
-            });
+            return Err(InfraError::conflict(
+                "WorkflowDefinition",
+                definition.id().as_uuid().to_string(),
+            ));
         }
 
         Ok(())

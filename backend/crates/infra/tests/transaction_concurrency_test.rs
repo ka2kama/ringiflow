@@ -17,7 +17,7 @@ mod common;
 use common::{assert_workflow_invariants, create_test_instance, create_test_step, seed_tenant_id};
 use pretty_assertions::assert_eq;
 use ringiflow_infra::{
-    InfraError,
+    InfraErrorKind,
     db::{PgTransactionManager, TransactionManager},
     repository::{
         PostgresWorkflowInstanceRepository,
@@ -101,7 +101,9 @@ async fn test_楽観的ロックで古いバージョンの更新がconflictを�
         .await;
 
     assert!(
-        matches!(result, Err(InfraError::Conflict { .. })),
+        result
+            .as_ref()
+            .is_err_and(|e| matches!(e.kind(), InfraErrorKind::Conflict { .. })),
         "古いバージョンでの更新は Conflict を返すべき: {:?}",
         result
     );
@@ -268,7 +270,9 @@ async fn test_トランザクション原子性で部分更新がロールバッ
         .await;
 
     assert!(
-        matches!(step_result, Err(InfraError::Conflict { .. })),
+        step_result
+            .as_ref()
+            .is_err_and(|e| matches!(e.kind(), InfraErrorKind::Conflict { .. })),
         "古いバージョンでの更新は Conflict を返すべき: {:?}",
         step_result
     );

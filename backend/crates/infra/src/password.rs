@@ -67,7 +67,7 @@ impl PasswordChecker for Argon2PasswordChecker {
         hash: &PasswordHash,
     ) -> Result<PasswordVerifyResult, InfraError> {
         let parsed = Argon2PasswordHash::new(hash.as_str())
-            .map_err(|e| InfraError::Unexpected(format!("不正なハッシュ形式: {e}")))?;
+            .map_err(|e| InfraError::unexpected(format!("不正なハッシュ形式: {e}")))?;
 
         let matched = self
             .argon2

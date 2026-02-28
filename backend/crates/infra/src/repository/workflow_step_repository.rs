@@ -115,23 +115,23 @@ impl TryFrom<WorkflowStepRow> for WorkflowStep {
             id: WorkflowStepId::from_uuid(row.id),
             instance_id: WorkflowInstanceId::from_uuid(row.instance_id),
             display_number: DisplayNumber::new(row.display_number)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             step_id: row.step_id,
             step_name: row.step_name,
             step_type: row.step_type,
             status: row
                 .status
                 .parse::<WorkflowStepStatus>()
-                .map_err(|e| InfraError::Unexpected(format!("不正なステータス: {}", e)))?,
+                .map_err(|e| InfraError::unexpected(format!("不正なステータス: {}", e)))?,
             version: Version::new(row.version as u32)
-                .map_err(|e| InfraError::Unexpected(e.to_string()))?,
+                .map_err(|e| InfraError::unexpected(e.to_string()))?,
             assigned_to: row.assigned_to.map(UserId::from_uuid),
             decision: row
                 .decision
                 .as_deref()
                 .map(|s| s.parse::<StepDecision>())
                 .transpose()
-                .map_err(|e| InfraError::Unexpected(format!("不正な判断: {}", e)))?,
+                .map_err(|e| InfraError::unexpected(format!("不正な判断: {}", e)))?,
             comment: row.comment,
             due_date: row.due_date,
             started_at: row.started_at,
@@ -139,7 +139,7 @@ impl TryFrom<WorkflowStepRow> for WorkflowStep {
             created_at: row.created_at,
             updated_at: row.updated_at,
         })
-        .map_err(|e| InfraError::Unexpected(e.to_string()))
+        .map_err(|e| InfraError::unexpected(e.to_string()))
     }
 }
 
@@ -236,10 +236,10 @@ impl WorkflowStepRepository for PostgresWorkflowStepRepository {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(InfraError::Conflict {
-                entity: "WorkflowStep".to_string(),
-                id:     step.id().as_uuid().to_string(),
-            });
+            return Err(InfraError::conflict(
+                "WorkflowStep",
+                step.id().as_uuid().to_string(),
+            ));
         }
 
         Ok(())

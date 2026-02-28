@@ -87,12 +87,12 @@ impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
         .fetch_one(&mut *tx)
         .await
         .map_err(|e| match e {
-            sqlx::Error::RowNotFound => InfraError::Unexpected(format!(
+            sqlx::Error::RowNotFound => InfraError::unexpected(format!(
                 "カウンター行が見つかりません: tenant_id={}, entity_type={}",
                 tenant_id.as_uuid(),
                 entity_type_str
             )),
-            other => InfraError::Database(other),
+            other => InfraError::from(other),
         })?;
 
         let next = row.last_number + 1;
@@ -113,6 +113,6 @@ impl DisplayIdCounterRepository for PostgresDisplayIdCounterRepository {
 
         tx.commit().await?;
 
-        DisplayNumber::new(next).map_err(|e| InfraError::Unexpected(e.to_string()))
+        DisplayNumber::new(next).map_err(|e| InfraError::unexpected(e.to_string()))
     }
 }
