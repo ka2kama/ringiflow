@@ -343,7 +343,7 @@ jobs:
         working-directory: frontend
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: frontend/dist/
@@ -679,7 +679,7 @@ jobs:
           E2E_BASE_URL="http://localhost:$E2E_VITE_PORT" npx playwright test
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
