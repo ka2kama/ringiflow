@@ -19,7 +19,7 @@
 - 参照の網羅性:
 - 用語の統一:
 - 意図の明確さ:
-- `just check-all` pass:
+- `just check` + CI pass:
 -->
 
 - 設計・ドキュメント:
@@ -29,8 +29,8 @@
 - 品質向上（ゼロ→プラス）:
 - UI/UX:
 - 横断検証:
-- `just check-all` pass:
+- `just check` + CI pass:
 
 ## 確認項目
 
-- [ ] `just check-all` が通る
+- [ ] `just check` + CI が通る

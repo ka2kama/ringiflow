@@ -182,7 +182,7 @@ Review コメント: N 件
 一括適用はしない。必ずコメントごとにユーザーの判断を仰ぐ。
 
 CHANGES_REQUESTED の場合:
-- 全コメントへの対応完了後、`just check-all` で全体チェックを実行
+- 全コメントへの対応完了後、`just check` でローカルチェックを実行
 - コミット・プッシュ
 - Claude Auto Review が再実行されるため、**Step 2 に戻る**
 - レビューが APPROVED になるまでこのループを繰り返す

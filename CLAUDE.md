@@ -39,8 +39,8 @@ RingiFlow: 承認フロー・タスク管理・ドキュメント管理を一元
 | `just setup` | 初回セットアップ |
 | `just dev-all` | 全サーバー一括起動（推奨） |
 | `just dev-deps` | PostgreSQL, Redis のみ起動 |
-| `just check` | リント + テスト（実装中） |
-| `just check-all` | リント + テスト + API テスト + E2E テスト（プッシュ前に必須） |
+| `just check` | リント + テスト（品質ゲート必須） |
+| `just check-all` | リント + テスト + API テスト + E2E テスト（フルチェック） |
 | `just fmt` | 全体フォーマット |
 
 開発サーバーは `just` コマンドで起動すること（環境変数の設定に必要）。
