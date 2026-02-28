@@ -87,7 +87,7 @@ ADR-041 でサブトレイト分割パターンを記録。structural-review.md 
 - `backend/apps/bff/src/client/core_service/user_client.rs`
 - `backend/apps/bff/src/client/core_service/workflow_client.rs`
 - `backend/apps/bff/src/client/core_service/task_client.rs`
-- `docs/05_ADR/041_CoreServiceClientのサブトレイト分割.md`
+- `docs/70_ADR/041_CoreServiceClientのサブトレイト分割.md`
 
 更新:
 - `backend/apps/bff/src/client/core_service.rs`（1212 行 → 約 30 行）

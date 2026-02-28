@@ -25,11 +25,11 @@ Lightsail インスタンスを IPv6-only（$5/月）からデュアルスタッ
 - `aedb202` #276 Switch Lightsail from IPv6-only to dual-stack
 
 作成ファイル:
-- `docs/05_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md`
+- `docs/70_ADR/047_LightsailのIPv6-onlyからデュアルスタックへの切り替え.md`
 
 更新ファイル:
-- `docs/05_ADR/030_Lightsail個人環境の構築.md`
-- `docs/06_ナレッジベース/infra/IPv6-only環境でのDocker運用.md`
+- `docs/70_ADR/030_Lightsail個人環境の構築.md`
+- `docs/80_ナレッジベース/infra/IPv6-only環境でのDocker運用.md`
 - `infra/lightsail/README.md`
 - `infra/lightsail/deploy.sh`
 - `scripts/deploy-lightsail.sh`

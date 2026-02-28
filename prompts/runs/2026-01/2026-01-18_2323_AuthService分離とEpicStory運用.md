@@ -58,8 +58,8 @@ Epic/Story 運用を導入し、Issue 駆動開発の手順書を更新した。
 
 | ファイル | 内容 |
 |---------|------|
-| `docs/05_ADR/017_AuthService分離の方針.md` | 新規作成 |
-| `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` | Epic/Story 運用セクション追加 |
+| `docs/70_ADR/017_AuthService分離の方針.md` | 新規作成 |
+| `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` | Epic/Story 運用セクション追加 |
 
 ### GitHub
 

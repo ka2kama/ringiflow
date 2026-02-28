@@ -94,7 +94,7 @@ fmt-rust *files:
 2. JSON のキー名が正しいか
 3. コマンドがカレントディレクトリに依存していないか
 
-詳細: [ClaudeCode_Hooks 技術ノート](../../../docs/06_ナレッジベース/devtools/ClaudeCode_Hooks.md)
+詳細: [ClaudeCode_Hooks 技術ノート](../../../docs/80_ナレッジベース/devtools/ClaudeCode_Hooks.md)
 
 ## 議論の経緯
 

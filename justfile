@@ -116,7 +116,7 @@ reset-db:
 # =============================================================================
 
 # GitHub ラベルを一括作成（冪等: 既存ラベルはスキップ）
-# → 詳細: docs/04_手順書/02_プロジェクト構築/03_GitHub設定.md#7-labels
+# → 詳細: docs/60_手順書/02_プロジェクト構築/03_GitHub設定.md#7-labels
 setup-labels:
     @echo "GitHub ラベルをセットアップ中..."
     @# Issue タイプ
@@ -402,7 +402,7 @@ check-fn-size:
 
 # コード重複（コピー＆ペースト）を検出（jscpd）
 # 警告のみ（exit 0）: CI をブロックしない。重複の可視化が目的。
-# 選定理由: docs/05_ADR/042_コピペ検出ツールの選定.md
+# 選定理由: docs/70_ADR/042_コピペ検出ツールの選定.md
 # ベースライン: .config/baselines.env（ラチェット方式、閾値超過で exit 1）
 check-duplicates:
     ./scripts/check/check-duplicates.sh
@@ -463,7 +463,7 @@ check-instrumentation:
 # =============================================================================
 
 # Cargo.toml の未使用依存を検出（cargo-machete）
-# 選定理由: docs/05_ADR/038_未使用依存検出ツールの選定.md
+# 選定理由: docs/70_ADR/038_未使用依存検出ツールの選定.md
 check-unused-deps:
     cd backend && cargo machete
 

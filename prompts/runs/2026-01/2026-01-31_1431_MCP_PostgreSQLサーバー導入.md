@@ -70,10 +70,10 @@ psql 接続文字列を justfile 変数 `_psql_url` に抽出し、3箇所の重
 ### 作成・更新ファイル
 
 - 新規: `.mcp.json`, `scripts/mcp-postgres.sh`
-- 新規: `docs/05_ADR/028_MCPサーバー導入（PostgreSQL）.md`
+- 新規: `docs/70_ADR/028_MCPサーバー導入（PostgreSQL）.md`
 - 更新: `.claude/settings.json`, `CLAUDE.md`, `justfile`
-- 更新: `docs/04_手順書/01_開発参画/01_開発環境構築.md`
-- 更新: `docs/05_ADR/009_MCPサーバー導入の見送り.md`（ステータスを「廃止」に変更）
+- 更新: `docs/60_手順書/01_開発参画/01_開発環境構築.md`
+- 更新: `docs/70_ADR/009_MCPサーバー導入の見送り.md`（ステータスを「廃止」に変更）
 
 ## 議論の経緯
 

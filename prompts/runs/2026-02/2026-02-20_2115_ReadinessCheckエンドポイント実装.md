@@ -62,6 +62,6 @@ d75ded7 #736 Add Cargo.lock updates and implementation plan
 ### 関連ドキュメント
 
 - 計画ファイル: [736_readiness-check.md](../../../prompts/plans/736_readiness-check.md)
-- 実装解説: [PR737_ReadinessCheck](../../../docs/07_実装解説/PR737_ReadinessCheck/)
+- 実装解説: [PR737_ReadinessCheck](../../../docs/90_実装解説/PR737_ReadinessCheck/)
 - 調査記録: [Cargo incremental cache stale 問題](../../../process/investigations/2026-02/2026-02-20_2115_Cargo-incremental-cache-stale問題.md)
 - PR: #737

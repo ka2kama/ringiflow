@@ -15,7 +15,7 @@
 //! - **fire-and-forget**: 通知送信の失敗はワークフロー操作に影響しない
 //! - **テンプレート分離**: 通知イベントとメール生成は分離（TemplateRenderer は core-service）
 //!
-//! → 詳細設計: `docs/03_詳細設計書/16_通知機能設計.md`
+//! → 詳細設計: `docs/40_詳細設計書/16_通知機能設計.md`
 
 use serde::{Deserialize, Serialize};
 use strum::IntoStaticStr;
@@ -94,7 +94,7 @@ pub struct EmailMessage {
 /// ワークフロー通知イベント
 ///
 /// 各バリアントが機能仕様書の通知イベント（5 種類）に対応する。
-/// → 機能仕様書: `docs/01_要件定義書/機能仕様書/05_通知機能.md`
+/// → 機能仕様書: `docs/20_機能仕様書/05_通知機能.md`
 #[derive(Debug, Clone)]
 pub enum WorkflowNotification {
     /// 承認依頼: ステップが active になったとき → 承認者に送信

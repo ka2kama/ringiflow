@@ -9,7 +9,7 @@ module Form.Validation exposing
 
 FormField の validation ルールに基づいてフォーム入力値を検証する。
 
-詳細: [UI 設計](../../../../docs/03_詳細設計書/10_ワークフロー申請フォームUI設計.md)
+詳細: [UI 設計](../../../../docs/40_詳細設計書/10_ワークフロー申請フォームUI設計.md)
 
 
 ## 設計方針

@@ -5,7 +5,7 @@ module Main exposing (main)
 TEA (The Elm Architecture) に基づく SPA のエントリーポイント。
 サイドバーナビゲーション付きのアプリシェルレイアウトを提供する。
 
-詳細: [TEA パターン](../../../docs/06_ナレッジベース/elm/Elmアーキテクチャ.md)
+詳細: [TEA パターン](../../../docs/80_ナレッジベース/elm/Elmアーキテクチャ.md)
 
 -}
 
@@ -781,7 +781,7 @@ isCurrentPageDirty model =
 {-| 外部イベントの購読
 
 現在のページに応じて、各ページの subscriptions にルーティングする。
-詳細: [Ports 設計](../../../docs/06_ナレッジベース/elm/Elmポート.md)
+詳細: [Ports 設計](../../../docs/80_ナレッジベース/elm/Elmポート.md)
 
 -}
 subscriptions : Model -> Sub Msg

@@ -3033,6 +3033,7 @@ dependencies = [
  "aws-sdk-sesv2",
  "base64",
  "chrono",
+ "derive_more",
  "dotenvy",
  "lettre",
  "pretty_assertions",

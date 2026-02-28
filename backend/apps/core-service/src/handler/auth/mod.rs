@@ -8,7 +8,7 @@
 //! - `GET /internal/users/by-email` - メールアドレスでユーザーを検索
 //! - `GET /internal/users/{user_id}` - ユーザー情報を取得
 //!
-//! 詳細: [08_AuthService設計.md](../../../../docs/03_詳細設計書/08_AuthService設計.md)
+//! 詳細: [08_AuthService設計.md](../../../../docs/40_詳細設計書/08_AuthService設計.md)
 
 use std::sync::Arc;
 

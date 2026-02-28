@@ -6,7 +6,7 @@
 --
 -- 注: id は UUID v7（時系列ソート可能）を使用。
 -- アプリケーション側で生成するため DEFAULT 句なし。
--- 参照: docs/05_ADR/001_ID形式の選定.md
+-- 参照: docs/70_ADR/001_ID形式の選定.md
 
 CREATE TABLE workflow_steps (
     id UUID PRIMARY KEY,

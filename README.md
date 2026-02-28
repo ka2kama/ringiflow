@@ -75,15 +75,15 @@ flowchart LR
 | Phase 3 | 📋 Planning | Enterprise features (SSO/MFA, complex workflows) |
 | Phase 4 | 📋 Planning | Advanced features (CQRS/ES, real-time) |
 
-Details: [Implementation Roadmap](docs/03_詳細設計書/00_実装ロードマップ.md)
+Details: [Implementation Roadmap](docs/40_詳細設計書/00_実装ロードマップ.md)
 
 ---
 
 ## Getting Started
 
-Development environment setup: [Procedures](docs/04_手順書/01_開発参画/01_開発環境構築.md)
+Development environment setup: [Procedures](docs/60_手順書/01_開発参画/01_開発環境構築.md)
 
-For working on multiple tasks simultaneously: [Parallel development (Worktree)](docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md)
+For working on multiple tasks simultaneously: [Parallel development (Worktree)](docs/60_手順書/04_開発フロー/04_並行開発（Worktree）.md)
 
 ```bash
 # Initial setup (install dependencies, start DB, run migrations)
@@ -122,14 +122,14 @@ ringiflow/
 ├── process/           # Improvement records, diagnostic reports
 ├── prompts/           # AI operations (session logs, plans, recipes)
 └── docs/              # Documentation
-    ├── 01_要件定義書/   # Requirements
-    ├── 02_基本設計書/   # High-level design
-    ├── 03_詳細設計書/   # Detailed design
-    ├── 04_手順書/      # Procedures
-    ├── 05_ADR/        # Architecture Decision Records
-    ├── 06_ナレッジベース/ # Knowledge base
-    ├── 07_実装解説/    # Implementation guides
-    └── 08_テスト/      # Test specifications
+    ├── 10_要件定義書/   # Requirements
+    ├── 30_基本設計書/   # High-level design
+    ├── 40_詳細設計書/   # Detailed design
+    ├── 60_手順書/      # Procedures
+    ├── 70_ADR/        # Architecture Decision Records
+    ├── 80_ナレッジベース/ # Knowledge base
+    ├── 90_実装解説/    # Implementation guides
+    └── 50_テスト/      # Test specifications
 ```
 
 ---
@@ -157,7 +157,7 @@ The quality strategy consists of two layers — V&V (Validation & Verification):
 
 | Layer | Question | Mechanism |
 |-------|----------|-----------|
-| Validation | Are we solving the right problem? | [Problem-solving framework](.claude/rules/problem-solving.md), [Issue triage](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査) |
+| Validation | Are we solving the right problem? | [Problem-solving framework](.claude/rules/problem-solving.md), [Issue triage](docs/60_手順書/04_開発フロー/01_Issue駆動開発.md#既存-issue-の精査) |
 | Verification | Are we building it correctly? | Defense & Offense (below) |
 
 The Verification layer has two complementary directions:
@@ -165,7 +165,7 @@ The Verification layer has two complementary directions:
 | Direction | Focus | Mechanism |
 |-----------|-------|-----------|
 | Defense (defect removal) | Negative → Zero: detect and fix problems | Design review, quality checklists |
-| Offense (design improvement) | Zero → Positive: discover and integrate better structures | Design review, [design-principle lenses](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ) in TDD Refactor |
+| Offense (design improvement) | Zero → Positive: discover and integrate better structures | Design review, [design-principle lenses](docs/60_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ) in TDD Refactor |
 
 **Design principles:**
 - Keep it simple (KISS)
@@ -200,7 +200,7 @@ Development is led by an AI agent (Claude Code), with guardrails to ensure quali
 
 Key rules:
 
-- [Issue-driven development](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md) / [TDD](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md) enforcement — Verify the Issue before coding; write tests first
+- [Issue-driven development](docs/60_手順書/04_開発フロー/01_Issue駆動開発.md) / [TDD](docs/60_手順書/04_開発フロー/02_TDD開発フロー.md) enforcement — Verify the Issue before coding; write tests first
 - [Pre-implementation checklist](.claude/rules/pre-implementation.md) — Confirm type definitions and existing patterns before writing; no guessing
 - [Design-implementation rhythm](.claude/rules/zoom-rhythm.md) — Alternate between big-picture and detail views; only submit when the gap between ideal and actual reaches zero
 - [Problem-solving framework](.claude/rules/problem-solving.md) — Don't jump to fixes; think through essential purpose → ideal state → current state → root cause
@@ -257,8 +257,8 @@ flowchart LR
 
 - Issue triage: Validate Issue assumptions, scope, and completion criteria using the [problem-solving framework](.claude/rules/problem-solving.md)
 - Design review: [Iterate design reviews](.claude/rules/zoom-rhythm.md#設計ブラッシュアップループ) until gaps reach zero before implementation
-- Design-principle lenses: Answer [SRP, DIP, Simple Design questions](docs/04_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ) during TDD Refactor to find improvement opportunities
-- Pre-submit check: Catch remaining issues with the [quality checklist](docs/04_手順書/04_開発フロー/01_Issue駆動開発.md#62-品質チェックリスト), and include Self-review in the PR
+- Design-principle lenses: Answer [SRP, DIP, Simple Design questions](docs/60_手順書/04_開発フロー/02_TDD開発フロー.md#設計原則レンズ) during TDD Refactor to find improvement opportunities
+- Pre-submit check: Catch remaining issues with the [quality checklist](docs/60_手順書/04_開発フロー/01_Issue駆動開発.md#62-品質チェックリスト), and include Self-review in the PR
 
 → Details: [CLAUDE.md](CLAUDE.md)
 
@@ -270,13 +270,13 @@ All knowledge is documented — aiming for **zero tacit knowledge**.
 
 | What you want to know | Where to look |
 |-----------------------|---------------|
-| What to build (WHAT) | [Requirements](docs/01_要件定義書/) |
-| How to build it (HOW) | [High-level design](docs/02_基本設計書/) / [Detailed design](docs/03_詳細設計書/) |
-| How to operate (HOW TO) | [Procedures](docs/04_手順書/) |
-| Why that decision (WHY) | [ADRs](docs/05_ADR/) (e.g., [ID format](docs/05_ADR/001_ID形式の選定.md) / [Data deletion](docs/05_ADR/007_テナント退会時のデータ削除方針.md) / [Newtype wrapping](docs/05_ADR/016_プリミティブ型のNewtype化方針.md)) |
-| Technical knowledge | [Knowledge base](docs/06_ナレッジベース/) |
-| Implementation walkthroughs | [Implementation guides](docs/07_実装解説/) (e.g., [Authentication](docs/07_実装解説/PR46_認証機能/01_認証機能_機能解説.md)) |
-| Tests | [Tests](docs/08_テスト/) (API test matrices, test specifications) |
+| What to build (WHAT) | [Requirements](docs/10_要件定義書/) |
+| How to build it (HOW) | [High-level design](docs/30_基本設計書/) / [Detailed design](docs/40_詳細設計書/) |
+| How to operate (HOW TO) | [Procedures](docs/60_手順書/) |
+| Why that decision (WHY) | [ADRs](docs/70_ADR/) (e.g., [ID format](docs/70_ADR/001_ID形式の選定.md) / [Data deletion](docs/70_ADR/007_テナント退会時のデータ削除方針.md) / [Newtype wrapping](docs/70_ADR/016_プリミティブ型のNewtype化方針.md)) |
+| Technical knowledge | [Knowledge base](docs/80_ナレッジベース/) |
+| Implementation walkthroughs | [Implementation guides](docs/90_実装解説/) (e.g., [Authentication](docs/90_実装解説/PR46_認証機能/01_認証機能_機能解説.md)) |
+| Tests | [Tests](docs/50_テスト/) (API test matrices, test specifications) |
 | Development history | [Session logs](prompts/runs/) |
 
 ### CI/CD & Code Quality

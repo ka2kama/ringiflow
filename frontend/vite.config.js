@@ -2,7 +2,7 @@
  * Vite 設定
  *
  * ポート番号はルートの .env ファイルで設定（justfile の dotenv-load で読み込み）
- * 技術詳細: [Vite](../docs/06_ナレッジベース/frontend/Vite.md)
+ * 技術詳細: [Vite](../docs/80_ナレッジベース/frontend/Vite.md)
  */
 
 import tailwindcss from "@tailwindcss/vite";

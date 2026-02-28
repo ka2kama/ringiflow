@@ -60,4 +60,4 @@ ADT の不変条件検証により、既存シードデータの `in_progress`/`
 | `backend/crates/infra/src/repository/workflow_instance_repository.rs` | `from_db()` の Result 対応 |
 | `backend/apps/core-service/src/usecase/dashboard.rs` | テスト修正 |
 | `backend/migrations/20260224000001_fix_seed_current_step_id.sql` | 新規: シードデータ修正 |
-| `docs/03_詳細設計書/エンティティ影響マップ/WorkflowInstance.md` | INV 拡充、状態遷移図更新 |
+| `docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md` | INV 拡充、状態遷移図更新 |

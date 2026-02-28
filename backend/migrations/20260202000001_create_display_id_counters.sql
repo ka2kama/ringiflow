@@ -1,7 +1,7 @@
 -- 表示用 ID の採番カウンターテーブル
 -- テナント × エンティティ種別ごとに最後に採番した番号を管理する
 --
--- 参照: docs/03_詳細設計書/12_表示用ID設計.md
+-- 参照: docs/40_詳細設計書/12_表示用ID設計.md
 
 CREATE TABLE display_id_counters (
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,

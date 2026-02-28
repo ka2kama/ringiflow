@@ -4,7 +4,7 @@
 -- 既存のパスワードハッシュを credentials テーブルに移行する。
 -- 移行期間中は両方のテーブルにデータを保持する。
 --
--- 設計詳細: docs/03_詳細設計書/08_AuthService設計.md
+-- 設計詳細: docs/40_詳細設計書/08_AuthService設計.md
 
 -- 既存のパスワードハッシュを credentials に移行
 INSERT INTO auth.credentials (user_id, tenant_id, credential_type, credential_data, is_active)

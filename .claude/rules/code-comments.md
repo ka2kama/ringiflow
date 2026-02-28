@@ -15,16 +15,16 @@ paths:
 コード・設定ファイル内でドキュメントを参照する場合、Markdown リンク形式で記述する。
 
 ```rust
-//! 詳細: [BFF パターン](../../docs/06_ナレッジベース/architecture/BFFパターン.md)
+//! 詳細: [BFF パターン](../../docs/80_ナレッジベース/architecture/BFFパターン.md)
 ```
 
 ```yaml
-# 技術詳細: [GitHub Actions](../../docs/06_ナレッジベース/devtools/GitHubActions.md)
+# 技術詳細: [GitHub Actions](../../docs/80_ナレッジベース/devtools/GitHubActions.md)
 ```
 
 ```javascript
 /**
- * 技術詳細: [Vite](../../docs/06_ナレッジベース/frontend/Vite.md)
+ * 技術詳細: [Vite](../../docs/80_ナレッジベース/frontend/Vite.md)
  */
 ```
 

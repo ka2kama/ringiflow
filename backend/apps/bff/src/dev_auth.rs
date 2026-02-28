@@ -9,7 +9,7 @@
 //! 2. フロントエンドで Cookie `session_id=dev-session` を設定
 //! 3. `X-Tenant-ID` ヘッダーに `DEV_TENANT_ID` を設定
 //!
-//! 詳細: [DevAuth](../../../docs/06_ナレッジベース/security/DevAuth.md)
+//! 詳細: [DevAuth](../../../docs/80_ナレッジベース/security/DevAuth.md)
 //!
 //! ## 安全策
 //!

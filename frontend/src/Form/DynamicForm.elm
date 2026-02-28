@@ -7,7 +7,7 @@ module Form.DynamicForm exposing
 
 WorkflowDefinition の definition フィールドから動的にフォーム要素を生成する。
 
-詳細: [UI 設計](../../../../docs/03_詳細設計書/10_ワークフロー申請フォームUI設計.md)
+詳細: [UI 設計](../../../../docs/40_詳細設計書/10_ワークフロー申請フォームUI設計.md)
 
 
 ## 設計方針

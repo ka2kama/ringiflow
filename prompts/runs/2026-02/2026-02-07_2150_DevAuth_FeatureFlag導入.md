@@ -63,8 +63,8 @@ feature flag は `#[cfg(not(debug_assertions))]` より精度が高い:
 | `backend/apps/bff/src/main.rs` | DevAuth import と初期化を条件コンパイル |
 | `backend/Dockerfile` | `--no-default-features` 追加 |
 | `.github/workflows/ci.yaml` | 本番ビルド検証ステップ追加 |
-| `docs/05_ADR/034_DevAuthのFeatureFlag導入.md` | 新規作成 |
-| `docs/06_ナレッジベース/security/DevAuth.md` | 安全策セクション更新 |
+| `docs/70_ADR/034_DevAuthのFeatureFlag導入.md` | 新規作成 |
+| `docs/80_ナレッジベース/security/DevAuth.md` | 安全策セクション更新 |
 
 ### PR
 

@@ -17,7 +17,7 @@ Epic #648（Observability 基盤の設計と段階的実装）の Story 5（#655
    - 実装解説ドキュメント、ナレッジベース（`log-schema.md`）を確認
 
 3. 設計書作成
-   - `docs/03_詳細設計書/14_Observability設計.md` を作成
+   - `docs/40_詳細設計書/14_Observability設計.md` を作成
    - 章構成: 概要 → 設計原則 → アーキテクチャ → ログ設計 → 計装設計 → ビジネスイベントログ → メトリクス設計 → Phase 4 移行パス → MUST 要件対応表 → 変更履歴
    - 実装済みセクションはマーカーなし、Phase 4 セクションは実装状態マーカーあり
 
@@ -27,6 +27,6 @@ Epic #648（Observability 基盤の設計と段階的実装）の Story 5（#655
 
 ## 成果物
 
-- `docs/03_詳細設計書/14_Observability設計.md`（新規作成）
+- `docs/40_詳細設計書/14_Observability設計.md`（新規作成）
 - `prompts/plans/655_observability-design-doc.md`（計画ファイル）
 - PR: #695

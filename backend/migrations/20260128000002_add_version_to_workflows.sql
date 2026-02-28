@@ -1,7 +1,7 @@
 -- workflow_instances と workflow_steps に version カラムを追加
 -- 楽観的ロックによる並行更新の競合検出に使用
 --
--- 参照: docs/03_詳細設計書/11_ワークフロー承認却下機能設計.md
+-- 参照: docs/40_詳細設計書/11_ワークフロー承認却下機能設計.md
 
 -- workflow_instances に version カラムを追加
 ALTER TABLE workflow_instances

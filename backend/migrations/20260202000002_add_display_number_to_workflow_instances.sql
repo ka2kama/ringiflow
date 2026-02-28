@@ -1,6 +1,6 @@
 -- workflow_instances に表示用連番カラムを追加し、既存データをマイグレーション
 --
--- 参照: docs/03_詳細設計書/12_表示用ID設計.md
+-- 参照: docs/40_詳細設計書/12_表示用ID設計.md
 
 -- 1. NULLABLE でカラムを追加
 ALTER TABLE workflow_instances

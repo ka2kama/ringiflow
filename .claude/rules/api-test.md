@@ -90,7 +90,7 @@ POST {{base_url}}/api/v1/workflows/{{workflow_id}}/steps/{{step_id}}/approve
 HTTP 409
 ```
 
-→ 全体方針: [テスト戦略: エッジケース方針](../../docs/08_テスト/テスト戦略_エッジケース方針.md)
+→ 全体方針: [テスト戦略: エッジケース方針](../../docs/50_テスト/テスト戦略_エッジケース方針.md)
 
 ## 必須チェック項目
 
@@ -135,6 +135,6 @@ API テストのアサーションを追加・変更する際:
 
 ## 参照
 
-- Hurl ナレッジベース: [docs/06_ナレッジベース/devtools/hurl.md](../../docs/06_ナレッジベース/devtools/hurl.md)
+- Hurl ナレッジベース: [docs/80_ナレッジベース/devtools/hurl.md](../../docs/80_ナレッジベース/devtools/hurl.md)
 - API 実装ルール: [.claude/rules/api.md](api.md)
 - OpenAPI 仕様: [openapi/openapi.yaml](../../openapi/openapi.yaml)

@@ -6,7 +6,7 @@
 # 超過時は exit 1 で CI を失敗させる（ラチェット方式）。
 #
 # Usage: ./scripts/check/check-duplicates.sh
-# 参照: [ADR-042](../../docs/05_ADR/042_コピペ検出ツールの選定.md)
+# 参照: [ADR-042](../../docs/70_ADR/042_コピペ検出ツールの選定.md)
 
 set -euo pipefail
 

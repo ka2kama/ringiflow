@@ -123,4 +123,4 @@ Not reproducible in:
 - [Ghostty Discussion #9513 - Shift+key not transmitting to mprocs](https://github.com/ghostty-org/ghostty/discussions/9513)
 - [Ghostty Discussion #8437 - TUI apps cause issues under Wayland](https://github.com/ghostty-org/ghostty/discussions/8437)
 - [Helix PR #6438 - Handle keyboard enhancement check failure](https://github.com/helix-editor/helix/pull/6438)
-- [ADR-026 開発サーバー一括起動ツールの選定](../../../docs/05_ADR/026_開発サーバー一括起動ツールの選定.md)
+- [ADR-026 開発サーバー一括起動ツールの選定](../../../docs/70_ADR/026_開発サーバー一括起動ツールの選定.md)

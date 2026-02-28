@@ -64,15 +64,15 @@ check-rule-files:
 新しい開発ツールを追加する場合、以下を同時に更新:
 
 1. `justfile` の `check-tools` タスク
-2. [`docs/04_手順書/01_開発参画/01_開発環境構築.md`](../../docs/04_手順書/01_開発参画/01_開発環境構築.md)
+2. [`docs/60_手順書/01_開発参画/01_開発環境構築.md`](../../docs/60_手順書/01_開発参画/01_開発環境構築.md)
 
 ## CI ワークフロー変更時の必須対応
 
 GitHub Actions ワークフローに新しい Action を追加した場合、以下を実施する。
 
-→ 詳細: [ナレッジベース: GitHub Actions](../../docs/06_ナレッジベース/devtools/GitHubActions.md#アクション許可設定)
+→ 詳細: [ナレッジベース: GitHub Actions](../../docs/80_ナレッジベース/devtools/GitHubActions.md#アクション許可設定)
 
-1. [ナレッジベースの許可設定テーブル](../../docs/06_ナレッジベース/devtools/GitHubActions.md#プロジェクトでの許可設定)に Action のパターンを追記する
+1. [ナレッジベースの許可設定テーブル](../../docs/80_ナレッジベース/devtools/GitHubActions.md#プロジェクトでの許可設定)に Action のパターンを追記する
 2. 間接依存（Action が内部で呼び出す別の Action）がないか確認し、あれば同様に追記する
 3. GitHub Settings → Actions → General の許可パターンにも追加する（リポジトリ管理者が手動で実施）
 
