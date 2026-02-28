@@ -202,7 +202,7 @@ E2E テストは TDD の Red-Green-Refactor サイクルには組み込まない
 | タイミング | 実行するテスト |
 |-----------|--------------|
 | TDD サイクル中 | `cargo test` / `elm-test`（ユニットテスト） |
-| Phase 完了時 | `just check-all`（lint + ユニット + API + E2E） |
+| Phase 完了時 | `just check`（lint + ユニット + 統合テスト） |
 | UI に影響する変更時 | `just test-e2e` で明示的に確認 |
 
 → E2E テストの詳細: [Playwright ナレッジベース](../../docs/06_ナレッジベース/devtools/Playwright.md)

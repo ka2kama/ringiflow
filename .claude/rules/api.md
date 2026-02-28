@@ -102,7 +102,7 @@ CreateResourceRequest:
 API エンドポイントを追加・変更・削除した場合:
 
 1. **実装完了後、OpenAPI 仕様書を必ず更新する**
-2. コミット前に `just check-all` で全体を確認する
+2. コミット前に `just check` で確認する
 
 **禁止事項:**
 
