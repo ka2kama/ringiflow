@@ -17,9 +17,9 @@ fn test_全パスが含まれている() {
     let doc = ApiDoc::openapi();
     let paths: Vec<&str> = doc.paths.paths.keys().map(|k| k.as_str()).collect();
 
-    // 31 パス（42 ハンドラ、同一パスに複数メソッドがあるため 31 パス）
+    // 35 パス（46 ハンドラ、同一パスに複数メソッドがあるため 35 パス）
     // /health はインフラ用のため OpenAPI 仕様には含めない、/health/ready は含める
-    assert_eq!(paths.len(), 31, "パス数が 31 であること: {paths:?}");
+    assert_eq!(paths.len(), 35, "パス数が 35 であること: {paths:?}");
 
     // 全パスの存在確認
     assert!(paths.contains(&"/health/ready"));
@@ -54,8 +54,12 @@ fn test_全パスが含まれている() {
     assert!(paths.contains(&"/api/v1/roles/{role_id}"));
     assert!(paths.contains(&"/api/v1/folders"));
     assert!(paths.contains(&"/api/v1/folders/{folder_id}"));
+    assert!(paths.contains(&"/api/v1/documents"));
     assert!(paths.contains(&"/api/v1/documents/upload-url"));
+    assert!(paths.contains(&"/api/v1/documents/{document_id}"));
     assert!(paths.contains(&"/api/v1/documents/{document_id}/confirm"));
+    assert!(paths.contains(&"/api/v1/documents/{document_id}/download-url"));
+    assert!(paths.contains(&"/api/v1/workflows/{workflow_instance_id}/attachments"));
     assert!(paths.contains(&"/api/v1/audit-logs"));
     assert!(paths.contains(&"/api/v1/workflows/{display_number}/comments"));
     assert!(paths.contains(&"/api/v1/dashboard/stats"));

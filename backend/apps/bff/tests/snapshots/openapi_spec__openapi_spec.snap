@@ -1,5 +1,6 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
+assertion_line: 113
 expression: json
 ---
 {
@@ -321,6 +322,54 @@ expression: json
         ]
       }
     },
+    "/api/v1/documents": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "GET /api/v1/documents",
+        "description": "フォルダ内のドキュメント一覧を取得する。",
+        "operationId": "list_documents",
+        "parameters": [
+          {
+            "name": "folder_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ドキュメント一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Vec_DocumentData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
     "/api/v1/documents/upload-url": {
       "post": {
         "tags": [
@@ -378,6 +427,78 @@ expression: json
         ]
       }
     },
+    "/api/v1/documents/{document_id}": {
+      "delete": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "DELETE /api/v1/documents/{document_id}",
+        "description": "ドキュメントをソフトデリートする。\n管理者またはアップロード者本人のみ削除可能。",
+        "operationId": "delete_document",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "description": "ドキュメントID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          },
+          "400": {
+            "description": "ワークフロー状態エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "権限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ドキュメントが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
     "/api/v1/documents/{document_id}/confirm": {
       "post": {
         "tags": [
@@ -411,6 +532,75 @@ expression: json
           },
           "400": {
             "description": "ステータスエラー / S3 にファイルが存在しない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ドキュメントが見つからない",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/download-url": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "POST /api/v1/documents/{document_id}/download-url",
+        "description": "Presigned GET URL を発行する。",
+        "operationId": "generate_download_url",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "description": "ドキュメントID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ダウンロード URL 発行成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_DownloadUrlData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ステータスエラー",
             "content": {
               "application/json": {
                 "schema": {
@@ -2484,6 +2674,55 @@ expression: json
         ]
       }
     },
+    "/api/v1/workflows/{workflow_instance_id}/attachments": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "GET /api/v1/workflows/{workflow_instance_id}/attachments",
+        "description": "ワークフロー添付ファイル一覧を取得する。",
+        "operationId": "list_workflow_attachments",
+        "parameters": [
+          {
+            "name": "workflow_instance_id",
+            "in": "path",
+            "description": "ワークフローインスタンスID",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "添付ファイル一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Vec_DocumentData"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "認証エラー",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_auth": []
+          }
+        ]
+      }
+    },
     "/health/ready": {
       "get": {
         "tags": [
@@ -2655,6 +2894,33 @@ expression: json
               },
               "created_at": {
                 "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "ApiResponse_DownloadUrlData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "ダウンロード URL データ",
+            "required": [
+              "download_url",
+              "expires_in"
+            ],
+            "properties": {
+              "download_url": {
+                "type": "string"
+              },
+              "expires_in": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
               }
             }
           }
@@ -3003,6 +3269,51 @@ expression: json
                 "type": "array",
                 "items": {
                   "$ref": "#/components/schemas/ValidationErrorData"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ApiResponse_Vec_DocumentData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "ドキュメントデータ",
+              "required": [
+                "id",
+                "filename",
+                "content_type",
+                "size",
+                "status",
+                "created_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "filename": {
+                  "type": "string"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "size": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string"
                 }
               }
             }
@@ -3879,6 +4190,24 @@ expression: json
           },
           "created_at": {
             "type": "string"
+          }
+        }
+      },
+      "DownloadUrlData": {
+        "type": "object",
+        "description": "ダウンロード URL データ",
+        "required": [
+          "download_url",
+          "expires_in"
+        ],
+        "properties": {
+          "download_url": {
+            "type": "string"
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },

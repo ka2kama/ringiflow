@@ -8,7 +8,7 @@ use std::sync::Arc;
 use axum::{
     Router,
     middleware::{from_fn, from_fn_with_state},
-    routing::{get, patch, post, put},
+    routing::{delete, get, patch, post, put},
 };
 use ringiflow_bff::{
     client::{AuthServiceClient, AuthServiceClientImpl, CoreServiceClientImpl},
@@ -32,8 +32,10 @@ use ringiflow_bff::{
         create_workflow,
         csrf,
         delete_definition,
+        delete_document,
         delete_folder,
         delete_role,
+        generate_download_url,
         get_dashboard_stats,
         get_role,
         get_task_by_display_numbers,
@@ -43,11 +45,13 @@ use ringiflow_bff::{
         health_check,
         list_audit_logs,
         list_comments,
+        list_documents,
         list_folders,
         list_my_tasks,
         list_my_workflows,
         list_roles,
         list_users,
+        list_workflow_attachments,
         list_workflow_definitions,
         login,
         logout,
@@ -277,12 +281,28 @@ pub(crate) fn build_app(
         .with_state(folder_state)
         // ドキュメント管理 API
         .route(
+            "/api/v1/documents",
+            get(list_documents),
+        )
+        .route(
             "/api/v1/documents/upload-url",
             post(request_upload_url),
         )
         .route(
+            "/api/v1/documents/{document_id}",
+            delete(delete_document),
+        )
+        .route(
             "/api/v1/documents/{document_id}/confirm",
             post(confirm_upload),
+        )
+        .route(
+            "/api/v1/documents/{document_id}/download-url",
+            post(generate_download_url),
+        )
+        .route(
+            "/api/v1/workflows/{workflow_instance_id}/attachments",
+            get(list_workflow_attachments),
         )
         .with_state(document_state)
         // 管理者 API（認可ミドルウェア適用、権限別ルートグループ）

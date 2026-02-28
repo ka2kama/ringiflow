@@ -83,6 +83,10 @@ use crate::handler::{
       // documents
       document::request_upload_url,
       document::confirm_upload,
+      document::generate_download_url,
+      document::delete_document,
+      document::list_documents,
+      document::list_workflow_attachments,
       // dashboard
       dashboard::get_dashboard_stats,
    ),

@@ -31,6 +31,7 @@ pub use core_service::{
     CreateWorkflowRequest,
     DashboardStatsDto,
     DocumentDetailCoreDto,
+    DownloadUrlCoreDto,
     FolderItemDto,
     PostCommentCoreRequest,
     PublishArchiveCoreRequest,

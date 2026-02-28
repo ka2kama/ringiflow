@@ -60,6 +60,28 @@ pub trait DocumentRepository: Send + Sync {
         workflow_instance_id: &WorkflowInstanceId,
         tenant_id: &TenantId,
     ) -> Result<(usize, i64), InfraError>;
+
+    /// ドキュメントをソフトデリートする（status, updated_at, deleted_at を更新）
+    async fn soft_delete(
+        &self,
+        id: &DocumentId,
+        tenant_id: &TenantId,
+        now: DateTime<Utc>,
+    ) -> Result<(), InfraError>;
+
+    /// フォルダ内の active ドキュメント一覧を取得する
+    async fn list_by_folder(
+        &self,
+        folder_id: &FolderId,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<Document>, InfraError>;
+
+    /// ワークフローインスタンスの active ドキュメント一覧を取得する
+    async fn list_by_workflow(
+        &self,
+        workflow_instance_id: &WorkflowInstanceId,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<Document>, InfraError>;
 }
 
 /// PostgreSQL 実装の DocumentRepository
@@ -73,6 +95,62 @@ impl PostgresDocumentRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+}
+
+/// DB 行からドキュメントエンティティを構築する
+///
+/// `find_by_id` と `list_by_*` で共通の変換ロジック。
+fn row_to_document(row: &DocumentRow) -> Result<Document, InfraError> {
+    let upload_context = match (row.folder_id, row.workflow_instance_id) {
+        (Some(fid), None) => UploadContext::Folder(FolderId::from_uuid(fid)),
+        (None, Some(wid)) => UploadContext::Workflow(WorkflowInstanceId::from_uuid(wid)),
+        // CHECK 制約が XOR を保証するため到達しない
+        _ => {
+            return Err(InfraError::Unexpected(
+                "documents テーブルの folder_id/workflow_instance_id が不正な状態です".to_string(),
+            ));
+        }
+    };
+
+    let status: DocumentStatus = row
+        .status
+        .parse()
+        .map_err(|e| InfraError::Unexpected(format!("DocumentStatus のパースに失敗: {}", e)))?;
+
+    Ok(Document::from_db(
+        DocumentId::from_uuid(row.id),
+        TenantId::from_uuid(row.tenant_id),
+        row.filename.clone(),
+        row.content_type.clone(),
+        row.size,
+        row.s3_key.clone(),
+        upload_context,
+        status,
+        row.uploaded_by.map(UserId::from_uuid),
+        row.created_at,
+        row.updated_at,
+        row.deleted_at,
+    ))
+}
+
+/// sqlx::query! が返す行の共通構造
+///
+/// `sqlx::query!` はクエリごとに匿名構造体を返すため、
+/// ヘルパー関数で受け取るための中間型。
+struct DocumentRow {
+    id: uuid::Uuid,
+    tenant_id: uuid::Uuid,
+    filename: String,
+    content_type: String,
+    size: i64,
+    s3_key: String,
+    folder_id: Option<uuid::Uuid>,
+    workflow_instance_id: Option<uuid::Uuid>,
+    status: String,
+    uploaded_by: Option<uuid::Uuid>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    deleted_at: Option<DateTime<Utc>>,
 }
 
 #[async_trait]
@@ -112,37 +190,23 @@ impl DocumentRepository for PostgresDocumentRepository {
             return Ok(None);
         };
 
-        let upload_context = match (row.folder_id, row.workflow_instance_id) {
-            (Some(fid), None) => UploadContext::Folder(FolderId::from_uuid(fid)),
-            (None, Some(wid)) => UploadContext::Workflow(WorkflowInstanceId::from_uuid(wid)),
-            // CHECK 制約が XOR を保証するため到達しない
-            _ => {
-                return Err(InfraError::Unexpected(
-                    "documents テーブルの folder_id/workflow_instance_id が不正な状態です"
-                        .to_string(),
-                ));
-            }
+        let doc_row = DocumentRow {
+            id: row.id,
+            tenant_id: row.tenant_id,
+            filename: row.filename,
+            content_type: row.content_type,
+            size: row.size,
+            s3_key: row.s3_key,
+            folder_id: row.folder_id,
+            workflow_instance_id: row.workflow_instance_id,
+            status: row.status,
+            uploaded_by: row.uploaded_by,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            deleted_at: row.deleted_at,
         };
 
-        let status: DocumentStatus = row
-            .status
-            .parse()
-            .map_err(|e| InfraError::Unexpected(format!("DocumentStatus のパースに失敗: {}", e)))?;
-
-        Ok(Some(Document::from_db(
-            DocumentId::from_uuid(row.id),
-            TenantId::from_uuid(row.tenant_id),
-            row.filename,
-            row.content_type,
-            row.size,
-            row.s3_key,
-            upload_context,
-            status,
-            row.uploaded_by.map(UserId::from_uuid),
-            row.created_at,
-            row.updated_at,
-            row.deleted_at,
-        )))
+        Ok(Some(row_to_document(&doc_row)?))
     }
 
     #[tracing::instrument(skip_all, level = "debug")]
@@ -251,6 +315,138 @@ impl DocumentRepository for PostgresDocumentRepository {
         .await?;
 
         Ok((row.count as usize, row.total_size))
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%id, %tenant_id))]
+    async fn soft_delete(
+        &self,
+        id: &DocumentId,
+        tenant_id: &TenantId,
+        now: DateTime<Utc>,
+    ) -> Result<(), InfraError> {
+        sqlx::query!(
+            r#"
+            UPDATE documents
+            SET status = 'deleted', updated_at = $2, deleted_at = $3
+            WHERE id = $1 AND tenant_id = $4
+            "#,
+            id.as_uuid(),
+            now,
+            now,
+            tenant_id.as_uuid()
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%folder_id, %tenant_id))]
+    async fn list_by_folder(
+        &self,
+        folder_id: &FolderId,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<Document>, InfraError> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                id,
+                tenant_id as "tenant_id!",
+                filename as "filename!",
+                content_type as "content_type!",
+                size as "size!",
+                s3_key as "s3_key!",
+                folder_id,
+                workflow_instance_id,
+                status as "status!",
+                uploaded_by,
+                created_at as "created_at!",
+                updated_at as "updated_at!",
+                deleted_at
+            FROM documents
+            WHERE folder_id = $1 AND tenant_id = $2 AND status = 'active'
+            ORDER BY created_at DESC
+            "#,
+            folder_id.as_uuid(),
+            tenant_id.as_uuid()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter()
+            .map(|row| {
+                let doc_row = DocumentRow {
+                    id: row.id,
+                    tenant_id: row.tenant_id,
+                    filename: row.filename.clone(),
+                    content_type: row.content_type.clone(),
+                    size: row.size,
+                    s3_key: row.s3_key.clone(),
+                    folder_id: row.folder_id,
+                    workflow_instance_id: row.workflow_instance_id,
+                    status: row.status.clone(),
+                    uploaded_by: row.uploaded_by,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    deleted_at: row.deleted_at,
+                };
+                row_to_document(&doc_row)
+            })
+            .collect()
+    }
+
+    #[tracing::instrument(skip_all, level = "debug", fields(%workflow_instance_id, %tenant_id))]
+    async fn list_by_workflow(
+        &self,
+        workflow_instance_id: &WorkflowInstanceId,
+        tenant_id: &TenantId,
+    ) -> Result<Vec<Document>, InfraError> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT
+                id,
+                tenant_id as "tenant_id!",
+                filename as "filename!",
+                content_type as "content_type!",
+                size as "size!",
+                s3_key as "s3_key!",
+                folder_id,
+                workflow_instance_id,
+                status as "status!",
+                uploaded_by,
+                created_at as "created_at!",
+                updated_at as "updated_at!",
+                deleted_at
+            FROM documents
+            WHERE workflow_instance_id = $1 AND tenant_id = $2 AND status = 'active'
+            ORDER BY created_at DESC
+            "#,
+            workflow_instance_id.as_uuid(),
+            tenant_id.as_uuid()
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter()
+            .map(|row| {
+                let doc_row = DocumentRow {
+                    id: row.id,
+                    tenant_id: row.tenant_id,
+                    filename: row.filename.clone(),
+                    content_type: row.content_type.clone(),
+                    size: row.size,
+                    s3_key: row.s3_key.clone(),
+                    folder_id: row.folder_id,
+                    workflow_instance_id: row.workflow_instance_id,
+                    status: row.status.clone(),
+                    uploaded_by: row.uploaded_by,
+                    created_at: row.created_at,
+                    updated_at: row.updated_at,
+                    deleted_at: row.deleted_at,
+                };
+                row_to_document(&doc_row)
+            })
+            .collect()
     }
 }
 

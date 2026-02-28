@@ -33,7 +33,15 @@ pub use auth::{
     update_user_status,
 };
 pub use dashboard::{DashboardState, get_dashboard_stats};
-pub use document::{DocumentState, confirm_upload, request_upload_url};
+pub use document::{
+    DocumentState,
+    confirm_upload,
+    delete_document,
+    generate_download_url,
+    list_documents,
+    list_workflow_attachments,
+    request_upload_url,
+};
 pub use folder::{FolderState, create_folder, delete_folder, list_folders, update_folder};
 pub use health::{ReadinessState, health_check, readiness_check};
 pub use role::{RoleState, create_role, delete_role, get_role, list_roles, update_role};
