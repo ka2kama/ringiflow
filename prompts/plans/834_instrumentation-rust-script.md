@@ -40,8 +40,8 @@ Epic #841 の高優先度タスク。先行実績 `.github/scripts/match-rules.r
 | `scripts/check/instrumentation.sh` | 削除 |
 | `justfile` (L429-430) | `rust-script` 呼び出しに変更 |
 | `.github/workflows/ci.yaml` (L715-739) | Rust toolchain + rust-script セットアップ追加 |
-| `docs/70_ADR/056_CIスクリプトの言語選定方針.md` | スコープ拡大記載 |
-| `docs/80_ナレッジベース/devtools/rust-script.md` | 使用箇所追記 |
+| `docs/05_ADR/056_CIスクリプトの言語選定方針.md` | スコープ拡大記載 |
+| `docs/06_ナレッジベース/devtools/rust-script.md` | 使用箇所追記 |
 | `.claude/rules/observability.md` | パス参照を `.rs` に更新 |
 
 対象外: `scripts/check/parallel.sh`（`just check-instrumentation` を呼ぶだけで変更不要）

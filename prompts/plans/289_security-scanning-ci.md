@@ -123,13 +123,13 @@ allow-git = []
 
 ### Phase 4: ドキュメント
 
-1. **ADR-033**: `docs/70_ADR/033_セキュリティスキャニングツールの選定.md`
+1. **ADR-033**: `docs/05_ADR/033_セキュリティスキャニングツールの選定.md`
    - コンテキスト: 要件定義書 12.8 節への対応
    - 検討した選択肢: cargo-audit のみ / cargo-deny のみ / 両方
    - 決定: cargo-deny のみ
    - 帰結: 多層チェック（advisories + licenses + bans + sources）、deny.toml の管理
 
-2. **開発環境構築手順書**: `docs/60_手順書/01_開発参画/01_開発環境構築.md`
+2. **開発環境構築手順書**: `docs/04_手順書/01_開発参画/01_開発環境構築.md`
    - 16 番目のツールとして cargo-deny を追加
    - インストール方法、バージョン確認を記載
 
@@ -140,8 +140,8 @@ allow-git = []
 | `backend/deny.toml` | 新規作成 |
 | `justfile` | audit タスク追加、check-tools 更新、check 更新 |
 | `.github/workflows/ci.yaml` | security ジョブ追加、ci-success 更新 |
-| `docs/70_ADR/033_セキュリティスキャニングツールの選定.md` | 新規作成 |
-| `docs/60_手順書/01_開発参画/01_開発環境構築.md` | cargo-deny の追加 |
+| `docs/05_ADR/033_セキュリティスキャニングツールの選定.md` | 新規作成 |
+| `docs/04_手順書/01_開発参画/01_開発環境構築.md` | cargo-deny の追加 |
 
 ## スコープ境界
 

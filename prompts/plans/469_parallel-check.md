@@ -261,8 +261,8 @@ E2E テスト（該当なし）
 
 ### 変更内容
 
-1. `docs/80_ナレッジベース/devtools/RedoclyCLI.md` L23, L164: `npx` コマンド例を `pnpm exec redocly` に更新
-2. `docs/70_ADR/042_コピペ検出ツールの選定.md` L51, L61: `npx` の記述を `pnpm exec` に更新
+1. `docs/06_ナレッジベース/devtools/RedoclyCLI.md` L23, L164: `npx` コマンド例を `pnpm exec redocly` に更新
+2. `docs/05_ADR/042_コピペ検出ツールの選定.md` L51, L61: `npx` の記述を `pnpm exec` に更新
 3. 開発環境構築手順に「ルート npm ツールのインストール」を追加（`just setup` で自動化されるため最小限の記述）
 
 ### テストリスト

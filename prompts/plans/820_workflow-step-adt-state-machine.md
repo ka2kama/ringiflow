@@ -260,7 +260,7 @@ INSERT / UPDATE の SQL クエリは getter メソッド経由でフィールド
 
 #### 確認事項
 - 型: `WorkflowStepState`, `ActiveStepState`, `CompletedStepState` → 新規定義（上記設計に従う）
-- パターン: ADR-054 Pattern A → `docs/70_ADR/054_ADTベースステートマシンパターンの標準化.md`
+- パターン: ADR-054 Pattern A → `docs/05_ADR/054_ADTベースステートマシンパターンの標準化.md`
 - パターン: 既存の `WorkflowStep::new()`, `from_db()`, getter、遷移メソッド → `step.rs` 行 141-404
 - パターン: テストの `record_from()` ヘルパー → `step.rs` 行 440-459
 

@@ -10,8 +10,8 @@ Volta（Node.js バージョンマネージャー）がメンテナンスされ�
 - `tests/e2e/package.json` — `volta` セクション削除
 - `.mise.toml`（新規作成）— node, elm, elm-format のバージョンピン留め
 - `frontend/README.md` — volta セクションを mise セクションに置換
-- `docs/60_手順書/01_開発参画/01_開発環境構築.md` — mise を推奨に変更、Volta を削除
-- `docs/70_ADR/052_Node.jsバージョン管理のmiseへの移行.md`（新規作成）
+- `docs/04_手順書/01_開発参画/01_開発環境構築.md` — mise を推奨に変更、Volta を削除
+- `docs/05_ADR/052_Node.jsバージョン管理のmiseへの移行.md`（新規作成）
 
 ## 対象外
 
@@ -77,11 +77,11 @@ E2E テスト（該当なし）
 ## Phase 3: ドキュメント更新
 
 1. `frontend/README.md` の volta セクション（L175-187）を mise の説明に置換
-2. `docs/60_手順書/01_開発参画/01_開発環境構築.md` の Node.js/pnpm インストール手順を更新
+2. `docs/04_手順書/01_開発参画/01_開発環境構築.md` の Node.js/pnpm インストール手順を更新
 3. ADR-052 を作成
 
 確認事項:
-- [x] ADR テンプレート → `docs/70_ADR/template.md` 必須セクション: ステータス、コンテキスト、検討した選択肢、決定、帰結、変更履歴
+- [x] ADR テンプレート → `docs/05_ADR/template.md` 必須セクション: ステータス、コンテキスト、検討した選択肢、決定、帰結、変更履歴
 
 テストリスト:
 

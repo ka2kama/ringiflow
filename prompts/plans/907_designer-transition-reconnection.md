@@ -13,7 +13,7 @@
 | `frontend/src/Data/DesignerCanvas.elm` | `ReconnectEnd` 型、`DraggingReconnection` バリアント追加 |
 | `frontend/src/Page/WorkflowDefinition/Designer.elm` | Msg 追加、update ロジック、view（ドラッグハンドル + プレビュー） |
 | `frontend/tests/Page/WorkflowDefinition/DesignerTest.elm` | 再接続ロジックのテスト |
-| `docs/40_詳細設計書/15_ワークフローデザイナー設計.md` | WFD-003 セクション更新 |
+| `docs/03_詳細設計書/15_ワークフローデザイナー設計.md` | WFD-003 セクション更新 |
 
 ## 対象外
 

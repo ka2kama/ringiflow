@@ -7,7 +7,7 @@ Epic #648（Observability 基盤の設計と段階的実装）の Story 1〜4, 6
 ## 対象・対象外
 
 対象:
-- `docs/40_詳細設計書/14_Observability設計.md` の新規作成
+- `docs/03_詳細設計書/14_Observability設計.md` の新規作成
 - 運用設計書 9.1〜9.4 の MUST 要件との対応表
 - Phase 4 への移行パスの文書化
 
@@ -21,7 +21,7 @@ Epic #648（Observability 基盤の設計と段階的実装）の Story 1〜4, 6
 ### ファイル命名
 
 既存の詳細設計書の連番は 00〜13（12 が最新作成）。次の番号は `14`。
-→ `docs/40_詳細設計書/14_Observability設計.md`
+→ `docs/03_詳細設計書/14_Observability設計.md`
 
 ### ドキュメント構造
 
@@ -50,10 +50,10 @@ Epic #648（Observability 基盤の設計と段階的実装）の Story 1〜4, 6
 | セクション | 主なソース |
 |-----------|-----------|
 | 設計原則 | Epic #648 Issue 本文 |
-| ログ設計 | `shared/src/observability.rs`, `docs/80_ナレッジベース/backend/log-schema.md` |
-| 計装設計 | `docs/90_実装解説/PR692_アプリケーション計装/` |
-| ビジネスイベントログ | `shared/src/event_log.rs`, `docs/90_実装解説/PR675_ビジネスイベントログ/` |
-| PII マスキング | `domain/src/macros.rs`, `docs/90_実装解説/PR668_PIIマスキング基盤/` |
+| ログ設計 | `shared/src/observability.rs`, `docs/06_ナレッジベース/backend/log-schema.md` |
+| 計装設計 | `docs/07_実装解説/PR692_アプリケーション計装/` |
+| ビジネスイベントログ | `shared/src/event_log.rs`, `docs/07_実装解説/PR675_ビジネスイベントログ/` |
+| PII マスキング | `domain/src/macros.rs`, `docs/07_実装解説/PR668_PIIマスキング基盤/` |
 | Request ID | `bff/src/middleware/request_id.rs` |
 | メトリクス・Phase 4 | 運用設計書 9.1〜9.2, OpenTelemetry Rust SDK ベストプラクティス |
 | MUST 要件対応表 | 運用設計書 9.1〜9.4, 8.5, 8.6 |
@@ -86,7 +86,7 @@ E2E テスト（該当なし）
 
 #### 作業内容
 
-1. `docs/40_詳細設計書/14_Observability設計.md` を作成
+1. `docs/03_詳細設計書/14_Observability設計.md` を作成
 2. 実装済みの設計（ログ、計装、PII、Request ID、ビジネスイベント）を文書化
 3. Phase 4 向けセクション（メトリクス、OTel、ダッシュボード、アラート）を文書化
 4. MUST 要件対応表を作成
@@ -111,7 +111,7 @@ E2E テスト（該当なし）
 
 ## 検証方法
 
-- `docs/40_詳細設計書/14_Observability設計.md` が存在すること
+- `docs/03_詳細設計書/14_Observability設計.md` が存在すること
 - Issue #655 の完了基準 5 項目すべてが文書に含まれていること
 - MUST 要件対応表が運用設計書の全 MUST/MUST NOT 要件を網羅していること
 - 実装状態マーカーが正しく付与されていること（実装済み = マーカーなし、Phase 4 = マーカーあり）

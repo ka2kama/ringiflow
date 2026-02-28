@@ -40,7 +40,7 @@ VALUES
 
 **更新ファイル**:
 - `justfile` の `check-tools` に hurl 確認を追加
-- `docs/60_手順書/01_開発参画/01_開発環境構築.md` に hurl を追加
+- `docs/04_手順書/01_開発参画/01_開発環境構築.md` に hurl を追加
 
 ### Phase 2: テスト基盤の構築
 
@@ -112,7 +112,7 @@ e2e-stop:
 | `tests/e2e/scripts/wait-for-healthy.sh` | 新規作成 |
 | `tests/e2e/README.md` | 新規作成 |
 | `justfile` | E2E テストコマンド追加 |
-| `docs/60_手順書/01_開発参画/01_開発環境構築.md` | hurl 追加 |
+| `docs/04_手順書/01_開発参画/01_開発環境構築.md` | hurl 追加 |
 
 ## 検証方法
 

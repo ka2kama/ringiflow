@@ -144,8 +144,8 @@ RUN cargo build --release --no-default-features --bin ringiflow-bff --bin ringif
 
 | ファイル | 内容 |
 |---------|------|
-| `docs/70_ADR/034_DevAuthのFeatureFlag導入.md` | 技術選定の記録 |
-| `docs/80_ナレッジベース/security/DevAuth.md` | 安全策セクションに feature flag を追記 |
+| `docs/05_ADR/034_DevAuthのFeatureFlag導入.md` | 技術選定の記録 |
+| `docs/06_ナレッジベース/security/DevAuth.md` | 安全策セクションに feature flag を追記 |
 
 ## 検証
 

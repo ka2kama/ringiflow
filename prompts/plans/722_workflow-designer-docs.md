@@ -15,11 +15,11 @@ Phase 2-4（ワークフローデザイナー）の実装に先立ち、設計�
 
 | # | 成果物 | パス |
 |---|--------|------|
-| 1 | 技術選定 ADR | `docs/70_ADR/053_ワークフローデザイナー技術選定.md` |
-| 2 | 機能仕様書 | `docs/20_機能仕様書/04_ワークフローデザイナー.md` |
-| 3 | 詳細設計書 | `docs/40_詳細設計書/15_ワークフローデザイナー設計.md` |
+| 1 | 技術選定 ADR | `docs/05_ADR/053_ワークフローデザイナー技術選定.md` |
+| 2 | 機能仕様書 | `docs/01_要件定義書/機能仕様書/04_ワークフローデザイナー.md` |
+| 3 | 詳細設計書 | `docs/03_詳細設計書/15_ワークフローデザイナー設計.md` |
 | 4 | OpenAPI 更新 | `openapi/openapi.yaml` |
-| 5 | はじめに更新 | `docs/20_機能仕様書/00_はじめに.md`（読む順序に追記） |
+| 5 | はじめに更新 | `docs/01_要件定義書/機能仕様書/00_はじめに.md`（読む順序に追記） |
 
 ## 対象外
 
@@ -31,7 +31,7 @@ Phase 2-4（ワークフローデザイナー）の実装に先立ち、設計�
 
 ## Phase 1: 技術選定 ADR
 
-`docs/70_ADR/053_ワークフローデザイナー技術選定.md`
+`docs/05_ADR/053_ワークフローデザイナー技術選定.md`
 
 ### 概要
 
@@ -62,7 +62,7 @@ Phase 2-4（ワークフローデザイナー）の実装に先立ち、設計�
 
 ## Phase 2: 機能仕様書
 
-`docs/20_機能仕様書/04_ワークフローデザイナー.md`
+`docs/01_要件定義書/機能仕様書/04_ワークフローデザイナー.md`
 
 ### 概要
 
@@ -103,16 +103,16 @@ Phase 2-4（ワークフローデザイナー）の実装に先立ち、設計�
 9. **関連ドキュメント**: CORE-11、ADR-053、詳細設計書 15
 
 ### 確認事項
-- [x] 既存機能仕様書のフォーマット詳細 → `docs/20_機能仕様書/01_ワークフロー管理.md` — 9 セクション体系、シナリオ駆動の記述スタイルを確認
-- [x] CORE-11 のスキーマ定義（Phase 2-4 サブセット特定）→ `docs/10_要件定義書/01_コア要件.md` L1061-1340 — steps（start/approval/end）、transitions（trigger）、form.fields（text/textarea/number/select/date）を特定
+- [x] 既存機能仕様書のフォーマット詳細 → `docs/01_要件定義書/機能仕様書/01_ワークフロー管理.md` — 9 セクション体系、シナリオ駆動の記述スタイルを確認
+- [x] CORE-11 のスキーマ定義（Phase 2-4 サブセット特定）→ `docs/01_要件定義書/01_コア要件.md` L1061-1340 — steps（start/approval/end）、transitions（trigger）、form.fields（text/textarea/number/select/date）を特定
 - [x] ワークフロー定義のステータス遷移 → `backend/crates/domain/src/workflow/definition.rs` — Draft/Published/Archived の 3 状態、can_publish() で遷移制御
-- [x] デザインガイドライン（UI 記述時の参照）→ `docs/40_詳細設計書/13_デザインガイドライン.md` — デザイントークン、タイポグラフィ、カラーパレットを参照
+- [x] デザインガイドライン（UI 記述時の参照）→ `docs/03_詳細設計書/13_デザインガイドライン.md` — デザイントークン、タイポグラフィ、カラーパレットを参照
 
 ---
 
 ## Phase 3: 詳細設計書 + OpenAPI
 
-`docs/40_詳細設計書/15_ワークフローデザイナー設計.md` + `openapi/openapi.yaml`
+`docs/03_詳細設計書/15_ワークフローデザイナー設計.md` + `openapi/openapi.yaml`
 
 ### 概要
 
@@ -186,10 +186,10 @@ Phase 2-4（ワークフローデザイナー）の実装に先立ち、設計�
 11. **OpenAPI 更新**: 上記エンドポイントを `openapi.yaml` に追加。`definition` フィールドの JSON Schema を部分的に型付け
 
 ### 確認事項
-- [x] 既存の詳細設計書フォーマット → `docs/40_詳細設計書/11_ワークフロー承認却下機能設計.md` — 概要/要件/アーキテクチャ/API設計/データモデル/ドメインロジック/テスト観点の構成。Mermaid 図、Rust コード、diff 形式を使用
+- [x] 既存の詳細設計書フォーマット → `docs/03_詳細設計書/11_ワークフロー承認却下機能設計.md` — 概要/要件/アーキテクチャ/API設計/データモデル/ドメインロジック/テスト観点の構成。Mermaid 図、Rust コード、diff 形式を使用
 - [x] 既存 OpenAPI スキーマ構造 → `openapi/openapi.yaml` — OpenAPI 3.1.0、`ApiResponse_XXX` ラッパー形式、`WorkflowDefinitionData` の `definition` は `{}` (untyped)
 - [x] 楽観的ロックのパターン → `ApproveRejectRequest` に `version: int32`、`update_with_version_check` で WHERE version = $N。Version 型は `u32` ラッパー
-- [x] `display_id` パターン → `docs/40_詳細設計書/12_表示用ID設計.md` — workflow_definitions にはまだ display_id 未導入。Phase 2-4 では UUID ルーティングを維持
+- [x] `display_id` パターン → `docs/03_詳細設計書/12_表示用ID設計.md` — workflow_definitions にはまだ display_id 未導入。Phase 2-4 では UUID ルーティングを維持
 - [x] 既存の Elm ページモジュール構成 → `frontend/src/Page/Workflow/` に Detail.elm/List.elm/New.elm。WorkflowDefinition は新規ディレクトリが必要
 
 ---

@@ -198,10 +198,10 @@ E2E テスト: 該当なし
 
 #### 実装内容
 
-**1. `docs/90_実装解説/02_APIテスト/02_APIテスト_コード解説.md`**:
+**1. `docs/07_実装解説/02_APIテスト/02_APIテスト_コード解説.md`**:
 - L232, L246 の `ringiflow_api_test` → `ringiflow` に置換
 
-**2. `docs/60_手順書/01_開発参画/02_プロジェクトセットアップ.md`**:
+**2. `docs/04_手順書/01_開発参画/02_プロジェクトセットアップ.md`**:
 - L94 の `ringiflow_dev` → `ringiflow` に置換
 
 **3. `prompts/recipes/Lightsailデプロイ_IPv6.md`**:

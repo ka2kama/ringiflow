@@ -57,7 +57,7 @@
 
 ### Story 1: API テスト突合表を最新の OpenAPI に同期する
 
-対象: `docs/50_テスト/APIテスト突合表.md`
+対象: `docs/08_テスト/APIテスト突合表.md`
 
 スコープ:
 - 37 全エンドポイントをリストし、Hurl テストの有無を記載
@@ -150,7 +150,7 @@ POST /users（CSRF なし）→ 403
 | `tests/api/hurl/workflow/create_workflow.hurl` | 書込系テストの参照パターン |
 | `tests/api/hurl/user/list_users.hurl` | ユーザー系テストの参照パターン |
 | `.claude/rules/api-test.md` | アサーション方針（決定性ベース） |
-| `docs/50_テスト/APIテスト突合表.md` | 更新対象 |
+| `docs/08_テスト/APIテスト突合表.md` | 更新対象 |
 
 ## ブラッシュアップループの記録
 

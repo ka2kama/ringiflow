@@ -30,8 +30,8 @@ MCP サーバーによるリアルタイムアクセスと、justfile コマン�
 | `.mcp.json` | 新規作成 | PostgreSQL MCP サーバー設定 |
 | `justfile` | 編集 | データストア操作セクション追加（5コマンド） |
 | `.claude/settings.json` | 編集 | 新 just コマンドの許可追加 |
-| `docs/70_ADR/028_MCPサーバー導入（PostgreSQL）.md` | 新規作成 | 技術選定の記録 |
-| `docs/70_ADR/009_MCPサーバー導入の見送り.md` | 編集 | ステータスを「廃止」に更新 |
+| `docs/05_ADR/028_MCPサーバー導入（PostgreSQL）.md` | 新規作成 | 技術選定の記録 |
+| `docs/05_ADR/009_MCPサーバー導入の見送り.md` | 編集 | ステータスを「廃止」に更新 |
 | `CLAUDE.md` | 編集 | データストア操作セクション追加 |
 
 ## Step 1: `.mcp.json` を作成
@@ -104,7 +104,7 @@ redis-get key:
 
 ## Step 4: ADR-028 を作成
 
-ファイル: `docs/70_ADR/028_MCPサーバー導入（PostgreSQL）.md`
+ファイル: `docs/05_ADR/028_MCPサーバー導入（PostgreSQL）.md`
 
 - ADR テンプレート（`template.md`）に準拠
 - ADR-009 を置換する決定を記録

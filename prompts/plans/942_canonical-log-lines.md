@@ -97,8 +97,8 @@ axum の `.layer()` 記法（下が外側）:
 | `backend/apps/core-service/src/main.rs` | 同上 |
 | `backend/apps/auth-service/src/main.rs` | 同上 |
 | `backend/apps/bff/src/error.rs` | `authenticate()` に `record_user_id` 呼び出し追加 |
-| `docs/80_ナレッジベース/backend/log-schema.md` | Canonical Log Line フィールドスキーマ追加 |
-| `docs/40_詳細設計書/14_Observability設計.md` | Canonical Log Line セクション追加、コンポーネント図更新 |
+| `docs/06_ナレッジベース/backend/log-schema.md` | Canonical Log Line フィールドスキーマ追加 |
+| `docs/03_詳細設計書/14_Observability設計.md` | Canonical Log Line セクション追加、コンポーネント図更新 |
 
 ## 対象外
 
@@ -198,8 +198,8 @@ API テスト（該当なし）
 E2E テスト（該当なし）
 
 更新内容:
-- `docs/80_ナレッジベース/backend/log-schema.md`: Canonical Log Line フィールドセクション追加、jq クエリ例追加
-- `docs/40_詳細設計書/14_Observability設計.md`: Canonical Log Line セクション追加、ファイル構成更新
+- `docs/06_ナレッジベース/backend/log-schema.md`: Canonical Log Line フィールドセクション追加、jq クエリ例追加
+- `docs/03_詳細設計書/14_Observability設計.md`: Canonical Log Line セクション追加、ファイル構成更新
 
 ---
 

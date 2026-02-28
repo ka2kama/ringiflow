@@ -4,8 +4,8 @@
 
 ### 対象
 
-- `docs/40_詳細設計書/14_Observability設計.md` — 「ログポリシー」セクション新設（7 項目の判断基準）
-- `docs/80_ナレッジベース/backend/log-schema.md` — 「メッセージ書き方ガイドライン」セクション追加
+- `docs/03_詳細設計書/14_Observability設計.md` — 「ログポリシー」セクション新設（7 項目の判断基準）
+- `docs/06_ナレッジベース/backend/log-schema.md` — 「メッセージ書き方ガイドライン」セクション追加
 
 ### 対象外
 
@@ -41,7 +41,7 @@ Mermaid flowchart で表現する。既存のログレベルガイドライン�
 
 #### 確認事項
 
-- パターン: Observability 設計書の構造・文体 → `docs/40_詳細設計書/14_Observability設計.md`
+- パターン: Observability 設計書の構造・文体 → `docs/03_詳細設計書/14_Observability設計.md`
 - パターン: 既存のログレベルガイドライン（重複回避） → 同ファイル line 164-174
 - パターン: 既存の計装設計（整合性） → 同ファイル line 222-
 
@@ -58,7 +58,7 @@ E2E テスト（該当なし）
 
 #### 確認事項
 
-- パターン: 既存のログスキーマの構造 → `docs/80_ナレッジベース/backend/log-schema.md`
+- パターン: 既存のログスキーマの構造 → `docs/06_ナレッジベース/backend/log-schema.md`
 - パターン: 実際のログメッセージ使用例 → `backend/apps/` 配下の `tracing::info!`, `tracing::error!` 呼び出し
 
 #### 操作パス: 該当なし（操作パスが存在しない）

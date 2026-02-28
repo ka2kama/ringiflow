@@ -16,7 +16,7 @@ CI YAML と justfile 内のインラインシェルスクリプトに対して�
 |---------|---------|
 | `justfile` | `check-tools` に actionlint 追加、`lint-ci` タスク新設 |
 | `.github/workflows/ci.yml` | `shell` ジョブで actionlint も実行 |
-| `docs/60_手順書/01_開発参画/01_開発環境構築.md` | actionlint インストール手順追加 |
+| `docs/04_手順書/01_開発参画/01_開発環境構築.md` | actionlint インストール手順追加 |
 
 ### 2. justfile 内シェルスクリプトの外部化
 

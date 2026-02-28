@@ -13,7 +13,7 @@
 - `justfile` L274 — `-- -D warnings` 削除
 - `.github/workflows/ci.yaml` L121 — `-- -D warnings` 削除
 - `.claude/rules/rust.md` — 「関数内スタイル」セクション追加
-- `docs/70_ADR/057_workspace-lintsによるlint管理の標準化.md` — 新規
+- `docs/05_ADR/057_workspace-lintsによるlint管理の標準化.md` — 新規
 - 既存 Rust ソースファイル — 新 lint 違反の修正
 
 ## 対象外
@@ -47,7 +47,7 @@ all = { level = "deny", priority = -1 }
 - パターン: justfile clippy コマンド → `justfile` L274: `cargo clippy {{ _cargo_q }} --all-targets --all-features -- -D warnings`
 
 ### 変更ファイル
-1. `docs/70_ADR/057_workspace-lintsによるlint管理の標準化.md`（新規）
+1. `docs/05_ADR/057_workspace-lintsによるlint管理の標準化.md`（新規）
 2. `backend/Cargo.toml` — `[workspace.lints.clippy]` セクション追加
 3. `backend/apps/bff/Cargo.toml` — `[lints] workspace = true` 追加
 4. `backend/apps/core-service/Cargo.toml` — `[lints] workspace = true` 追加

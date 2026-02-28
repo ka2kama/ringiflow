@@ -1,11 +1,11 @@
 # 技術ノート・学習ノート統合計画
 
-`docs/06_技術ノート/` と `docs/08_学習ノート/` を統合し、カテゴリ別サブディレクトリで管理する `docs/80_ナレッジベース/` を構築する。
+`docs/06_技術ノート/` と `docs/08_学習ノート/` を統合し、カテゴリ別サブディレクトリで管理する `docs/06_ナレッジベース/` を構築する。
 
 ## カテゴリ構成
 
 ```
-docs/80_ナレッジベース/
+docs/06_ナレッジベース/
 ├── README.md
 ├── rust/          (4)  Cargoワークスペース, Newtype, エラーハンドリング, sqlx-cli
 ├── elm/           (5)  アーキテクチャ, ポート, ルーティング, NestedTEA, TEAメインループ(←学習ノート)
@@ -23,14 +23,14 @@ docs/80_ナレッジベース/
 
 ### Step 1: git mv でファイル移動
 
-1. `mkdir -p docs/80_ナレッジベース/{rust,elm,frontend,infra,architecture,security,devtools,english}`
+1. `mkdir -p docs/06_ナレッジベース/{rust,elm,frontend,infra,architecture,security,devtools,english}`
 2. 各カテゴリへ `git mv`（ファイル名は変更しない。唯一の例外: `01_Elm_TEAメインループ.md` → `Elm_TEAメインループ.md`（連番プレフィクス除去））
-3. `docs/06_技術ノート/README.md` → `docs/80_ナレッジベース/README.md`
+3. `docs/06_技術ノート/README.md` → `docs/06_ナレッジベース/README.md`
 4. 空ディレクトリ削除: `docs/06_技術ノート/`, `docs/08_学習ノート/`
 
 ### Step 2: README.md を書き換え
 
-`docs/80_ナレッジベース/README.md`:
+`docs/06_ナレッジベース/README.md`:
 - タイトル・概要を「ナレッジベース」に更新
 - カテゴリ一覧セクションを新設
 - ADR との違いテーブルは維持（名称のみ変更）
@@ -40,15 +40,15 @@ docs/80_ナレッジベース/
 ### Step 3: コードベース全体の参照更新
 
 #### ソースコード（6 ファイル）
-- `backend/crates/infra/src/session.rs` — `06_技術ノート/Redis.md` → `80_ナレッジベース/infra/Redis.md`
-- `backend/crates/infra/src/password.rs` — `06_技術ノート/パスワードハッシュ.md` → `80_ナレッジベース/security/パスワードハッシュ.md`
-- `backend/apps/bff/src/dev_auth.rs` — `06_技術ノート/DevAuth.md` → `80_ナレッジベース/security/DevAuth.md`
-- `frontend/src/main.js` — `06_技術ノート/DevAuth.md` → `80_ナレッジベース/security/DevAuth.md`
-- `scripts/generate-env.sh` — `06_技術ノート/DevAuth.md` → `80_ナレッジベース/security/DevAuth.md`
-- `.github/workflows/ci.yaml` — `06_技術ノート/GitHubActions.md` → `80_ナレッジベース/devtools/GitHubActions.md`
+- `backend/crates/infra/src/session.rs` — `06_技術ノート/Redis.md` → `06_ナレッジベース/infra/Redis.md`
+- `backend/crates/infra/src/password.rs` — `06_技術ノート/パスワードハッシュ.md` → `06_ナレッジベース/security/パスワードハッシュ.md`
+- `backend/apps/bff/src/dev_auth.rs` — `06_技術ノート/DevAuth.md` → `06_ナレッジベース/security/DevAuth.md`
+- `frontend/src/main.js` — `06_技術ノート/DevAuth.md` → `06_ナレッジベース/security/DevAuth.md`
+- `scripts/generate-env.sh` — `06_技術ノート/DevAuth.md` → `06_ナレッジベース/security/DevAuth.md`
+- `.github/workflows/ci.yaml` — `06_技術ノート/GitHubActions.md` → `06_ナレッジベース/devtools/GitHubActions.md`
 
-#### 古いパス修正（`05_技術ノート` → `80_ナレッジベース/<カテゴリ>`、4 ファイル）
-- `frontend/vite.config.js` — `05_技術ノート/Vite.md` → `80_ナレッジベース/frontend/Vite.md`
+#### 古いパス修正（`05_技術ノート` → `06_ナレッジベース/<カテゴリ>`、4 ファイル）
+- `frontend/vite.config.js` — `05_技術ノート/Vite.md` → `06_ナレッジベース/frontend/Vite.md`
 - `frontend/src/Main.elm` (2箇所) — `05_技術ノート/Elmアーキテクチャ.md`, `05_技術ノート/Elmポート.md`
 - `frontend/src/Ports.elm` — `05_技術ノート/Elmポート.md`
 
@@ -56,9 +56,9 @@ docs/80_ナレッジベース/
 - `CLAUDE.md` — パスリンク 4箇所 + テキスト「技術ノート」→「ナレッジベース」3箇所 + ドキュメント体系テーブルから `08_学習ノート` 行を削除
 - `README.md`（ルート） — ドキュメント体系テーブル + ディレクトリツリー
 - `.claude/rules/code-comments.md` — パス例 3箇所 + テキスト 2箇所
-- `.claude/rules/rust.md` — `06_技術ノート/sqlx-cli.md` → `80_ナレッジベース/rust/sqlx-cli.md`
+- `.claude/rules/rust.md` — `06_技術ノート/sqlx-cli.md` → `06_ナレッジベース/rust/sqlx-cli.md`
 - `.claude/settings.json` — テキスト「技術ノート」→「ナレッジベース」
-- `.claude/skills/walkthrough/SKILL.md` — `08_学習ノート` → `80_ナレッジベース` + 説明文更新
+- `.claude/skills/walkthrough/SKILL.md` — `08_学習ノート` → `06_ナレッジベース` + 説明文更新
 
 #### docs 配下ドキュメント + README（多数）
 - 設計書、ADR、手順書、実装解説内の技術ノートパス参照を一括更新
@@ -90,5 +90,5 @@ just check-all
 | `CLAUDE.md` | ドキュメント体系の定義、パスリンク、テキスト言及が集中 |
 | `.claude/skills/walkthrough/SKILL.md` | 学習ノートパスの変更 + 説明文の整合性 |
 | `.claude/rules/code-comments.md` | コードコメント規約内のパス例 |
-| `docs/80_ナレッジベース/README.md` | 新 README への書き換え |
+| `docs/06_ナレッジベース/README.md` | 新 README への書き換え |
 | `README.md`（ルート） | ドキュメント体系テーブル |

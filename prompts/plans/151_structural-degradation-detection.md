@@ -48,20 +48,20 @@ ADR-038 作成 → ツール導入 → justfile 統合 → CI 統合
 - パターン: `lint-rust` レシピの構造 → `justfile` L217-219
 - パターン: `check-tools` のツール確認パターン → `justfile` L28-49
 - パターン: `rust` ジョブのステップ構成 → `.github/workflows/ci.yaml` L58-112
-- パターン: ADR フォーマット → `docs/70_ADR/template.md`
-- パターン: 開発環境構築の記載形式 → `docs/60_手順書/01_開発参画/01_開発環境構築.md`
+- パターン: ADR フォーマット → `docs/05_ADR/template.md`
+- パターン: 開発環境構築の記載形式 → `docs/04_手順書/01_開発参画/01_開発環境構築.md`
 - ライブラリ: cargo-machete の CLI オプション → `cargo machete --help`（ローカルインストール後に確認）
 
 #### 変更対象ファイル
 
-1. `docs/70_ADR/038_未使用依存検出ツールの選定.md` — 新規作成（cargo-machete vs cargo-udeps）
+1. `docs/05_ADR/038_未使用依存検出ツールの選定.md` — 新規作成（cargo-machete vs cargo-udeps）
 2. `justfile` — 変更:
    - `check-tools` に `cargo-machete` を追加
    - `check-unused-deps` レシピを追加
    - `lint` に `check-unused-deps` を追加
 3. `.github/workflows/ci.yaml` — 変更:
    - `rust` ジョブに `cargo-machete` インストール + 実行ステップを追加
-4. `docs/60_手順書/01_開発参画/01_開発環境構築.md` — セクション追加（cargo-machete）
+4. `docs/04_手順書/01_開発参画/01_開発環境構築.md` — セクション追加（cargo-machete）
 5. `backend/Cargo.toml` — 偽陽性があれば `[workspace.metadata.cargo-machete]` 追加
 
 #### テストリスト
@@ -102,7 +102,7 @@ ADR-038 作成 → ツール導入 → justfile 統合 → CI 統合
 #### 確認事項
 - パターン: `.claude/rules/` ファイルの paths フロントマター → `.claude/rules/api.md` L1-6
 - パターン: CLAUDE.md からルールファイルへの参照方式 → CLAUDE.md 内の `→ 詳細:` パターン
-- パターン: 品質チェックリストの構造 → `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` L354-401
+- パターン: 品質チェックリストの構造 → `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` L354-401
 
 #### 変更対象ファイル
 
@@ -111,7 +111,7 @@ ADR-038 作成 → ツール導入 → justfile 統合 → CI 統合
    - ファイルサイズ閾値の指針（500 行超で分割検討）
    - Phase 完了時の構造確認（`just check-unused-deps` + `just check-file-size`）
 2. `CLAUDE.md` — 変更: 構造レビュー指針への参照を追加
-3. `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` — 変更: 品質チェックリストに構造確認項目を追加
+3. `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` — 変更: 品質チェックリストに構造確認項目を追加
 
 #### テストリスト
 - [ ] `.claude/rules/structural-review.md` が paths フロントマター付きで作成されている
@@ -126,7 +126,7 @@ ADR-038 作成 → ツール導入 → justfile 統合 → CI 統合
 
 #### 変更対象ファイル
 
-1. `docs/70_ADR/README.md` — 変更: ADR-038 を一覧に追加
+1. `docs/05_ADR/README.md` — 変更: ADR-038 を一覧に追加
 2. Issue #151 — チェックボックスを更新
 
 #### テストリスト

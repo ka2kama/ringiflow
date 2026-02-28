@@ -40,7 +40,7 @@ Python 版の出力形式を厳密に再現する。ワークフローが `conta
 | `.github/scripts/match-rules.rs` | 新規作成（Python 版の置き換え） |
 | `.github/scripts/match-rules.py` | 削除 |
 | `.github/workflows/claude-rules-check.yaml` | `python3` → `rust-script` に変更 + Rust セットアップ追加 |
-| `docs/70_ADR/056_CIスクリプトの言語選定方針.md` | 新規作成 |
+| `docs/05_ADR/056_CIスクリプトの言語選定方針.md` | 新規作成 |
 
 対象外: `backend/Cargo.toml`（ワークスペース変更なし）、`scripts/` 配下のシェルスクリプト
 
@@ -111,7 +111,7 @@ E2E テスト（該当なし）
 - パターン: CI の Rust ツールチェインセットアップ → `.github/workflows/ci.yaml` L76-79
 - パターン: sccache セットアップ → `ci.yaml` L88-89
 - パターン: cargo-binstall インストール → `ci.yaml` L103-104
-- テンプレート: ADR → `docs/70_ADR/template.md`
+- テンプレート: ADR → `docs/05_ADR/template.md`
 
 ### CI ワークフロー変更（`claude-rules-check.yaml`）
 

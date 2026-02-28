@@ -2,15 +2,15 @@
 
 ## Context
 
-AI ディレクティブ版（`.claude/rules/dev-flow-issue.md`, `dev-flow-tdd.md`）を作成済み。手順の詳細は AI 版が Single Source of Truth になった。人間向け手順書（`docs/60_手順書/04_開発フロー/`）に残る手順記述が AI 版と重複しており、二重管理になっている。
+AI ディレクティブ版（`.claude/rules/dev-flow-issue.md`, `dev-flow-tdd.md`）を作成済み。手順の詳細は AI 版が Single Source of Truth になった。人間向け手順書（`docs/04_手順書/04_開発フロー/`）に残る手順記述が AI 版と重複しており、二重管理になっている。
 
 手順書を教育資料に特化させる: 重複する手順記述を要約 + AI 版リンクに置き換え、教育コンテンツ（Why の解説、Mermaid 図、良い例/悪い例、既知手法との対応、参考資料）を維持する。
 
 ## スコープ
 
 **対象:**
-- `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md`
-- `docs/60_手順書/04_開発フロー/02_TDD開発フロー.md`
+- `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md`
+- `docs/04_手順書/04_開発フロー/02_TDD開発フロー.md`
 
 **対象外:**
 - `.claude/rules/dev-flow-*.md`（変更しない）

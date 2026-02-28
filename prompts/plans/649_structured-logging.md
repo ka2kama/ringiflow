@@ -168,7 +168,7 @@ tracing-subscriber = { workspace = true, optional = true }
 | `backend/apps/auth-service/Cargo.toml` | 同上 |
 | `backend/.env.template` | LOG_FORMAT 追記 |
 | `backend/.env.api-test.template` | LOG_FORMAT 追記 |
-| `docs/70_ADR/049_...md` | 補遺: クローン2の判断変更を記録 |
+| `docs/05_ADR/049_...md` | 補遺: クローン2の判断変更を記録 |
 
 ## Phase 分割
 

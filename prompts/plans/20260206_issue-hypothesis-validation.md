@@ -16,7 +16,7 @@ Issue 駆動開発フローに「Issue 精査」を追加し、問題解決フ�
 
 | # | ファイル | 変更内容 |
 |---|---------|---------|
-| 1 | `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` | 概要に前提を追加、Step 1 に精査プロセスを追加、Mermaid 図を更新 |
+| 1 | `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` | 概要に前提を追加、Step 1 に精査プロセスを追加、Mermaid 図を更新 |
 | 2 | `.claude/rules/problem-solving.md` | 適用場面セクションを追加（Issue 着手時を明記） |
 | 3 | `CLAUDE.md` | 簡略フローの Step 1 に精査を反映 |
 | 4 | `prompts/improvements/2026-02/` | 改善記録を作成 |

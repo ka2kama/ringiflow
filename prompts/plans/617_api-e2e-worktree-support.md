@@ -19,7 +19,7 @@ dev-deps の動的化パターンを api-test-deps に横展開する。
 - `scripts/run-e2e-tests.sh` — ポートを環境変数から取得
 - `tests/api/hurl/vars.env` — `bff_url` を `--variable` で動的上書き
 - `.github/workflows/ci.yaml` — `setup-env` 追加＋ハードコード排除
-- `docs/60_手順書/04_開発フロー/04_並行開発（Worktree）.md` — テスト実行の注意事項追記
+- `docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md` — テスト実行の注意事項追記
 
 ## 対象外
 
@@ -264,7 +264,7 @@ E2E テスト（該当なし）
 
 ### 変更内容
 
-1. `docs/60_手順書/04_開発フロー/04_並行開発（Worktree）.md`:
+1. `docs/04_手順書/04_開発フロー/04_並行開発（Worktree）.md`:
    - 「テスト実行」セクションを追加
    - ポートオフセット表に API テスト用ポートを追加
    - `just test-api` / `just test-e2e` が worktree 間で独立して実行できることを説明

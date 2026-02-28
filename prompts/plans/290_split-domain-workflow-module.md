@@ -66,7 +66,7 @@ definition.rs ←(WorkflowDefinitionId)─ instance.rs ←(WorkflowInstanceId)�
 
 ### Phase 1: ADR-039 作成
 
-`docs/70_ADR/039_ワークフローモジュールの分割方針.md` を作成。
+`docs/05_ADR/039_ワークフローモジュールの分割方針.md` を作成。
 
 確認事項: なし（ADR-038 のフォーマットを踏襲）
 
@@ -152,4 +152,4 @@ just check-file-size    # 閾値確認
 | `backend/crates/domain/src/workflow.rs` | 分割元（1665行 → ~50行の親モジュール） |
 | `backend/crates/domain/src/lib.rs` | 変更なし（`pub mod workflow;`） |
 | `backend/apps/core-service/src/handler.rs` | 参照パターン（`handler.rs` + `handler/`） |
-| `docs/70_ADR/038_未使用依存検出ツールの選定.md` | ADR フォーマット参照 |
+| `docs/05_ADR/038_未使用依存検出ツールの選定.md` | ADR フォーマット参照 |

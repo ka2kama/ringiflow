@@ -2,7 +2,7 @@
 
 ## Context
 
-`scripts/check/impl-docs.sh`（83行）は実装解説ドキュメント（`docs/90_実装解説/`）のファイル命名規則をチェックするスクリプト。Bash 4+ の連想配列（`declare -A`）と `BASH_REMATCH` による正規表現キャプチャに依存しており、ADR-015 の移行基準に該当する。
+`scripts/check/impl-docs.sh`（83行）は実装解説ドキュメント（`docs/07_実装解説/`）のファイル命名規則をチェックするスクリプト。Bash 4+ の連想配列（`declare -A`）と `BASH_REMATCH` による正規表現キャプチャに依存しており、ADR-015 の移行基準に該当する。
 
 先行移行（#834 instrumentation.rs, #835 improvement-records.rs）でパターンが確立されているため、そのパターンに従って移行する。
 
@@ -29,7 +29,7 @@ improvement-records.rs は文字列操作で十分だったため regex 不採�
 
 ### glob クレートでファイル探索
 
-improvement-records.rs と同じパターン。`docs/90_実装解説/` は `.gitignore` を考慮する必要がないため `glob` が適切。
+improvement-records.rs と同じパターン。`docs/07_実装解説/` は `.gitignore` を考慮する必要がないため `glob` が適切。
 
 ### 構造: validate_dir 純粋関数
 
@@ -160,4 +160,4 @@ E2E テスト（該当なし）
 | 3 | 設計判断の完結性 | 全ての差異に判断が記載 | OK | regex 採用、glob 採用、validate_dir 設計を記載 |
 | 4 | スコープ境界 | 対象と対象外が両方明記 | OK | 対象・対象外セクションあり |
 | 5 | 技術的前提 | 前提が考慮されている | OK | regex クレートの API、glob パターンを確認 |
-| 6 | 既存ドキュメント整合 | 矛盾がない | OK | docs/90_実装解説/README.md の命名規則と整合 |
+| 6 | 既存ドキュメント整合 | 矛盾がない | OK | docs/07_実装解説/README.md の命名規則と整合 |

@@ -107,7 +107,7 @@ PR 状態とレビュー結果を表示し、`/review-and-merge` の実行を案
 ## 参照ファイル
 
 - `.claude/skills/start/SKILL.md` — 変更対象
-- `docs/60_手順書/04_開発フロー/01_Issue駆動開発.md` — Issue 精査、ブランチ作成、Draft PR 作成の手順
+- `docs/04_手順書/04_開発フロー/01_Issue駆動開発.md` — Issue 精査、ブランチ作成、Draft PR 作成の手順
 - `.github/pull_request_template.md` — PR テンプレート
 - `prompts/recipes/worktree環境でのブランチ作成.md` — worktree でのブランチ作成パターン
 - `scripts/worktree/issue.sh` — Issue タイトルからスラッグ生成のロジック

@@ -72,7 +72,7 @@ Core Service Handler も同様にユニットテスト不要:
 
 変更ファイル:
 - `justfile` — `coverage` タスク追加、`check-tools` に cargo-llvm-cov 追加
-- `docs/60_手順書/01_開発参画/01_開発環境構築.md` — ツール一覧に追記
+- `docs/04_手順書/01_開発参画/01_開発環境構築.md` — ツール一覧に追記
 
 ### Phase 2: Domain エッジケーステスト追加
 
@@ -159,7 +159,7 @@ mod workflow_step {
 ### Phase 3: API テスト ↔ OpenAPI 突合表
 
 変更ファイル:
-- `docs/40_詳細設計書/API_テスト突合表.md` — 新規作成
+- `docs/03_詳細設計書/API_テスト突合表.md` — 新規作成
 
 内容:
 
