@@ -58,6 +58,7 @@ impl IntoResponse for CoreError {
                 tracing::error!(
                     error.category = "infrastructure",
                     error.kind = "database",
+                    error.span_trace = %e.span_trace(),
                     "データベースエラー: {}",
                     e
                 );
@@ -67,9 +68,11 @@ impl IntoResponse for CoreError {
                 )
             }
             CoreError::Internal(msg) => {
+                let span_trace = tracing_error::SpanTrace::capture();
                 tracing::error!(
                     error.category = "infrastructure",
                     error.kind = "internal",
+                    error.span_trace = %span_trace,
                     "内部エラー: {}",
                     msg
                 );

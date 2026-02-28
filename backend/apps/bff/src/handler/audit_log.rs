@@ -171,7 +171,7 @@ pub async fn list_audit_logs(
             Err(validation_error_response("カーソルの形式が不正です"))
         }
         Err(e) => {
-            tracing::error!("監査ログの検索に失敗: {}", e);
+            tracing::error!(error.span_trace = %e.span_trace(), "監査ログの検索に失敗: {}", e);
             Err(internal_error_response())
         }
     }
