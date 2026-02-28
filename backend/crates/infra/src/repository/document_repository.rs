@@ -365,7 +365,7 @@ impl DocumentRepository for PostgresDocumentRepository {
                 deleted_at
             FROM documents
             WHERE folder_id = $1 AND tenant_id = $2 AND status = 'active'
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id ASC
             "#,
             folder_id.as_uuid(),
             tenant_id.as_uuid()
@@ -419,7 +419,7 @@ impl DocumentRepository for PostgresDocumentRepository {
                 deleted_at
             FROM documents
             WHERE workflow_instance_id = $1 AND tenant_id = $2 AND status = 'active'
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id ASC
             "#,
             workflow_instance_id.as_uuid(),
             tenant_id.as_uuid()

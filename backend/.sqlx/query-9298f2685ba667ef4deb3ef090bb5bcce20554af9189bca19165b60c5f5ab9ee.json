@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT\n                id,\n                tenant_id as \"tenant_id!\",\n                filename as \"filename!\",\n                content_type as \"content_type!\",\n                size as \"size!\",\n                s3_key as \"s3_key!\",\n                folder_id,\n                workflow_instance_id,\n                status as \"status!\",\n                uploaded_by,\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\",\n                deleted_at\n            FROM documents\n            WHERE workflow_instance_id = $1 AND tenant_id = $2 AND status = 'active'\n            ORDER BY created_at DESC\n            ",
+  "query": "\n            SELECT\n                id,\n                tenant_id as \"tenant_id!\",\n                filename as \"filename!\",\n                content_type as \"content_type!\",\n                size as \"size!\",\n                s3_key as \"s3_key!\",\n                folder_id,\n                workflow_instance_id,\n                status as \"status!\",\n                uploaded_by,\n                created_at as \"created_at!\",\n                updated_at as \"updated_at!\",\n                deleted_at\n            FROM documents\n            WHERE folder_id = $1 AND tenant_id = $2 AND status = 'active'\n            ORDER BY created_at DESC, id ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -91,5 +91,5 @@
       true
     ]
   },
-  "hash": "fd159b3bdbc14a663dd4233651356d2859cb4323d45b3b79e345f313f183ddee"
+  "hash": "9298f2685ba667ef4deb3ef090bb5bcce20554af9189bca19165b60c5f5ab9ee"
 }
