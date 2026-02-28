@@ -20,6 +20,7 @@
 
 use std::fmt;
 
+use derive_more::Display;
 use thiserror::Error;
 use tracing_error::SpanTrace;
 
@@ -39,6 +40,8 @@ use tracing_error::SpanTrace;
 ///     _ => { /* その他 */ }
 /// }
 /// ```
+#[derive(Display)]
+#[display("{kind}")]
 pub struct InfraError {
     kind:       InfraErrorKind,
     span_trace: SpanTrace,
@@ -192,12 +195,6 @@ impl InfraError {
 
 // ===== トレイト実装 =====
 
-impl fmt::Display for InfraError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.kind, f)
-    }
-}
-
 impl fmt::Debug for InfraError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("InfraError")
@@ -270,6 +267,24 @@ mod tests {
             let trace_str = format!("{}", err.span_trace());
             assert!(
                 trace_str.contains("test_repo"),
+                "SpanTrace がスパン名を含むこと: {trace_str}",
+            );
+        });
+    }
+
+    #[test]
+    fn test_from_redis_errorでspan_traceがキャプチャされる() {
+        with_error_layer(|| {
+            let span = tracing::info_span!("test_redis");
+            let _enter = span.enter();
+
+            let redis_err: redis::RedisError = (redis::ErrorKind::Io, "接続失敗").into();
+            let err: InfraError = redis_err.into();
+
+            assert!(matches!(err.kind(), InfraErrorKind::Redis(_)));
+            let trace_str = format!("{}", err.span_trace());
+            assert!(
+                trace_str.contains("test_redis"),
                 "SpanTrace がスパン名を含むこと: {trace_str}",
             );
         });
