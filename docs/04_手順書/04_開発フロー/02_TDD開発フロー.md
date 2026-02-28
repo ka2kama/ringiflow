@@ -482,7 +482,7 @@ flowchart TD
     F --> G{"テストリスト<br/>完了？"}
     G -->|No| C
     G -->|Yes| H["統合テストで動作確認"]
-    H --> J["just check-all<br/>（E2E テスト含む）"]
+    H --> J["just check<br/>（lint + テスト + 統合テスト）"]
     J --> I["PR 作成"]
 ```
 
