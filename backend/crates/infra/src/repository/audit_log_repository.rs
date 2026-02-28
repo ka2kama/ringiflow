@@ -332,7 +332,7 @@ fn convert_item_to_audit_log(
         source_ip,
         ttl,
     )
-    .map_err(|e| InfraError::dynamo_db(e))
+    .map_err(InfraError::dynamo_db)
 }
 
 /// DynamoDB アイテムから文字列属性を取得する
