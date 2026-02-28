@@ -50,7 +50,7 @@ Epic #405（ワークフローデザイナー）の Story #724。テナント管
 | `frontend/src/Route.elm` | `WorkflowDefinitions` ルート追加 |
 | `frontend/src/Main.elm` | ページ統合（Page/Msg/update/view/等） |
 | `frontend/src/Component/Icons.elm` | ワークフロー定義アイコン追加 |
-| `docs/50_テスト/E2Eテスト突合表.md` | E2E テスト突合表更新 |
+| `docs/08_テスト/E2Eテスト突合表.md` | E2E テスト突合表更新 |
 
 ## 実装計画
 

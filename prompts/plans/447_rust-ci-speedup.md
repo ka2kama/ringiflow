@@ -67,7 +67,7 @@ CI の安定性を優先する。
 | ファイル | 変更内容 |
 |---------|---------|
 | `.github/workflows/ci.yaml` | cargo-binstall 導入、sccache 追加、cache 調整 |
-| `docs/80_ナレッジベース/devtools/GitHubActions.md` | 許可設定テーブルに sccache-action を追加 |
+| `docs/06_ナレッジベース/devtools/GitHubActions.md` | 許可設定テーブルに sccache-action を追加 |
 
 ## Phase 1: cargo-binstall の導入
 
@@ -199,7 +199,7 @@ CI 検証:
 
 **ナレッジベース更新:**
 
-`docs/80_ナレッジベース/devtools/GitHubActions.md` の許可設定テーブルに追加:
+`docs/06_ナレッジベース/devtools/GitHubActions.md` の許可設定テーブルに追加:
 ```
 | `mozilla-actions/sccache-action@*` | Rust コンパイルキャッシュ |
 ```
