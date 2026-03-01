@@ -215,13 +215,13 @@ flowchart TB
 ### 1. テストが容易
 
 ```rust
-// ドメイン層のテスト（モックを使用）
-struct MockUserRepository {
+// ドメイン層のテスト（Fake を使用）
+struct FakeUserRepository {
     users: Vec<User>,
 }
 
 #[async_trait::async_trait]
-impl UserRepository for MockUserRepository {
+impl UserRepository for FakeUserRepository {
     async fn find_by_id(&self, id: UserId) -> Result<Option<User>, DomainError> {
         Ok(self.users.iter().find(|u| u.id == id).cloned())
     }
@@ -229,7 +229,7 @@ impl UserRepository for MockUserRepository {
 
 #[tokio::test]
 async fn test_user_service() {
-    let repo = MockUserRepository { users: vec![...] };
+    let repo = FakeUserRepository { users: vec![...] };
     let service = UserService::new(Arc::new(repo));
     // テスト
 }
