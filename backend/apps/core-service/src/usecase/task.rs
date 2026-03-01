@@ -241,7 +241,7 @@ mod tests {
         },
     };
     use ringiflow_infra::{
-        mock::{MockUserRepository, MockWorkflowInstanceRepository, MockWorkflowStepRepository},
+        fake::{FakeUserRepository, FakeWorkflowInstanceRepository, FakeWorkflowStepRepository},
         repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepositoryTestExt},
     };
 
@@ -254,8 +254,8 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // ワークフローインスタンスを作成
         let now = chrono::Utc::now();
@@ -312,7 +312,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -333,8 +333,8 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -370,7 +370,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -392,8 +392,8 @@ mod tests {
         let approver_id = UserId::new();
         let other_user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -429,7 +429,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act: 別のユーザーで取得
@@ -446,13 +446,13 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -470,8 +470,8 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -508,7 +508,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -529,13 +529,13 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act: 存在しない step_id で取得
@@ -555,8 +555,8 @@ mod tests {
         let approver_id = UserId::new();
         let other_user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -593,7 +593,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act: 別のユーザーで取得
@@ -612,8 +612,8 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let workflow_dn = DisplayNumber::new(42).unwrap();
@@ -652,7 +652,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -675,13 +675,13 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -704,8 +704,8 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let workflow_dn = DisplayNumber::new(42).unwrap();
@@ -726,7 +726,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act
@@ -751,8 +751,8 @@ mod tests {
         let approver_id = UserId::new();
         let other_user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let workflow_dn = DisplayNumber::new(42).unwrap();
@@ -791,7 +791,7 @@ mod tests {
         let sut = TaskUseCaseImpl::new(
             Arc::new(instance_repo),
             Arc::new(step_repo),
-            Arc::new(MockUserRepository::new()),
+            Arc::new(FakeUserRepository::new()),
         );
 
         // Act

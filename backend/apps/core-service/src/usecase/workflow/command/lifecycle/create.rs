@@ -121,16 +121,16 @@ mod tests {
         },
     };
     use ringiflow_infra::{
-        mock::{
-            MockDisplayIdCounterRepository,
-            MockNotificationLogRepository,
-            MockNotificationSender,
-            MockTransactionManager,
-            MockUserRepository,
-            MockWorkflowCommentRepository,
-            MockWorkflowDefinitionRepository,
-            MockWorkflowInstanceRepository,
-            MockWorkflowStepRepository,
+        fake::{
+            FakeDisplayIdCounterRepository,
+            FakeNotificationLogRepository,
+            FakeNotificationSender,
+            FakeTransactionManager,
+            FakeUserRepository,
+            FakeWorkflowCommentRepository,
+            FakeWorkflowDefinitionRepository,
+            FakeWorkflowInstanceRepository,
+            FakeWorkflowStepRepository,
         },
         repository::WorkflowInstanceRepository,
     };
@@ -149,9 +149,9 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 公開済みの定義を追加
         let now = chrono::Utc::now();
@@ -168,9 +168,9 @@ mod tests {
         definition_repo.add_definition(published_definition.clone());
 
         let notification_service = Arc::new(NotificationService::new(
-            Arc::new(MockNotificationSender::new()),
+            Arc::new(FakeNotificationSender::new()),
             TemplateRenderer::new().unwrap(),
-            Arc::new(MockNotificationLogRepository::new()),
+            Arc::new(FakeNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
 
@@ -178,11 +178,11 @@ mod tests {
             definition_repo: Arc::new(definition_repo),
             instance_repo: Arc::new(instance_repo.clone()),
             step_repo: Arc::new(step_repo),
-            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
-            user_repo: Arc::new(MockUserRepository::new()),
-            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            comment_repo: Arc::new(FakeWorkflowCommentRepository::new()),
+            user_repo: Arc::new(FakeUserRepository::new()),
+            counter_repo: Arc::new(FakeDisplayIdCounterRepository::new()),
             clock: Arc::new(FixedClock::new(now)),
-            tx_manager: Arc::new(MockTransactionManager),
+            tx_manager: Arc::new(FakeTransactionManager),
             notification_service,
         });
 
@@ -228,16 +228,16 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
 
         let notification_service = Arc::new(NotificationService::new(
-            Arc::new(MockNotificationSender::new()),
+            Arc::new(FakeNotificationSender::new()),
             TemplateRenderer::new().unwrap(),
-            Arc::new(MockNotificationLogRepository::new()),
+            Arc::new(FakeNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
 
@@ -245,11 +245,11 @@ mod tests {
             definition_repo: Arc::new(definition_repo),
             instance_repo: Arc::new(instance_repo),
             step_repo: Arc::new(step_repo),
-            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
-            user_repo: Arc::new(MockUserRepository::new()),
-            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            comment_repo: Arc::new(FakeWorkflowCommentRepository::new()),
+            user_repo: Arc::new(FakeUserRepository::new()),
+            counter_repo: Arc::new(FakeDisplayIdCounterRepository::new()),
             clock: Arc::new(FixedClock::new(now)),
-            tx_manager: Arc::new(MockTransactionManager),
+            tx_manager: Arc::new(FakeTransactionManager),
             notification_service,
         });
 

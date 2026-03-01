@@ -120,7 +120,7 @@ mod tests {
         },
     };
     use ringiflow_infra::{
-        mock::{MockWorkflowInstanceRepository, MockWorkflowStepRepository},
+        fake::{FakeWorkflowInstanceRepository, FakeWorkflowStepRepository},
         repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepositoryTestExt},
     };
 
@@ -132,8 +132,8 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -200,8 +200,8 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = Utc::now();
 
@@ -269,8 +269,8 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -321,8 +321,8 @@ mod tests {
         let tenant_id = TenantId::new();
         let user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let sut = DashboardUseCaseImpl::new(Arc::new(instance_repo), Arc::new(step_repo));
         let stats = sut.get_stats(tenant_id, user_id, Utc::now()).await.unwrap();
@@ -342,8 +342,8 @@ mod tests {
         let approver_id = UserId::new();
         let other_user_id = UserId::new();
 
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = Utc::now();
 

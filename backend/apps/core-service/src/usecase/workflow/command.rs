@@ -26,16 +26,16 @@ pub(super) mod test_helpers {
             WorkflowStepId,
         },
     };
-    use ringiflow_infra::mock::{
-        MockDisplayIdCounterRepository,
-        MockNotificationLogRepository,
-        MockNotificationSender,
-        MockTransactionManager,
-        MockUserRepository,
-        MockWorkflowCommentRepository,
-        MockWorkflowDefinitionRepository,
-        MockWorkflowInstanceRepository,
-        MockWorkflowStepRepository,
+    use ringiflow_infra::fake::{
+        FakeDisplayIdCounterRepository,
+        FakeNotificationLogRepository,
+        FakeNotificationSender,
+        FakeTransactionManager,
+        FakeUserRepository,
+        FakeWorkflowCommentRepository,
+        FakeWorkflowDefinitionRepository,
+        FakeWorkflowInstanceRepository,
+        FakeWorkflowStepRepository,
     };
 
     use crate::usecase::{
@@ -46,59 +46,59 @@ pub(super) mod test_helpers {
     /// SUT（WorkflowUseCaseImpl）を構築する
     ///
     /// テストで繰り返される構築ボイラープレートを共通化する。
-    /// Mock repos は参照で受け取り、内部で clone する（共有ステートが保持される）。
+    /// Fake repos は参照で受け取り、内部で clone する（共有ステートが保持される）。
     pub fn build_sut(
-        definition_repo: &MockWorkflowDefinitionRepository,
-        instance_repo: &MockWorkflowInstanceRepository,
-        step_repo: &MockWorkflowStepRepository,
+        definition_repo: &FakeWorkflowDefinitionRepository,
+        instance_repo: &FakeWorkflowInstanceRepository,
+        step_repo: &FakeWorkflowStepRepository,
         now: chrono::DateTime<chrono::Utc>,
     ) -> WorkflowUseCaseImpl {
         let notification_service = Arc::new(NotificationService::new(
-            Arc::new(MockNotificationSender::new()),
+            Arc::new(FakeNotificationSender::new()),
             TemplateRenderer::new().unwrap(),
-            Arc::new(MockNotificationLogRepository::new()),
+            Arc::new(FakeNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
         WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
             definition_repo: Arc::new(definition_repo.clone()),
             instance_repo: Arc::new(instance_repo.clone()),
             step_repo: Arc::new(step_repo.clone()),
-            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
-            user_repo: Arc::new(MockUserRepository::new()),
-            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            comment_repo: Arc::new(FakeWorkflowCommentRepository::new()),
+            user_repo: Arc::new(FakeUserRepository::new()),
+            counter_repo: Arc::new(FakeDisplayIdCounterRepository::new()),
             clock: Arc::new(FixedClock::new(now)),
-            tx_manager: Arc::new(MockTransactionManager),
+            tx_manager: Arc::new(FakeTransactionManager),
             notification_service,
         })
     }
 
     /// SUT を構築する（通知検証用）
     ///
-    /// `MockNotificationSender` を返すため、テスト側で `sent_emails()` を確認できる。
+    /// `FakeNotificationSender` を返すため、テスト側で `sent_emails()` を確認できる。
     /// ユーザー情報を返すモックを使用するため、通知のユーザー情報取得が成功する。
     pub fn build_sut_with_notification(
-        definition_repo: &MockWorkflowDefinitionRepository,
-        instance_repo: &MockWorkflowInstanceRepository,
-        step_repo: &MockWorkflowStepRepository,
+        definition_repo: &FakeWorkflowDefinitionRepository,
+        instance_repo: &FakeWorkflowInstanceRepository,
+        step_repo: &FakeWorkflowStepRepository,
         user_repo: Arc<dyn ringiflow_infra::repository::UserRepository>,
         now: chrono::DateTime<chrono::Utc>,
-    ) -> (WorkflowUseCaseImpl, MockNotificationSender) {
-        let sender = MockNotificationSender::new();
+    ) -> (WorkflowUseCaseImpl, FakeNotificationSender) {
+        let sender = FakeNotificationSender::new();
         let notification_service = Arc::new(NotificationService::new(
             Arc::new(sender.clone()),
             TemplateRenderer::new().unwrap(),
-            Arc::new(MockNotificationLogRepository::new()),
+            Arc::new(FakeNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
         let sut = WorkflowUseCaseImpl::new(WorkflowUseCaseDeps {
             definition_repo: Arc::new(definition_repo.clone()),
             instance_repo: Arc::new(instance_repo.clone()),
             step_repo: Arc::new(step_repo.clone()),
-            comment_repo: Arc::new(MockWorkflowCommentRepository::new()),
+            comment_repo: Arc::new(FakeWorkflowCommentRepository::new()),
             user_repo,
-            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            counter_repo: Arc::new(FakeDisplayIdCounterRepository::new()),
             clock: Arc::new(FixedClock::new(now)),
-            tx_manager: Arc::new(MockTransactionManager),
+            tx_manager: Arc::new(FakeTransactionManager),
             notification_service,
         });
         (sut, sender)

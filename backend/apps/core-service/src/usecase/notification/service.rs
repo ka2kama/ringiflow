@@ -141,13 +141,13 @@ impl NotificationService {
 #[cfg(test)]
 mod tests {
     use ringiflow_domain::user::UserId;
-    use ringiflow_infra::mock::{MockNotificationLogRepository, MockNotificationSender};
+    use ringiflow_infra::fake::{FakeNotificationLogRepository, FakeNotificationSender};
 
     use super::*;
 
     fn make_service(
-        sender: MockNotificationSender,
-        log_repo: MockNotificationLogRepository,
+        sender: FakeNotificationSender,
+        log_repo: FakeNotificationLogRepository,
     ) -> NotificationService {
         let template_renderer = TemplateRenderer::new().unwrap();
         NotificationService::new(
@@ -171,8 +171,8 @@ mod tests {
 
     #[tokio::test]
     async fn 送信成功時にlog_repoにstatus_sentで記録する() {
-        let sender = MockNotificationSender::new();
-        let log_repo = MockNotificationLogRepository::new();
+        let sender = FakeNotificationSender::new();
+        let log_repo = FakeNotificationLogRepository::new();
         let service = make_service(sender.clone(), log_repo.clone());
 
         let tenant_id = TenantId::new();
@@ -192,10 +192,10 @@ mod tests {
 
     #[tokio::test]
     async fn 送信失敗してもエラーを返さない() {
-        // MockNotificationSender は常に成功するため、このテストは
+        // FakeNotificationSender は常に成功するため、このテストは
         // service.notify() が Result ではなく () を返すことの確認
-        let sender = MockNotificationSender::new();
-        let log_repo = MockNotificationLogRepository::new();
+        let sender = FakeNotificationSender::new();
+        let log_repo = FakeNotificationLogRepository::new();
         let service = make_service(sender, log_repo);
 
         let tenant_id = TenantId::new();
@@ -209,8 +209,8 @@ mod tests {
 
     #[tokio::test]
     async fn mock_notification_senderが送信メッセージを記録する() {
-        let sender = MockNotificationSender::new();
-        let log_repo = MockNotificationLogRepository::new();
+        let sender = FakeNotificationSender::new();
+        let log_repo = FakeNotificationLogRepository::new();
         let service = make_service(sender.clone(), log_repo);
 
         let tenant_id = TenantId::new();

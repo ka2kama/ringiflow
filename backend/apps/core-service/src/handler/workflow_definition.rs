@@ -334,7 +334,7 @@ mod tests {
         value_objects::WorkflowName,
         workflow::{NewWorkflowDefinition, WorkflowDefinition, WorkflowDefinitionId},
     };
-    use ringiflow_infra::mock::MockWorkflowDefinitionRepository;
+    use ringiflow_infra::fake::FakeWorkflowDefinitionRepository;
     use serde_json::json;
     use tower::ServiceExt;
 
@@ -351,7 +351,7 @@ mod tests {
 
     fn create_test_app() -> (Router, TenantId) {
         let tid = tenant_id();
-        let repo = Arc::new(MockWorkflowDefinitionRepository::new());
+        let repo = Arc::new(FakeWorkflowDefinitionRepository::new());
         let clock = Arc::new(FixedClock::new(fixed_now()));
         let usecase = WorkflowDefinitionUseCaseImpl::new(repo, clock);
         let state = Arc::new(WorkflowDefinitionState { usecase });
@@ -386,7 +386,7 @@ mod tests {
 
     fn create_test_app_with_published() -> (Router, TenantId, WorkflowDefinitionId) {
         let tid = tenant_id();
-        let repo = Arc::new(MockWorkflowDefinitionRepository::new());
+        let repo = Arc::new(FakeWorkflowDefinitionRepository::new());
 
         // Published 定義を直接セットアップ
         let def = WorkflowDefinition::new(NewWorkflowDefinition {

@@ -318,7 +318,7 @@ mod tests {
         let usecase = FolderUseCaseImpl::new(
             repo_arc,
             Arc::new(StubClock) as Arc<dyn Clock>,
-            Arc::new(ringiflow_infra::mock::MockTransactionManager),
+            Arc::new(ringiflow_infra::fake::FakeTransactionManager),
         );
         let state = Arc::new(FolderState { usecase });
 

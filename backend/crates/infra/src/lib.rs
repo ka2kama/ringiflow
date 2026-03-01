@@ -54,7 +54,7 @@ pub mod deletion;
 pub mod dynamodb;
 pub mod error;
 #[cfg(any(test, feature = "test-utils"))]
-pub mod mock;
+pub mod fake;
 pub mod notification;
 pub mod password;
 pub mod redis;

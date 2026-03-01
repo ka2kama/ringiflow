@@ -93,11 +93,11 @@ mod tests {
         },
     };
     use ringiflow_infra::{
-        mock::{
-            MockUserRepository,
-            MockWorkflowDefinitionRepository,
-            MockWorkflowInstanceRepository,
-            MockWorkflowStepRepository,
+        fake::{
+            FakeUserRepository,
+            FakeWorkflowDefinitionRepository,
+            FakeWorkflowInstanceRepository,
+            FakeWorkflowStepRepository,
         },
         repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepositoryTestExt},
     };
@@ -120,9 +120,9 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -190,9 +190,9 @@ mod tests {
         let other_user_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
             id: WorkflowDefinitionId::new(),
@@ -261,9 +261,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
             id: WorkflowDefinitionId::new(),
@@ -331,9 +331,9 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let now = chrono::Utc::now();
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -396,9 +396,9 @@ mod tests {
         let (definition, instance, step1, step2) =
             setup_two_step_approval(&tenant_id, &user_id, &approver1_id, &approver2_id, now);
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         definition_repo.add_definition(definition);
         instance_repo.insert_for_test(&instance).await.unwrap();
@@ -476,9 +476,9 @@ mod tests {
         let step1_completed = step1.approve(None, now).unwrap();
         let step2_active = step2.activated(now);
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         definition_repo.add_definition(definition);
         instance_repo
@@ -545,9 +545,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let instance = WorkflowInstance::new(NewWorkflowInstance {
             id: WorkflowInstanceId::new(),
@@ -580,7 +580,7 @@ mod tests {
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
         // ユーザー情報をモックに登録
-        let user_repo = MockUserRepository::new();
+        let user_repo = FakeUserRepository::new();
         user_repo.add_user(User::new(
             user_id.clone(),
             tenant_id.clone(),
@@ -639,9 +639,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let instance = WorkflowInstance::new(NewWorkflowInstance {
             id: WorkflowInstanceId::new(),
@@ -673,8 +673,8 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        // ユーザー情報を登録しない（空の MockUserRepository）
-        let user_repo = MockUserRepository::new();
+        // ユーザー情報を登録しない（空の FakeUserRepository）
+        let user_repo = FakeUserRepository::new();
         let (sut, sender) = build_sut_with_notification(
             &definition_repo,
             &instance_repo,
