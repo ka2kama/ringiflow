@@ -1,6 +1,6 @@
-//! # テスト用モックリポジトリ
+//! # テスト用 Fake リポジトリ
 //!
-//! ユースケーステストで使用するインメモリモックリポジトリ。
+//! ユースケーステストで使用するインメモリ Fake リポジトリ。
 //! `test-utils` feature を有効にすることで、他クレートからも利用可能。
 //!
 //! ```toml
@@ -48,14 +48,14 @@ use crate::{
     },
 };
 
-// ===== MockWorkflowDefinitionRepository =====
+// ===== FakeWorkflowDefinitionRepository =====
 
 #[derive(Clone, Default)]
-pub struct MockWorkflowDefinitionRepository {
+pub struct FakeWorkflowDefinitionRepository {
     definitions: Arc<Mutex<Vec<WorkflowDefinition>>>,
 }
 
-impl MockWorkflowDefinitionRepository {
+impl FakeWorkflowDefinitionRepository {
     pub fn new() -> Self {
         Self {
             definitions: Arc::new(Mutex::new(Vec::new())),
@@ -68,7 +68,7 @@ impl MockWorkflowDefinitionRepository {
 }
 
 #[async_trait]
-impl WorkflowDefinitionRepository for MockWorkflowDefinitionRepository {
+impl WorkflowDefinitionRepository for FakeWorkflowDefinitionRepository {
     async fn find_published_by_tenant(
         &self,
         tenant_id: &TenantId,
@@ -147,14 +147,14 @@ impl WorkflowDefinitionRepository for MockWorkflowDefinitionRepository {
     }
 }
 
-// ===== MockWorkflowInstanceRepository =====
+// ===== FakeWorkflowInstanceRepository =====
 
 #[derive(Clone, Default)]
-pub struct MockWorkflowInstanceRepository {
+pub struct FakeWorkflowInstanceRepository {
     instances: Arc<Mutex<Vec<WorkflowInstance>>>,
 }
 
-impl MockWorkflowInstanceRepository {
+impl FakeWorkflowInstanceRepository {
     pub fn new() -> Self {
         Self {
             instances: Arc::new(Mutex::new(Vec::new())),
@@ -163,7 +163,7 @@ impl MockWorkflowInstanceRepository {
 }
 
 #[async_trait]
-impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
+impl WorkflowInstanceRepository for FakeWorkflowInstanceRepository {
     async fn insert(
         &self,
         _tx: &mut TxContext,
@@ -267,14 +267,14 @@ impl WorkflowInstanceRepository for MockWorkflowInstanceRepository {
     }
 }
 
-// ===== MockWorkflowStepRepository =====
+// ===== FakeWorkflowStepRepository =====
 
 #[derive(Clone, Default)]
-pub struct MockWorkflowStepRepository {
+pub struct FakeWorkflowStepRepository {
     steps: Arc<Mutex<Vec<WorkflowStep>>>,
 }
 
-impl MockWorkflowStepRepository {
+impl FakeWorkflowStepRepository {
     pub fn new() -> Self {
         Self {
             steps: Arc::new(Mutex::new(Vec::new())),
@@ -283,7 +283,7 @@ impl MockWorkflowStepRepository {
 }
 
 #[async_trait]
-impl WorkflowStepRepository for MockWorkflowStepRepository {
+impl WorkflowStepRepository for FakeWorkflowStepRepository {
     async fn insert(
         &self,
         _tx: &mut TxContext,
@@ -375,18 +375,18 @@ impl WorkflowStepRepository for MockWorkflowStepRepository {
     }
 }
 
-// ===== MockUserRepository =====
+// ===== FakeUserRepository =====
 
 /// テスト用のモック UserRepository
 ///
 /// ユーザーを格納し、ID で検索できるインメモリ実装。
 /// `add_user()` でテストデータを追加する。
 #[derive(Clone, Default)]
-pub struct MockUserRepository {
+pub struct FakeUserRepository {
     users: Arc<Mutex<Vec<User>>>,
 }
 
-impl MockUserRepository {
+impl FakeUserRepository {
     pub fn new() -> Self {
         Self::default()
     }
@@ -398,7 +398,7 @@ impl MockUserRepository {
 }
 
 #[async_trait]
-impl UserRepository for MockUserRepository {
+impl UserRepository for FakeUserRepository {
     async fn find_by_email(
         &self,
         _tenant_id: &TenantId,
@@ -513,17 +513,17 @@ impl UserRepository for MockUserRepository {
     }
 }
 
-// ===== MockDisplayIdCounterRepository =====
+// ===== FakeDisplayIdCounterRepository =====
 
 /// テスト用のモック DisplayIdCounterRepository
 ///
 /// 呼び出しごとにカウンターをインクリメントして返す。
 #[derive(Clone, Default)]
-pub struct MockDisplayIdCounterRepository {
+pub struct FakeDisplayIdCounterRepository {
     counter: Arc<Mutex<i64>>,
 }
 
-impl MockDisplayIdCounterRepository {
+impl FakeDisplayIdCounterRepository {
     pub fn new() -> Self {
         Self {
             counter: Arc::new(Mutex::new(0)),
@@ -532,7 +532,7 @@ impl MockDisplayIdCounterRepository {
 }
 
 #[async_trait]
-impl DisplayIdCounterRepository for MockDisplayIdCounterRepository {
+impl DisplayIdCounterRepository for FakeDisplayIdCounterRepository {
     async fn next_display_number(
         &self,
         _tenant_id: &TenantId,
@@ -544,14 +544,14 @@ impl DisplayIdCounterRepository for MockDisplayIdCounterRepository {
     }
 }
 
-// ===== MockWorkflowCommentRepository =====
+// ===== FakeWorkflowCommentRepository =====
 
 #[derive(Clone, Default)]
-pub struct MockWorkflowCommentRepository {
+pub struct FakeWorkflowCommentRepository {
     comments: Arc<Mutex<Vec<WorkflowComment>>>,
 }
 
-impl MockWorkflowCommentRepository {
+impl FakeWorkflowCommentRepository {
     pub fn new() -> Self {
         Self {
             comments: Arc::new(Mutex::new(Vec::new())),
@@ -560,7 +560,7 @@ impl MockWorkflowCommentRepository {
 }
 
 #[async_trait]
-impl WorkflowCommentRepository for MockWorkflowCommentRepository {
+impl WorkflowCommentRepository for FakeWorkflowCommentRepository {
     async fn insert(
         &self,
         comment: &WorkflowComment,
@@ -587,18 +587,18 @@ impl WorkflowCommentRepository for MockWorkflowCommentRepository {
     }
 }
 
-// ===== MockFolderRepository =====
+// ===== FakeFolderRepository =====
 
-/// テスト用の MockFolderRepository
+/// テスト用の FakeFolderRepository
 ///
 /// フォルダをインメモリで管理する。`max_subtree_depth` は
 /// 格納されたフォルダの path プレフィックスマッチで計算する。
 #[derive(Clone, Default)]
-pub struct MockFolderRepository {
+pub struct FakeFolderRepository {
     folders: Arc<Mutex<Vec<ringiflow_domain::folder::Folder>>>,
 }
 
-impl MockFolderRepository {
+impl FakeFolderRepository {
     pub fn new() -> Self {
         Self {
             folders: Arc::new(Mutex::new(Vec::new())),
@@ -611,7 +611,7 @@ impl MockFolderRepository {
 }
 
 #[async_trait]
-impl crate::repository::FolderRepository for MockFolderRepository {
+impl crate::repository::FolderRepository for FakeFolderRepository {
     async fn find_all_by_tenant(
         &self,
         tenant_id: &TenantId,
@@ -705,32 +705,32 @@ impl crate::repository::FolderRepository for MockFolderRepository {
     }
 }
 
-// ===== MockTransactionManager =====
+// ===== FakeTransactionManager =====
 
-/// テスト用の MockTransactionManager
+/// テスト用の FakeTransactionManager
 ///
 /// `begin()` は常に `TxContext::mock()` を返す。
-/// Mock リポジトリはインメモリ実装のため、実際のトランザクションは不要。
-pub struct MockTransactionManager;
+/// Fake リポジトリはインメモリ実装のため、実際のトランザクションは不要。
+pub struct FakeTransactionManager;
 
 #[async_trait]
-impl TransactionManager for MockTransactionManager {
+impl TransactionManager for FakeTransactionManager {
     async fn begin(&self) -> Result<TxContext, InfraError> {
         Ok(TxContext::mock())
     }
 }
 
-// ===== MockNotificationSender =====
+// ===== FakeNotificationSender =====
 
 /// テスト用のモック NotificationSender
 ///
 /// 送信されたメッセージを `Arc<Mutex<Vec<EmailMessage>>>` に記録する。
 #[derive(Clone, Default)]
-pub struct MockNotificationSender {
+pub struct FakeNotificationSender {
     sent_emails: Arc<Mutex<Vec<EmailMessage>>>,
 }
 
-impl MockNotificationSender {
+impl FakeNotificationSender {
     pub fn new() -> Self {
         Self {
             sent_emails: Arc::new(Mutex::new(Vec::new())),
@@ -744,24 +744,24 @@ impl MockNotificationSender {
 }
 
 #[async_trait]
-impl NotificationSender for MockNotificationSender {
+impl NotificationSender for FakeNotificationSender {
     async fn send_email(&self, email: &EmailMessage) -> Result<(), NotificationError> {
         self.sent_emails.lock().unwrap().push(email.clone());
         Ok(())
     }
 }
 
-// ===== MockNotificationLogRepository =====
+// ===== FakeNotificationLogRepository =====
 
 /// テスト用のモック NotificationLogRepository
 ///
 /// 挿入されたログを `Arc<Mutex<Vec<NotificationLog>>>` に記録する。
 #[derive(Clone, Default)]
-pub struct MockNotificationLogRepository {
+pub struct FakeNotificationLogRepository {
     logs: Arc<Mutex<Vec<NotificationLog>>>,
 }
 
-impl MockNotificationLogRepository {
+impl FakeNotificationLogRepository {
     pub fn new() -> Self {
         Self {
             logs: Arc::new(Mutex::new(Vec::new())),
@@ -775,7 +775,7 @@ impl MockNotificationLogRepository {
 }
 
 #[async_trait]
-impl NotificationLogRepository for MockNotificationLogRepository {
+impl NotificationLogRepository for FakeNotificationLogRepository {
     async fn insert(&self, log: &NotificationLog) -> Result<(), InfraError> {
         self.logs.lock().unwrap().push(log.clone());
         Ok(())

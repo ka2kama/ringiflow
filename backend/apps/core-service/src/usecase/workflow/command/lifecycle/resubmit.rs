@@ -189,11 +189,11 @@ mod tests {
         },
     };
     use ringiflow_infra::{
-        mock::{
-            MockUserRepository,
-            MockWorkflowDefinitionRepository,
-            MockWorkflowInstanceRepository,
-            MockWorkflowStepRepository,
+        fake::{
+            FakeUserRepository,
+            FakeWorkflowDefinitionRepository,
+            FakeWorkflowInstanceRepository,
+            FakeWorkflowStepRepository,
         },
         repository::WorkflowInstanceRepositoryTestExt,
     };
@@ -216,9 +216,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 1段階承認の定義を追加
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
@@ -309,9 +309,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
             id: WorkflowDefinitionId::new(),
@@ -346,8 +346,8 @@ mod tests {
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
-        // ユーザー情報をモックに登録
-        let user_repo = MockUserRepository::new();
+        // ユーザー情報を Fake に登録
+        let user_repo = FakeUserRepository::new();
         user_repo.add_user(User::new(
             user_id.clone(),
             tenant_id.clone(),
@@ -414,9 +414,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // InProgress 状態のインスタンス（ChangesRequested ではない）
         let instance = WorkflowInstance::new(NewWorkflowInstance {
@@ -464,9 +464,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
             id: WorkflowDefinitionId::new(),
@@ -529,9 +529,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 1段階承認の定義だが、2人指定する
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
@@ -602,9 +602,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
             id: WorkflowDefinitionId::new(),

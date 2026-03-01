@@ -186,11 +186,11 @@ mod tests {
         },
     };
     use ringiflow_infra::{
-        mock::{
-            MockUserRepository,
-            MockWorkflowDefinitionRepository,
-            MockWorkflowInstanceRepository,
-            MockWorkflowStepRepository,
+        fake::{
+            FakeUserRepository,
+            FakeWorkflowDefinitionRepository,
+            FakeWorkflowInstanceRepository,
+            FakeWorkflowStepRepository,
         },
         repository::{WorkflowInstanceRepositoryTestExt, WorkflowStepRepository},
     };
@@ -214,9 +214,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 1段階承認の定義を追加
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
@@ -290,9 +290,9 @@ mod tests {
         let approver2_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 2段階承認の定義を追加
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
@@ -378,9 +378,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 2段階承認の定義だが、1人しか指定しない
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
@@ -437,9 +437,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 1段階承認の定義を追加
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
@@ -468,8 +468,8 @@ mod tests {
         });
         instance_repo.insert_for_test(&instance).await.unwrap();
 
-        // ユーザー情報をモックに登録
-        let user_repo = MockUserRepository::new();
+        // ユーザー情報を Fake に登録
+        let user_repo = FakeUserRepository::new();
         user_repo.add_user(User::new(
             user_id.clone(),
             tenant_id.clone(),
@@ -529,9 +529,9 @@ mod tests {
         let approver_id = UserId::new();
         let now = chrono::Utc::now();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {
             id: WorkflowDefinitionId::new(),
@@ -558,8 +558,8 @@ mod tests {
         });
         instance_repo.insert_for_test(&instance).await.unwrap();
 
-        // ユーザー情報を登録しない（空の MockUserRepository）
-        let user_repo = MockUserRepository::new();
+        // ユーザー情報を登録しない（空の FakeUserRepository）
+        let user_repo = FakeUserRepository::new();
         let (sut, sender) = build_sut_with_notification(
             &definition_repo,
             &instance_repo,
@@ -595,9 +595,9 @@ mod tests {
         let user_id = UserId::new();
         let approver_id = UserId::new();
 
-        let definition_repo = MockWorkflowDefinitionRepository::new();
-        let instance_repo = MockWorkflowInstanceRepository::new();
-        let step_repo = MockWorkflowStepRepository::new();
+        let definition_repo = FakeWorkflowDefinitionRepository::new();
+        let instance_repo = FakeWorkflowInstanceRepository::new();
+        let step_repo = FakeWorkflowStepRepository::new();
 
         // 公開済みの定義を追加
         let definition = WorkflowDefinition::new(NewWorkflowDefinition {

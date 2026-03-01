@@ -1,7 +1,7 @@
 //! ワークフローテストビルダー
 //!
 //! テストコードの重複を削減するためのビルダーパターン実装。
-//! 標準的なテストデータとモックリポジトリのセットアップを提供する。
+//! 標準的なテストデータと Fake リポジトリのセットアップを提供する。
 
 use std::sync::Arc;
 
@@ -14,16 +14,16 @@ use ringiflow_domain::{
     workflow::{NewWorkflowInstance, WorkflowDefinitionId, WorkflowInstance, WorkflowInstanceId},
 };
 use ringiflow_infra::{
-    mock::{
-        MockDisplayIdCounterRepository,
-        MockNotificationLogRepository,
-        MockNotificationSender,
-        MockTransactionManager,
-        MockUserRepository,
-        MockWorkflowCommentRepository,
-        MockWorkflowDefinitionRepository,
-        MockWorkflowInstanceRepository,
-        MockWorkflowStepRepository,
+    fake::{
+        FakeDisplayIdCounterRepository,
+        FakeNotificationLogRepository,
+        FakeNotificationSender,
+        FakeTransactionManager,
+        FakeUserRepository,
+        FakeWorkflowCommentRepository,
+        FakeWorkflowDefinitionRepository,
+        FakeWorkflowInstanceRepository,
+        FakeWorkflowStepRepository,
     },
     repository::{
         WorkflowCommentRepository,
@@ -40,7 +40,7 @@ use crate::usecase::{
 
 /// ワークフローテストのセットアップデータ
 ///
-/// WorkflowTestBuilder が生成する SUT と Mock リポジトリのセット。
+/// WorkflowTestBuilder が生成する SUT と Fake リポジトリのセット。
 pub struct WorkflowTestSetup {
     pub sut: WorkflowUseCaseImpl,
     pub definition_repo: Arc<dyn WorkflowDefinitionRepository>,
@@ -64,7 +64,7 @@ pub struct WorkflowTestSetup {
 ///     let instance = builder.build_submitted_instance("テスト申請", 100);
 ///     let setup = builder.build_workflow_usecase_impl();
 ///
-///     // Mock リポジトリに初期データを設定
+///     // Fake リポジトリに初期データを設定
 ///     setup.instance_repo.insert(&instance).await.unwrap();
 ///
 ///     // SUT を使ってテスト
@@ -149,25 +149,25 @@ impl WorkflowTestBuilder {
         .unwrap()
     }
 
-    /// Mock リポジトリ群を含む SUT（System Under Test）を構築
+    /// Fake リポジトリ群を含む SUT（System Under Test）を構築
     ///
     /// # 戻り値
     ///
-    /// WorkflowTestSetup（SUT と各 Mock リポジトリへの参照を含む）
+    /// WorkflowTestSetup（SUT と各 Fake リポジトリへの参照を含む）
     pub fn build_workflow_usecase_impl(&self) -> WorkflowTestSetup {
         let definition_repo: Arc<dyn WorkflowDefinitionRepository> =
-            Arc::new(MockWorkflowDefinitionRepository::new());
+            Arc::new(FakeWorkflowDefinitionRepository::new());
         let instance_repo: Arc<dyn WorkflowInstanceRepository> =
-            Arc::new(MockWorkflowInstanceRepository::new());
+            Arc::new(FakeWorkflowInstanceRepository::new());
         let step_repo: Arc<dyn WorkflowStepRepository> =
-            Arc::new(MockWorkflowStepRepository::new());
+            Arc::new(FakeWorkflowStepRepository::new());
         let comment_repo: Arc<dyn WorkflowCommentRepository> =
-            Arc::new(MockWorkflowCommentRepository::new());
+            Arc::new(FakeWorkflowCommentRepository::new());
 
         let notification_service = Arc::new(NotificationService::new(
-            Arc::new(MockNotificationSender::new()),
+            Arc::new(FakeNotificationSender::new()),
             TemplateRenderer::new().unwrap(),
-            Arc::new(MockNotificationLogRepository::new()),
+            Arc::new(FakeNotificationLogRepository::new()),
             "http://localhost:5173".to_string(),
         ));
 
@@ -176,10 +176,10 @@ impl WorkflowTestBuilder {
             instance_repo: instance_repo.clone(),
             step_repo: step_repo.clone(),
             comment_repo: comment_repo.clone(),
-            user_repo: Arc::new(MockUserRepository::new()),
-            counter_repo: Arc::new(MockDisplayIdCounterRepository::new()),
+            user_repo: Arc::new(FakeUserRepository::new()),
+            counter_repo: Arc::new(FakeDisplayIdCounterRepository::new()),
             clock: Arc::new(FixedClock::new(self.now)),
-            tx_manager: Arc::new(MockTransactionManager),
+            tx_manager: Arc::new(FakeTransactionManager),
             notification_service,
         });
 

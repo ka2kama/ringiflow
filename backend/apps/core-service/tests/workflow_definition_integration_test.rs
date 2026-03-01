@@ -40,7 +40,7 @@ use ringiflow_core_service::{
     usecase::WorkflowDefinitionUseCaseImpl,
 };
 use ringiflow_domain::clock::FixedClock;
-use ringiflow_infra::mock::MockWorkflowDefinitionRepository;
+use ringiflow_infra::fake::FakeWorkflowDefinitionRepository;
 use serde_json::{Value as JsonValue, json};
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -54,7 +54,7 @@ fn fixed_now() -> DateTime<Utc> {
 /// テスト用 Core Service アプリケーションを構築する
 fn create_test_app() -> (Router, Uuid) {
     let tenant_id = Uuid::new_v4();
-    let repo = Arc::new(MockWorkflowDefinitionRepository::new());
+    let repo = Arc::new(FakeWorkflowDefinitionRepository::new());
     let clock = Arc::new(FixedClock::new(fixed_now()));
     let usecase = WorkflowDefinitionUseCaseImpl::new(repo, clock);
     let state = Arc::new(WorkflowDefinitionState { usecase });

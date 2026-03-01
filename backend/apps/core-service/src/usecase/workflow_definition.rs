@@ -227,7 +227,7 @@ fn map_version_conflict(e: ringiflow_infra::InfraError) -> CoreError {
 mod tests {
     use chrono::{DateTime, Utc};
     use ringiflow_domain::clock::FixedClock;
-    use ringiflow_infra::mock::MockWorkflowDefinitionRepository;
+    use ringiflow_infra::fake::FakeWorkflowDefinitionRepository;
     use serde_json::json;
 
     use super::*;
@@ -238,9 +238,9 @@ mod tests {
 
     fn create_usecase() -> (
         WorkflowDefinitionUseCaseImpl,
-        Arc<MockWorkflowDefinitionRepository>,
+        Arc<FakeWorkflowDefinitionRepository>,
     ) {
-        let repo = Arc::new(MockWorkflowDefinitionRepository::new());
+        let repo = Arc::new(FakeWorkflowDefinitionRepository::new());
         let clock = Arc::new(FixedClock::new(fixed_now()));
         let usecase = WorkflowDefinitionUseCaseImpl::new(repo.clone(), clock);
         (usecase, repo)

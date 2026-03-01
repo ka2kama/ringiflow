@@ -164,14 +164,14 @@ mod tests {
     use super::*;
     use crate::deletion::DeletionResult;
 
-    /// テスト用のモック Deleter
-    struct MockDeleter {
+    /// テスト用の Fake Deleter
+    struct FakeDeleter {
         name:        &'static str,
         count:       AtomicU64,
         should_fail: bool,
     }
 
-    impl MockDeleter {
+    impl FakeDeleter {
         fn new(name: &'static str, initial_count: u64) -> Self {
             Self {
                 name,
@@ -190,7 +190,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl TenantDeleter for MockDeleter {
+    impl TenantDeleter for FakeDeleter {
         fn name(&self) -> &'static str {
             self.name
         }
@@ -222,8 +222,8 @@ mod tests {
     #[test]
     fn test_deleterを登録するとregistered_namesで名前を取得できる() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::new("test:a", 0)));
-        registry.register(Box::new(MockDeleter::new("test:b", 0)));
+        registry.register(Box::new(FakeDeleter::new("test:a", 0)));
+        registry.register(Box::new(FakeDeleter::new("test:b", 0)));
 
         let names = registry.registered_names();
         assert_eq!(names, vec!["test:a", "test:b"]);
@@ -232,8 +232,8 @@ mod tests {
     #[tokio::test]
     async fn test_delete_allが全成功時succeededに全結果を返しfailedが空() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::new("test:a", 3)));
-        registry.register(Box::new(MockDeleter::new("test:b", 5)));
+        registry.register(Box::new(FakeDeleter::new("test:a", 3)));
+        registry.register(Box::new(FakeDeleter::new("test:b", 5)));
 
         let tenant_id = TenantId::new();
         let report = registry.delete_all(&tenant_id).await;
@@ -248,8 +248,8 @@ mod tests {
     #[tokio::test]
     async fn test_delete_allで1つ目が失敗しても残りのdeleterが実行される() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::failing("test:a")));
-        registry.register(Box::new(MockDeleter::new("test:b", 5)));
+        registry.register(Box::new(FakeDeleter::failing("test:a")));
+        registry.register(Box::new(FakeDeleter::new("test:b", 5)));
 
         let tenant_id = TenantId::new();
         let report = registry.delete_all(&tenant_id).await;
@@ -264,8 +264,8 @@ mod tests {
     #[tokio::test]
     async fn test_delete_allで最後のdeleterが失敗しても先行の成功結果が残る() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::new("test:a", 3)));
-        registry.register(Box::new(MockDeleter::failing("test:b")));
+        registry.register(Box::new(FakeDeleter::new("test:a", 3)));
+        registry.register(Box::new(FakeDeleter::failing("test:b")));
 
         let tenant_id = TenantId::new();
         let report = registry.delete_all(&tenant_id).await;
@@ -280,8 +280,8 @@ mod tests {
     #[tokio::test]
     async fn test_delete_allで全deleterが失敗した場合succeededが空でfailedに全エラー() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::failing("test:a")));
-        registry.register(Box::new(MockDeleter::failing("test:b")));
+        registry.register(Box::new(FakeDeleter::failing("test:a")));
+        registry.register(Box::new(FakeDeleter::failing("test:b")));
 
         let tenant_id = TenantId::new();
         let report = registry.delete_all(&tenant_id).await;
@@ -296,7 +296,7 @@ mod tests {
     #[tokio::test]
     async fn test_has_failuresが失敗なしでfalseを返す() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::new("test:a", 1)));
+        registry.register(Box::new(FakeDeleter::new("test:a", 1)));
 
         let tenant_id = TenantId::new();
         let report = registry.delete_all(&tenant_id).await;
@@ -307,8 +307,8 @@ mod tests {
     #[tokio::test]
     async fn test_count_allが全deleterのcountを呼び結果を返す() {
         let mut registry = DeletionRegistry::new();
-        registry.register(Box::new(MockDeleter::new("test:a", 10)));
-        registry.register(Box::new(MockDeleter::new("test:b", 20)));
+        registry.register(Box::new(FakeDeleter::new("test:a", 10)));
+        registry.register(Box::new(FakeDeleter::new("test:b", 20)));
 
         let tenant_id = TenantId::new();
         let counts = registry.count_all(&tenant_id).await.unwrap();

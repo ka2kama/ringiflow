@@ -287,7 +287,7 @@ impl FolderUseCaseImpl {
 #[cfg(test)]
 mod tests {
     use ringiflow_domain::{clock::FixedClock, folder::FolderName};
-    use ringiflow_infra::mock::{MockFolderRepository, MockTransactionManager};
+    use ringiflow_infra::fake::{FakeFolderRepository, FakeTransactionManager};
 
     use super::*;
 
@@ -295,11 +295,11 @@ mod tests {
         chrono::DateTime::from_timestamp(1_700_000_000, 0).unwrap()
     }
 
-    fn create_sut(repo: MockFolderRepository) -> FolderUseCaseImpl {
+    fn create_sut(repo: FakeFolderRepository) -> FolderUseCaseImpl {
         FolderUseCaseImpl::new(
             Arc::new(repo),
             Arc::new(FixedClock::new(fixed_now())),
-            Arc::new(MockTransactionManager),
+            Arc::new(FakeTransactionManager),
         )
     }
 
@@ -350,7 +350,7 @@ mod tests {
         // /l1/ → depth 5, /l1/l2/ → depth 6, /l1/l2/l3/ → depth 7
         // depth_delta = +4, max_subtree_depth = 3, 3 + 4 = 7 > 5 → エラー
         let tenant_id = TenantId::new();
-        let repo = MockFolderRepository::new();
+        let repo = FakeFolderRepository::new();
 
         // 移動対象のフォルダツリー（3 階層）
         let l1 = create_root_folder(&tenant_id, "l1");

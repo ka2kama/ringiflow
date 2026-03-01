@@ -419,8 +419,8 @@ fn test_verify_password_returns_false_for_wrong_password() {
 #[tokio::test]
 async fn test_login_succeeds_with_valid_credentials() {
     // Given（Arrange）: 前提条件
-    let repo = MockUserRepository::new();
-    let hasher = MockPasswordHasher::new();
+    let repo = FakeUserRepository::new();
+    let hasher = FakePasswordHasher::new();
     let sut = AuthUseCase::new(repo, hasher);
 
     // When（Act）: 実行
