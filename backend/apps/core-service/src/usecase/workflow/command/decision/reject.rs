@@ -579,7 +579,7 @@ mod tests {
         .activated(now);
         step_repo.insert_for_test(&step, &tenant_id).await.unwrap();
 
-        // ユーザー情報をモックに登録
+        // ユーザー情報を Fake に登録
         let user_repo = FakeUserRepository::new();
         user_repo.add_user(User::new(
             user_id.clone(),

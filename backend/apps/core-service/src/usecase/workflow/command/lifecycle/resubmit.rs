@@ -346,7 +346,7 @@ mod tests {
         .unwrap();
         instance_repo.insert_for_test(&instance).await.unwrap();
 
-        // ユーザー情報をモックに登録
+        // ユーザー情報を Fake に登録
         let user_repo = FakeUserRepository::new();
         user_repo.add_user(User::new(
             user_id.clone(),

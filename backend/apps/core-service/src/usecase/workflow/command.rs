@@ -75,7 +75,7 @@ pub(super) mod test_helpers {
     /// SUT を構築する（通知検証用）
     ///
     /// `FakeNotificationSender` を返すため、テスト側で `sent_emails()` を確認できる。
-    /// ユーザー情報を返すモックを使用するため、通知のユーザー情報取得が成功する。
+    /// ユーザー情報を返す Fake を使用するため、通知のユーザー情報取得が成功する。
     pub fn build_sut_with_notification(
         definition_repo: &FakeWorkflowDefinitionRepository,
         instance_repo: &FakeWorkflowInstanceRepository,

@@ -208,7 +208,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mock_notification_senderが送信メッセージを記録する() {
+    async fn fake_notification_senderが送信メッセージを記録する() {
         let sender = FakeNotificationSender::new();
         let log_repo = FakeNotificationLogRepository::new();
         let service = make_service(sender.clone(), log_repo);
