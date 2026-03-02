@@ -1,6 +1,47 @@
 //! # ワークフローインスタンスの状態遷移
 //!
 //! 申請・承認・却下・差し戻し・再申請・取り消しの状態遷移メソッド。
+//!
+//! ## 使用例
+//!
+//! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use chrono::Utc;
+//! use ringiflow_domain::{
+//!     tenant::TenantId,
+//!     user::UserId,
+//!     value_objects::{DisplayNumber, Version},
+//!     workflow::{
+//!         NewWorkflowInstance,
+//!         WorkflowDefinitionId,
+//!         WorkflowInstance,
+//!         WorkflowInstanceId,
+//!         WorkflowInstanceStatus,
+//!     },
+//! };
+//! use serde_json::json;
+//!
+//! let now = Utc::now();
+//! let instance = WorkflowInstance::new(NewWorkflowInstance {
+//!     id: WorkflowInstanceId::new(),
+//!     tenant_id: TenantId::new(),
+//!     definition_id: WorkflowDefinitionId::new(),
+//!     definition_version: Version::initial(),
+//!     display_number: DisplayNumber::new(1)?,
+//!     title: "テスト申請".to_string(),
+//!     form_data: json!({}),
+//!     initiated_by: UserId::new(),
+//!     now,
+//! });
+//!
+//! // Draft → Pending（申請）
+//! let instance = instance.submitted(now)?;
+//! assert_eq!(instance.status(), WorkflowInstanceStatus::Pending);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! 詳細: [エンティティ影響マップ](../../../docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md)
 
 use chrono::{DateTime, Utc};
 use serde_json::Value as JsonValue;

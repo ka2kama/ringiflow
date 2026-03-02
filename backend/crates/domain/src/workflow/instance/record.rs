@@ -2,6 +2,52 @@
 //!
 //! DB のフラット構造と型安全ステートマシンの ADT 間の変換を行う。
 //! `from_db()` で不変条件（INV-I1〜I9）を検証する。
+//!
+//! ## 使用例
+//!
+//! ```rust
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use chrono::Utc;
+//! use ringiflow_domain::{
+//!     tenant::TenantId,
+//!     user::UserId,
+//!     value_objects::{DisplayNumber, Version},
+//!     workflow::{
+//!         WorkflowDefinitionId,
+//!         WorkflowInstance,
+//!         WorkflowInstanceId,
+//!         WorkflowInstanceRecord,
+//!         WorkflowInstanceStatus,
+//!     },
+//! };
+//! use serde_json::json;
+//!
+//! let now = Utc::now();
+//! let record = WorkflowInstanceRecord {
+//!     id: WorkflowInstanceId::new(),
+//!     tenant_id: TenantId::new(),
+//!     definition_id: WorkflowDefinitionId::new(),
+//!     definition_version: Version::initial(),
+//!     display_number: DisplayNumber::new(1)?,
+//!     title: "テスト申請".to_string(),
+//!     form_data: json!({}),
+//!     status: WorkflowInstanceStatus::Draft,
+//!     version: Version::initial(),
+//!     current_step_id: None,
+//!     initiated_by: UserId::new(),
+//!     submitted_at: None,
+//!     completed_at: None,
+//!     created_at: now,
+//!     updated_at: now,
+//! };
+//!
+//! let instance = WorkflowInstance::from_db(record)?;
+//! assert_eq!(instance.status(), WorkflowInstanceStatus::Draft);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! 詳細: [エンティティ影響マップ](../../../docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md)（INV-I1〜I9）
 
 use chrono::{DateTime, Utc};
 use serde_json::Value as JsonValue;

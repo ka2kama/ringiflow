@@ -1,7 +1,27 @@
 //! # ワークフローインスタンスの状態型
 //!
 //! 型安全ステートマシンの各状態を定義する。
-//! 詳細: [ADR-054](../../../docs/70_ADR/054_型安全ステートマシンパターンの標準化.md)
+//!
+//! - [`WorkflowInstanceState`]: 7 つの状態バリアント（Draft, Pending, InProgress, Approved, Rejected, Cancelled, ChangesRequested）
+//! - [`CancelledState`]: 遷移元に応じた 3 バリアント（FromDraft, FromPending, FromActive）
+//!
+//! ## 使用例
+//!
+//! ```rust
+//! use chrono::Utc;
+//! use ringiflow_domain::workflow::{PendingState, WorkflowInstanceState};
+//!
+//! // Draft 状態（フィールドなし）
+//! let state = WorkflowInstanceState::Draft;
+//!
+//! // Pending 状態（submitted_at を型で強制）
+//! let state = WorkflowInstanceState::Pending(PendingState {
+//!     submitted_at: Utc::now(),
+//! });
+//! ```
+//!
+//! 詳細: [ADR-054](../../../docs/70_ADR/054_型安全ステートマシンパターンの標準化.md),
+//! [エンティティ影響マップ](../../../docs/40_詳細設計書/エンティティ影響マップ/WorkflowInstance.md)
 
 use chrono::{DateTime, Utc};
 
