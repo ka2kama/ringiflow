@@ -123,13 +123,14 @@ ringiflow/
 ├── prompts/           # AI operations (session logs, plans, recipes)
 └── docs/              # Documentation
     ├── 10_要件定義書/   # Requirements
+    ├── 20_機能仕様書/   # Functional specifications
     ├── 30_基本設計書/   # High-level design
     ├── 40_詳細設計書/   # Detailed design
+    ├── 50_テスト/      # Test specifications
     ├── 60_手順書/      # Procedures
     ├── 70_ADR/        # Architecture Decision Records
     ├── 80_ナレッジベース/ # Knowledge base
-    ├── 90_実装解説/    # Implementation guides
-    └── 50_テスト/      # Test specifications
+    └── 90_実装解説/    # Implementation guides
 ```
 
 ---
@@ -271,6 +272,7 @@ All knowledge is documented — aiming for **zero tacit knowledge**.
 | What you want to know | Where to look |
 |-----------------------|---------------|
 | What to build (WHAT) | [Requirements](docs/10_要件定義書/) |
+| What users see (USER) | [Functional specifications](docs/20_機能仕様書/) |
 | How to build it (HOW) | [High-level design](docs/30_基本設計書/) / [Detailed design](docs/40_詳細設計書/) |
 | How to operate (HOW TO) | [Procedures](docs/60_手順書/) |
 | Why that decision (WHY) | [ADRs](docs/70_ADR/) (e.g., [ID format](docs/70_ADR/001_ID形式の選定.md) / [Data deletion](docs/70_ADR/007_テナント退会時のデータ削除方針.md) / [Newtype wrapping](docs/70_ADR/016_プリミティブ型のNewtype化方針.md)) |
