@@ -24,7 +24,7 @@ import Page.WorkflowDefinition.Designer.Canvas as Canvas
 import Page.WorkflowDefinition.Designer.Palette as Palette
 import Page.WorkflowDefinition.Designer.PropertyPanel as PropertyPanel
 import Page.WorkflowDefinition.Designer.Toolbar as Toolbar
-import Page.WorkflowDefinition.Designer.Types as Types exposing (CanvasState, Model, Msg(..), PageState(..), canvasElementId)
+import Page.WorkflowDefinition.Designer.Types exposing (CanvasState, Model, Msg(..), PageState(..))
 import Page.WorkflowDefinition.Designer.Update as DesignerUpdate
 import Ports
 import Shared exposing (Shared)

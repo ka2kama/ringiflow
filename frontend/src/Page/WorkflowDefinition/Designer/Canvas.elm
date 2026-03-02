@@ -7,7 +7,7 @@ SVG キャンバス要素を描画する。
 
 -}
 
-import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..), StepNode, StepType(..), Transition, viewBoxHeight, viewBoxWidth)
+import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..), StepNode, Transition, viewBoxHeight, viewBoxWidth)
 import Dict
 import Html exposing (Html, div)
 import Html.Attributes exposing (class)

@@ -11,7 +11,7 @@ import Api exposing (ApiError)
 import Api.ErrorMessage as ErrorMessage
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Component.ConfirmDialog as ConfirmDialog
-import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..), StepType(..))
+import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..))
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Dict
 import Form.DirtyState as DirtyState
