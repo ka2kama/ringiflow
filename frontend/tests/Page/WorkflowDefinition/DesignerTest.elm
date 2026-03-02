@@ -12,7 +12,8 @@ import Data.WorkflowDefinition exposing (ValidationResult, WorkflowDefinition)
 import Dict
 import Expect
 import Json.Encode as Encode
-import Page.WorkflowDefinition.Designer as Designer exposing (CanvasState, Model, Msg(..), PageState(..))
+import Page.WorkflowDefinition.Designer as Designer
+import Page.WorkflowDefinition.Designer.Types exposing (CanvasState, Model, Msg(..), PageState(..))
 import Shared exposing (Shared)
 import Test exposing (..)
 

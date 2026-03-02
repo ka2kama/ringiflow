@@ -34,6 +34,7 @@ import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Page.WorkflowDefinition.Designer as Designer
+import Page.WorkflowDefinition.Designer.Types as DesignerTypes
 import Page.WorkflowDefinition.List as WorkflowDefinitionList
 import Ports
 import Route exposing (Route)
@@ -98,7 +99,7 @@ type Page
     | RoleEditPage RoleEdit.Model
     | AuditLogsPage AuditLogList.Model
     | WorkflowDefinitionsPage WorkflowDefinitionList.Model
-    | DesignerPage Designer.Model
+    | DesignerPage DesignerTypes.Model
     | NotFoundPage
 
 
@@ -400,7 +401,7 @@ type Msg
     | RoleEditMsg RoleEdit.Msg
     | AuditLogsMsg AuditLogList.Msg
     | WorkflowDefinitionsMsg WorkflowDefinitionList.Msg
-    | DesignerMsg Designer.Msg
+    | DesignerMsg DesignerTypes.Msg
 
 
 {-| メッセージに基づいて Model を更新
