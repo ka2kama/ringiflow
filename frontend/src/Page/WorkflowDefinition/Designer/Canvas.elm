@@ -5,6 +5,10 @@ module Page.WorkflowDefinition.Designer.Canvas exposing (viewCanvasArea)
 ワークフローのステップ・接続線・ドラッグプレビューなどの
 SVG キャンバス要素を描画する。
 
+本モジュールは 659 行（500行閾値超）だが、SVG 描画要素（ステップ・接続線・
+ドラッグプレビュー・グリッド）が共通の座標空間と描画順序を共有しており、
+分割すると描画順序の制御が困難になる。さらなる分割は Epic #996 で追跡中。
+
 -}
 
 import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..), StepNode, Transition, viewBoxHeight, viewBoxWidth)
@@ -329,7 +333,7 @@ viewReconnectionHandleLayer : CanvasState -> Svg.Svg Msg
 viewReconnectionHandleLayer canvas =
     case ( canvas.selectedTransitionIndex, canvas.dragging ) of
         ( Just index, Nothing ) ->
-            case List.drop index canvas.transitions |> List.head of
+            case List.Extra.getAt index canvas.transitions of
                 Just transition ->
                     let
                         fromStep =

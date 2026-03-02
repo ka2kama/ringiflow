@@ -9,8 +9,8 @@ module Page.WorkflowDefinition.Designer.Types exposing
 {-| Designer ページの共有型定義
 
 型定義を独立モジュールに配置し、Designer.elm とサブモジュール間の
-循環依存を防止する。Designer.elm が本モジュールの型を re-export するため、
-外部モジュール（Main.elm、テスト）からの import パスは変更不要。
+循環依存を防止する。外部モジュール（Main.elm、テスト）は
+本モジュールの型を直接 import する。
 
 -}
 

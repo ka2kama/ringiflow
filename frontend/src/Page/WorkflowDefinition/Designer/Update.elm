@@ -5,6 +5,10 @@ module Page.WorkflowDefinition.Designer.Update exposing (handleGotDefinition, up
 updateLoaded（Loaded 状態でのメッセージ処理）と
 ヘルパー関数を集約する。
 
+本モジュールは 696 行（500行閾値超）だが、updateLoaded の全メッセージ処理
+（27 バリアント）が単一の CanvasState を操作するアーキテクチャパターンの
+帰結であり、分割すると責務境界が不明確になる。さらなる分割は Epic #996 で追跡中。
+
 -}
 
 import Api exposing (ApiError)
