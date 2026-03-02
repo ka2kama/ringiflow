@@ -215,7 +215,7 @@ sequenceDiagram
 | `div` + 自前実装 | JavaScript で実装必要 | 各ページで個別 | 手動追加 | 高い |
 | `div` + ライブラリ（elm-aria） | ライブラリ依存 | ライブラリ依存 | ライブラリ提供 | 中（依存追加） |
 
-**採用理由**: `<dialog>` 要素は主要ブラウザでサポート済みで、`showModal()` がフォーカストラップ・ESC・`::backdrop` をネイティブ提供する。自前実装を大幅に削減でき、WAI-ARIA 準拠が容易。Elm の宣言的 Virtual DOM と命令的 `showModal()` の橋渡しは Port で解決。
+採用理由: `<dialog>` 要素は主要ブラウザでサポート済みで、`showModal()` がフォーカストラップ・ESC・`::backdrop` をネイティブ提供する。自前実装を大幅に削減でき、WAI-ARIA 準拠が容易。Elm の宣言的 Virtual DOM と命令的 `showModal()` の橋渡しは Port で解決。
 
 ### 2. Elm と命令的 API の橋渡し: Port vs Custom Element
 
@@ -226,7 +226,7 @@ sequenceDiagram
 | **Port（採用）** | 高い（既存パターン） | 低い（subscribe 1 つ） | 他のダイアログにも使える |
 | Custom Element | 中（attribute 変更で発火） | 高い（CE 定義が必要） | 高い |
 
-**採用理由**: プロジェクトに既に Port パターンが確立されている。`showModalDialog : String -> Cmd msg` という汎用的な Port を 1 つ追加するだけで、将来他のダイアログにも再利用可能。
+採用理由: プロジェクトに既に Port パターンが確立されている。`showModalDialog : String -> Cmd msg` という汎用的な Port を 1 つ追加するだけで、将来他のダイアログにも再利用可能。
 
 ### 3. バックドロップクリック: `pointer-events` トリック vs `stopPropagation`
 
@@ -237,7 +237,7 @@ sequenceDiagram
 | **`pointer-events` トリック（採用）** | シンプル（`onCancel` のみ） | 高い（`target.nodeName` で判定） |
 | `stopPropagation` | 複雑（no-op Msg が必要） | 高い |
 
-**採用理由**: `pointer-events-none` / `pointer-events-auto` の組み合わせにより、ダイアログボックス外のクリックが `<dialog>` 要素に到達する。`target.nodeName === "DIALOG"` で判定することで、コンポーネント API を `onCancel` のみに保てる。
+採用理由: `pointer-events-none` / `pointer-events-auto` の組み合わせにより、ダイアログボックス外のクリックが `<dialog>` 要素に到達する。`target.nodeName === "DIALOG"` で判定することで、コンポーネント API を `onCancel` のみに保てる。
 
 ## 関連ドキュメント
 

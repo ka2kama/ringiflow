@@ -224,7 +224,7 @@ sequenceDiagram
 | Adjacency list（parent_id のみ） | 再帰 CTE が必要 | parent_id の更新のみ | 低 |
 | Nested set | 範囲条件で高速 | 全ノードの left/right 更新が必要 | 高 |
 
-**採用理由**: 5 階層制限でサブツリーのサイズが限定的なため移動時のコストは低い。一方、一覧取得は `ORDER BY path` だけで階層順のソートが実現できる。
+採用理由: 5 階層制限でサブツリーのサイズが限定的なため移動時のコストは低い。一方、一覧取得は `ORDER BY path` だけで階層順のソートが実現できる。
 
 ### 2. 移動操作の入力をどう表現するか
 
@@ -236,7 +236,7 @@ sequenceDiagram
 | フラグ + `Option<Uuid>` | `move: bool` + `parent_id: Option<Uuid>` | 冗長、無効な組み合わせが可能 |
 | Enum | `NoChange` / `MoveToRoot` / `MoveTo(Uuid)` | 明確だが JSON シリアライズが複雑 |
 
-**採用理由**: `Option<Option<Uuid>>` は Rust の型システムで 3 状態を直接表現でき、serde の JSON デシリアライズでも `null` / `[null]` / `[uuid]` が自然にマッピングされる。
+採用理由: `Option<Option<Uuid>>` は Rust の型システムで 3 状態を直接表現でき、serde の JSON デシリアライズでも `null` / `[null]` / `[uuid]` が自然にマッピングされる。
 
 ### 3. 循環移動をどう検出するか
 
@@ -247,7 +247,7 @@ sequenceDiagram
 | **Path プレフィックスチェック（採用）** | 移動先の path が自身の path で始まるか検査 | O(1)、追加クエリ不要 |
 | サブツリークエリ | `LIKE '{path}%'` で子孫を取得して移動先が含まれるか検査 | O(n)、DB クエリ必要 |
 
-**採用理由**: materialized path のプレフィックス比較で O(1) で検出でき、追加の DB アクセスが不要。
+採用理由: materialized path のプレフィックス比較で O(1) で検出でき、追加の DB アクセスが不要。
 
 ### 4. 空フォルダチェックの範囲
 
@@ -258,7 +258,7 @@ sequenceDiagram
 | **子フォルダのみ（採用）** | `count_children()` で子フォルダ数をチェック | 本 PR |
 | 子フォルダ + ドキュメント | documents テーブルも含めてチェック | #881 で追加予定 |
 
-**採用理由**: `documents` テーブルは #881（ファイルアップロード）で作成されるため、本 PR では子フォルダのみチェック。ドキュメント数のチェックは #881 で追加する。
+採用理由: `documents` テーブルは #881（ファイルアップロード）で作成されるため、本 PR では子フォルダのみチェック。ドキュメント数のチェックは #881 で追加する。
 
 ## 関連ドキュメント
 

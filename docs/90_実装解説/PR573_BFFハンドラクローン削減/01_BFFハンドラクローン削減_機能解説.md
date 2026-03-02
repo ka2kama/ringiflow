@@ -148,7 +148,7 @@ flowchart TB
 | カスタムエラー型 `BffError` | 可能 | 必要 | エラー型 + `IntoResponse` impl が必要 |
 | `impl IntoResponse` のまま | 不可 | 不要 | なし |
 
-**採用理由**: axum は `Result<T, E>` で `T: IntoResponse, E: IntoResponse` のとき `IntoResponse` を実装する。`Response` 自体が `IntoResponse` なので、カスタム型を作らずに `?` が使える。
+採用理由: axum は `Result<T, E>` で `T: IntoResponse, E: IntoResponse` のとき `IntoResponse` を実装する。`Response` 自体が `IntoResponse` なので、カスタム型を作らずに `?` が使える。
 
 ### 2. `IntoResponse for CoreServiceError` をどこに配置するか
 
@@ -157,7 +157,7 @@ flowchart TB
 | **`error.rs`（採用）** | 高（レスポンスヘルパー群と同一ファイル） | BFF レスポンス層 |
 | `client/core_service/error.rs` | 低 | HTTP レスポンスの知識を持つべきでない |
 
-**採用理由**: `client/core_service/error.rs` はドメインエラーの定義層であり、HTTP ステータスコードの知識を持つのは責務違反。`error.rs` には既にレスポンスヘルパー群があり凝集度が高い。
+採用理由: `client/core_service/error.rs` はドメインエラーの定義層であり、HTTP ステータスコードの知識を持つのは責務違反。`error.rs` には既にレスポンスヘルパー群があり凝集度が高い。
 
 ### 3. 監査ログ付きハンドラ（カテゴリ B）をどう扱うか
 
@@ -168,7 +168,7 @@ Ok パスで監査ログ記録が必要なハンドラは、単純に `?` 化で
 | **Ok は match 維持、Err のみ簡略化（採用）** | 高（監査ログ等の処理を自由に書ける） | 中（Err パス + セッション認証） |
 | 高階関数で抽象化 | 低（監査ログのパラメータが多様） | 高 |
 
-**採用理由**: 監査ログのパラメータ（リソース種別、リソース ID、詳細 JSON）がハンドラごとに異なるため、高階関数での抽象化は過度な複雑さを招く。
+採用理由: 監査ログのパラメータ（リソース種別、リソース ID、詳細 JSON）がハンドラごとに異なるため、高階関数での抽象化は過度な複雑さを招く。
 
 ## 関連ドキュメント
 
