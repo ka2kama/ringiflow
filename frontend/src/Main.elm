@@ -34,6 +34,7 @@ import Page.Workflow.Detail as WorkflowDetail
 import Page.Workflow.Detail.Types as DetailTypes
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
+import Page.Workflow.New.Types as NewTypes
 import Page.WorkflowDefinition.Designer as Designer
 import Page.WorkflowDefinition.Designer.Types as DesignerTypes
 import Page.WorkflowDefinition.List as WorkflowDefinitionList
@@ -87,7 +88,7 @@ Nested TEA パターンにより、各ページの Model を Page 型で保持�
 type Page
     = HomePage Home.Model
     | WorkflowsPage WorkflowList.Model
-    | WorkflowNewPage WorkflowNew.Model
+    | WorkflowNewPage NewTypes.Model
     | WorkflowDetailPage DetailTypes.Model
     | TasksPage TaskList.Model
     | TaskDetailPage TaskDetail.Model
@@ -389,7 +390,7 @@ type Msg
     | CancelNavigation
     | HomeMsg Home.Msg
     | WorkflowsMsg WorkflowList.Msg
-    | WorkflowNewMsg WorkflowNew.Msg
+    | WorkflowNewMsg NewTypes.Msg
     | WorkflowDetailMsg DetailTypes.Msg
     | TasksMsg TaskList.Msg
     | TaskDetailMsg TaskDetail.Msg

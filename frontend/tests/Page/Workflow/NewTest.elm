@@ -15,7 +15,8 @@ import Data.WorkflowInstance exposing (Status(..))
 import Dict
 import Expect exposing (Expectation)
 import Json.Encode as Encode
-import Page.Workflow.New as New exposing (FormState(..), Msg(..), PageState(..))
+import Page.Workflow.New as New
+import Page.Workflow.New.Types exposing (EditingState, FormState(..), Model, Msg(..), PageState(..))
 import Shared
 import Test exposing (..)
 
@@ -39,14 +40,14 @@ suite =
 
 {-| メッセージを送信し、結果の Model を返す（Cmd は破棄）
 -}
-sendMsg : Msg -> New.Model -> New.Model
+sendMsg : Msg -> Model -> Model
 sendMsg msg model =
     New.update msg model |> Tuple.first
 
 
 {-| テスト用の初期 Model を生成（Cmd は破棄）
 -}
-initialModel : New.Model
+initialModel : Model
 initialModel =
     let
         shared =
@@ -134,21 +135,21 @@ testStepId =
 
 {-| ロード完了モデル（定義一覧表示、定義未選択）
 -}
-loadedModel : New.Model
+loadedModel : Model
 loadedModel =
     initialModel |> sendMsg (GotDefinitions (Ok [ testDefinition ]))
 
 
 {-| 編集中モデル（定義選択済み、承認ステップ初期化済み）
 -}
-editingModel : New.Model
+editingModel : Model
 editingModel =
     loadedModel |> sendMsg (SelectDefinition "def-001")
 
 
 {-| Editing 状態を検証するアサーションヘルパー
 -}
-expectEditing : (New.EditingState -> Expectation) -> New.Model -> Expectation
+expectEditing : (EditingState -> Expectation) -> Model -> Expectation
 expectEditing check model =
     case model.state of
         Loaded loaded ->
