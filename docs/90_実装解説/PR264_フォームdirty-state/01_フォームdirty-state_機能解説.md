@@ -220,7 +220,7 @@ sequenceDiagram
 | **Bool フラグ（採用）** | 高い（入力 → True、保存 → False） | 十分（false positive は許容範囲） | 低い |
 | 初期値との値比較 | 低い（全フィールドの初期値を保持） | 高い（入力後に戻しても clean） | 高い |
 
-**採用理由**: シンプルな Bool フラグで十分。ユーザーが値を入力して元に戻した場合に false positive になるが、「変更した」という事実自体を保護する方が安全。値比較は YAGNI。
+採用理由: シンプルな Bool フラグで十分。ユーザーが値を入力して元に戻した場合に false positive になるが、「変更した」という事実自体を保護する方が安全。値比較は YAGNI。
 
 ### 2. ブラウザ API 連携方式: 専用 Port vs 汎用メッセージ Port
 
@@ -231,7 +231,7 @@ beforeunload の制御を Elm からどう行うか。
 | **専用 Port（採用）** | 高い（`Bool -> Cmd msg`） | 高い（専用チャネル） | 新 Port 追加 |
 | 汎用 `sendMessage` | 低い（JSON エンコード） | 低い（dispatch ロジック必要） | switch 分岐追加 |
 
-**採用理由**: `setBeforeUnloadEnabled : Bool -> Cmd msg` という専用ポートにより、呼び出し側で JSON エンコードミスが起きない。beforeunload 制御はメッセージ通信とは本質的に異なる責務であり、プロジェクトの Elm ポート方針（論理的に独立した通信は専用ポート）にも合致する。
+採用理由: `setBeforeUnloadEnabled : Bool -> Cmd msg` という専用ポートにより、呼び出し側で JSON エンコードミスが起きない。beforeunload 制御はメッセージ通信とは本質的に異なる責務であり、プロジェクトの Elm ポート方針（論理的に独立した通信は専用ポート）にも合致する。
 
 ### 3. ナビゲーション確認 UI の配置: Main.elm vs ページ側
 
@@ -243,7 +243,7 @@ dirty 状態での SPA 内ナビゲーションをどこで阻止するか。
 | ページ側 | 低い（Nav.Key の受け渡し必要） | 低い（ナビゲーション制御を知る） | Nested TEA で不自然 |
 | JavaScript 側 | 低い（Elm 外で制御） | — | `window.confirm()` は UX が劣る |
 
-**採用理由**: Elm の `Browser.application` では `Nav.Key` は `Main.elm` のみが保持する。ナビゲーションの実行（`Nav.pushUrl`）には `Nav.Key` が必要なため、ナビゲーション制御は Main の責務。各ページは `isDirty` 関数を公開するだけでよく、ナビゲーション制御の知識を持たない。
+採用理由: Elm の `Browser.application` では `Nav.Key` は `Main.elm` のみが保持する。ナビゲーションの実行（`Nav.pushUrl`）には `Nav.Key` が必要なため、ナビゲーション制御は Main の責務。各ページは `isDirty` 関数を公開するだけでよく、ナビゲーション制御の知識を持たない。
 
 ### 4. ConfirmNavigation 時の beforeunload 解除タイミング
 
@@ -254,7 +254,7 @@ dirty 状態での SPA 内ナビゲーションをどこで阻止するか。
 | **ConfirmNavigation 時に明示解除（採用）** | 高い（リスナー残留なし） | `Cmd.batch [Nav.pushUrl, setBeforeUnloadEnabled False]` |
 | 遷移先の init で自然解消 | 低い（遷移先が New 以外ならリスナー残留） | 暗黙的 |
 
-**採用理由**: ナビゲーションを確定した時点で明示的に解除する。`Nav.pushUrl` による遷移先が New.elm 以外の場合、JS 側の `beforeunload` リスナーが残留するリスクがあるため、明示解除が安全。
+採用理由: ナビゲーションを確定した時点で明示的に解除する。`Nav.pushUrl` による遷移先が New.elm 以外の場合、JS 側の `beforeunload` リスナーが残留するリスクがあるため、明示解除が安全。
 
 ## 関連ドキュメント
 

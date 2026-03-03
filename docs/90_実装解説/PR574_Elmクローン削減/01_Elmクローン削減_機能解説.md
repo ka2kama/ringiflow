@@ -236,7 +236,7 @@ flowchart TD
 | **A: `Component.FormField` に全種別集約（採用）** | 低（1 モジュール） | 容易（inputClass 共有） | 1 ファイル変更 |
 | B: 種別ごとに個別モジュール | 高（4 モジュール） | 困難（CSS クラス分散） | 4 ファイル変更 |
 
-**採用理由**: フォームフィールドは共通の設計意図（ラベル + 入力 + エラー表示）を持ち、エラー表示の CSS クラスが全種別で同一。既存の `Component.PermissionMatrix` も複数関数を 1 ファイルに集約するパターン。
+採用理由: フォームフィールドは共通の設計意図（ラベル + 入力 + エラー表示）を持ち、エラー表示の CSS クラスが全種別で同一。既存の `Component.PermissionMatrix` も複数関数を 1 ファイルに集約するパターン。
 
 ### 2. Dirty フラグ管理の共有方法をどうするか
 
@@ -248,7 +248,7 @@ flowchart TD
 | B: 値のみ返す関数 | 中（boilerplate 増加） | 低 | なし |
 | C: 別の型に切り出す | 大（全モデル構造変更） | 高 | 大 |
 
-**採用理由**: Elm の extensible record `{ a | isDirty_ : Bool }` により、呼び出し側の変更が最小限（`markDirty model` → `DirtyState.markDirty model`）で型安全性も確保できる。
+採用理由: Elm の extensible record `{ a | isDirty_ : Bool }` により、呼び出し側の変更が最小限（`markDirty model` → `DirtyState.markDirty model`）で型安全性も確保できる。
 
 ### 3. バリデーション関数の共有方法をどうするか
 
@@ -260,7 +260,7 @@ flowchart TD
 | B: 別モジュール `Form.Validation.Common` 作成 | 高 | 新モジュール追加 | 中 |
 | C: 各ページのバリデータをそのまま残す | — | 変更なし | なし |
 
-**採用理由**: `Form.Validation` は既にバリデーションの責務を持ち、追加する関数は 1 つ。`fieldLabel` パラメータで「名前を入力してください」「ロール名を入力してください」のメッセージを動的に生成する。
+採用理由: `Form.Validation` は既にバリデーションの責務を持ち、追加する関数は 1 つ。`fieldLabel` パラメータで「名前を入力してください」「ロール名を入力してください」のメッセージを動的に生成する。
 
 ### 4. statusToBadge の配置先をどうするか
 
@@ -272,7 +272,7 @@ User Detail と List で重複する statusToBadge の移動先。
 | `Component.Badge` | 低（Badge は表示部品） | 中 |
 | `Page.User.Common` | 中 | 低（新モジュール必要） |
 
-**採用理由**: `statusToBadge` はユーザーのステータス値をドメイン知識に基づいて変換するロジック。`Data.AdminUser` が既にユーザーデータ型を定義しており、配置先として最適。
+採用理由: `statusToBadge` はユーザーのステータス値をドメイン知識に基づいて変換するロジック。`Data.AdminUser` が既にユーザーデータ型を定義しており、配置先として最適。
 
 ## 指標
 

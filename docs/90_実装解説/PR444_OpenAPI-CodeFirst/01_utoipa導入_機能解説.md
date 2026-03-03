@@ -186,7 +186,7 @@ sequenceDiagram
 | Design First（手動管理） | 手動（忘れやすい） | なし | YAML の手動編集が増大 |
 | Design First + コード生成 | 自動（YAML が SSOT） | コード生成ツール導入 | YAML を先に編集する必要 |
 
-**採用理由**: Rust の型が既に存在する状況では、型にアノテーションを追加するだけで仕様を生成できる Code First が最も自然。
+採用理由: Rust の型が既に存在する状況では、型にアノテーションを追加するだけで仕様を生成できる Code First が最も自然。
 
 ### 2. 同期チェックのタイミングをどうするか
 
@@ -198,7 +198,7 @@ sequenceDiagram
 | CI のみ | プッシュ後 | ローカルで気づけない | 同上 |
 | pre-commit hook | コミット時 | 毎コミットでビルド待ち | なし |
 
-**採用理由**: CI で確実に検出しつつ、`just check` にも含めることでローカルでの早期発見も可能にした。pre-commit hook はビルド待ちが発生するため不採用。
+採用理由: CI で確実に検出しつつ、`just check` にも含めることでローカルでの早期発見も可能にした。pre-commit hook はビルド待ちが発生するため不採用。
 
 ### 3. utoipa 依存の波及をどう制御するか
 
@@ -210,7 +210,7 @@ utoipa は BFF でのみ必要だが、`ApiResponse` や `ErrorResponse` は sha
 | shared に常時依存 | 全サービスに波及 | 不要 | 最低 |
 | BFF 内で wrapper 型を定義 | なし | 不要 | 高（型の二重管理） |
 
-**採用理由**: `openapi` feature flag により、BFF だけが utoipa を有効化する。Core Service や Auth Service のビルドには影響しない。
+採用理由: `openapi` feature flag により、BFF だけが utoipa を有効化する。Core Service や Auth Service のビルドには影響しない。
 
 ## 関連ドキュメント
 
