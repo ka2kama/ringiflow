@@ -5,22 +5,19 @@ module Page.WorkflowDefinition.Designer.Update exposing (handleGotDefinition, up
 updateLoaded（Loaded 状態でのメッセージ処理）と
 ヘルパー関数を集約する。
 
-本モジュールは 696 行（500行閾値超）だが、updateLoaded の全メッセージ処理
-（27 バリアント）が単一の CanvasState を操作するアーキテクチャパターンの
-帰結であり、分割すると責務境界が不明確になる。さらなる分割は Epic #996 で追跡中。
+永続化操作（Save/Validate/Publish チェーン）と接続線付け替え処理は
+UpdatePersistence モジュールに委譲する。
 
 -}
 
 import Api exposing (ApiError)
-import Api.ErrorMessage as ErrorMessage
-import Api.WorkflowDefinition as WorkflowDefinitionApi
-import Component.ConfirmDialog as ConfirmDialog
-import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..))
-import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
+import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..))
+import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Dict
 import Form.DirtyState as DirtyState
 import List.Extra
 import Page.WorkflowDefinition.Designer.Types exposing (CanvasState, Model, Msg(..), PageState(..), canvasElementId)
+import Page.WorkflowDefinition.Designer.UpdatePersistence as UpdatePersistence
 import Ports
 import Shared exposing (Shared)
 
@@ -224,7 +221,7 @@ updateLoaded msg shared definitionId canvas =
                             )
 
                 Just (DraggingReconnection index end mousePos) ->
-                    handleReconnectionDrop index end mousePos canvas
+                    UpdatePersistence.handleReconnectionDrop index end mousePos canvas
 
                 Nothing ->
                     ( canvas, Cmd.none )
@@ -319,205 +316,31 @@ updateLoaded msg shared definitionId canvas =
             ( { dirtyCanvas | name = newName }, dirtyCmd )
 
         SaveClicked ->
-            let
-                definition =
-                    DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
-
-                body =
-                    WorkflowDefinition.encodeUpdateRequest
-                        { name = canvas.name
-                        , description = canvas.description
-                        , definition = definition
-                        , version = canvas.version
-                        }
-            in
-            ( { canvas | isSaving = True, successMessage = Nothing, errorMessage = Nothing }
-            , WorkflowDefinitionApi.updateDefinition
-                { config = Shared.toRequestConfig shared
-                , id = definitionId
-                , body = body
-                , toMsg = GotSaveResult
-                }
-            )
+            UpdatePersistence.handleSave shared definitionId canvas
 
         GotSaveResult result ->
-            case result of
-                Ok def ->
-                    let
-                        ( cleanCanvas, cleanCmd ) =
-                            DirtyState.clearDirty canvas
-                    in
-                    if canvas.pendingPublish then
-                        -- 公開チェーン: 保存成功 → バリデーション
-                        let
-                            definition =
-                                DesignerCanvas.encodeDefinition cleanCanvas.steps cleanCanvas.transitions
-                        in
-                        ( { cleanCanvas
-                            | isSaving = False
-                            , version = def.version
-                            , isValidating = True
-                            , validationResult = Nothing
-                          }
-                        , Cmd.batch
-                            [ cleanCmd
-                            , WorkflowDefinitionApi.validateDefinition
-                                { config = Shared.toRequestConfig shared
-                                , body = definition
-                                , toMsg = GotValidationResult
-                                }
-                            ]
-                        )
-
-                    else
-                        ( { cleanCanvas
-                            | isSaving = False
-                            , version = def.version
-                            , successMessage = Just "保存しました"
-                            , errorMessage = Nothing
-                          }
-                        , cleanCmd
-                        )
-
-                Err err ->
-                    ( { canvas
-                        | isSaving = False
-                        , pendingPublish = False
-                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
-                        , successMessage = Nothing
-                      }
-                    , Cmd.none
-                    )
+            UpdatePersistence.handleSaveResult shared result canvas
 
         ValidateClicked ->
-            let
-                definition =
-                    DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
-            in
-            ( { canvas | isValidating = True, validationResult = Nothing, errorMessage = Nothing }
-            , WorkflowDefinitionApi.validateDefinition
-                { config = Shared.toRequestConfig shared
-                , body = WorkflowDefinition.encodeValidationRequest { definition = definition }
-                , toMsg = GotValidationResult
-                }
-            )
+            UpdatePersistence.handleValidate shared canvas
 
         GotValidationResult result ->
-            case result of
-                Ok validResult ->
-                    if canvas.pendingPublish && validResult.valid then
-                        -- 公開チェーン: バリデーション成功 → 公開 API 呼び出し
-                        ( { canvas
-                            | isValidating = False
-                            , validationResult = Just validResult
-                            , isPublishing = True
-                          }
-                        , WorkflowDefinitionApi.publishDefinition
-                            { config = Shared.toRequestConfig shared
-                            , id = definitionId
-                            , body = WorkflowDefinition.encodeVersionRequest { version = canvas.version }
-                            , toMsg = GotPublishResult
-                            }
-                        )
-
-                    else
-                        -- 通常バリデーション結果、または公開チェーンでバリデーション失敗
-                        ( { canvas
-                            | isValidating = False
-                            , validationResult = Just validResult
-                            , pendingPublish = False
-                          }
-                        , Cmd.none
-                        )
-
-                Err err ->
-                    ( { canvas
-                        | isValidating = False
-                        , pendingPublish = False
-                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
-                      }
-                    , Cmd.none
-                    )
+            UpdatePersistence.handleValidationResult shared definitionId result canvas
 
         PublishClicked ->
-            ( { canvas | pendingPublish = True, successMessage = Nothing, errorMessage = Nothing }
-            , Ports.showModalDialog ConfirmDialog.dialogId
-            )
+            UpdatePersistence.handlePublishClicked canvas
 
         ConfirmPublish ->
-            if canvas.isDirty_ then
-                -- dirty なら先に保存
-                let
-                    definition =
-                        DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
-
-                    body =
-                        WorkflowDefinition.encodeUpdateRequest
-                            { name = canvas.name
-                            , description = canvas.description
-                            , definition = definition
-                            , version = canvas.version
-                            }
-                in
-                ( { canvas | isSaving = True }
-                , WorkflowDefinitionApi.updateDefinition
-                    { config = Shared.toRequestConfig shared
-                    , id = definitionId
-                    , body = body
-                    , toMsg = GotSaveResult
-                    }
-                )
-
-            else
-                -- dirty でなければ直接バリデーション
-                let
-                    definition =
-                        DesignerCanvas.encodeDefinition canvas.steps canvas.transitions
-                in
-                ( { canvas | isValidating = True, validationResult = Nothing }
-                , WorkflowDefinitionApi.validateDefinition
-                    { config = Shared.toRequestConfig shared
-                    , body = WorkflowDefinition.encodeValidationRequest { definition = definition }
-                    , toMsg = GotValidationResult
-                    }
-                )
+            UpdatePersistence.handleConfirmPublish shared definitionId canvas
 
         CancelPublish ->
-            ( { canvas | pendingPublish = False }
-            , Cmd.none
-            )
+            UpdatePersistence.handleCancelPublish canvas
 
         GotPublishResult result ->
-            case result of
-                Ok def ->
-                    let
-                        ( cleanCanvas, cleanCmd ) =
-                            DirtyState.clearDirty canvas
-                    in
-                    ( { cleanCanvas
-                        | isPublishing = False
-                        , pendingPublish = False
-                        , version = def.version
-                        , successMessage = Just "公開しました"
-                        , errorMessage = Nothing
-                      }
-                    , cleanCmd
-                    )
-
-                Err err ->
-                    ( { canvas
-                        | isPublishing = False
-                        , pendingPublish = False
-                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ワークフロー定義" } err)
-                        , successMessage = Nothing
-                      }
-                    , Cmd.none
-                    )
+            UpdatePersistence.handlePublishResult result canvas
 
         DismissMessage ->
-            ( { canvas | successMessage = Nothing, errorMessage = Nothing }
-            , Cmd.none
-            )
+            UpdatePersistence.handleDismissMessage canvas
 
         StepMouseDown stepId clientX clientY ->
             case ( Dict.get stepId canvas.steps, DesignerCanvas.clientToCanvas canvas.canvasBounds clientX clientY ) of
@@ -637,64 +460,3 @@ deleteSelectedTransition canvas =
 
         Nothing ->
             ( canvas, Cmd.none )
-
-
-{-| 接続線端点の付け替えドロップ処理
-
-ドロップ先のステップを判定し、有効な場合は transition の from/to を更新する。
-trigger は維持する（付け替え時に自動変更しない）。
-
--}
-handleReconnectionDrop : Int -> ReconnectEnd -> DesignerCanvas.Position -> CanvasState -> ( CanvasState, Cmd Msg )
-handleReconnectionDrop index end mousePos canvas =
-    case List.Extra.getAt index canvas.transitions of
-        Just transition ->
-            let
-                -- 付け替えない側のステップ ID（自己ループ防止に使用）
-                fixedStepId =
-                    case end of
-                        SourceEnd ->
-                            transition.to
-
-                        TargetEnd ->
-                            transition.from
-
-                -- ドロップ先のステップを判定（固定端と同じステップは除外 = 自己ループ防止）
-                droppedStep =
-                    canvas.steps
-                        |> Dict.values
-                        |> List.filter (\s -> s.id /= fixedStepId)
-                        |> List.filter (DesignerCanvas.stepContainsPoint mousePos)
-                        |> List.head
-            in
-            case droppedStep of
-                Just target ->
-                    let
-                        updatedTransition =
-                            case end of
-                                SourceEnd ->
-                                    { transition | from = target.id }
-
-                                TargetEnd ->
-                                    { transition | to = target.id }
-
-                        ( dirtyCanvas, dirtyCmd ) =
-                            DirtyState.markDirty canvas
-                    in
-                    ( { dirtyCanvas
-                        | transitions = List.Extra.updateAt index (\_ -> updatedTransition) dirtyCanvas.transitions
-                        , dragging = Nothing
-                        , selectedTransitionIndex = Nothing
-                      }
-                    , dirtyCmd
-                    )
-
-                Nothing ->
-                    ( { canvas | dragging = Nothing }
-                    , Cmd.none
-                    )
-
-        Nothing ->
-            ( { canvas | dragging = Nothing }
-            , Cmd.none
-            )
