@@ -16,7 +16,7 @@ import Component.ApproverSelector as ApproverSelector
 import Component.Button as Button
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
-import Dict exposing (Dict)
+import Dict
 import Form.DynamicForm as DynamicForm
 import Html exposing (..)
 import Html.Attributes exposing (..)

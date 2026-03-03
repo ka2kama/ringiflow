@@ -12,7 +12,6 @@ import Api.Workflow as WorkflowApi
 import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
 import Data.UserItem as UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition
-import Data.WorkflowInstance exposing (WorkflowInstance)
 import Dict exposing (Dict)
 import Form.DynamicForm as DynamicForm
 import Form.Validation as Validation
