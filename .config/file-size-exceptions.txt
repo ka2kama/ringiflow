@@ -1,0 +1,46 @@
+# 500 行超ファイルの例外リスト
+#
+# 新たに 500 行を超えたファイルは、このリストに追加するか分割する。
+# 追加する場合は理由を必ず記載すること（ADR-043 の判断プロセスに従う）。
+#
+# 形式: ファイルパス # 理由
+# 空行と # で始まる行は無視される。
+
+# --- ADR-043 例外許容（prod < 500 + 高凝集） ---
+backend/apps/core-service/src/handler/auth/mod.rs # ADR-043: prod 442行、認証関連で高凝集
+backend/apps/core-service/src/usecase/task.rs # ADR-043: prod 225行（ADR-041 で判断済み）
+backend/crates/domain/src/value_objects.rs # ADR-043: prod 437行、値オブジェクト集約で高凝集
+frontend/src/Main.elm # ADR-043: TEA + Nested TEA ルーターの帰結（アーキテクチャパターン）
+
+# --- 既存の超過（分割検討対象） ---
+backend/apps/bff/src/client/core_service/workflow_client.rs # 既存の超過、分割検討対象
+backend/apps/bff/src/error.rs # 既存の超過、分割検討対象
+backend/apps/bff/src/handler/auth/login.rs # 既存の超過、分割検討対象
+backend/apps/bff/src/handler/user.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/handler/document.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/handler/folder.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/handler/workflow/command.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/handler/workflow_definition.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/usecase/workflow/command/decision/approve.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/usecase/workflow/command/decision/reject.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/usecase/workflow/command/decision/request_changes.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/usecase/workflow/command/lifecycle/resubmit.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/usecase/workflow/command/lifecycle/submit.rs # 既存の超過、分割検討対象
+backend/apps/core-service/src/usecase/workflow_definition.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/document.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/folder.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/role.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/user.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/workflow/definition.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/workflow/definition_validator.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/workflow/instance.rs # 既存の超過、分割検討対象
+backend/crates/domain/src/workflow/step.rs # 既存の超過、分割検討対象
+backend/crates/infra/src/fake.rs # 既存の超過、分割検討対象
+backend/crates/infra/src/repository/user_repository.rs # 既存の超過、分割検討対象
+backend/crates/infra/src/session.rs # 既存の超過、分割検討対象
+frontend/src/Data/DesignerCanvas.elm # 既存の超過、分割検討対象
+frontend/src/Page/Task/Detail.elm # 既存の超過、分割検討対象
+frontend/src/Page/Workflow/New/Update.elm # 既存の超過、分割検討対象
+frontend/src/Page/WorkflowDefinition/Designer/Canvas.elm # 既存の超過、分割検討対象
+frontend/src/Page/WorkflowDefinition/Designer/Update.elm # 既存の超過、分割検討対象
+frontend/src/Page/WorkflowDefinition/List.elm # 既存の超過、分割検討対象

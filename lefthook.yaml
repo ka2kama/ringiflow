@@ -38,6 +38,11 @@ pre-commit:
       # 計画ファイルの命名規則違反検出（ランダム名のブロック）
       glob: "prompts/plans/*.md"
       run: ./scripts/check/check-plan-filenames.sh {staged_files}
+    check-file-size:
+      # 500 行超のファイルを早期検出（警告のみ、品質ゲートは just check で実施）
+      glob: "*.{rs,elm}"
+      exclude: "*/tests/*|*_test.rs"
+      run: ./scripts/check/file-size.sh --pre-commit {staged_files}
 
 # プッシュ前のチェック（lint + unit test、DB 不要）
 pre-push:
