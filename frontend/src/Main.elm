@@ -31,6 +31,7 @@ import Page.User.Edit as UserEdit
 import Page.User.List as UserList
 import Page.User.New as UserNew
 import Page.Workflow.Detail as WorkflowDetail
+import Page.Workflow.Detail.Types as DetailTypes
 import Page.Workflow.List as WorkflowList
 import Page.Workflow.New as WorkflowNew
 import Page.WorkflowDefinition.Designer as Designer
@@ -87,7 +88,7 @@ type Page
     = HomePage Home.Model
     | WorkflowsPage WorkflowList.Model
     | WorkflowNewPage WorkflowNew.Model
-    | WorkflowDetailPage WorkflowDetail.Model
+    | WorkflowDetailPage DetailTypes.Model
     | TasksPage TaskList.Model
     | TaskDetailPage TaskDetail.Model
     | UsersPage UserList.Model
@@ -389,7 +390,7 @@ type Msg
     | HomeMsg Home.Msg
     | WorkflowsMsg WorkflowList.Msg
     | WorkflowNewMsg WorkflowNew.Msg
-    | WorkflowDetailMsg WorkflowDetail.Msg
+    | WorkflowDetailMsg DetailTypes.Msg
     | TasksMsg TaskList.Msg
     | TaskDetailMsg TaskDetail.Msg
     | UsersMsg UserList.Msg
