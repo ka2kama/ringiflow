@@ -27,18 +27,19 @@ paths:
 
 ### 検出メカニズム: 例外リスト方式
 
-背景: [Issue #1017](https://github.com/ka2kama/ringiflow/issues/1017)
+例外リスト（`.config/file-size-exceptions.txt`）に登録されていない超過ファイルのみ失敗にする。
 
-既知の超過ファイルは `.config/file-size-exceptions.txt` で管理する。新たに 500 行を超えたファイル（例外リストにないもの）のみ失敗にする。
-
-```
-新たに超過 → 「分割する」か「例外リストに理由付きで追加する」の 2 択
-```
+| 超過ファイルの状態 | 結果 |
+|-------------------|------|
+| 例外リストにない | 失敗（`just check`）/ 警告（pre-commit） |
+| 例外リストにある | 通過 |
 
 | 検出タイミング | メカニズム | 挙動 |
 |--------------|----------|------|
 | pre-commit | lefthook | 警告のみ（exit 0） |
 | `just check` | parallel.sh | 失敗（exit 1） |
+
+改善の経緯: [Issue #1017](https://github.com/ka2kama/ringiflow/issues/1017)
 
 ### 判断プロセス
 
