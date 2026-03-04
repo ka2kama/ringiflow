@@ -318,6 +318,10 @@ jobs:
             - 必須の手順（テスト、ドキュメント更新など）
             - 禁止事項
 
+            ### 重大度の判定（ADR-063）
+
+            全てのルール違反は High（blocking）として扱う。→ 根拠: [ADR-063](docs/70_ADR/063_PRレビュープロンプトのベストプラクティス起点再設計.md)
+
             ### 過去の議論を踏まえた判断
 
             PR コメントで既に議論された内容については、以下のように判断する:
@@ -334,9 +338,11 @@ jobs:
 
             1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
                - 該当ルールを引用して指摘
-            2. 全体フィードバック: `gh pr comment` で PR コメントを投稿
-               - ルール違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
-               - ルール違反なし → "Rules Check (Group 1): LGTM ✅" + チェックしたルール一覧 + 結果マーカー `<!-- rules-check-result:pass -->`
+            2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿
+               - 違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
+               - 違反なし → "Rules Check (Group 1): LGTM ✅" + 結果マーカー `<!-- rules-check-result:pass -->`
+
+            LGTM 時はチェックしたルール一覧を省略し、1 行 + メタデータのみとする。
 
             **重要:**
             - `gh pr review` は使用しない（Auto Review の承認判断との競合を防ぐため）
@@ -350,9 +356,9 @@ jobs:
             ```html
             <!-- review-metadata
             type: rules-check
-            severity-critical: <数値>
-            severity-high: 0
-            severity-medium: 0
+            severity-critical: 0
+            severity-high: <数値>
+            severity-medium: <数値>
             severity-low: 0
             action-required: true | false
             -->
@@ -360,12 +366,12 @@ jobs:
 
             ### Rules Check でのメタデータルール
 
-            Rules Check では以下のルールに従う:
-
             - `type`: `rules-check` 固定
-            - `severity-critical`: ルール違反の件数（ルール違反はすべて Critical 扱い）
-            - `severity-high`, `severity-medium`, `severity-low`: 常に `0`（Rules Check では使用しない）
-            - `action-required`: ルール違反がある場合は `true`、ない場合は `false`
+            - `severity-critical`: 常に `0`（Rules Check では Critical は使用しない）
+            - `severity-high`: ルール違反の件数
+            - `severity-medium`: 常に `0`
+            - `severity-low`: 常に `0`
+            - `action-required`: `severity-high` が 1 以上なら `true`、それ以外は `false`
 
             ### 配置場所
 
@@ -471,6 +477,10 @@ jobs:
             - 必須の手順（テスト、ドキュメント更新など）
             - 禁止事項
 
+            ### 重大度の判定（ADR-063）
+
+            全てのルール違反は High（blocking）として扱う。→ 根拠: [ADR-063](docs/70_ADR/063_PRレビュープロンプトのベストプラクティス起点再設計.md)
+
             ### 過去の議論を踏まえた判断
 
             PR コメントで既に議論された内容については、以下のように判断する:
@@ -487,9 +497,11 @@ jobs:
 
             1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
                - 該当ルールを引用して指摘
-            2. 全体フィードバック: `gh pr comment` で PR コメントを投稿
-               - ルール違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
-               - ルール違反なし → "Rules Check (Group 2): LGTM ✅" + チェックしたルール一覧 + 結果マーカー `<!-- rules-check-result:pass -->`
+            2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿
+               - 違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
+               - 違反なし → "Rules Check (Group 2): LGTM ✅" + 結果マーカー `<!-- rules-check-result:pass -->`
+
+            LGTM 時はチェックしたルール一覧を省略し、1 行 + メタデータのみとする。
 
             **重要:**
             - `gh pr review` は使用しない（Auto Review の承認判断との競合を防ぐため）
@@ -503,9 +515,9 @@ jobs:
             ```html
             <!-- review-metadata
             type: rules-check
-            severity-critical: <数値>
-            severity-high: 0
-            severity-medium: 0
+            severity-critical: 0
+            severity-high: <数値>
+            severity-medium: <数値>
             severity-low: 0
             action-required: true | false
             -->
@@ -513,12 +525,12 @@ jobs:
 
             ### Rules Check でのメタデータルール
 
-            Rules Check では以下のルールに従う:
-
             - `type`: `rules-check` 固定
-            - `severity-critical`: ルール違反の件数（ルール違反はすべて Critical 扱い）
-            - `severity-high`, `severity-medium`, `severity-low`: 常に `0`（Rules Check では使用しない）
-            - `action-required`: ルール違反がある場合は `true`、ない場合は `false`
+            - `severity-critical`: 常に `0`（Rules Check では Critical は使用しない）
+            - `severity-high`: ルール違反の件数
+            - `severity-medium`: 常に `0`
+            - `severity-low`: 常に `0`
+            - `action-required`: `severity-high` が 1 以上なら `true`、それ以外は `false`
 
             ### 配置場所
 

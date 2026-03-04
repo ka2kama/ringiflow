@@ -313,7 +313,8 @@ PR 本文の形式:
 
 Claude Code Action による自動 PR レビューが有効。→ [`.github/workflows/claude-auto-review.yaml`](.github/workflows/claude-auto-review.yaml)
 
-承認基準: Critical/High は修正必須（request-changes）、Medium/Low は改善推奨だがマージ可能（approve + コメント）。
+承認基準（Verification）: Critical/High は修正必須（request-changes）、Medium/Low は改善推奨だがマージ可能（approve + コメント）。
+承認基準（Rules Check）: 全ルール違反は修正必須（blocking）。→ [ADR-063](docs/70_ADR/063_PRレビュープロンプトのベストプラクティス起点再設計.md)
 
 ```bash
 gh pr checks && gh pr view --comments  # 指摘対応フロー
