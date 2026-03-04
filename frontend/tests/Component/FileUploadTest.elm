@@ -6,7 +6,7 @@ module Component.FileUploadTest exposing (suite)
 
 -}
 
-import Component.FileUpload exposing (FileError(..), validateFile, validateFileCount)
+import Component.FileUpload exposing (FileError(..), init, validateFile, validateFileCount)
 import Data.FormField exposing (FileConfig)
 import Expect
 import Test exposing (..)
@@ -15,8 +15,41 @@ import Test exposing (..)
 suite : Test
 suite =
     describe "Component.FileUpload"
-        [ validateFileTests
+        [ initTests
+        , validateFileTests
         , validateFileCountTests
+        ]
+
+
+
+-- init
+
+
+initTests : Test
+initTests =
+    let
+        defaultConfig : FileConfig
+        defaultConfig =
+            { maxFiles = 5
+            , maxFileSize = 10485760
+            , allowedTypes = []
+            }
+    in
+    describe "init"
+        [ test "nextId の初期値は 0" <|
+            \_ ->
+                let
+                    sut =
+                        init defaultConfig Nothing
+                in
+                sut.nextId |> Expect.equal 0
+        , test "files の初期値は空リスト" <|
+            \_ ->
+                let
+                    sut =
+                        init defaultConfig Nothing
+                in
+                sut.files |> Expect.equal []
         ]
 
 
