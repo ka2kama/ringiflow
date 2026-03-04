@@ -121,7 +121,7 @@ pub struct FileValidation;
 
 impl FileValidation {
     /// 対応 Content-Type の一覧
-    const ALLOWED_CONTENT_TYPES: &[&str] = &[
+    pub const ALLOWED_CONTENT_TYPES: &[&str] = &[
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

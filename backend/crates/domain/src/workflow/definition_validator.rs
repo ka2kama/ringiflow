@@ -8,6 +8,8 @@ use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 
+use crate::document::FileValidation;
+
 /// バリデーション結果
 #[derive(Debug, Clone, Serialize)]
 pub struct ValidationResult {
@@ -359,7 +361,7 @@ fn validate_form_fields(definition: &JsonValue, errors: &mut Vec<ValidationError
         return;
     };
 
-    let valid_types = ["text", "textarea", "number", "select", "date"];
+    let valid_types = ["text", "textarea", "number", "select", "date", "file"];
     let mut seen_ids = HashSet::new();
 
     for field in fields {
@@ -419,6 +421,66 @@ fn validate_form_fields(definition: &JsonValue, errors: &mut Vec<ValidationError
                     "invalid_form_field",
                     format!("フォームフィールド '{}' (select) に options が必要です", id),
                 ));
+            }
+        }
+
+        // file の固有バリデーション
+        if field_type == Some("file") {
+            validate_file_field_options(field, id, errors);
+        }
+    }
+}
+
+/// file フィールドの固有プロパティを検証する
+///
+/// maxFiles, maxFileSize は任意で、指定時は 1 以上の整数。
+/// allowedTypes は任意で、指定時は `FileValidation::ALLOWED_CONTENT_TYPES` のサブセット。
+fn validate_file_field_options(field: &JsonValue, id: &str, errors: &mut Vec<ValidationError>) {
+    // maxFiles: 指定時は 1 以上
+    if let Some(max_files) = field.get("maxFiles") {
+        match max_files.as_i64() {
+            Some(n) if n >= 1 => {}
+            _ => {
+                errors.push(ValidationError::new(
+                    "invalid_form_field",
+                    format!(
+                        "フォームフィールド '{}' (file) の maxFiles は 1 以上の整数が必要です",
+                        id
+                    ),
+                ));
+            }
+        }
+    }
+
+    // maxFileSize: 指定時は 1 以上
+    if let Some(max_file_size) = field.get("maxFileSize") {
+        match max_file_size.as_i64() {
+            Some(n) if n >= 1 => {}
+            _ => {
+                errors.push(ValidationError::new(
+                    "invalid_form_field",
+                    format!(
+                        "フォームフィールド '{}' (file) の maxFileSize は 1 以上の整数が必要です",
+                        id
+                    ),
+                ));
+            }
+        }
+    }
+
+    // allowedTypes: 指定時は ALLOWED_CONTENT_TYPES のサブセット
+    if let Some(allowed_types) = field.get("allowedTypes").and_then(|v| v.as_array()) {
+        for ct in allowed_types {
+            if let Some(ct_str) = ct.as_str() {
+                if !FileValidation::ALLOWED_CONTENT_TYPES.contains(&ct_str) {
+                    errors.push(ValidationError::new(
+                        "invalid_form_field",
+                        format!(
+                            "フォームフィールド '{}' (file) の allowedTypes に非対応の形式があります: {}",
+                            id, ct_str
+                        ),
+                    ));
+                }
             }
         }
     }
@@ -893,6 +955,149 @@ mod tests {
         let result = validate_definition(&valid_definition());
 
         assert!(!has_error(&result, "invalid_form_field"));
+    }
+
+    #[test]
+    fn test_fileタイプのフィールドがバリデーションを通過する() {
+        let definition = json!({
+            "form": {
+                "fields": [
+                    {"id": "title", "type": "text", "label": "件名", "required": true},
+                    {"id": "receipt", "type": "file", "label": "領収書"}
+                ]
+            },
+            "steps": [
+                {"id": "start", "type": "start", "name": "開始"},
+                {"id": "approval_1", "type": "approval", "name": "承認"},
+                {"id": "end_approved", "type": "end", "name": "完了", "status": "approved"},
+                {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+            ],
+            "transitions": [
+                {"from": "start", "to": "approval_1"},
+                {"from": "approval_1", "to": "end_approved", "trigger": "approve"},
+                {"from": "approval_1", "to": "end_rejected", "trigger": "reject"}
+            ]
+        });
+
+        let result = validate_definition(&definition);
+
+        assert!(result.valid, "errors: {:?}", result.errors);
+    }
+
+    #[test]
+    fn test_fileフィールドにmax_filesとmax_file_sizeとallowed_typesを設定した定義が通過する() {
+        let definition = json!({
+            "form": {
+                "fields": [
+                    {
+                        "id": "receipt",
+                        "type": "file",
+                        "label": "領収書",
+                        "maxFiles": 3,
+                        "maxFileSize": 10485760,
+                        "allowedTypes": ["application/pdf", "image/jpeg"]
+                    }
+                ]
+            },
+            "steps": [
+                {"id": "start", "type": "start", "name": "開始"},
+                {"id": "approval_1", "type": "approval", "name": "承認"},
+                {"id": "end_approved", "type": "end", "name": "完了", "status": "approved"},
+                {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+            ],
+            "transitions": [
+                {"from": "start", "to": "approval_1"},
+                {"from": "approval_1", "to": "end_approved", "trigger": "approve"},
+                {"from": "approval_1", "to": "end_rejected", "trigger": "reject"}
+            ]
+        });
+
+        let result = validate_definition(&definition);
+
+        assert!(result.valid, "errors: {:?}", result.errors);
+    }
+
+    #[test]
+    fn test_fileフィールドのmax_filesが0以下の場合エラー() {
+        let definition = json!({
+            "form": {
+                "fields": [
+                    {"id": "receipt", "type": "file", "label": "領収書", "maxFiles": 0}
+                ]
+            },
+            "steps": [
+                {"id": "start", "type": "start", "name": "開始"},
+                {"id": "approval_1", "type": "approval", "name": "承認"},
+                {"id": "end_approved", "type": "end", "name": "完了", "status": "approved"},
+                {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+            ],
+            "transitions": [
+                {"from": "start", "to": "approval_1"},
+                {"from": "approval_1", "to": "end_approved", "trigger": "approve"},
+                {"from": "approval_1", "to": "end_rejected", "trigger": "reject"}
+            ]
+        });
+
+        let result = validate_definition(&definition);
+
+        assert!(has_error(&result, "invalid_form_field"));
+    }
+
+    #[test]
+    fn test_fileフィールドのmax_file_sizeが0以下の場合エラー() {
+        let definition = json!({
+            "form": {
+                "fields": [
+                    {"id": "receipt", "type": "file", "label": "領収書", "maxFileSize": 0}
+                ]
+            },
+            "steps": [
+                {"id": "start", "type": "start", "name": "開始"},
+                {"id": "approval_1", "type": "approval", "name": "承認"},
+                {"id": "end_approved", "type": "end", "name": "完了", "status": "approved"},
+                {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+            ],
+            "transitions": [
+                {"from": "start", "to": "approval_1"},
+                {"from": "approval_1", "to": "end_approved", "trigger": "approve"},
+                {"from": "approval_1", "to": "end_rejected", "trigger": "reject"}
+            ]
+        });
+
+        let result = validate_definition(&definition);
+
+        assert!(has_error(&result, "invalid_form_field"));
+    }
+
+    #[test]
+    fn test_fileフィールドのallowed_typesに無効なcontent_typeがある場合エラー() {
+        let definition = json!({
+            "form": {
+                "fields": [
+                    {
+                        "id": "receipt",
+                        "type": "file",
+                        "label": "領収書",
+                        "allowedTypes": ["application/pdf", "application/zip"]
+                    }
+                ]
+            },
+            "steps": [
+                {"id": "start", "type": "start", "name": "開始"},
+                {"id": "approval_1", "type": "approval", "name": "承認"},
+                {"id": "end_approved", "type": "end", "name": "完了", "status": "approved"},
+                {"id": "end_rejected", "type": "end", "name": "却下", "status": "rejected"}
+            ],
+            "transitions": [
+                {"from": "start", "to": "approval_1"},
+                {"from": "approval_1", "to": "end_approved", "trigger": "approve"},
+                {"from": "approval_1", "to": "end_rejected", "trigger": "reject"}
+            ]
+        });
+
+        let result = validate_definition(&definition);
+
+        assert!(has_error(&result, "invalid_form_field"));
     }
 
     #[test]
