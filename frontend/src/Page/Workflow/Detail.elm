@@ -11,6 +11,7 @@ module Page.Workflow.Detail exposing (init, subscriptions, update, updateShared,
 -}
 
 import Api exposing (ApiError)
+import Api.Document as DocumentApi
 import Api.ErrorMessage as ErrorMessage
 import Api.Workflow as WorkflowApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
@@ -18,18 +19,21 @@ import Component.Badge as Badge
 import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
-import Data.FormField exposing (FormField)
+import Data.Document exposing (Document)
+import Data.FormField exposing (FieldType(..), FormField)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, WorkflowStep)
 import Form.DynamicForm as DynamicForm
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events
 import Json.Decode as Decode
 import Page.Workflow.Detail.Approval as Approval
 import Page.Workflow.Detail.Comments as Comments
 import Page.Workflow.Detail.Resubmit as Resubmit
 import Page.Workflow.Detail.StepProgress as StepProgress
 import Page.Workflow.Detail.Types as Types exposing (EditState(..), LoadedState, Model, Msg(..), initLoaded)
+import Ports
 import RemoteData exposing (RemoteData(..))
 import Route
 import Shared exposing (Shared)
@@ -131,6 +135,11 @@ handleGotWorkflow result model =
                             , displayNumber = model.workflowDisplayNumber
                             , toMsg = GotComments
                             }
+                        , DocumentApi.listWorkflowAttachments
+                            { config = Shared.toRequestConfig model.shared
+                            , workflowInstanceId = workflow.id
+                            , toMsg = GotAttachments
+                            }
                         ]
                     )
 
@@ -156,6 +165,36 @@ updateLoaded msg shared workflowDisplayNumber loaded =
 
                 Err err ->
                     ( { loaded | definition = Failure err }, Cmd.none )
+
+        -- 添付ファイル
+        GotAttachments result ->
+            case result of
+                Ok attachments ->
+                    ( { loaded | attachments = Success attachments }, Cmd.none )
+
+                Err err ->
+                    ( { loaded | attachments = Failure err }, Cmd.none )
+
+        DownloadFile documentId ->
+            ( loaded
+            , DocumentApi.requestDownloadUrl
+                { config = Shared.toRequestConfig shared
+                , documentId = documentId
+                , toMsg = GotDownloadUrl
+                }
+            )
+
+        GotDownloadUrl result ->
+            case result of
+                Ok response ->
+                    ( loaded
+                    , Ports.openUrl response.downloadUrl
+                    )
+
+                Err _ ->
+                    ( { loaded | errorMessage = Just "ダウンロード URL の取得に失敗しました" }
+                    , Cmd.none
+                    )
 
         DismissMessage ->
             ( { loaded | errorMessage = Nothing, successMessage = Nothing }
@@ -333,6 +372,7 @@ viewWorkflowDetail shared loaded =
 
             Viewing ->
                 viewFormData loaded.workflow loaded.definition
+        , viewAttachments loaded.attachments
         , Comments.viewCommentSection loaded
         ]
 
@@ -482,3 +522,63 @@ viewRawFormData formData =
                 |> Result.withDefault "（データなし）"
             )
         ]
+
+
+{-| 添付ファイルセクション
+-}
+viewAttachments : RemoteData ApiError (List Document) -> Html Msg
+viewAttachments remoteAttachments =
+    div [ class "rounded-lg border border-secondary-200 bg-white p-6 shadow-sm" ]
+        [ h2 [ class "mb-4 text-lg font-semibold text-secondary-900" ] [ text "添付ファイル" ]
+        , case remoteAttachments of
+            NotAsked ->
+                text ""
+
+            RemoteData.Loading ->
+                LoadingSpinner.view
+
+            Failure _ ->
+                p [ class "text-sm text-secondary-500" ] [ text "添付ファイルの取得に失敗しました" ]
+
+            Success attachments ->
+                if List.isEmpty attachments then
+                    p [ class "text-sm text-secondary-500" ] [ text "添付ファイルはありません" ]
+
+                else
+                    ul [ class "space-y-2 list-none pl-0" ]
+                        (List.map viewAttachmentItem attachments)
+        ]
+
+
+{-| 添付ファイル個別表示
+-}
+viewAttachmentItem : Document -> Html Msg
+viewAttachmentItem doc =
+    li [ class "flex items-center justify-between rounded-lg border border-secondary-200 bg-secondary-50 p-3" ]
+        [ div [ class "min-w-0 flex-1" ]
+            [ span [ class "truncate text-sm font-medium text-secondary-900" ]
+                [ text doc.filename ]
+            , span [ class "ml-2 text-xs text-secondary-500" ]
+                [ text (formatFileSize doc.size) ]
+            ]
+        , button
+            [ Html.Events.onClick (DownloadFile doc.id)
+            , class "shrink-0 rounded border border-primary-500 bg-white px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 transition-colors cursor-pointer"
+            , type_ "button"
+            ]
+            [ text "ダウンロード" ]
+        ]
+
+
+{-| ファイルサイズを読みやすい形式にフォーマット
+-}
+formatFileSize : Int -> String
+formatFileSize bytes =
+    if bytes >= 1048576 then
+        String.fromFloat (toFloat (bytes * 10 // 1048576) / 10) ++ " MB"
+
+    else if bytes >= 1024 then
+        String.fromFloat (toFloat (bytes * 10 // 1024) / 10) ++ " KB"
+
+    else
+        String.fromInt bytes ++ " B"

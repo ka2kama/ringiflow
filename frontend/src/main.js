@@ -255,6 +255,18 @@ if (app.ports.requestCanvasBounds) {
   });
 }
 
+/**
+ * URL を新しいタブで開く（Ports: openUrl）
+ *
+ * ファイルダウンロード用の Presigned URL を新しいタブで開く。
+ * window.open を使用してページ遷移を発生させない。
+ */
+if (app.ports.openUrl) {
+  app.ports.openUrl.subscribe((url) => {
+    window.open(url, "_blank");
+  });
+}
+
 if (app.ports.setBeforeUnloadEnabled) {
   let beforeUnloadHandler = null;
 
