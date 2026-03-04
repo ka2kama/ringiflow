@@ -13,12 +13,12 @@ import Component.ApproverSelector as ApproverSelector exposing (ApproverSelectio
 import Data.UserItem as UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition
 import Dict exposing (Dict)
+import Form.DirtyState as DirtyState
 import Form.DynamicForm as DynamicForm
 import Form.Validation as Validation
-import Json.Encode as Encode
 import List.Extra
+import Page.Workflow.New.Api as NewApi
 import Page.Workflow.New.Types exposing (..)
-import Ports
 import RemoteData exposing (RemoteData(..))
 import Shared exposing (Shared)
 
@@ -48,7 +48,7 @@ updateLoaded msg shared users loaded =
                             initEditing definition
 
                         ( dirtyEditing, dirtyCmd ) =
-                            markDirty { newEditing | isDirty_ = previousIsDirty }
+                            DirtyState.markDirty { newEditing | isDirty_ = previousIsDirty }
                     in
                     ( { loaded | formState = Editing dirtyEditing }, dirtyCmd )
 
@@ -81,7 +81,7 @@ updateEditing msg shared users editing =
         UpdateTitle newTitle ->
             let
                 ( dirtyEditing, dirtyCmd ) =
-                    markDirty editing
+                    DirtyState.markDirty editing
             in
             ( { dirtyEditing | title = newTitle }
             , dirtyCmd
@@ -90,7 +90,7 @@ updateEditing msg shared users editing =
         UpdateField fieldId value ->
             let
                 ( dirtyEditing, dirtyCmd ) =
-                    markDirty editing
+                    DirtyState.markDirty editing
             in
             ( { dirtyEditing | formValues = Dict.insert fieldId value editing.formValues }
             , dirtyCmd
@@ -115,7 +115,7 @@ updateEditing msg shared users editing =
         SelectApprover stepId user ->
             let
                 ( dirtyEditing, dirtyCmd ) =
-                    markDirty editing
+                    DirtyState.markDirty editing
             in
             ( { dirtyEditing
                 | approvers =
@@ -137,7 +137,7 @@ updateEditing msg shared users editing =
         ClearApprover stepId ->
             let
                 ( dirtyEditing, dirtyCmd ) =
-                    markDirty editing
+                    DirtyState.markDirty editing
             in
             ( { dirtyEditing | approvers = Dict.insert stepId ApproverSelector.init dirtyEditing.approvers }
             , dirtyCmd
@@ -172,7 +172,7 @@ updateEditing msg shared users editing =
                         , saveMessage = Nothing
                         , validationErrors = Dict.empty
                       }
-                    , saveDraft shared editing.selectedDefinition.id editing.title editing.formValues
+                    , NewApi.saveDraft shared editing.selectedDefinition.id editing.title editing.formValues
                     )
 
         GotSaveResult result ->
@@ -180,7 +180,7 @@ updateEditing msg shared users editing =
                 Ok workflow ->
                     let
                         ( cleanEditing, cleanCmd ) =
-                            clearDirty editing
+                            DirtyState.clearDirty editing
                     in
                     ( { cleanEditing
                         | submitting = False
@@ -212,14 +212,14 @@ updateEditing msg shared users editing =
                     Just workflow ->
                         let
                             ( cleanEditing, cleanCmd ) =
-                                clearDirty editing
+                                DirtyState.clearDirty editing
                         in
                         ( { cleanEditing
                             | submitting = True
                             , saveMessage = Nothing
                           }
                         , Cmd.batch
-                            [ submitWorkflow shared workflow.displayNumber approvers
+                            [ NewApi.submitWorkflow shared workflow.displayNumber approvers
                             , cleanCmd
                             ]
                         )
@@ -229,7 +229,7 @@ updateEditing msg shared users editing =
                             | submitting = True
                             , saveMessage = Nothing
                           }
-                        , saveAndSubmit shared
+                        , NewApi.saveAndSubmit shared
                             editing.selectedDefinition.id
                             editing.title
                             editing.formValues
@@ -249,11 +249,11 @@ updateEditing msg shared users editing =
                 Ok workflow ->
                     let
                         ( cleanEditing, cleanCmd ) =
-                            clearDirty editing
+                            DirtyState.clearDirty editing
                     in
                     ( { cleanEditing | savedWorkflow = Just workflow }
                     , Cmd.batch
-                        [ submitWorkflow shared workflow.displayNumber approvers
+                        [ NewApi.submitWorkflow shared workflow.displayNumber approvers
                         , cleanCmd
                         ]
                     )
@@ -271,7 +271,7 @@ updateEditing msg shared users editing =
                 Ok workflow ->
                     let
                         ( cleanEditing, cleanCmd ) =
-                            clearDirty editing
+                            DirtyState.clearDirty editing
                     in
                     ( { cleanEditing
                         | submitting = False
@@ -301,39 +301,6 @@ updateEditing msg shared users editing =
 
 
 -- ヘルパー関数
-
-
-{-| フォーム入力時の dirty 状態更新
-
-isDirty が False → True に変わるときのみ beforeunload を有効にする。
-既に dirty な場合は余分な Port 通信を避ける。
-
--}
-markDirty : EditingState -> ( EditingState, Cmd Msg )
-markDirty editing =
-    if editing.isDirty_ then
-        ( editing, Cmd.none )
-
-    else
-        ( { editing | isDirty_ = True }
-        , Ports.setBeforeUnloadEnabled True
-        )
-
-
-{-| 保存/送信成功時の dirty リセット
-
-isDirty が True → False に変わるときのみ beforeunload を無効にする。
-
--}
-clearDirty : EditingState -> ( EditingState, Cmd Msg )
-clearDirty editing =
-    if editing.isDirty_ then
-        ( { editing | isDirty_ = False }
-        , Ports.setBeforeUnloadEnabled False
-        )
-
-    else
-        ( editing, Cmd.none )
 
 
 {-| フォーム全体のバリデーション
@@ -422,7 +389,7 @@ handleApproverKeyDown stepId key users editing =
                 ApproverSelector.Select user ->
                     let
                         ( dirtyEditing, dirtyCmd ) =
-                            markDirty editing
+                            DirtyState.markDirty editing
                     in
                     ( { dirtyEditing
                         | approvers =
@@ -478,63 +445,3 @@ buildApprovers editing =
                     |> Maybe.andThen (\state -> ApproverSelector.selectedUserId state.selection)
                     |> Maybe.map (\userId -> { stepId = stepId, assignedTo = userId })
             )
-
-
-
--- API 呼び出し
-
-
-{-| 下書き保存 API を呼び出す
--}
-saveDraft : Shared -> String -> String -> Dict String String -> Cmd Msg
-saveDraft shared definitionId title formValues =
-    WorkflowApi.createWorkflow
-        { config = Shared.toRequestConfig shared
-        , body =
-            { definitionId = definitionId
-            , title = title
-            , formData = encodeFormValues formValues
-            }
-        , toMsg = GotSaveResult
-        }
-
-
-{-| フォーム値を JSON にエンコード
--}
-encodeFormValues : Dict String String -> Encode.Value
-encodeFormValues values =
-    Dict.toList values
-        |> List.map (\( k, v ) -> ( k, Encode.string v ))
-        |> Encode.object
-
-
-{-| ワークフローを申請
--}
-submitWorkflow : Shared -> Int -> List WorkflowApi.StepApproverRequest -> Cmd Msg
-submitWorkflow shared workflowDisplayNumber approvers =
-    WorkflowApi.submitWorkflow
-        { config = Shared.toRequestConfig shared
-        , displayNumber = workflowDisplayNumber
-        , body = { approvers = approvers }
-        , toMsg = GotSubmitResult
-        }
-
-
-{-| 保存と申請を連続実行
-
-未保存のワークフローを下書き保存する。
-保存成功時は GotSaveAndSubmitResult ハンドラで submitWorkflow にチェーンし、
-保存→申請の連続処理を実現する。
-
--}
-saveAndSubmit : Shared -> String -> String -> Dict String String -> List WorkflowApi.StepApproverRequest -> Cmd Msg
-saveAndSubmit shared definitionId title formValues approvers =
-    WorkflowApi.createWorkflow
-        { config = Shared.toRequestConfig shared
-        , body =
-            { definitionId = definitionId
-            , title = title
-            , formData = encodeFormValues formValues
-            }
-        , toMsg = GotSaveAndSubmitResult approvers
-        }
