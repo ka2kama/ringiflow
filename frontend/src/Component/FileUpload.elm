@@ -87,9 +87,14 @@ type UploadProgress
 
 
 {-| アップロード中のファイル
+
+`id` はコンポーネント内でのユニーク識別子（カウンタベース）。
+同名ファイルを複数追加した場合でも個別に識別できる。
+
 -}
 type alias UploadingFile =
-    { file : File
+    { id : Int
+    , file : File
     , documentId : Maybe String
     , name : String
     , size : Int
@@ -104,6 +109,7 @@ type alias Model =
     , dragOver : Bool
     , config : FileConfig
     , workflowInstanceId : Maybe String
+    , nextId : Int
     }
 
 
@@ -115,11 +121,11 @@ type Msg
     | DragEnter
     | DragLeave
     | FilesDropped File (List File)
-    | GotUploadUrl String (Result ApiError UploadUrlResponse)
+    | GotUploadUrl Int (Result ApiError UploadUrlResponse)
     | GotUploadProgress String Http.Progress
     | UploadCompleted String (Result Http.Error ())
     | ConfirmCompleted String (Result ApiError Document)
-    | RemoveFile String
+    | RemoveFile Int
 
 
 
@@ -134,6 +140,7 @@ init config workflowInstanceId =
     , dragOver = False
     , config = config
     , workflowInstanceId = workflowInstanceId
+    , nextId = 0
     }
 
 
@@ -213,14 +220,14 @@ update requestConfig msg model =
         FilesDropped first rest ->
             addFiles requestConfig (first :: rest) { model | dragOver = False }
 
-        GotUploadUrl fileName result ->
+        GotUploadUrl fileId result ->
             case result of
                 Ok response ->
                     let
                         updatedFiles =
                             List.map
                                 (\f ->
-                                    if f.name == fileName then
+                                    if f.id == fileId then
                                         { f
                                             | documentId = Just response.documentId
                                             , progress = Uploading 0.0
@@ -233,7 +240,7 @@ update requestConfig msg model =
 
                         uploadCmd =
                             updatedFiles
-                                |> List.filter (\f -> f.name == fileName)
+                                |> List.filter (\f -> f.id == fileId)
                                 |> List.head
                                 |> Maybe.map
                                     (\f ->
@@ -251,7 +258,7 @@ update requestConfig msg model =
                 Err _ ->
                     ( { model
                         | files =
-                            updateFileProgress fileName (Failed "アップロード URL の取得に失敗しました") model.files
+                            updateFileProgressById fileId (Failed "アップロード URL の取得に失敗しました") model.files
                       }
                     , Cmd.none
                     )
@@ -317,8 +324,8 @@ update requestConfig msg model =
                     , Cmd.none
                     )
 
-        RemoveFile fileName ->
-            ( { model | files = List.filter (\f -> f.name /= fileName) model.files }
+        RemoveFile fileId ->
+            ( { model | files = List.filter (\f -> f.id /= fileId) model.files }
             , Cmd.none
             )
 
@@ -350,10 +357,12 @@ addFiles requestConfig newFiles model =
                     )
                 |> List.take remainingCapacity
 
+        -- カウンタベースの ID を付与
         uploadingFiles =
-            List.map
-                (\f ->
-                    { file = f
+            List.indexedMap
+                (\i f ->
+                    { id = model.nextId + i
+                    , file = f
                     , documentId = Nothing
                     , name = File.name f
                     , size = File.size f
@@ -362,21 +371,24 @@ addFiles requestConfig newFiles model =
                 )
                 validFiles
 
+        newNextId =
+            model.nextId + List.length validFiles
+
         uploadCmds =
             case model.workflowInstanceId of
                 Just wfId ->
-                    validFiles
+                    uploadingFiles
                         |> List.map
-                            (\f ->
+                            (\uf ->
                                 DocumentApi.requestUploadUrl
                                     { config = requestConfig
                                     , body =
-                                        { filename = File.name f
-                                        , contentType = File.mime f
-                                        , size = File.size f
+                                        { filename = uf.name
+                                        , contentType = File.mime uf.file
+                                        , size = uf.size
                                         , workflowInstanceId = wfId
                                         }
-                                    , toMsg = GotUploadUrl (File.name f)
+                                    , toMsg = GotUploadUrl uf.id
                                     }
                             )
                         |> Cmd.batch
@@ -392,7 +404,7 @@ addFiles requestConfig newFiles model =
                 Nothing ->
                     uploadingFiles
     in
-    ( { model | files = model.files ++ filesWithProgress }
+    ( { model | files = model.files ++ filesWithProgress, nextId = newNextId }
     , uploadCmds
     )
 
@@ -425,7 +437,7 @@ startPendingUploads requestConfig workflowInstanceId model =
                                 , size = f.size
                                 , workflowInstanceId = workflowInstanceId
                                 }
-                            , toMsg = GotUploadUrl f.name
+                            , toMsg = GotUploadUrl f.id
                             }
                     )
                 |> Cmd.batch
@@ -458,11 +470,11 @@ completedCount model =
         |> List.length
 
 
-updateFileProgress : String -> UploadProgress -> List UploadingFile -> List UploadingFile
-updateFileProgress fileName progress files =
+updateFileProgressById : Int -> UploadProgress -> List UploadingFile -> List UploadingFile
+updateFileProgressById fileId progress files =
     List.map
         (\f ->
-            if f.name == fileName then
+            if f.id == fileId then
                 { f | progress = progress }
 
             else
@@ -579,7 +591,7 @@ viewFileItem file =
             , viewProgress file.progress
             ]
         , button
-            [ onClick (RemoveFile file.name)
+            [ onClick (RemoveFile file.id)
             , class "shrink-0 border-0 bg-transparent cursor-pointer text-secondary-400 hover:text-error-600 transition-colors text-lg rounded outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
             , type_ "button"
             , attribute "aria-label" ("ファイル「" ++ file.name ++ "」を削除")
