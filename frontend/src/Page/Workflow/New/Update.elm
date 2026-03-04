@@ -7,7 +7,7 @@ API 呼び出し・dirty 管理を処理する。
 
 -}
 
-import Api exposing (ApiError, RequestConfig)
+import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
 import Component.FileUpload as FileUpload

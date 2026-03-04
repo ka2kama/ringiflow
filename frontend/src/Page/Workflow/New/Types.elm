@@ -20,7 +20,7 @@ import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Component.ApproverSelector as ApproverSelector
 import Component.FileUpload as FileUpload
-import Data.FormField exposing (FieldType(..), FormField)
+import Data.FormField exposing (FieldType(..))
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance exposing (WorkflowInstance)

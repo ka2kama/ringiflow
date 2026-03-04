@@ -471,16 +471,16 @@ fn validate_file_field_options(field: &JsonValue, id: &str, errors: &mut Vec<Val
     // allowedTypes: 指定時は ALLOWED_CONTENT_TYPES のサブセット
     if let Some(allowed_types) = field.get("allowedTypes").and_then(|v| v.as_array()) {
         for ct in allowed_types {
-            if let Some(ct_str) = ct.as_str() {
-                if !FileValidation::ALLOWED_CONTENT_TYPES.contains(&ct_str) {
-                    errors.push(ValidationError::new(
-                        "invalid_form_field",
-                        format!(
-                            "フォームフィールド '{}' (file) の allowedTypes に非対応の形式があります: {}",
-                            id, ct_str
-                        ),
-                    ));
-                }
+            if let Some(ct_str) = ct.as_str()
+                && !FileValidation::ALLOWED_CONTENT_TYPES.contains(&ct_str)
+            {
+                errors.push(ValidationError::new(
+                    "invalid_form_field",
+                    format!(
+                        "フォームフィールド '{}' (file) の allowedTypes に非対応の形式があります: {}",
+                        id, ct_str
+                    ),
+                ));
             }
         }
     }

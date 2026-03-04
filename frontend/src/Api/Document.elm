@@ -1,7 +1,6 @@
 module Api.Document exposing
     ( UploadRequest
     , confirmUpload
-    , encodeUploadRequest
     , listWorkflowAttachments
     , requestDownloadUrl
     , requestUploadUrl

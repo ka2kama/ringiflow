@@ -6,7 +6,7 @@ JSON デコーダーの正確性を検証する。
 
 -}
 
-import Data.FormField as FormField exposing (FieldType(..), FileConfig)
+import Data.FormField as FormField exposing (FieldType(..))
 import Expect
 import Json.Decode as Decode
 import Test exposing (..)

@@ -42,15 +42,15 @@ validateFileTests =
         , test "許可されていない Content-Type を拒否する" <|
             \_ ->
                 validateFile config { name = "script.exe", size = 1024, mime = "application/x-msdownload" }
-                    |> Expect.equal [ InvalidType "application/x-msdownload" ]
+                    |> Expect.equal [ InvalidType ]
         , test "サイズ上限超過を拒否する" <|
             \_ ->
                 validateFile config { name = "large.pdf", size = 20971520, mime = "application/pdf" }
-                    |> Expect.equal [ FileTooLarge 20971520 ]
+                    |> Expect.equal [ FileTooLarge ]
         , test "Content-Type とサイズの両方が不正な場合は両方のエラーを返す" <|
             \_ ->
                 validateFile config { name = "large.exe", size = 20971520, mime = "application/x-msdownload" }
-                    |> Expect.equal [ InvalidType "application/x-msdownload", FileTooLarge 20971520 ]
+                    |> Expect.equal [ InvalidType, FileTooLarge ]
         , test "allowedTypes が空の場合は全形式を許可する" <|
             \_ ->
                 let
@@ -92,9 +92,9 @@ validateFileCountTests =
         , test "既存 + 新規が上限を超える場合エラー" <|
             \_ ->
                 validateFileCount config { existingCount = 2, newCount = 2 }
-                    |> Expect.equal (Just (TooManyFiles 3))
+                    |> Expect.equal (Just TooManyFiles)
         , test "新規のみで上限を超える場合エラー" <|
             \_ ->
                 validateFileCount config { existingCount = 0, newCount = 4 }
-                    |> Expect.equal (Just (TooManyFiles 3))
+                    |> Expect.equal (Just TooManyFiles)
         ]

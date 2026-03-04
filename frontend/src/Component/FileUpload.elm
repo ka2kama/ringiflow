@@ -1,8 +1,8 @@
 module Component.FileUpload exposing
     ( FileError(..)
     , Model
-    , Msg(..)
-    , UploadProgress(..)
+    , Msg
+    , UploadProgress
     , UploadingFile
     , completedCount
     , init
@@ -69,9 +69,9 @@ import Json.Decode as Decode
 {-| ファイルバリデーションエラー
 -}
 type FileError
-    = InvalidType String
-    | FileTooLarge Int
-    | TooManyFiles Int
+    = InvalidType
+    | FileTooLarge
+    | TooManyFiles
 
 
 {-| アップロード進捗
@@ -157,11 +157,11 @@ validateFile config fileMeta =
                 []
 
             else
-                [ InvalidType fileMeta.mime ]
+                [ InvalidType ]
 
         sizeError =
             if fileMeta.size > config.maxFileSize then
-                [ FileTooLarge fileMeta.size ]
+                [ FileTooLarge ]
 
             else
                 []
@@ -177,7 +177,7 @@ validateFile config fileMeta =
 validateFileCount : FileConfig -> { existingCount : Int, newCount : Int } -> Maybe FileError
 validateFileCount config { existingCount, newCount } =
     if existingCount + newCount > config.maxFiles then
-        Just (TooManyFiles config.maxFiles)
+        Just TooManyFiles
 
     else
         Nothing

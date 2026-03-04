@@ -20,7 +20,7 @@ import Component.ErrorState as ErrorState
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.Document exposing (Document)
-import Data.FormField exposing (FieldType(..), FormField)
+import Data.FormField exposing (FormField)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance as WorkflowInstance exposing (WorkflowInstance, WorkflowStep)
 import Form.DynamicForm as DynamicForm
