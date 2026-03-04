@@ -343,7 +343,8 @@ Claude Code Action による自動レビューが実行される。
 2. 指摘があれば修正をコミット
 3. 修正不要な指摘は理由を返信してから resolve
 
-承認基準: Critical/High は修正必須（request-changes）、Medium/Low は改善推奨だがマージ可能。
+承認基準（Verification）: Critical/High は修正必須（request-changes）、Medium/Low は改善推奨だがマージ可能。
+承認基準（Rules Check）: 禁止事項違反（High）は修正必須、その他のルール違反（Medium）は改善推奨だがマージ可能（ADR-063）。
 
 ## 8. マージ
 
