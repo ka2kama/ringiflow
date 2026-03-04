@@ -77,10 +77,14 @@
 ### テストリスト
 
 ユニットテスト:
-- [ ] 同名ファイルを複数追加した場合、それぞれ異なる ID が付与される
-- [ ] RemoveFile で特定 ID のファイルのみ削除され、同名の他ファイルは残る
-- [ ] GotUploadUrl 成功時に対象 ID のファイルのみ documentId が設定される
-- [ ] GotUploadUrl 失敗時に対象 ID のファイルのみ Failed になる
+- [x] init: nextId の初期値が 0 であること
+- [x] init: files の初期値が空リストであること
+- N/A: 同名ファイルを複数追加した場合の ID 一意性（Elm の File 型が opaque カーネル型のため elm-test で構築不可）
+- N/A: RemoveFile による個別削除（同上）
+- N/A: GotUploadUrl の ID ベース適用（同上）
+- N/A: GotUploadUrl 失敗時の ID ベース適用（同上）
+
+型レベルの保証: `GotUploadUrl String → GotUploadUrl Int`、`RemoveFile String → RemoveFile Int` の型変更により、コンパイラが fileName ベースの識別を防止する。
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
