@@ -31,11 +31,11 @@
 - 詳細設計書: `docs/40_詳細設計書/17_ドキュメント管理設計.md`（FileUpload コンポーネント設計、アップロードフロー詳細あり）
 
 ### 進捗
-- [ ] Phase 1: バックエンド — definition_validator に file フィールド型追加
-- [ ] Phase 2: フロントエンド — Data/Document.elm + Api/Document.elm
-- [ ] Phase 3: フロントエンド — Component/FileUpload.elm
-- [ ] Phase 4: フロントエンド — 申請フォームへの FileUpload 統合
-- [ ] Phase 5: フロントエンド — 承認者の添付ファイル表示とダウンロード
+- [x] Phase 1: バックエンド — definition_validator に file フィールド型追加
+- [x] Phase 2: フロントエンド — Data/Document.elm + Api/Document.elm
+- [x] Phase 3: フロントエンド — Component/FileUpload.elm
+- [x] Phase 4: フロントエンド — 申請フォームへの FileUpload 統合
+- [x] Phase 5: フロントエンド — 承認者の添付ファイル表示とダウンロード
 
 ## 設計判断
 
