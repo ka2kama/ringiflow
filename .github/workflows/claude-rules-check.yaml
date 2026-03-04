@@ -320,15 +320,8 @@ jobs:
 
             ### 重大度の判定（ADR-063）
 
-            ルール違反を 2 階層に分類する:
-
-            | 違反の種類 | 重大度 | blocking | 判定基準 |
-            |-----------|--------|---------|---------|
-            | 禁止事項違反 | High | blocking | ルール中に `**禁止:**` と明記されている項目への違反 |
-            | その他のルール違反 | Medium | non-blocking | スタイル、推奨事項、フォーマット等 |
-
-            High（blocking）違反がある場合のみ結果マーカーを `fail` にする。
-            Medium（non-blocking）のみの場合は結果マーカーを `pass` にし、コメントで指摘を残す。
+            全てのルール違反は High（blocking）として扱う。
+            ルールに定義されている以上、違反は修正すべきものであり、linter では検出できない規約を AI でキャッチすることがこのワークフローの存在意義である。
 
             ### 過去の議論を踏まえた判断
 
@@ -346,10 +339,8 @@ jobs:
 
             1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
                - 該当ルールを引用して指摘
-               - 違反の重大度（High/Medium）を明記
             2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿
-               - High 違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
-               - Medium 違反のみ → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:pass -->`
+               - 違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
                - 違反なし → "Rules Check (Group 1): LGTM ✅" + 結果マーカー `<!-- rules-check-result:pass -->`
 
             LGTM 時はチェックしたルール一覧を省略し、1 行 + メタデータのみとする。
@@ -378,8 +369,8 @@ jobs:
 
             - `type`: `rules-check` 固定
             - `severity-critical`: 常に `0`（Rules Check では Critical は使用しない）
-            - `severity-high`: 禁止事項違反の件数
-            - `severity-medium`: その他のルール違反の件数
+            - `severity-high`: ルール違反の件数
+            - `severity-medium`: 常に `0`
             - `severity-low`: 常に `0`
             - `action-required`: `severity-high` が 1 以上なら `true`、それ以外は `false`
 
@@ -489,15 +480,8 @@ jobs:
 
             ### 重大度の判定（ADR-063）
 
-            ルール違反を 2 階層に分類する:
-
-            | 違反の種類 | 重大度 | blocking | 判定基準 |
-            |-----------|--------|---------|---------|
-            | 禁止事項違反 | High | blocking | ルール中に `**禁止:**` と明記されている項目への違反 |
-            | その他のルール違反 | Medium | non-blocking | スタイル、推奨事項、フォーマット等 |
-
-            High（blocking）違反がある場合のみ結果マーカーを `fail` にする。
-            Medium（non-blocking）のみの場合は結果マーカーを `pass` にし、コメントで指摘を残す。
+            全てのルール違反は High（blocking）として扱う。
+            ルールに定義されている以上、違反は修正すべきものであり、linter では検出できない規約を AI でキャッチすることがこのワークフローの存在意義である。
 
             ### 過去の議論を踏まえた判断
 
@@ -515,10 +499,8 @@ jobs:
 
             1. ルール違反がある場合: `mcp__github_inline_comment__create_inline_comment` で該当箇所にコメント
                - 該当ルールを引用して指摘
-               - 違反の重大度（High/Medium）を明記
             2. 全体フィードバック（必須）: `gh pr comment` で PR コメントを投稿
-               - High 違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
-               - Medium 違反のみ → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:pass -->`
+               - 違反あり → 違反内容のサマリー + 結果マーカー `<!-- rules-check-result:fail -->`
                - 違反なし → "Rules Check (Group 2): LGTM ✅" + 結果マーカー `<!-- rules-check-result:pass -->`
 
             LGTM 時はチェックしたルール一覧を省略し、1 行 + メタデータのみとする。
@@ -547,8 +529,8 @@ jobs:
 
             - `type`: `rules-check` 固定
             - `severity-critical`: 常に `0`（Rules Check では Critical は使用しない）
-            - `severity-high`: 禁止事項違反の件数
-            - `severity-medium`: その他のルール違反の件数
+            - `severity-high`: ルール違反の件数
+            - `severity-medium`: 常に `0`
             - `severity-low`: 常に `0`
             - `action-required`: `severity-high` が 1 以上なら `true`、それ以外は `false`
 
