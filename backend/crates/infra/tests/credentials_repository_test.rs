@@ -11,6 +11,7 @@
 
 mod common;
 
+use chrono::Utc;
 use common::{create_other_tenant, insert_user_raw, setup_test_data};
 use ringiflow_infra::repository::{
     CredentialType,
@@ -26,6 +27,7 @@ async fn test_createでcredentialを作成しdbに正しく保存される(pool:
     let (tenant_id, user_id) = setup_test_data(&pool).await;
     let sut = PostgresCredentialsRepository::new(pool);
 
+    let before = Utc::now();
     let id = sut
         .create(
             &user_id,
@@ -35,6 +37,7 @@ async fn test_createでcredentialを作成しdbに正しく保存される(pool:
         )
         .await
         .unwrap();
+    let after = Utc::now();
 
     let credential = sut
         .find_by_user_and_type(&tenant_id, &user_id, CredentialType::Password)
@@ -51,6 +54,14 @@ async fn test_createでcredentialを作成しdbに正しく保存される(pool:
     assert!(
         credential.last_used_at.is_none(),
         "初期状態で last_used_at = None"
+    );
+    assert!(
+        credential.created_at >= before && credential.created_at <= after,
+        "created_at が作成時刻の範囲内"
+    );
+    assert!(
+        credential.updated_at >= before && credential.updated_at <= after,
+        "updated_at が作成時刻の範囲内"
     );
 }
 
@@ -127,6 +138,7 @@ async fn test_delete_by_userでユーザーの全credentialsを削除できる(p
     let (tenant_id, user_id) = setup_test_data(&pool).await;
     let sut = PostgresCredentialsRepository::new(pool);
 
+    // 複数の credential type を作成
     sut.create(
         &user_id,
         &tenant_id,
@@ -135,15 +147,29 @@ async fn test_delete_by_userでユーザーの全credentialsを削除できる(p
     )
     .await
     .unwrap();
+    sut.create(
+        &user_id,
+        &tenant_id,
+        CredentialType::Totp,
+        "totp_secret_base32",
+    )
+    .await
+    .unwrap();
 
     sut.delete_by_user(&tenant_id, &user_id).await.unwrap();
 
-    let result = sut
+    // 両方の credential type が削除されていることを確認
+    let password = sut
         .find_by_user_and_type(&tenant_id, &user_id, CredentialType::Password)
         .await
         .unwrap();
+    let totp = sut
+        .find_by_user_and_type(&tenant_id, &user_id, CredentialType::Totp)
+        .await
+        .unwrap();
 
-    assert!(result.is_none(), "削除後は取得できない");
+    assert!(password.is_none(), "Password credential が削除されている");
+    assert!(totp.is_none(), "Totp credential が削除されている");
 }
 
 #[sqlx::test(migrations = "../../migrations")]

@@ -87,7 +87,7 @@ Issue コメントとして評価結果を記録する。
 
 テストデータの作成方法:
 - credentials の挿入は `PostgresCredentialsRepository::create` を使用する（正常系テスト後はリポジトリメソッド自体が検証済みになるため）
-- 初回の `create` テストのみ、作成後の検証に raw SQL を使用して create メソッドの正しさを独立に確認する
+- `create` テストの検証には `find_by_user_and_type` で読み戻す方式を採用。当初は raw SQL による独立検証を計画していたが、`role_repository_test.rs` 等の既存パターンとの一貫性を優先して変更した（sqlx のコンパイル時クエリ検証により、create と find の双方にバグがあり打ち消し合うリスクは実務上十分に低い）
 - テナント・ユーザーは `setup_test_data()` ヘルパーを使用
 
 ### 操作パス
