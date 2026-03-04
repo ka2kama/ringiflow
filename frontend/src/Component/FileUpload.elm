@@ -60,6 +60,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, preventDefaultOn)
 import Http
 import Json.Decode as Decode
+import Util.Format
 
 
 
@@ -331,6 +332,10 @@ update requestConfig msg model =
 addFiles : RequestConfig -> List File -> Model -> ( Model, Cmd Msg )
 addFiles requestConfig newFiles model =
     let
+        -- ファイル数上限チェック: 残り容量分だけ追加可能
+        remainingCapacity =
+            Basics.max 0 (model.config.maxFiles - List.length model.files)
+
         validFiles =
             newFiles
                 |> List.filter
@@ -343,6 +348,7 @@ addFiles requestConfig newFiles model =
                                 }
                             )
                     )
+                |> List.take remainingCapacity
 
         uploadingFiles =
             List.map
@@ -355,9 +361,6 @@ addFiles requestConfig newFiles model =
                     }
                 )
                 validFiles
-
-        updatedModel =
-            { model | files = model.files ++ uploadingFiles }
 
         uploadCmds =
             case model.workflowInstanceId of
@@ -389,7 +392,7 @@ addFiles requestConfig newFiles model =
                 Nothing ->
                     uploadingFiles
     in
-    ( { updatedModel | files = model.files ++ filesWithProgress }
+    ( { model | files = model.files ++ filesWithProgress }
     , uploadCmds
     )
 
@@ -571,7 +574,7 @@ viewFileItem file =
                 [ span [ class "truncate text-sm font-medium text-secondary-900" ]
                     [ text file.name ]
                 , span [ class "ml-2 shrink-0 text-xs text-secondary-500" ]
-                    [ text (formatFileSize file.size) ]
+                    [ text (Util.Format.formatFileSize file.size) ]
                 ]
             , viewProgress file.progress
             ]
@@ -644,17 +647,3 @@ D&D では `dragenter`, `dragover`, `dragleave`, `drop` のデフォルト動作
 hijackOn : String -> Decode.Decoder msg -> Attribute msg
 hijackOn event decoder =
     preventDefaultOn event (Decode.map (\msg -> ( msg, True )) decoder)
-
-
-{-| ファイルサイズを読みやすい形式にフォーマット
--}
-formatFileSize : Int -> String
-formatFileSize bytes =
-    if bytes >= 1048576 then
-        String.fromFloat (toFloat (bytes * 10 // 1048576) / 10) ++ " MB"
-
-    else if bytes >= 1024 then
-        String.fromFloat (toFloat (bytes * 10 // 1024) / 10) ++ " KB"
-
-    else
-        String.fromInt bytes ++ " B"

@@ -39,6 +39,7 @@ import Route
 import Shared exposing (Shared)
 import Time
 import Util.DateFormat as DateFormat
+import Util.Format
 
 
 {-| 初期化
@@ -559,7 +560,7 @@ viewAttachmentItem doc =
             [ span [ class "truncate text-sm font-medium text-secondary-900" ]
                 [ text doc.filename ]
             , span [ class "ml-2 text-xs text-secondary-500" ]
-                [ text (formatFileSize doc.size) ]
+                [ text (Util.Format.formatFileSize doc.size) ]
             ]
         , button
             [ Html.Events.onClick (DownloadFile doc.id)
@@ -568,17 +569,3 @@ viewAttachmentItem doc =
             ]
             [ text "ダウンロード" ]
         ]
-
-
-{-| ファイルサイズを読みやすい形式にフォーマット
--}
-formatFileSize : Int -> String
-formatFileSize bytes =
-    if bytes >= 1048576 then
-        String.fromFloat (toFloat (bytes * 10 // 1048576) / 10) ++ " MB"
-
-    else if bytes >= 1024 then
-        String.fromFloat (toFloat (bytes * 10 // 1024) / 10) ++ " KB"
-
-    else
-        String.fromInt bytes ++ " B"
