@@ -19,10 +19,13 @@ module Page.Workflow.New.Types exposing
 import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Component.ApproverSelector as ApproverSelector
+import Component.FileUpload as FileUpload
+import Data.FormField exposing (FieldType(..))
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Data.WorkflowInstance exposing (WorkflowInstance)
 import Dict exposing (Dict)
+import Form.DynamicForm as DynamicForm
 import RemoteData exposing (RemoteData)
 import Shared exposing (Shared)
 
@@ -81,6 +84,7 @@ type alias EditingState =
     , formValues : Dict String String
     , validationErrors : Dict String String
     , approvers : Dict String ApproverSelector.State
+    , fileUploads : Dict String FileUpload.Model
     , savedWorkflow : Maybe WorkflowInstance
     , saveMessage : Maybe SaveMessage
     , submitting : Bool
@@ -99,6 +103,7 @@ type SaveMessage
 
 定義選択時に新しい EditingState を構築する。
 承認ステップ情報から ApproverSelector の初期状態を生成する。
+ファイルフィールドから FileUpload の初期状態を生成する。
 
 -}
 initEditing : WorkflowDefinition -> EditingState
@@ -111,11 +116,38 @@ initEditing definition =
         WorkflowDefinition.approvalStepInfos definition
             |> List.map (\info -> ( info.id, ApproverSelector.init ))
             |> Dict.fromList
+    , fileUploads = initFileUploads definition
     , savedWorkflow = Nothing
     , saveMessage = Nothing
     , submitting = False
     , isDirty_ = False
     }
+
+
+{-| 定義のファイルフィールドから FileUpload モデルを初期化
+
+各 file フィールドに対して FileUpload.init を呼び出す。
+workflowInstanceId は未保存のため Nothing。
+
+-}
+initFileUploads : WorkflowDefinition -> Dict String FileUpload.Model
+initFileUploads definition =
+    case DynamicForm.extractFormFields definition.definition of
+        Ok fields ->
+            fields
+                |> List.filterMap
+                    (\field ->
+                        case field.fieldType of
+                            File config ->
+                                Just ( field.id, FileUpload.init config Nothing )
+
+                            _ ->
+                                Nothing
+                    )
+                |> Dict.fromList
+
+        Err _ ->
+            Dict.empty
 
 
 
@@ -139,6 +171,8 @@ type Msg
     | ClearApprover String
     | ApproverKeyDown String String
     | CloseApproverDropdown String
+      -- ファイルアップロード（第1引数: フィールド ID）
+    | FileUploadMsg String FileUpload.Msg
       -- 保存・申請
     | SaveDraft
     | GotSaveResult (Result ApiError WorkflowInstance)

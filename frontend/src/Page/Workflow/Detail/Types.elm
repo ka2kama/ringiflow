@@ -18,6 +18,7 @@ module Page.Workflow.Detail.Types exposing
 
 import Api exposing (ApiError)
 import Component.ApproverSelector as ApproverSelector
+import Data.Document exposing (Document, DownloadUrlResponse)
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowComment exposing (WorkflowComment)
 import Data.WorkflowDefinition exposing (WorkflowDefinition)
@@ -84,6 +85,9 @@ type alias LoadedState =
     , newCommentBody : String
     , isPostingComment : Bool
 
+    -- 添付ファイル
+    , attachments : RemoteData ApiError (List Document)
+
     -- ユーザー一覧（承認者選択で使用）
     , users : RemoteData ApiError (List UserItem)
 
@@ -135,6 +139,7 @@ initLoaded workflow =
     , comments = RemoteData.Loading
     , newCommentBody = ""
     , isPostingComment = False
+    , attachments = RemoteData.Loading
     , users = NotAsked
     , editState = Viewing
     }
@@ -175,4 +180,8 @@ type Msg
     | SubmitResubmit
     | GotResubmitResult (Result ApiError WorkflowInstance)
     | GotUsers (Result ApiError (List UserItem))
+      -- 添付ファイル
+    | GotAttachments (Result ApiError (List Document))
+    | DownloadFile String
+    | GotDownloadUrl (Result ApiError DownloadUrlResponse)
     | DismissMessage

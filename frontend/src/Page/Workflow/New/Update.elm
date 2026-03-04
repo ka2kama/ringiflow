@@ -10,8 +10,11 @@ API 呼び出し・dirty 管理を処理する。
 import Api exposing (ApiError)
 import Api.Workflow as WorkflowApi
 import Component.ApproverSelector as ApproverSelector exposing (ApproverSelection(..))
+import Component.FileUpload as FileUpload
+import Data.FormField exposing (FieldType(..), FormField)
 import Data.UserItem as UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition
+import Data.WorkflowInstance exposing (WorkflowInstance)
 import Dict exposing (Dict)
 import Form.DirtyState as DirtyState
 import Form.DynamicForm as DynamicForm
@@ -95,6 +98,23 @@ updateEditing msg shared users editing =
             ( { dirtyEditing | formValues = Dict.insert fieldId value editing.formValues }
             , dirtyCmd
             )
+
+        FileUploadMsg fieldId subMsg ->
+            case Dict.get fieldId editing.fileUploads of
+                Just fileUploadModel ->
+                    let
+                        requestConfig =
+                            Shared.toRequestConfig shared
+
+                        ( newFileUploadModel, fileUploadCmd ) =
+                            FileUpload.update requestConfig subMsg fileUploadModel
+                    in
+                    ( { editing | fileUploads = Dict.insert fieldId newFileUploadModel editing.fileUploads }
+                    , Cmd.map (FileUploadMsg fieldId) fileUploadCmd
+                    )
+
+                Nothing ->
+                    ( editing, Cmd.none )
 
         UpdateApproverSearch stepId query ->
             ( { editing
@@ -181,13 +201,17 @@ updateEditing msg shared users editing =
                     let
                         ( cleanEditing, cleanCmd ) =
                             DirtyState.clearDirty editing
+
+                        ( updatedFileUploads, uploadCmds ) =
+                            startFileUploads shared workflow cleanEditing
                     in
                     ( { cleanEditing
                         | submitting = False
                         , savedWorkflow = Just workflow
                         , saveMessage = Just (SaveSuccess "下書きを保存しました")
+                        , fileUploads = updatedFileUploads
                       }
-                    , cleanCmd
+                    , Cmd.batch [ cleanCmd, uploadCmds ]
                     )
 
                 Err _ ->
@@ -250,11 +274,18 @@ updateEditing msg shared users editing =
                     let
                         ( cleanEditing, cleanCmd ) =
                             DirtyState.clearDirty editing
+
+                        ( updatedFileUploads, uploadCmds ) =
+                            startFileUploads shared workflow cleanEditing
                     in
-                    ( { cleanEditing | savedWorkflow = Just workflow }
+                    ( { cleanEditing
+                        | savedWorkflow = Just workflow
+                        , fileUploads = updatedFileUploads
+                      }
                     , Cmd.batch
                         [ NewApi.submitWorkflow shared workflow.displayNumber approvers
                         , cleanCmd
+                        , uploadCmds
                         ]
                     )
 
@@ -305,7 +336,7 @@ updateEditing msg shared users editing =
 
 {-| フォーム全体のバリデーション
 
-タイトルと動的フォームフィールドを検証する。
+タイトル、動的フォームフィールド、ファイルフィールドを検証する。
 selectedDefinition により定義検索が不要。
 
 -}
@@ -320,15 +351,50 @@ validateForm editing =
                 Ok _ ->
                     Dict.empty
 
-        fieldErrors =
+        ( fieldErrors, fileErrors ) =
             case DynamicForm.extractFormFields editing.selectedDefinition.definition of
                 Ok fields ->
-                    Validation.validateAllFields fields editing.formValues
+                    ( Validation.validateAllFields fields editing.formValues
+                    , validateFileFields fields editing
+                    )
 
                 Err _ ->
-                    Dict.empty
+                    ( Dict.empty, Dict.empty )
     in
     Dict.union titleErrors fieldErrors
+        |> Dict.union fileErrors
+
+
+{-| ファイルフィールドのバリデーション
+
+各ファイルフィールドの完了ファイル数を確認し、
+required の場合にファイルが添付されていなければエラーを返す。
+
+-}
+validateFileFields : List FormField -> EditingState -> Dict String String
+validateFileFields fields editing =
+    fields
+        |> List.filterMap
+            (\field ->
+                case field.fieldType of
+                    File _ ->
+                        let
+                            count =
+                                Dict.get field.id editing.fileUploads
+                                    |> Maybe.map FileUpload.completedCount
+                                    |> Maybe.withDefault 0
+                        in
+                        case Validation.validateFileField field count of
+                            Err msg ->
+                                Just ( field.id, msg )
+
+                            Ok _ ->
+                                Nothing
+
+                    _ ->
+                        Nothing
+            )
+        |> Dict.fromList
 
 
 {-| フォーム全体 + 承認者のバリデーション（申請用）
@@ -445,3 +511,38 @@ buildApprovers editing =
                     |> Maybe.andThen (\state -> ApproverSelector.selectedUserId state.selection)
                     |> Maybe.map (\userId -> { stepId = stepId, assignedTo = userId })
             )
+
+
+{-| 保存成功後に FileUpload の Pending ファイルのアップロードを開始
+
+各ファイルフィールドの FileUpload モデルに workflowInstanceId を設定し、
+アップロードコマンドを生成する。
+
+-}
+startFileUploads : Shared -> WorkflowInstance -> EditingState -> ( Dict String FileUpload.Model, Cmd Msg )
+startFileUploads shared workflow editing =
+    let
+        requestConfig =
+            Shared.toRequestConfig shared
+
+        results =
+            editing.fileUploads
+                |> Dict.map
+                    (\fieldId fileUploadModel ->
+                        let
+                            ( updatedModel, cmd ) =
+                                FileUpload.startPendingUploads requestConfig workflow.id fileUploadModel
+                        in
+                        ( updatedModel, Cmd.map (FileUploadMsg fieldId) cmd )
+                    )
+
+        updatedModels =
+            Dict.map (\_ ( m, _ ) -> m) results
+
+        cmds =
+            results
+                |> Dict.values
+                |> List.map (\( _, cmd ) -> cmd)
+                |> Cmd.batch
+    in
+    ( updatedModels, cmds )

@@ -1,5 +1,6 @@
 port module Ports exposing
-    ( receiveCanvasBounds
+    ( openUrl
+    , receiveCanvasBounds
     , receiveMessage
     , requestCanvasBounds
     , sendMessage
@@ -65,6 +66,15 @@ port setBeforeUnloadEnabled : Bool -> Cmd msg
 
 -}
 port showModalDialog : String -> Cmd msg
+
+
+{-| URL を新しいタブで開く
+
+ダウンロード URL を新しいタブで開くために使用する。
+`window.open(url, '_blank')` を呼び出す。
+
+-}
+port openUrl : String -> Cmd msg
 
 
 {-| キャンバス SVG 要素の境界情報をリクエスト

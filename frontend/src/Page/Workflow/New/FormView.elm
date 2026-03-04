@@ -14,6 +14,7 @@ module Page.Workflow.New.FormView exposing
 import Api exposing (ApiError)
 import Component.ApproverSelector as ApproverSelector
 import Component.Button as Button
+import Component.FileUpload as FileUpload
 import Data.UserItem exposing (UserItem)
 import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
 import Dict
@@ -230,12 +231,29 @@ viewDynamicFormFields editing =
                         editing.formValues
                         editing.validationErrors
                         UpdateField
+                        (viewFileField editing)
                     ]
 
         Err _ ->
             div
                 [ class "rounded bg-error-50 p-4 text-error-600" ]
                 [ text "フォーム定義の読み込みに失敗しました。" ]
+
+
+{-| ファイルフィールドの描画
+
+フィールド ID に対応する FileUpload コンポーネントの view を返す。
+
+-}
+viewFileField : EditingState -> String -> Html Msg
+viewFileField editing fieldId =
+    case Dict.get fieldId editing.fileUploads of
+        Just fileUploadModel ->
+            FileUpload.view fileUploadModel
+                |> Html.map (FileUploadMsg fieldId)
+
+        Nothing ->
+            text ""
 
 
 {-| アクションボタン

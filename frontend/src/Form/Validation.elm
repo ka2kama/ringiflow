@@ -1,6 +1,7 @@
 module Form.Validation exposing
     ( ValidationResult
     , validateAllFields
+    , validateFileField
     , validateRequiredString
     , validateTitle
     )
@@ -118,24 +119,47 @@ validateTitle title =
 FormField の validation ルールに基づいて値を検証する。
 複数のルールがある場合、最初に失敗したルールでエラーを返す。
 
+File フィールドは `validateFileField` で別途検証するため、ここではスキップする。
+
 -}
 validateField : FormField -> String -> ValidationResult
 validateField field value =
-    let
-        validation =
-            field.validation
+    case field.fieldType of
+        File _ ->
+            -- File フィールドは formValues ではなく FileUpload の状態で検証
+            Ok ()
 
-        -- 各チェックを順番に実行
-        checks =
-            [ checkRequired validation.required value
-            , checkMinLength field.fieldType validation.minLength value
-            , checkMaxLength field.fieldType validation.maxLength value
-            , checkMin field.fieldType validation.min value
-            , checkMax field.fieldType validation.max value
-            ]
-    in
-    -- 最初のエラーを返す
-    List.foldl combineResults (Ok ()) checks
+        _ ->
+            let
+                validation =
+                    field.validation
+
+                -- 各チェックを順番に実行
+                checks =
+                    [ checkRequired validation.required value
+                    , checkMinLength field.fieldType validation.minLength value
+                    , checkMaxLength field.fieldType validation.maxLength value
+                    , checkMin field.fieldType validation.min value
+                    , checkMax field.fieldType validation.max value
+                    ]
+            in
+            -- 最初のエラーを返す
+            List.foldl combineResults (Ok ()) checks
+
+
+{-| ファイルフィールドのバリデーション
+
+required の場合、完了ファイルが 1 つ以上あるか検証する。
+completedCount は FileUpload コンポーネントの Completed 状態のファイル数。
+
+-}
+validateFileField : FormField -> Int -> ValidationResult
+validateFileField field completedCount =
+    if field.validation.required && completedCount == 0 then
+        Err "ファイルを添付してください"
+
+    else
+        Ok ()
 
 
 {-| 必須チェック

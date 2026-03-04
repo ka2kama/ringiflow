@@ -799,6 +799,9 @@ subscriptions model =
         DesignerPage subModel ->
             Sub.map DesignerMsg (Designer.subscriptions subModel)
 
+        WorkflowNewPage subModel ->
+            Sub.map WorkflowNewMsg (WorkflowNew.subscriptions subModel)
+
         _ ->
             Sub.none
 
