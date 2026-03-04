@@ -72,8 +72,8 @@ handleSave shared definitionId canvas =
 pendingPublish が True の場合、バリデーション API を呼び出して公開チェーンを継続する。
 
 -}
-handleSaveResult : Shared -> String -> Result ApiError WorkflowDefinition -> CanvasState -> ( CanvasState, Cmd Msg )
-handleSaveResult shared definitionId result canvas =
+handleSaveResult : Shared -> Result ApiError WorkflowDefinition -> CanvasState -> ( CanvasState, Cmd Msg )
+handleSaveResult shared result canvas =
     case result of
         Ok def ->
             let

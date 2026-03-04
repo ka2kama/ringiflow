@@ -20,9 +20,8 @@ import Html.Events
 import Json.Decode as Decode
 import List.Extra
 import Page.WorkflowDefinition.Designer.Types exposing (CanvasState, Msg(..))
-import Svg exposing (svg)
+import Svg
 import Svg.Attributes as SvgAttr
-import Svg.Events
 
 
 {-| SVG マーカー定義（矢印の先端形状）

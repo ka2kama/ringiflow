@@ -11,8 +11,8 @@ UpdatePersistence モジュールに委譲する。
 -}
 
 import Api exposing (ApiError)
-import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..), ReconnectEnd(..))
-import Data.WorkflowDefinition as WorkflowDefinition exposing (WorkflowDefinition)
+import Data.DesignerCanvas as DesignerCanvas exposing (DraggingState(..))
+import Data.WorkflowDefinition exposing (WorkflowDefinition)
 import Dict
 import Form.DirtyState as DirtyState
 import List.Extra
@@ -319,7 +319,7 @@ updateLoaded msg shared definitionId canvas =
             UpdatePersistence.handleSave shared definitionId canvas
 
         GotSaveResult result ->
-            UpdatePersistence.handleSaveResult shared definitionId result canvas
+            UpdatePersistence.handleSaveResult shared result canvas
 
         ValidateClicked ->
             UpdatePersistence.handleValidate shared canvas
