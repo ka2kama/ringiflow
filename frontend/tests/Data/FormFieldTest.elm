@@ -6,7 +6,7 @@ JSON デコーダーの正確性を検証する。
 
 -}
 
-import Data.FormField as FormField exposing (FieldType(..))
+import Data.FormField as FormField exposing (FieldType(..), FileConfig)
 import Expect
 import Json.Decode as Decode
 import Test exposing (..)
@@ -113,10 +113,44 @@ fieldTypeTests =
             \_ ->
                 decodeFieldType "date"
                     |> Expect.equal (Ok Date)
-        , test "file タイプ" <|
+        , test "file タイプ（デフォルト設定）" <|
             \_ ->
                 decodeFieldType "file"
-                    |> Expect.equal (Ok File)
+                    |> Expect.equal
+                        (Ok
+                            (File
+                                { maxFiles = 10
+                                , maxFileSize = 20971520
+                                , allowedTypes = []
+                                }
+                            )
+                        )
+        , test "file タイプ（カスタム設定）" <|
+            \_ ->
+                let
+                    json =
+                        """
+                        {
+                            "id": "attachment",
+                            "label": "添付ファイル",
+                            "type": "file",
+                            "maxFiles": 3,
+                            "maxFileSize": 5242880,
+                            "allowedTypes": ["application/pdf", "image/png"]
+                        }
+                        """
+                in
+                Decode.decodeString FormField.decoder json
+                    |> Result.map .fieldType
+                    |> Expect.equal
+                        (Ok
+                            (File
+                                { maxFiles = 3
+                                , maxFileSize = 5242880
+                                , allowedTypes = [ "application/pdf", "image/png" ]
+                                }
+                            )
+                        )
         , test "select タイプ" <|
             \_ ->
                 let

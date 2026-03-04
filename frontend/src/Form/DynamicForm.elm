@@ -154,7 +154,7 @@ viewInput field value maybeError onInputMsg =
         Date ->
             viewDateInput field value maybeError onInputMsg
 
-        File ->
+        File _ ->
             viewFileInput field
 
 

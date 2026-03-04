@@ -1,9 +1,11 @@
 module Data.FormField exposing
     ( FieldType(..)
+    , FileConfig
     , FormField
     , SelectOption
     , Validation
     , decoder
+    , defaultFileConfig
     , listDecoder
     )
 
@@ -28,7 +30,7 @@ MVP では以下のタイプをサポート:
   - `Number`: 数値入力
   - `Select`: ドロップダウン選択
   - `Date`: 日付選択
-  - `File`: ファイルアップロード
+  - `File`: ファイルアップロード（FileConfig で制約をカスタマイズ可能）
 
 -}
 
@@ -47,7 +49,31 @@ type FieldType
     | Number
     | Select (List SelectOption)
     | Date
-    | File
+    | File FileConfig
+
+
+{-| ファイルフィールドの設定
+-}
+type alias FileConfig =
+    { maxFiles : Int
+    , maxFileSize : Int
+    , allowedTypes : List String
+    }
+
+
+{-| デフォルトのファイル設定
+
+  - maxFiles: 10
+  - maxFileSize: 20MB（20971520 バイト）
+  - allowedTypes: []（空 = 全形式許可）
+
+-}
+defaultFileConfig : FileConfig
+defaultFileConfig =
+    { maxFiles = 10
+    , maxFileSize = 20971520
+    , allowedTypes = []
+    }
 
 
 {-| Select フィールドの選択肢
@@ -115,12 +141,23 @@ fieldTypeDecoder =
                         Decode.succeed Date
 
                     "file" ->
-                        Decode.succeed File
+                        fileConfigDecoder
+                            |> Decode.map File
 
                     _ ->
                         -- 未知のタイプはテキストとして扱う
                         Decode.succeed Text
             )
+
+
+{-| ファイル設定をデコード（省略時はデフォルト値）
+-}
+fileConfigDecoder : Decoder FileConfig
+fileConfigDecoder =
+    Decode.succeed FileConfig
+        |> optional "maxFiles" Decode.int defaultFileConfig.maxFiles
+        |> optional "maxFileSize" Decode.int defaultFileConfig.maxFileSize
+        |> optional "allowedTypes" (Decode.list Decode.string) defaultFileConfig.allowedTypes
 
 
 {-| バリデーションルールをデコード
