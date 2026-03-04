@@ -3,7 +3,7 @@ module Form.ValidationTest exposing (suite)
 {-| Form.Validation モジュールのテスト
 -}
 
-import Data.FormField exposing (FieldType(..), FormField, Validation)
+import Data.FormField exposing (FieldType(..), FileConfig, FormField, Validation)
 import Dict
 import Expect
 import Form.Validation as Validation
@@ -16,6 +16,7 @@ suite =
         [ validateTitleTests
         , validateAllFieldsTests
         , validateRequiredStringTests
+        , validateFileFieldTests
         ]
 
 
@@ -264,6 +265,40 @@ validateRequiredStringTests =
 
 
 
+-- validateFileField
+
+
+validateFileFieldTests : Test
+validateFileFieldTests =
+    describe "validateFileField"
+        [ test "required で完了ファイルがない場合エラー" <|
+            \_ ->
+                Validation.validateFileField (requiredFileField "attachment" "添付ファイル") 0
+                    |> Expect.err
+        , test "required で完了ファイルがある場合 OK" <|
+            \_ ->
+                Validation.validateFileField (requiredFileField "attachment" "添付ファイル") 1
+                    |> Expect.ok
+        , test "optional でファイルなしでも OK" <|
+            \_ ->
+                Validation.validateFileField (optionalFileField "attachment" "添付ファイル") 0
+                    |> Expect.ok
+        , test "required で file フィールドの validateAllFields はスキップされる" <|
+            \_ ->
+                let
+                    fields =
+                        [ requiredFileField "attachment" "添付ファイル" ]
+
+                    values =
+                        Dict.empty
+                in
+                Validation.validateAllFields fields values
+                    |> Dict.isEmpty
+                    |> Expect.equal True
+        ]
+
+
+
 -- Test Helpers
 
 
@@ -324,6 +359,34 @@ numberFieldWithMin id label minVal =
     , fieldType = Number
     , placeholder = Nothing
     , validation = { defaultValidation | min = Just minVal }
+    }
+
+
+defaultFileConfig : FileConfig
+defaultFileConfig =
+    { maxFiles = 10
+    , maxFileSize = 20971520
+    , allowedTypes = []
+    }
+
+
+requiredFileField : String -> String -> FormField
+requiredFileField id label =
+    { id = id
+    , label = label
+    , fieldType = File defaultFileConfig
+    , placeholder = Nothing
+    , validation = { defaultValidation | required = True }
+    }
+
+
+optionalFileField : String -> String -> FormField
+optionalFileField id label =
+    { id = id
+    , label = label
+    , fieldType = File defaultFileConfig
+    , placeholder = Nothing
+    , validation = defaultValidation
     }
 
 

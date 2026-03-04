@@ -4,7 +4,9 @@ module Component.FileUpload exposing
     , Msg(..)
     , UploadProgress(..)
     , UploadingFile
+    , completedCount
     , init
+    , startPendingUploads
     , subscriptions
     , update
     , validateFile
@@ -390,6 +392,67 @@ addFiles requestConfig newFiles model =
     ( { updatedModel | files = model.files ++ filesWithProgress }
     , uploadCmds
     )
+
+
+{-| Pending ファイルのアップロードを開始
+
+下書き保存成功後に呼び出す。workflowInstanceId を設定し、
+Pending 状態のファイルのアップロードを開始する。
+
+-}
+startPendingUploads : RequestConfig -> String -> Model -> ( Model, Cmd Msg )
+startPendingUploads requestConfig workflowInstanceId model =
+    let
+        updatedModel =
+            { model | workflowInstanceId = Just workflowInstanceId }
+
+        pendingFiles =
+            model.files
+                |> List.filter (\f -> f.progress == Pending)
+
+        uploadCmds =
+            pendingFiles
+                |> List.map
+                    (\f ->
+                        DocumentApi.requestUploadUrl
+                            { config = requestConfig
+                            , body =
+                                { filename = f.name
+                                , contentType = File.mime f.file
+                                , size = f.size
+                                , workflowInstanceId = workflowInstanceId
+                                }
+                            , toMsg = GotUploadUrl f.name
+                            }
+                    )
+                |> Cmd.batch
+
+        filesWithProgress =
+            List.map
+                (\f ->
+                    if f.progress == Pending then
+                        { f | progress = RequestingUrl }
+
+                    else
+                        f
+                )
+                updatedModel.files
+    in
+    ( { updatedModel | files = filesWithProgress }
+    , uploadCmds
+    )
+
+
+{-| 完了済みファイルの数を取得
+
+バリデーション時に使用する。
+
+-}
+completedCount : Model -> Int
+completedCount model =
+    model.files
+        |> List.filter (\f -> f.progress == Completed)
+        |> List.length
 
 
 updateFileProgress : String -> UploadProgress -> List UploadingFile -> List UploadingFile

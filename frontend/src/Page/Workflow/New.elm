@@ -1,4 +1,4 @@
-module Page.Workflow.New exposing (init, isDirty, update, updateShared, view)
+module Page.Workflow.New exposing (init, isDirty, subscriptions, update, updateShared, view)
 
 {-| 新規申請フォームページ
 
@@ -30,8 +30,10 @@ import Api.ErrorMessage as ErrorMessage
 import Api.User as UserApi
 import Api.WorkflowDefinition as WorkflowDefinitionApi
 import Component.ErrorState as ErrorState
+import Component.FileUpload as FileUpload
 import Component.LoadingSpinner as LoadingSpinner
 import Data.UserItem exposing (UserItem)
+import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page.Workflow.New.FormView as FormView
@@ -165,6 +167,37 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+
+
+-- SUBSCRIPTIONS
+
+
+{-| FileUpload の進捗購読
+
+Editing 状態のファイルアップロードコンポーネントの subscriptions を集約する。
+
+-}
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model.state of
+        Loaded loaded ->
+            case loaded.formState of
+                Editing editing ->
+                    editing.fileUploads
+                        |> Dict.map
+                            (\fieldId fileUploadModel ->
+                                FileUpload.subscriptions fileUploadModel
+                                    |> Sub.map (FileUploadMsg fieldId)
+                            )
+                        |> Dict.values
+                        |> Sub.batch
+
+                SelectingDefinition ->
+                    Sub.none
+
+        _ ->
+            Sub.none
 
 
 
