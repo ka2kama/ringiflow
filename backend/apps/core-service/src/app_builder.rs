@@ -14,12 +14,7 @@ use ringiflow_infra::{
     PgTransactionManager,
     S3Client,
     TransactionManager,
-    notification::{
-        NoopNotificationSender,
-        NotificationSender,
-        SesNotificationSender,
-        SmtpNotificationSender,
-    },
+    notification::NotificationSender,
     repository::{
         DisplayIdCounterRepository,
         DocumentRepository,
@@ -135,7 +130,7 @@ use crate::{
 pub(crate) fn build_app(
     pool: sqlx::PgPool,
     s3_client: Arc<dyn S3Client>,
-    ses_client: Option<ringiflow_infra::notification::SesClient>,
+    notification_sender: Arc<dyn NotificationSender>,
     config: &CoreConfig,
 ) -> Router {
     // Readiness Check 用 State
@@ -209,36 +204,6 @@ pub(crate) fn build_app(
     });
 
     // 通知サービス
-    // NOTIFICATION_BACKEND 環境変数で送信バックエンドを切り替える
-    let notification_sender: Arc<dyn NotificationSender> =
-        match config.notification.backend.as_str() {
-            "smtp" => {
-                tracing::info!(
-                    host = %config.notification.smtp_host,
-                    port = config.notification.smtp_port,
-                    "SMTP バックエンドで通知サービスを初期化します"
-                );
-                Arc::new(SmtpNotificationSender::new(
-                    &config.notification.smtp_host,
-                    config.notification.smtp_port,
-                    config.notification.from_address.clone(),
-                ))
-            }
-            "ses" => {
-                // FIXME(#1046): Option + expect を解消し、型レベルで不正状態を防ぐ設計にリファクタリングする
-                let client = ses_client
-                    .expect("NOTIFICATION_BACKEND=ses だが SES クライアントが未初期化です");
-                tracing::info!("SES バックエンドで通知サービスを初期化します");
-                Arc::new(SesNotificationSender::new(
-                    client,
-                    config.notification.from_address.clone(),
-                ))
-            }
-            _ => {
-                tracing::info!("Noop バックエンドで通知サービスを初期化します");
-                Arc::new(NoopNotificationSender)
-            }
-        };
     let notification_log_repo: Arc<dyn NotificationLogRepository> =
         Arc::new(PostgresNotificationLogRepository::new(pool));
     let template_renderer = TemplateRenderer::new().expect("テンプレートエンジンの初期化に失敗");

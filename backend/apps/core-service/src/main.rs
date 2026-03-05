@@ -63,7 +63,16 @@ mod usecase;
 use std::{net::SocketAddr, sync::Arc};
 
 use config::CoreConfig;
-use ringiflow_infra::db;
+use ringiflow_infra::{
+    db,
+    notification::{
+        NoopNotificationSender,
+        NotificationSender,
+        SesNotificationSender,
+        SmtpNotificationSender,
+        create_ses_client,
+    },
+};
 use ringiflow_shared::observability::TracingConfig;
 use tokio::net::TcpListener;
 
@@ -109,17 +118,37 @@ async fn main() -> anyhow::Result<()> {
     );
     tracing::info!("S3 クライアントを初期化しました");
 
-    // SES クライアントの条件付き初期化
-    let ses_client = if config.notification.backend == "ses" {
-        let client = ringiflow_infra::notification::create_ses_client().await;
-        tracing::info!("SES クライアントを初期化しました");
-        Some(client)
-    } else {
-        None
-    };
+    // 通知バックエンドの初期化
+    let notification_sender: Arc<dyn NotificationSender> =
+        match config.notification.backend.as_str() {
+            "smtp" => {
+                tracing::info!(
+                    host = %config.notification.smtp_host,
+                    port = config.notification.smtp_port,
+                    "SMTP バックエンドで通知サービスを初期化します"
+                );
+                Arc::new(SmtpNotificationSender::new(
+                    &config.notification.smtp_host,
+                    config.notification.smtp_port,
+                    config.notification.from_address.clone(),
+                ))
+            }
+            "ses" => {
+                let client = create_ses_client().await;
+                tracing::info!("SES バックエンドで通知サービスを初期化します");
+                Arc::new(SesNotificationSender::new(
+                    client,
+                    config.notification.from_address.clone(),
+                ))
+            }
+            _ => {
+                tracing::info!("Noop バックエンドで通知サービスを初期化します");
+                Arc::new(NoopNotificationSender)
+            }
+        };
 
     // アプリケーション構築（DI + ルーター）
-    let app = app_builder::build_app(pool, s3_client, ses_client, &config);
+    let app = app_builder::build_app(pool, s3_client, notification_sender, &config);
 
     // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)
