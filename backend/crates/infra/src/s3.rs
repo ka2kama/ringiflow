@@ -196,8 +196,7 @@ impl S3Client for AwsS3Client {
 ///
 /// S3 クライアント
 pub async fn create_client(endpoint: Option<&str>) -> Client {
-    let mut config_builder = aws_config::defaults(aws_config::BehaviorVersion::latest())
-        .region(aws_config::Region::new("ap-northeast-1"));
+    let mut config_builder = aws_config::defaults(aws_config::BehaviorVersion::latest());
 
     if let Some(endpoint_url) = endpoint {
         config_builder = config_builder.endpoint_url(endpoint_url);
