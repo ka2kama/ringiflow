@@ -33,6 +33,39 @@ paths:
 
 禁止: 「パフォーマンスが劣化する」を理由にジェネリクスを選択し、型パラメータの増殖を受け入れること
 
+### DI コンポジションルート
+
+改善の経緯: [Issue #1052](https://github.com/ka2kama/ringiflow/issues/1052)
+
+外部依存（インフラクライアント）の具象型構築は `main.rs`（コンポジションルート）で行い、`build_app` には `Arc<dyn Trait>` のみを渡す。
+
+| 責務 | `main.rs`（コンポジションルート） | `build_app` |
+|------|--------------------------------|-------------|
+| 外部クライアント構築 | S3, SES/SMTP, Redis, DynamoDB 等の具象型を構築し `Arc<dyn Trait>` に変換 | 受け取るのみ（具象型を知らない） |
+| リポジトリ構築 | — | `pool` から `Arc<dyn XxxRepository>` を構築 |
+| UseCase / State 構築 | — | リポジトリと外部クライアントを組み合わせて構築 |
+| 設定の判断分岐 | 環境変数に基づく具象型の選択（例: SMTP vs SES vs Noop） | — |
+
+```rust
+// Good: main.rs で具象型を構築し、trait object として渡す
+let notification_sender: Arc<dyn NotificationSender> = match config.backend.as_str() {
+    "smtp" => Arc::new(SmtpNotificationSender::new(...)),
+    "ses"  => Arc::new(SesNotificationSender::new(...)),
+    _      => Arc::new(NoopNotificationSender),
+};
+let app = build_app(pool, s3_client, notification_sender, &config);
+
+// Bad: Option で渡して build_app 内で具象型を構築する
+let ses_client: Option<SesClient> = if use_ses { Some(create_ses_client().await) } else { None };
+let app = build_app(pool, ses_client, &config);  // build_app が具象型の存在を知ってしまう
+```
+
+小規模サービス（Auth Service 等）で `build_app` を分離しない場合は、`main.rs` 内で同じ原則を守る（具象型構築 → `Arc<dyn Trait>` 変換 → UseCase への注入）。
+
+禁止:
+- `Option<具象型>` を渡して受け側で `.expect()` や条件分岐する設計
+- `build_app` 内で外部クライアントの具象型を構築すること
+
 ### エラーハンドリング
 
 | 状況 | 推奨される方法 |
