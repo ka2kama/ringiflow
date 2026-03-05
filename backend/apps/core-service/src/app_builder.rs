@@ -225,6 +225,7 @@ pub(crate) fn build_app(
                 ))
             }
             "ses" => {
+                // FIXME(#1046): Option + expect を解消し、型レベルで不正状態を防ぐ設計にリファクタリングする
                 let client = ses_client
                     .expect("NOTIFICATION_BACKEND=ses だが SES クライアントが未初期化です");
                 tracing::info!("SES バックエンドで通知サービスを初期化します");
