@@ -25,4 +25,9 @@ resource "aws_sesv2_configuration_set" "main" {
   sending_options {
     sending_enabled = true
   }
+
+  # バウンス・苦情アドレスを自動的に抑制リストに追加
+  suppression_options {
+    suppressed_reasons = ["BOUNCE", "COMPLAINT"]
+  }
 }
