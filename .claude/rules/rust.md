@@ -35,7 +35,7 @@ paths:
 
 ### DI コンポジションルート
 
-→ 経緯: [Issue #1052](https://github.com/ka2kama/ringiflow/issues/1052)（PR #1040 で `Option<SesClient>` + `.expect()` パターンが混入し、#1046 で検出・修正）
+改善の経緯: [Issue #1052](https://github.com/ka2kama/ringiflow/issues/1052)
 
 外部依存（インフラクライアント）の具象型構築は `main.rs`（コンポジションルート）で行い、`build_app` には `Arc<dyn Trait>` のみを渡す。
 
