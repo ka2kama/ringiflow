@@ -70,6 +70,8 @@ CI が「action not allowed」エラーで失敗した場合:
 | `pnpm/action-setup@*` | pnpm パッケージマネージャ |
 | `EmbarkStudios/cargo-deny-action@*` | 依存関係セキュリティスキャン |
 | `mozilla-actions/sccache-action@*` | Rust コンパイルキャッシュ |
+| `hashicorp/setup-terraform@*` | Terraform CLI セットアップ |
+| `terraform-linters/setup-tflint@*` | TFLint セットアップ |
 | `docker/setup-buildx-action@*` | Docker Buildx セットアップ（デモデプロイ） |
 | `docker/login-action@*` | Docker レジストリ認証（デモデプロイ） |
 | `docker/build-push-action@*` | Docker イメージのビルド・プッシュ（デモデプロイ） |

@@ -57,6 +57,8 @@ check-tools:
     @which sccache > /dev/null || (echo "ERROR: sccache がインストールされていません" && exit 1)
     @which rust-script > /dev/null || (echo "ERROR: rust-script がインストールされていません" && exit 1)
     @which mprocs > /dev/null || (echo "ERROR: mprocs がインストールされていません" && exit 1)
+    @which terraform > /dev/null || (echo "ERROR: terraform がインストールされていません" && exit 1)
+    @which tflint > /dev/null || (echo "ERROR: tflint がインストールされていません" && exit 1)
     @which gh > /dev/null || (echo "ERROR: GitHub CLI (gh) がインストールされていません" && exit 1)
     @which psql > /dev/null || (echo "ERROR: psql がインストールされていません" && exit 1)
     @which pg_dump > /dev/null || (echo "ERROR: pg_dump がインストールされていません" && exit 1)
@@ -241,7 +243,7 @@ db-migrate:
 # =============================================================================
 
 # 全体フォーマット
-fmt: fmt-rust fmt-elm
+fmt: fmt-rust fmt-elm fmt-terraform
 
 # Rust フォーマット（引数なし=全ファイル、引数あり=指定ファイル）
 fmt-rust *files:
@@ -261,12 +263,16 @@ fmt-elm *files:
         elm-format --yes {{files}}
     fi
 
+# Terraform フォーマット
+fmt-terraform:
+    terraform fmt -recursive infra/terraform/
+
 # =============================================================================
 # リント（フォーマットチェック含む）
 # =============================================================================
 
 # 全体リント
-lint: lint-rust lint-elm lint-shell lint-ci lint-openapi check-unused-deps
+lint: lint-rust lint-elm lint-shell lint-ci lint-openapi lint-terraform check-unused-deps
 
 # Rust リント（rustfmt + clippy）
 lint-rust:
@@ -295,6 +301,10 @@ lint-ci:
 # OpenAPI 仕様書 リント（Redocly CLI）
 lint-openapi:
     pnpm exec redocly lint --config openapi/redocly.yaml
+
+# Terraform リント（fmt チェック + validate + tflint）
+lint-terraform:
+    ./scripts/check/terraform.sh
 
 # =============================================================================
 # テスト

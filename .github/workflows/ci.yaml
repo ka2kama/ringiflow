@@ -27,6 +27,7 @@ jobs:
       openapi: ${{ steps.filter.outputs.openapi }}
       api-test: ${{ steps.filter.outputs.api-test }}
       e2e: ${{ steps.filter.outputs.e2e }}
+      terraform: ${{ steps.filter.outputs.terraform }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -56,6 +57,8 @@ jobs:
               - 'backend/**'
               - 'frontend/**'
               - 'tests/e2e/**'
+            terraform:
+              - 'infra/terraform/**'
 
   # Rust リント: フォーマット、clippy、未使用依存チェック
   rust-lint:
@@ -406,6 +409,44 @@ jobs:
 
       - name: Lint OpenAPI
         run: just lint-openapi
+
+  # Terraform チェック: フォーマット、構文検証、tflint
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.14.0"
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: "v0.61.0"
+
+      - name: Format check
+        run: terraform fmt -check -recursive infra/terraform/
+
+      - name: Validate (dev)
+        run: |
+          cd infra/terraform/environments/dev
+          terraform init -backend=false
+          terraform validate
+
+      - name: Init TFLint plugins
+        run: tflint --init --config infra/terraform/.tflint.hcl
+
+      - name: TFLint (dev)
+        run: |
+          cd infra/terraform/environments/dev
+          tflint --config "$(pwd)/../../.tflint.hcl"
 
   # API テスト: 実際のサービスを起動して hurl でテスト
   api-test:
@@ -776,7 +817,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [changes, rust-lint, rust-test, rust-integration, elm, shell, openapi, api-test, e2e-test, security]
+    needs: [changes, rust-lint, rust-test, rust-integration, elm, shell, openapi, terraform, api-test, e2e-test, security]
     if: always()
     steps:
       - name: Check results
@@ -813,6 +854,11 @@ jobs:
 
           if [[ "${{ needs.openapi.result }}" == "failure" ]]; then
             echo "OpenAPI checks failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.terraform.result }}" == "failure" ]]; then
+            echo "Terraform checks failed"
             exit 1
           fi
 

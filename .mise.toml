@@ -2,3 +2,5 @@
 node = "22"
 elm = "0.19.1"
 "npm:elm-format" = "0.8.8"
+terraform = "1.14"
+tflint = "0.61"
