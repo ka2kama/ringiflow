@@ -14,7 +14,12 @@ use ringiflow_infra::{
     PgTransactionManager,
     S3Client,
     TransactionManager,
-    notification::{NoopNotificationSender, NotificationSender, SmtpNotificationSender},
+    notification::{
+        NoopNotificationSender,
+        NotificationSender,
+        SesNotificationSender,
+        SmtpNotificationSender,
+    },
     repository::{
         DisplayIdCounterRepository,
         DocumentRepository,
@@ -130,6 +135,7 @@ use crate::{
 pub(crate) fn build_app(
     pool: sqlx::PgPool,
     s3_client: Arc<dyn S3Client>,
+    ses_client: Option<ringiflow_infra::notification::SesClient>,
     config: &CoreConfig,
 ) -> Router {
     // Readiness Check 用 State
@@ -218,8 +224,16 @@ pub(crate) fn build_app(
                     config.notification.from_address.clone(),
                 ))
             }
-            // SES バックエンドは #879 で有効化
-            // "ses" => { ... }
+            "ses" => {
+                // FIXME(#1046): Option + expect を解消し、型レベルで不正状態を防ぐ設計にリファクタリングする
+                let client = ses_client
+                    .expect("NOTIFICATION_BACKEND=ses だが SES クライアントが未初期化です");
+                tracing::info!("SES バックエンドで通知サービスを初期化します");
+                Arc::new(SesNotificationSender::new(
+                    client,
+                    config.notification.from_address.clone(),
+                ))
+            }
             _ => {
                 tracing::info!("Noop バックエンドで通知サービスを初期化します");
                 Arc::new(NoopNotificationSender)
