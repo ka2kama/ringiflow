@@ -62,8 +62,8 @@ infra/terraform/
 | `terraform validate` | 構文検証 | コミット前 |
 | `tflint` | Lint（ベストプラクティス検証） | コミット前 |
 
-現時点ではローカルに Terraform がインストールされていないため手動検証。
-→ CI 統合とローカルツールチェーン整備は #1043 で対応予定。
+ローカル: `just lint-terraform`（fmt チェック + validate + tflint）。CI: `.tf` ファイル変更時に自動実行。
+→ 詳細: [ナレッジベース: Terraform](../../docs/80_ナレッジベース/devtools/Terraform.md)
 
 ## モジュール設計
 
