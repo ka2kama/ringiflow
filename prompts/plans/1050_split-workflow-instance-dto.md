@@ -40,9 +40,9 @@
 - `openapi/openapi.yaml` は `just openapi-generate` で BFF の utoipa アノテーションから自動生成（VCS 管理の生成物）
 
 ### 進捗
-- [ ] Phase 1: Core Service DTO 分離
-- [ ] Phase 2: BFF Client 型分離
-- [ ] Phase 3: BFF Handler 型分離 + OpenAPI 更新
+- [x] Phase 1: Core Service DTO 分離
+- [x] Phase 2: BFF Client 型分離
+- [x] Phase 3: BFF Handler 型分離 + OpenAPI 更新
 
 ## 仕様整理
 
