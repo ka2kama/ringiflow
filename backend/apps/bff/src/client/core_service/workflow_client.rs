@@ -22,6 +22,7 @@ use super::{
         WorkflowCommentDto,
         WorkflowDefinitionDto,
         WorkflowInstanceDto,
+        WorkflowInstanceSummaryDto,
     },
 };
 use crate::middleware::request_id::inject_request_id;
@@ -70,7 +71,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowInstanceDto>>, CoreServiceError>;
+    ) -> Result<ApiResponse<Vec<WorkflowInstanceSummaryDto>>, CoreServiceError>;
 
     /// ワークフローの詳細を取得する
     ///
@@ -318,7 +319,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowInstanceDto>>, CoreServiceError> {
+    ) -> Result<ApiResponse<Vec<WorkflowInstanceSummaryDto>>, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows?tenant_id={}&user_id={}",
             self.base_url, tenant_id, user_id

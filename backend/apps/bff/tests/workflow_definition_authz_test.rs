@@ -30,6 +30,7 @@ use ringiflow_bff::{
         ValidationResultDto,
         WorkflowDefinitionDto,
         WorkflowInstanceDto,
+        WorkflowInstanceSummaryDto,
     },
     handler::{WorkflowDefinitionState, create_definition},
     middleware::{AuthzState, require_permission},
@@ -179,7 +180,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _tenant_id: Uuid,
         _user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowInstanceDto>>, CoreServiceError> {
+    ) -> Result<ApiResponse<Vec<WorkflowInstanceSummaryDto>>, CoreServiceError> {
         unimplemented!()
     }
 

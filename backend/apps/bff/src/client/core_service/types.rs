@@ -146,7 +146,32 @@ pub struct WorkflowStepDto {
     pub updated_at: String,
 }
 
-/// ワークフローインスタンス DTO
+/// ワークフローインスタンス一覧用 DTO（ステップなし）
+///
+/// 一覧 API のレスポンスをデシリアライズする。
+/// `steps` フィールドを持たないため、API レスポンスの構造を正確に反映する。
+#[derive(Debug, Clone, Deserialize)]
+pub struct WorkflowInstanceSummaryDto {
+    pub id: String,
+    pub display_id: String,
+    pub display_number: i64,
+    pub title: String,
+    pub definition_id: String,
+    pub status: String,
+    pub version: i32,
+    pub form_data: serde_json::Value,
+    pub initiated_by: UserRefDto,
+    pub current_step_id: Option<String>,
+    pub submitted_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// ワークフローインスタンス詳細用 DTO（ステップ付き）
+///
+/// 詳細 API およびコマンド系 API のレスポンスをデシリアライズする。
+/// コマンドでステップが空の場合は `#[serde(default)]` で空 Vec となる。
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkflowInstanceDto {
     pub id: String,

@@ -77,3 +77,6 @@ jsonpath "$.data[0].initiated_by.id" == "{{admin_id}}"
 jsonpath "$.data[0].initiated_by.name" == "{{admin_name}}"
 jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 jsonpath "$.data[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+
+# 一覧レスポンスには steps フィールドが含まれないことを検証
+jsonpath "$.data[0].steps" not exists
