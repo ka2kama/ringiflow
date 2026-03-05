@@ -12,7 +12,7 @@
 
 ### ブランチ / PR
 - ブランチ: `feature/757-merge-queue`
-- PR: #1038（Draft）
+- PR: #1039（Draft）
 
 ### As-Is（探索結果の要約）
 - Ruleset `main-protection`（ID: 11811117）: `strict_required_status_checks_policy: true`
