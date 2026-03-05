@@ -25,7 +25,7 @@ use super::{
     StepPathParams,
     SubmitWorkflowRequest,
     WorkflowCommentDto,
-    WorkflowInstanceDto,
+    WorkflowInstanceDetailDto,
     WorkflowState,
     convert_approvers,
     parse_display_number,
@@ -74,7 +74,7 @@ pub async fn create_workflow(
         .await?;
 
     // ユーザー名を解決してレスポンスを返す
-    let dto = WorkflowInstanceDto::resolve_from_instance(&instance, &state.usecase).await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_instance(&instance, &state.usecase).await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::CREATED, Json(response)).into_response())
@@ -111,7 +111,7 @@ pub async fn submit_workflow(
         .await?;
 
     // ユーザー名を解決してレスポンスを返す
-    let dto = WorkflowInstanceDto::resolve_from_instance(&instance, &state.usecase).await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_instance(&instance, &state.usecase).await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -148,9 +148,11 @@ pub async fn approve_step(
         .approve_step(input, step_id, tenant_id, user_id)
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -187,9 +189,11 @@ pub async fn reject_step(
         .reject_step(input, step_id, tenant_id, user_id)
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -225,7 +229,7 @@ pub async fn submit_workflow_by_display_number(
         .submit_workflow_by_display_number(input, display_number, tenant_id)
         .await?;
 
-    let dto = WorkflowInstanceDto::resolve_from_instance(&instance, &state.usecase).await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_instance(&instance, &state.usecase).await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -271,9 +275,11 @@ pub async fn approve_step_by_display_number(
         )
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -304,9 +310,11 @@ pub async fn request_changes_step(
         .request_changes_step(input, step_id, tenant_id, user_id)
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -338,9 +346,11 @@ pub async fn resubmit_workflow(
         .resubmit_workflow(input, instance_id, tenant_id, user_id)
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -386,9 +396,11 @@ pub async fn reject_step_by_display_number(
         )
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -428,9 +440,11 @@ pub async fn request_changes_step_by_display_number(
         )
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -462,9 +476,11 @@ pub async fn resubmit_workflow_by_display_number(
         .resubmit_workflow_by_display_number(input, display_number, tenant_id, user_id)
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())

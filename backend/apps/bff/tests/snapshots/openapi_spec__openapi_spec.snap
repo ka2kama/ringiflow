@@ -1,6 +1,5 @@
 ---
 source: apps/bff/tests/openapi_spec.rs
-assertion_line: 113
 expression: json
 ---
 {
@@ -1907,7 +1906,7 @@ expression: json
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_Vec_WorkflowData"
+                  "$ref": "#/components/schemas/ApiResponse_Vec_WorkflowSummaryData"
                 }
               }
             }
@@ -3581,95 +3580,6 @@ expression: json
           }
         }
       },
-      "ApiResponse_Vec_WorkflowData": {
-        "type": "object",
-        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
-        "required": [
-          "data"
-        ],
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "description": "ワークフローデータ",
-              "required": [
-                "id",
-                "display_id",
-                "display_number",
-                "title",
-                "definition_id",
-                "status",
-                "version",
-                "form_data",
-                "initiated_by",
-                "steps",
-                "created_at",
-                "updated_at"
-              ],
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "display_id": {
-                  "type": "string"
-                },
-                "display_number": {
-                  "type": "integer",
-                  "format": "int64"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "definition_id": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string"
-                },
-                "version": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "form_data": {},
-                "initiated_by": {
-                  "$ref": "#/components/schemas/UserRefData"
-                },
-                "current_step_id": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "steps": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WorkflowStepData"
-                  }
-                },
-                "submitted_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "completed_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                },
-                "created_at": {
-                  "type": "string"
-                },
-                "updated_at": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
       "ApiResponse_Vec_WorkflowDefinitionData": {
         "type": "object",
         "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
@@ -3727,6 +3637,88 @@ expression: json
           }
         }
       },
+      "ApiResponse_Vec_WorkflowSummaryData": {
+        "type": "object",
+        "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "ワークフロー一覧用データ（ステップなし）\n\n一覧 API のレスポンスで使用。`steps` フィールドを含まない。",
+              "required": [
+                "id",
+                "display_id",
+                "display_number",
+                "title",
+                "definition_id",
+                "status",
+                "version",
+                "form_data",
+                "initiated_by",
+                "created_at",
+                "updated_at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "display_id": {
+                  "type": "string"
+                },
+                "display_number": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "definition_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "form_data": {},
+                "initiated_by": {
+                  "$ref": "#/components/schemas/UserRefData"
+                },
+                "current_step_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "submitted_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "completed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
       "ApiResponse_WorkflowCommentData": {
         "type": "object",
         "description": "公開 API の統一レスポンス型\n\nすべての公開 API エンドポイントは `{ \"data\": T }` 形式でレスポンスを返す。\nこの型は以下の場所で使用される:\n- Core Service ハンドラ（Serialize でレスポンスを返す）\n- BFF ハンドラ（Serialize でクライアントにレスポンスを返す）\n- BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）\n\n## 使用例\n\n```\nuse ringiflow_shared::ApiResponse;\n\nlet response = ApiResponse::new(\"hello\");\nassert_eq!(response.data, \"hello\");\n```",
@@ -3769,7 +3761,7 @@ expression: json
         "properties": {
           "data": {
             "type": "object",
-            "description": "ワークフローデータ",
+            "description": "ワークフロー詳細用データ（ステップ付き）\n\n詳細 API およびコマンド系 API のレスポンスで使用。",
             "required": [
               "id",
               "display_id",
@@ -5134,7 +5126,7 @@ expression: json
       },
       "WorkflowData": {
         "type": "object",
-        "description": "ワークフローデータ",
+        "description": "ワークフロー詳細用データ（ステップ付き）\n\n詳細 API およびコマンド系 API のレスポンスで使用。",
         "required": [
           "id",
           "display_id",
@@ -5325,6 +5317,76 @@ expression: json
             ]
           },
           "started_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkflowSummaryData": {
+        "type": "object",
+        "description": "ワークフロー一覧用データ（ステップなし）\n\n一覧 API のレスポンスで使用。`steps` フィールドを含まない。",
+        "required": [
+          "id",
+          "display_id",
+          "display_number",
+          "title",
+          "definition_id",
+          "status",
+          "version",
+          "form_data",
+          "initiated_by",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "display_id": {
+            "type": "string"
+          },
+          "display_number": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "definition_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "form_data": {},
+          "initiated_by": {
+            "$ref": "#/components/schemas/UserRefData"
+          },
+          "current_step_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "submitted_at": {
             "type": [
               "string",
               "null"

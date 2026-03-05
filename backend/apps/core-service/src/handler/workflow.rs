@@ -221,9 +221,12 @@ impl WorkflowStepDto {
     }
 }
 
-/// ワークフローインスタンス DTO
+/// ワークフローインスタンスの共通フィールド
+///
+/// 一覧用（Summary）と詳細用（Detail）で共有する基底構造体。
+/// `#[serde(flatten)]` で embed して使用する。
 #[derive(Debug, Serialize)]
-pub struct WorkflowInstanceDto {
+pub struct WorkflowInstanceBaseDto {
     pub id: String,
     pub display_id: String,
     pub display_number: i64,
@@ -234,74 +237,94 @@ pub struct WorkflowInstanceDto {
     pub form_data: serde_json::Value,
     pub initiated_by: UserRefDto,
     pub current_step_id: Option<String>,
-    pub steps: Vec<WorkflowStepDto>,
     pub submitted_at: Option<String>,
     pub completed_at: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
 
-impl WorkflowInstanceDto {
-    /// 一覧 API 用: ステップなしの変換
-    fn from_instance(instance: &WorkflowInstance, user_names: &HashMap<UserId, String>) -> Self {
-        Self {
-            id: instance.id().to_string(),
-            display_id: DisplayId::new(
-                display_prefix::WORKFLOW_INSTANCE,
-                instance.display_number(),
-            )
+/// WorkflowInstance から共通フィールドを構築するヘルパー
+fn build_base_dto(
+    instance: &WorkflowInstance,
+    user_names: &HashMap<UserId, String>,
+) -> WorkflowInstanceBaseDto {
+    WorkflowInstanceBaseDto {
+        id: instance.id().to_string(),
+        display_id: DisplayId::new(display_prefix::WORKFLOW_INSTANCE, instance.display_number())
             .to_string(),
-            display_number: instance.display_number().as_i64(),
-            title: instance.title().to_string(),
-            definition_id: instance.definition_id().to_string(),
-            status: format!("{:?}", instance.status()),
-            version: instance.version().as_i32(),
-            form_data: instance.form_data().clone(),
-            initiated_by: to_user_ref(instance.initiated_by(), user_names),
-            current_step_id: instance.current_step_id().map(|s| s.to_string()),
-            steps: Vec::new(),
-            submitted_at: instance.submitted_at().map(|t| t.to_rfc3339()),
-            completed_at: instance.completed_at().map(|t| t.to_rfc3339()),
-            created_at: instance.created_at().to_rfc3339(),
-            updated_at: instance.updated_at().to_rfc3339(),
+        display_number: instance.display_number().as_i64(),
+        title: instance.title().to_string(),
+        definition_id: instance.definition_id().to_string(),
+        status: format!("{:?}", instance.status()),
+        version: instance.version().as_i32(),
+        form_data: instance.form_data().clone(),
+        initiated_by: to_user_ref(instance.initiated_by(), user_names),
+        current_step_id: instance.current_step_id().map(|s| s.to_string()),
+        submitted_at: instance.submitted_at().map(|t| t.to_rfc3339()),
+        completed_at: instance.completed_at().map(|t| t.to_rfc3339()),
+        created_at: instance.created_at().to_rfc3339(),
+        updated_at: instance.updated_at().to_rfc3339(),
+    }
+}
+
+/// ワークフローインスタンス一覧用 DTO（ステップなし）
+///
+/// 一覧 API で使用。`steps` フィールドを持たないため、
+/// レスポンスに不要な `"steps": []` が含まれない。
+#[derive(Debug, Serialize)]
+pub struct WorkflowInstanceSummaryDto {
+    #[serde(flatten)]
+    pub base: WorkflowInstanceBaseDto,
+}
+
+impl WorkflowInstanceSummaryDto {
+    /// 一覧 API 用: ステップなしの変換
+    pub(crate) fn from_instance(
+        instance: &WorkflowInstance,
+        user_names: &HashMap<UserId, String>,
+    ) -> Self {
+        Self {
+            base: build_base_dto(instance, user_names),
         }
     }
+}
 
+/// ワークフローインスタンス詳細用 DTO（ステップ付き）
+///
+/// 詳細 API およびコマンドハンドラのレスポンスで使用。
+#[derive(Debug, Serialize)]
+pub struct WorkflowInstanceDetailDto {
+    #[serde(flatten)]
+    pub base:  WorkflowInstanceBaseDto,
+    pub steps: Vec<WorkflowStepDto>,
+}
+
+impl WorkflowInstanceDetailDto {
     /// 詳細 API 用: ステップ付きの変換
     pub(crate) fn from_workflow_with_steps(
         data: &WorkflowWithSteps,
         user_names: &HashMap<UserId, String>,
     ) -> Self {
-        let instance = &data.instance;
         Self {
-            id: instance.id().to_string(),
-            display_id: DisplayId::new(
-                display_prefix::WORKFLOW_INSTANCE,
-                instance.display_number(),
-            )
-            .to_string(),
-            display_number: instance.display_number().as_i64(),
-            title: instance.title().to_string(),
-            definition_id: instance.definition_id().to_string(),
-            status: format!("{:?}", instance.status()),
-            version: instance.version().as_i32(),
-            form_data: instance.form_data().clone(),
-            initiated_by: to_user_ref(instance.initiated_by(), user_names),
-            current_step_id: instance.current_step_id().map(|s| s.to_string()),
+            base:  build_base_dto(&data.instance, user_names),
             steps: data
                 .steps
                 .iter()
                 .map(|s| WorkflowStepDto::from_step(s, user_names))
                 .collect(),
-            submitted_at: instance.submitted_at().map(|t| t.to_rfc3339()),
-            completed_at: instance.completed_at().map(|t| t.to_rfc3339()),
-            created_at: instance.created_at().to_rfc3339(),
-            updated_at: instance.updated_at().to_rfc3339(),
+        }
+    }
+
+    /// コマンドハンドラ用: ステップなしの変換（空 Vec）
+    fn from_instance(instance: &WorkflowInstance, user_names: &HashMap<UserId, String>) -> Self {
+        Self {
+            base:  build_base_dto(instance, user_names),
+            steps: Vec::new(),
         }
     }
 
     /// ユーザー名を解決して WorkflowInstance から DTO を構築する（ステップなし）
-    async fn resolve_from_instance(
+    pub(crate) async fn resolve_from_instance(
         instance: &WorkflowInstance,
         usecase: &WorkflowUseCaseImpl,
     ) -> Result<Self, CoreError> {

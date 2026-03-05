@@ -16,7 +16,8 @@ use super::{
     TenantQuery,
     UserQuery,
     WorkflowCommentDto,
-    WorkflowInstanceDto,
+    WorkflowInstanceDetailDto,
+    WorkflowInstanceSummaryDto,
     WorkflowState,
     parse_display_number,
 };
@@ -53,7 +54,7 @@ pub async fn list_my_workflows(
     let response = ApiResponse::new(
         workflows
             .iter()
-            .map(|w| WorkflowInstanceDto::from_instance(w, &user_names))
+            .map(|w| WorkflowInstanceSummaryDto::from_instance(w, &user_names))
             .collect::<Vec<_>>(),
     );
 
@@ -81,9 +82,11 @@ pub async fn get_workflow(
 
     let workflow_with_steps = state.usecase.get_workflow(instance_id, tenant_id).await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())
@@ -114,9 +117,11 @@ pub async fn get_workflow_by_display_number(
         .get_workflow_by_display_number(display_number, tenant_id)
         .await?;
 
-    let dto =
-        WorkflowInstanceDto::resolve_from_workflow_with_steps(&workflow_with_steps, &state.usecase)
-            .await?;
+    let dto = WorkflowInstanceDetailDto::resolve_from_workflow_with_steps(
+        &workflow_with_steps,
+        &state.usecase,
+    )
+    .await?;
     let response = ApiResponse::new(dto);
 
     Ok((StatusCode::OK, Json(response)).into_response())

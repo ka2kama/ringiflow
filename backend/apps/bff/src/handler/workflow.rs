@@ -151,7 +151,51 @@ impl From<crate::client::WorkflowStepDto> for WorkflowStepData {
     }
 }
 
-/// ワークフローデータ
+/// ワークフロー一覧用データ（ステップなし）
+///
+/// 一覧 API のレスポンスで使用。`steps` フィールドを含まない。
+#[derive(Debug, Serialize, ToSchema)]
+pub struct WorkflowSummaryData {
+    pub id: String,
+    pub display_id: String,
+    pub display_number: i64,
+    pub title: String,
+    pub definition_id: String,
+    pub status: String,
+    pub version: i32,
+    pub form_data: serde_json::Value,
+    pub initiated_by: UserRefData,
+    pub current_step_id: Option<String>,
+    pub submitted_at: Option<String>,
+    pub completed_at: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+impl From<crate::client::WorkflowInstanceSummaryDto> for WorkflowSummaryData {
+    fn from(dto: crate::client::WorkflowInstanceSummaryDto) -> Self {
+        Self {
+            id: dto.id,
+            display_id: dto.display_id,
+            display_number: dto.display_number,
+            title: dto.title,
+            definition_id: dto.definition_id,
+            status: dto.status,
+            version: dto.version,
+            form_data: dto.form_data,
+            initiated_by: UserRefData::from(dto.initiated_by),
+            current_step_id: dto.current_step_id,
+            submitted_at: dto.submitted_at,
+            completed_at: dto.completed_at,
+            created_at: dto.created_at,
+            updated_at: dto.updated_at,
+        }
+    }
+}
+
+/// ワークフロー詳細用データ（ステップ付き）
+///
+/// 詳細 API およびコマンド系 API のレスポンスで使用。
 #[derive(Debug, Serialize, ToSchema)]
 pub struct WorkflowData {
     pub id: String,

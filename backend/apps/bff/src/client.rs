@@ -60,5 +60,6 @@ pub use core_service::{
     WorkflowCommentDto,
     WorkflowDefinitionDto,
     WorkflowInstanceDto,
+    WorkflowInstanceSummaryDto,
     WorkflowStepDto,
 };

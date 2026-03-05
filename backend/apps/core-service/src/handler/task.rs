@@ -23,7 +23,13 @@ use uuid::Uuid;
 
 use crate::{
     error::CoreError,
-    handler::workflow::{UserQuery, UserRefDto, WorkflowInstanceDto, WorkflowStepDto, to_user_ref},
+    handler::workflow::{
+        UserQuery,
+        UserRefDto,
+        WorkflowInstanceDetailDto,
+        WorkflowStepDto,
+        to_user_ref,
+    },
     usecase::task::{TaskItem, TaskUseCaseImpl},
 };
 
@@ -107,7 +113,7 @@ impl TaskItemDto {
 #[derive(Debug, Serialize)]
 pub struct TaskDetailDto {
     pub step:     WorkflowStepDto,
-    pub workflow: WorkflowInstanceDto,
+    pub workflow: WorkflowInstanceDetailDto,
 }
 
 /// 自分のタスク一覧を取得する
@@ -168,7 +174,7 @@ pub async fn get_task(
 
     let response = ApiResponse::new(TaskDetailDto {
         step:     WorkflowStepDto::from_step(&detail.step, &user_names),
-        workflow: WorkflowInstanceDto::from_workflow_with_steps(
+        workflow: WorkflowInstanceDetailDto::from_workflow_with_steps(
             &crate::usecase::workflow::WorkflowWithSteps {
                 instance: detail.workflow,
                 steps:    detail.steps,
@@ -212,7 +218,7 @@ pub async fn get_task_by_display_numbers(
 
     let response = ApiResponse::new(TaskDetailDto {
         step:     WorkflowStepDto::from_step(&detail.step, &user_names),
-        workflow: WorkflowInstanceDto::from_workflow_with_steps(
+        workflow: WorkflowInstanceDetailDto::from_workflow_with_steps(
             &crate::usecase::workflow::WorkflowWithSteps {
                 instance: detail.workflow,
                 steps:    detail.steps,

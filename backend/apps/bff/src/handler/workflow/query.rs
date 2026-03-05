@@ -17,6 +17,7 @@ use super::{
     WorkflowData,
     WorkflowDefinitionData,
     WorkflowState,
+    WorkflowSummaryData,
 };
 use crate::{
     client::CoreServiceError,
@@ -125,7 +126,7 @@ pub async fn get_workflow_definition(
    tag = "workflows",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "自分のワークフロー一覧", body = ApiResponse<Vec<WorkflowData>>),
+      (status = 200, description = "自分のワークフロー一覧", body = ApiResponse<Vec<WorkflowSummaryData>>),
       (status = 401, description = "認証エラー", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -150,7 +151,7 @@ pub async fn list_my_workflows(
         core_response
             .data
             .into_iter()
-            .map(WorkflowData::from)
+            .map(WorkflowSummaryData::from)
             .collect::<Vec<_>>(),
     );
     Ok((StatusCode::OK, Json(response)).into_response())
