@@ -206,6 +206,8 @@ dist
 ### Terraform template
 # Local .terraform directories
 **/.terraform/*
+# NOTE: .terraform.lock.hcl はコミット対象（HashiCorp 推奨）
+# https://developer.hashicorp.com/terraform/language/files/dependency-lock
 
 # .tfstate files
 *.tfstate
