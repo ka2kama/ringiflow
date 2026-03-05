@@ -8,7 +8,7 @@
 - 完了基準:
   - AWS SES API でメールが送信できる
   - 環境変数 `NOTIFICATION_BACKEND=ses` で SES に切り替わる
-  - SES のドメイン検証が Terraform で定義されている
+  - ~~SES のドメイン検証が Terraform で定義されている~~ → 別 Issue に分離
 
 ### ブランチ / PR
 - ブランチ: `feature/879-ses-integration`
@@ -23,12 +23,15 @@
 - `SesNotificationSender::new(client: Client, from_address: String)` で `aws_sdk_sesv2::Client` が必要
 - AWS SDK クライアント初期化パターン: `s3.rs:198-218` — `aws_config::defaults().load().await` → サービス固有 Client
 - `build_app()` は同期関数。SES クライアント生成は async のため `main.rs` で行う必要あり
-- Terraform ディレクトリは `.gitkeep` のみ（構成未着手）
 
 ### 進捗
 - [x] Phase 1: SES クライアント初期化と app_builder 配線
-- [x] Phase 2: Terraform SES ドメイン検証
-- [x] Phase 3: テスト手順文書
+- ~~Phase 2: Terraform SES ドメイン検証~~ → 別 Issue に分離
+- ~~Phase 3: テスト手順文書~~ → 別 Issue に分離（Terraform デプロイ後に作成）
+
+### スコープ変更の経緯
+
+Terraform インフラ基盤（provider、state backend、.gitignore）が未整備であることが判明。SES モジュール単体では適用できないため、Terraform 関連（Phase 2, 3）を別の前提 Issue に分離した。
 
 ## 設計判断
 
@@ -50,6 +53,10 @@
 
 理由: `s3.rs` が `create_client` + `AwsS3Client` を同居させているのと同様のパターン。SES は endpoint 切替不要なのでよりシンプル。
 
+### SesClient 型エイリアス
+
+`app_builder.rs` が `aws-sdk-sesv2` crate に直接依存するのを避けるため、infra crate で `pub type SesClient = aws_sdk_sesv2::Client` を定義。S3 の `AwsS3Client`（独自ラッパー型）とは異なり、SES はラッパーが不要なため型エイリアスで対応。
+
 ## Phase 1: SES クライアント初期化と app_builder 配線
 
 ### 確認事項
@@ -61,44 +68,11 @@
 
 ### 変更内容
 
-1. `backend/crates/infra/src/notification/ses.rs` に `create_client()` を追加
-   ```rust
-   pub async fn create_client() -> Client {
-       let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
-           .region(aws_config::Region::new("ap-northeast-1"))
-           .load()
-           .await;
-       Client::new(&config)
-   }
-   ```
-
-2. `backend/crates/infra/src/notification.rs` で `create_client` を re-export
-   ```rust
-   pub use ses::{SesNotificationSender, create_ses_client};
-   ```
-   （関数名は `create_ses_client` として明確化）
-
+1. `backend/crates/infra/src/notification/ses.rs` に `create_ses_client()` を追加
+2. `backend/crates/infra/src/notification.rs` で re-export + `SesClient` 型エイリアス追加
 3. `backend/apps/core-service/src/main.rs` で条件付き SES クライアント生成
-   ```rust
-   let ses_client = if config.notification.backend == "ses" {
-       let client = ringiflow_infra::notification::create_ses_client().await;
-       tracing::info!("SES クライアントを初期化しました");
-       Some(client)
-   } else {
-       None
-   };
-   ```
-
-4. `build_app` シグネチャ変更: `ses_client: Option<aws_sdk_sesv2::Client>` を追加
-
-5. `app_builder.rs` の match arm に "ses" を追加:
-   ```rust
-   "ses" => {
-       let client = ses_client.expect("NOTIFICATION_BACKEND=ses だが SES クライアントが未初期化");
-       tracing::info!("SES バックエンドで通知サービスを初期化します");
-       Arc::new(SesNotificationSender::new(client, config.notification.from_address.clone()))
-   }
-   ```
+4. `build_app` シグネチャ変更: `ses_client: Option<ringiflow_infra::notification::SesClient>` を追加
+5. `app_builder.rs` の match arm に "ses" を追加
 
 ### 操作パス
 
@@ -111,8 +85,8 @@
 ### テストリスト
 
 ユニットテスト:
-- [ ] `ses::create_ses_client` が `Send + Sync` な `Client` を返す（コンパイル確認で十分）
-- [ ] 既存テスト（`SesNotificationSender` の `Send + Sync` テスト）がパスする
+- [x] `ses::create_ses_client` が `Send + Sync` な `Client` を返す（コンパイル確認で十分）
+- [x] 既存テスト（`SesNotificationSender` の `Send + Sync` テスト）がパスする
 
 ハンドラテスト（該当なし）
 API テスト（該当なし）
@@ -120,65 +94,22 @@ E2E テスト（該当なし）
 
 注: バックエンド切替のロジックは `app_builder` の match 文であり、統合テストは実際の AWS 接続が必要なため CI では実行不可。ユニットテストとコンパイル確認でカバーする。
 
-## Phase 2: Terraform SES ドメイン検証
-
-### 確認事項
-- パターン: Terraform ディレクトリ構造 → `infra/terraform/`（`.gitkeep` のみ）
-- ライブラリ: AWS provider の SES リソース → `aws_sesv2_email_identity`, `aws_sesv2_configuration_set`
-
-### 変更内容
-
-`infra/terraform/modules/ses/` に SES モジュールを作成:
-
-1. `main.tf`: SES ドメイン検証リソース
-   - `aws_sesv2_email_identity` — ドメイン検証
-   - `aws_sesv2_configuration_set` — 送信設定
-
-2. `variables.tf`: 入力変数
-   - `domain` — 検証するドメイン
-   - `environment` — 環境名
-
-3. `outputs.tf`: 出力値
-   - DKIM レコード（Route53 手動設定用）
-
-### テストリスト
-
-ユニットテスト（該当なし）
-ハンドラテスト（該当なし）
-API テスト（該当なし）
-E2E テスト（該当なし）
-
-注: Terraform は `terraform validate` で構文チェック。実際のデプロイは手動。
-
-## Phase 3: テスト手順文書
-
-### 確認事項: なし（既知のパターンのみ）
-
-### 変更内容
-
-`docs/60_手順書/` に本番メール送信テスト手順を追加。
-
-### テストリスト
-
-ユニットテスト（該当なし）
-ハンドラテスト（該当なし）
-API テスト（該当なし）
-E2E テスト（該当なし）
-
 ## ブラッシュアップループの記録
 
 | ループ | 検出したギャップ | 観点 | 対応 |
 |-------|----------------|------|------|
 | 1回目 | `build_app` が同期関数のため SES クライアントを内部で生成できない | 技術的前提 | main.rs で条件付き生成し `Option<Client>` を渡す設計に |
 | 2回目 | `create_client` の名前が S3 と衝突する可能性 | 曖昧 | `create_ses_client` に明確化 |
+| 3回目 | `app_builder.rs` が `aws-sdk-sesv2` crate に直接依存する | アーキテクチャ不整合 | infra crate で `SesClient` 型エイリアスを定義して re-export |
+| 4回目 | Terraform インフラ基盤が未整備 | 不完全なパス | Phase 2, 3 を別 Issue に分離 |
 
 ## 収束確認（設計・計画）
 
 | # | 観点 | 理想状態（To-Be） | 判定 | 確認内容 |
 |---|------|------------------|------|---------|
-| 1 | 網羅性 | 全対象が計画に含まれている | OK | 完了基準 3 項目すべてに Phase が対応: SES API → Phase 1, 環境変数切替 → Phase 1, Terraform → Phase 2 |
+| 1 | 網羅性 | 全対象が計画に含まれている | OK | Phase 1 で SES API 有効化と環境変数切替をカバー。Terraform は別 Issue に分離済み |
 | 2 | 曖昧さ排除 | 不確定な記述がゼロ | OK | 関数名、配置、シグネチャが具体的に記載 |
-| 3 | 設計判断の完結性 | 全ての差異に判断が記載 | OK | クライアント生成場所、関数配置の判断を記載 |
-| 4 | スコープ境界 | 対象と対象外が両方明記 | OK | 対象: SES 有効化、Terraform、手順書。対象外: 実際のデプロイ、Route53 設定 |
+| 3 | 設計判断の完結性 | 全ての差異に判断が記載 | OK | クライアント生成場所、関数配置、型エイリアスの判断を記載 |
+| 4 | スコープ境界 | 対象と対象外が両方明記 | OK | 対象: SES 有効化。対象外: Terraform、テスト手順書（別 Issue） |
 | 5 | 技術的前提 | 前提が考慮されている | OK | `build_app` が同期関数である制約を考慮 |
 | 6 | 既存ドキュメント整合 | 矛盾がない | OK | 詳細設計書 16_通知機能設計.md の環境切替セクションと整合 |
