@@ -22,8 +22,8 @@
 - Rules Check（`claude-rules-check.yaml`）: `.claude/rules/` のルールファイルに基づくチェック。DI 固有ルールなし
 
 ### 進捗
-- [ ] Phase 1: `rust.md` に DI コンポジションルートルールを追加
-- [ ] Phase 2: レビュープロンプトに DI パターン一貫性チェックを追加
+- [x] Phase 1: `rust.md` に DI コンポジションルートルールを追加
+- [x] Phase 2: レビュープロンプトに DI パターン一貫性チェックを追加
 
 ## 仕様整理
 
