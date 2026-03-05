@@ -78,7 +78,7 @@ Terraform インフラ基盤（provider、state backend、.gitignore）が未整
 
 | # | 操作パス | 分類 | テスト層 |
 |---|---------|------|---------|
-| 1 | `NOTIFICATION_BACKEND=ses` でサーバー起動 → SES sender が選択される | 正常系 | ユニットテスト |
+| 1 | `NOTIFICATION_BACKEND=ses` でサーバー起動 → SES sender が選択される | 正常系 | コンパイル確認（実 AWS 接続が必要なためユニットテスト不可） |
 | 2 | `NOTIFICATION_BACKEND=smtp` でサーバー起動 → SMTP sender が選択される（既存動作維持） | 正常系 | 既存テスト |
 | 3 | `NOTIFICATION_BACKEND` 未設定 → Noop sender（既存動作維持） | 正常系 | 既存テスト |
 
