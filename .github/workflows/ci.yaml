@@ -13,7 +13,6 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
-  merge_group:
 
 jobs:
   # 変更検出: 変更されたファイルを検出し、必要なジョブのみを実行
