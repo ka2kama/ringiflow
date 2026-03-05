@@ -68,9 +68,9 @@ E2E テスト（該当なし）
 1. Ruleset の更新（GitHub API 経由）:
    - `merge_queue` ルール追加
    - `strict_required_status_checks_policy` を `false` に変更
-2. `.claude/skills/review-and-merge/SKILL.md`: マージコマンドを `--squash` → `--merge-queue` に変更
-3. `.claude/rules/dev-flow-issue.md`: マージ手順の更新
-4. `CLAUDE.md`: 必要に応じて Merge Queue の記述追加
+2. `.claude/skills/review-and-merge/SKILL.md`: Merge Queue に関する注記追加
+3. `.claude/rules/dev-flow-issue.md`: Merge Queue に関する注記追加
+4. `CLAUDE.md`: Merge Queue の記述追加
 
 #### 操作パス: 該当なし（設定・ドキュメント変更のみ）
 
