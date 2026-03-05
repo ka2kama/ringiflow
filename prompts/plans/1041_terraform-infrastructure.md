@@ -39,9 +39,9 @@ Terraform ディレクトリ構造:
 - この Issue は設定ファイルの作成が主目的。実際の `apply` は手動で行う
 
 ### 進捗
-- [ ] Phase 1: Terraform 基盤設定
-- [ ] Phase 2: SES ドメイン検証モジュール
-- [ ] Phase 3: SES メール送信テスト手順
+- [x] Phase 1: Terraform 基盤設定
+- [x] Phase 2: SES ドメイン検証モジュール
+- [x] Phase 3: SES メール送信テスト手順
 
 ## 設計判断
 
