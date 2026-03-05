@@ -109,8 +109,17 @@ async fn main() -> anyhow::Result<()> {
     );
     tracing::info!("S3 クライアントを初期化しました");
 
+    // SES クライアントの条件付き初期化
+    let ses_client = if config.notification.backend == "ses" {
+        let client = ringiflow_infra::notification::create_ses_client().await;
+        tracing::info!("SES クライアントを初期化しました");
+        Some(client)
+    } else {
+        None
+    };
+
     // アプリケーション構築（DI + ルーター）
-    let app = app_builder::build_app(pool, s3_client, &config);
+    let app = app_builder::build_app(pool, s3_client, ses_client, &config);
 
     // jscpd:ignore-start — サーバー起動パターン（意図的な重複）
     let addr: SocketAddr = format!("{}:{}", config.host, config.port)

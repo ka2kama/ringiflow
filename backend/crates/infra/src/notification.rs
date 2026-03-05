@@ -17,7 +17,12 @@ mod smtp;
 use async_trait::async_trait;
 pub use noop::NoopNotificationSender;
 use ringiflow_domain::notification::{EmailMessage, NotificationError};
-pub use ses::SesNotificationSender;
+pub use ses::{SesNotificationSender, create_ses_client};
+
+/// SES クライアント型の re-export
+///
+/// `app_builder` が `aws-sdk-sesv2` に直接依存しないようにする。
+pub type SesClient = aws_sdk_sesv2::Client;
 pub use smtp::SmtpNotificationSender;
 
 /// メール送信トレイト

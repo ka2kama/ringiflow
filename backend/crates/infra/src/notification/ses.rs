@@ -12,6 +12,18 @@ use ringiflow_domain::notification::{EmailMessage, NotificationError};
 
 use super::NotificationSender;
 
+/// SES クライアントを作成する
+///
+/// `aws_config` から共有設定をロードし、SES v2 クライアントを生成する。
+/// 本番環境では IAM ロール（ECS タスクロール）の認証情報が自動的に使用される。
+pub async fn create_ses_client() -> Client {
+    let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .region(aws_config::Region::new("ap-northeast-1"))
+        .load()
+        .await;
+    Client::new(&config)
+}
+
 /// SES 通知送信
 ///
 /// `aws_sdk_sesv2::Client` をラップする。
