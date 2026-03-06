@@ -1,8 +1,8 @@
 module Data.Folder exposing
     ( Folder
     , decoder
+    , detailDecoder
     , listDecoder
-    , singleDecoder
     )
 
 {-| フォルダ管理のデータ型
@@ -52,8 +52,8 @@ decoder =
 
 {-| data フィールドから単一フォルダをデコード
 -}
-singleDecoder : Decoder Folder
-singleDecoder =
+detailDecoder : Decoder Folder
+detailDecoder =
     Decode.field "data" decoder
 
 

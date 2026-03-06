@@ -58,7 +58,7 @@ buildTree folders =
                                 (\existing ->
                                     case existing of
                                         Just list ->
-                                            Just (list ++ [ folder ])
+                                            Just (folder :: list)
 
                                         Nothing ->
                                             Just [ folder ]
@@ -78,6 +78,7 @@ buildTree folders =
                 children =
                     Dict.get folder.id childrenMap
                         |> Maybe.withDefault []
+                        |> List.reverse
                         |> List.map toNode
             in
             FolderNode { folder = folder, children = children }

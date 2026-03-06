@@ -25,6 +25,7 @@ import File.Select as Select
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, stopPropagationOn)
+import Http
 import Json.Decode as Decode
 import Ports
 import RemoteData exposing (RemoteData(..))
@@ -44,6 +45,7 @@ type alias Model =
     , documents : RemoteData ApiError (List Document)
     , folderDialog : Maybe FolderDialog
     , pendingDelete : Maybe PendingDelete
+    , selectedFile : Maybe File
     , isUploading : Bool
     , successMessage : Maybe String
     , errorMessage : Maybe String
@@ -73,6 +75,7 @@ init shared =
       , documents = NotAsked
       , folderDialog = Nothing
       , pendingDelete = Nothing
+      , selectedFile = Nothing
       , isUploading = False
       , successMessage = Nothing
       , errorMessage = Nothing
@@ -118,6 +121,7 @@ type Msg
     | SelectFile
     | FileSelected File
     | GotUploadUrl (Result ApiError UploadUrlResponse)
+    | GotS3UploadResult String (Result Http.Error ())
     | GotConfirmUpload (Result ApiError Document)
     | ClickDownload Document
     | GotDownloadUrl (Result ApiError DownloadUrlResponse)
@@ -341,7 +345,7 @@ update msg model =
         FileSelected file ->
             case model.selectedFolderId of
                 Just folderId ->
-                    ( { model | isUploading = True }
+                    ( { model | selectedFile = Just file, isUploading = True }
                     , DocumentApi.requestUploadUrlForFolder
                         { config = Shared.toRequestConfig model.shared
                         , filename = File.name file
@@ -358,18 +362,50 @@ update msg model =
         GotUploadUrl result ->
             case result of
                 Ok response ->
-                    ( model
-                    , DocumentApi.confirmUpload
-                        { config = Shared.toRequestConfig model.shared
-                        , documentId = response.documentId
-                        , toMsg = GotConfirmUpload
-                        }
-                    )
+                    case model.selectedFile of
+                        Just file ->
+                            ( model
+                            , DocumentApi.uploadToS3
+                                { uploadUrl = response.uploadUrl
+                                , file = file
+                                , trackerId = "upload-doc-" ++ response.documentId
+                                , toMsg = GotS3UploadResult response.documentId
+                                }
+                            )
+
+                        Nothing ->
+                            ( { model
+                                | isUploading = False
+                                , errorMessage = Just "アップロードするファイルが見つかりません"
+                              }
+                            , Cmd.none
+                            )
 
                 Err err ->
                     ( { model
                         | isUploading = False
+                        , selectedFile = Nothing
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ファイル" } err)
+                      }
+                    , Cmd.none
+                    )
+
+        GotS3UploadResult documentId result ->
+            case result of
+                Ok () ->
+                    ( model
+                    , DocumentApi.confirmUpload
+                        { config = Shared.toRequestConfig model.shared
+                        , documentId = documentId
+                        , toMsg = GotConfirmUpload
+                        }
+                    )
+
+                Err _ ->
+                    ( { model
+                        | isUploading = False
+                        , selectedFile = Nothing
+                        , errorMessage = Just "ファイルのアップロードに失敗しました"
                       }
                     , Cmd.none
                     )
@@ -381,6 +417,7 @@ update msg model =
                         Just folderId ->
                             ( { model
                                 | isUploading = False
+                                , selectedFile = Nothing
                                 , successMessage = Just "ファイルをアップロードしました"
                                 , documents = Loading
                               }
@@ -392,11 +429,12 @@ update msg model =
                             )
 
                         Nothing ->
-                            ( { model | isUploading = False }, Cmd.none )
+                            ( { model | isUploading = False, selectedFile = Nothing }, Cmd.none )
 
                 Err err ->
                     ( { model
                         | isUploading = False
+                        , selectedFile = Nothing
                         , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ファイル" } err)
                       }
                     , Cmd.none
@@ -817,9 +855,10 @@ viewFolderDialog maybeDialog =
                     ]
                     [ h2 [ class "text-lg font-semibold text-secondary-900" ] [ text dialogTitle ]
                     , div [ class "mt-4" ]
-                        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text "フォルダ名" ]
+                        [ label [ class "block text-sm font-medium text-secondary-700 mb-1", Html.Attributes.for "folder-name-input" ] [ text "フォルダ名" ]
                         , input
-                            [ type_ "text"
+                            [ id "folder-name-input"
+                            , type_ "text"
                             , value dialogName
                             , onInput UpdateFolderDialogName
                             , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"

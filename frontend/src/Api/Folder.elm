@@ -55,7 +55,7 @@ createFolder { config, name, parentId, toMsg } =
         { config = config
         , url = "/api/v1/folders"
         , body = Http.jsonBody (encodeCreateFolder name parentId)
-        , decoder = Folder.singleDecoder
+        , decoder = Folder.detailDecoder
         , toMsg = toMsg
         }
 
@@ -77,7 +77,7 @@ updateFolder { config, folderId, name, toMsg } =
         { config = config
         , url = "/api/v1/folders/" ++ folderId
         , body = Http.jsonBody (encodeUpdateFolder name)
-        , decoder = Folder.singleDecoder
+        , decoder = Folder.detailDecoder
         , toMsg = toMsg
         }
 
