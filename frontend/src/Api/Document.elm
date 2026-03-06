@@ -6,6 +6,7 @@ module Api.Document exposing
     , listWorkflowAttachments
     , requestDownloadUrl
     , requestUploadUrl
+    , requestUploadUrlForFolder
     , uploadToS3
     )
 
@@ -69,6 +70,40 @@ requestUploadUrl { config, body, toMsg } =
         { config = config
         , url = "/api/v1/documents/upload-url"
         , body = Http.jsonBody (encodeUploadRequest body)
+        , decoder = Document.uploadUrlResponseDecoder
+        , toMsg = toMsg
+        }
+
+
+{-| フォルダ用のアップロード URL を取得
+
+`POST /api/v1/documents/upload-url`
+
+`folder_id` を指定してアップロード URL を発行する。
+
+-}
+requestUploadUrlForFolder :
+    { config : RequestConfig
+    , filename : String
+    , contentType : String
+    , size : Int
+    , folderId : String
+    , toMsg : Result ApiError UploadUrlResponse -> msg
+    }
+    -> Cmd msg
+requestUploadUrlForFolder { config, filename, contentType, size, folderId, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/documents/upload-url"
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "filename", Encode.string filename )
+                    , ( "content_type", Encode.string contentType )
+                    , ( "size", Encode.int size )
+                    , ( "folder_id", Encode.string folderId )
+                    ]
+                )
         , decoder = Document.uploadUrlResponseDecoder
         , toMsg = toMsg
         }

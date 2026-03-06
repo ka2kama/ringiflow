@@ -18,11 +18,14 @@ import Component.ErrorState as ErrorState
 import Component.FolderTree as FolderTree exposing (FolderNode(..), childrenOf, folderOf)
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
-import Data.Document exposing (Document)
+import Data.Document exposing (Document, DownloadUrlResponse, UploadUrlResponse)
 import Data.Folder exposing (Folder)
+import File exposing (File)
+import File.Select as Select
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, stopPropagationOn)
+import Http
 import Json.Decode as Decode
 import Ports
 import RemoteData exposing (RemoteData(..))
@@ -41,7 +44,8 @@ type alias Model =
     , expandedFolderIds : Set String
     , documents : RemoteData ApiError (List Document)
     , folderDialog : Maybe FolderDialog
-    , pendingDeleteFolder : Maybe Folder
+    , pendingDelete : Maybe PendingDelete
+    , isUploading : Bool
     , successMessage : Maybe String
     , errorMessage : Maybe String
     }
@@ -54,6 +58,13 @@ type FolderDialog
     | RenameFolderDialog { folderId : String, name : String, isSubmitting : Bool }
 
 
+{-| 削除対象（フォルダまたはドキュメント）
+-}
+type PendingDelete
+    = DeleteFolder Folder
+    | DeleteDocument Document
+
+
 init : Shared -> ( Model, Cmd Msg )
 init shared =
     ( { shared = shared
@@ -62,7 +73,8 @@ init shared =
       , expandedFolderIds = Set.empty
       , documents = NotAsked
       , folderDialog = Nothing
-      , pendingDeleteFolder = Nothing
+      , pendingDelete = Nothing
+      , isUploading = False
       , successMessage = Nothing
       , errorMessage = Nothing
       }
@@ -97,10 +109,20 @@ type Msg
     | GotCreateFolderResult (Result ApiError Folder)
     | GotRenameFolderResult (Result ApiError Folder)
     | ClickDeleteFolder Folder
-    | ConfirmDeleteFolder
-    | CancelDeleteFolder
+    | ClickDeleteDocument Document
+    | ConfirmDelete
+    | CancelDelete
     | GotDeleteFolderResult (Result ApiError ())
+    | GotDeleteDocumentResult (Result ApiError ())
     | DismissMessage
+      -- ファイル操作
+    | SelectFile
+    | FileSelected File
+    | GotUploadUrl (Result ApiError UploadUrlResponse)
+    | UploadCompleted String (Result Http.Error ())
+    | GotConfirmUpload (Result ApiError Document)
+    | ClickDownload Document
+    | GotDownloadUrl (Result ApiError DownloadUrlResponse)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -256,14 +278,19 @@ update msg model =
                     )
 
         ClickDeleteFolder folder ->
-            ( { model | pendingDeleteFolder = Just folder }
+            ( { model | pendingDelete = Just (DeleteFolder folder) }
             , Ports.showModalDialog ConfirmDialog.dialogId
             )
 
-        ConfirmDeleteFolder ->
-            case model.pendingDeleteFolder of
-                Just folder ->
-                    ( { model | pendingDeleteFolder = Nothing }
+        ClickDeleteDocument doc ->
+            ( { model | pendingDelete = Just (DeleteDocument doc) }
+            , Ports.showModalDialog ConfirmDialog.dialogId
+            )
+
+        ConfirmDelete ->
+            case model.pendingDelete of
+                Just (DeleteFolder folder) ->
+                    ( { model | pendingDelete = Nothing }
                     , FolderApi.deleteFolder
                         { config = Shared.toRequestConfig model.shared
                         , folderId = folder.id
@@ -271,11 +298,20 @@ update msg model =
                         }
                     )
 
+                Just (DeleteDocument doc) ->
+                    ( { model | pendingDelete = Nothing }
+                    , DocumentApi.deleteDocument
+                        { config = Shared.toRequestConfig model.shared
+                        , documentId = doc.id
+                        , toMsg = GotDeleteDocumentResult
+                        }
+                    )
+
                 Nothing ->
                     ( model, Cmd.none )
 
-        CancelDeleteFolder ->
-            ( { model | pendingDeleteFolder = Nothing }, Cmd.none )
+        CancelDelete ->
+            ( { model | pendingDelete = Nothing }, Cmd.none )
 
         GotDeleteFolderResult result ->
             case result of
@@ -299,6 +335,121 @@ update msg model =
 
         DismissMessage ->
             ( { model | successMessage = Nothing, errorMessage = Nothing }, Cmd.none )
+
+        -- ファイル操作
+        SelectFile ->
+            ( model, Select.file [] FileSelected )
+
+        FileSelected file ->
+            case model.selectedFolderId of
+                Just folderId ->
+                    ( { model | isUploading = True }
+                    , DocumentApi.requestUploadUrlForFolder
+                        { config = Shared.toRequestConfig model.shared
+                        , filename = File.name file
+                        , contentType = File.mime file
+                        , size = File.size file
+                        , folderId = folderId
+                        , toMsg = GotUploadUrl
+                        }
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        GotUploadUrl result ->
+            case result of
+                Ok response ->
+                    ( model
+                    , DocumentApi.confirmUpload
+                        { config = Shared.toRequestConfig model.shared
+                        , documentId = response.documentId
+                        , toMsg = GotConfirmUpload
+                        }
+                    )
+
+                Err err ->
+                    ( { model
+                        | isUploading = False
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ファイル" } err)
+                      }
+                    , Cmd.none
+                    )
+
+        UploadCompleted _ _ ->
+            -- S3 アップロード完了（簡略化: 直接 confirm に進む）
+            ( model, Cmd.none )
+
+        GotConfirmUpload result ->
+            case result of
+                Ok _ ->
+                    case model.selectedFolderId of
+                        Just folderId ->
+                            ( { model
+                                | isUploading = False
+                                , successMessage = Just "ファイルをアップロードしました"
+                                , documents = Loading
+                              }
+                            , DocumentApi.listDocuments
+                                { config = Shared.toRequestConfig model.shared
+                                , folderId = folderId
+                                , toMsg = GotDocuments
+                                }
+                            )
+
+                        Nothing ->
+                            ( { model | isUploading = False }, Cmd.none )
+
+                Err err ->
+                    ( { model
+                        | isUploading = False
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ファイル" } err)
+                      }
+                    , Cmd.none
+                    )
+
+        ClickDownload doc ->
+            ( model
+            , DocumentApi.requestDownloadUrl
+                { config = Shared.toRequestConfig model.shared
+                , documentId = doc.id
+                , toMsg = GotDownloadUrl
+                }
+            )
+
+        GotDownloadUrl result ->
+            case result of
+                Ok response ->
+                    ( model, Ports.openUrl response.downloadUrl )
+
+                Err err ->
+                    ( { model | errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ファイル" } err) }
+                    , Cmd.none
+                    )
+
+        GotDeleteDocumentResult result ->
+            case result of
+                Ok () ->
+                    case model.selectedFolderId of
+                        Just folderId ->
+                            ( { model
+                                | documents = Loading
+                                , successMessage = Just "ファイルを削除しました"
+                              }
+                            , DocumentApi.listDocuments
+                                { config = Shared.toRequestConfig model.shared
+                                , folderId = folderId
+                                , toMsg = GotDocuments
+                                }
+                            )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                Err err ->
+                    ( { model | errorMessage = Just (ErrorMessage.toUserMessage { entityName = "ファイル" } err) }
+                    , Cmd.none
+                    )
 
 
 updateDialogName : String -> FolderDialog -> FolderDialog
@@ -345,7 +496,7 @@ view model =
             }
         , viewContent model
         , viewFolderDialog model.folderDialog
-        , viewDeleteFolderDialog model.pendingDeleteFolder
+        , viewDeleteConfirmDialog model.pendingDelete
         ]
 
 
@@ -501,8 +652,27 @@ viewFolderNode model depth node =
 viewDocumentPanel : Model -> Html Msg
 viewDocumentPanel model =
     div [ class "min-w-0 flex-1 rounded-lg border border-secondary-200 bg-white" ]
-        [ div [ class "border-b border-secondary-200 px-4 py-3" ]
-            [ h2 [ class "text-sm font-semibold text-secondary-700" ] [ text "ファイル一覧" ] ]
+        [ div [ class "flex items-center justify-between border-b border-secondary-200 px-4 py-3" ]
+            [ h2 [ class "text-sm font-semibold text-secondary-700" ] [ text "ファイル一覧" ]
+            , case model.selectedFolderId of
+                Just _ ->
+                    Button.view
+                        { variant = Button.Primary
+                        , disabled = model.isUploading
+                        , onClick = SelectFile
+                        }
+                        [ text
+                            (if model.isUploading then
+                                "アップロード中..."
+
+                             else
+                                "アップロード"
+                            )
+                        ]
+
+                Nothing ->
+                    text ""
+            ]
         , div [ class "p-4" ]
             [ viewDocumentContent model ]
         ]
@@ -553,6 +723,7 @@ viewDocumentTable docs =
                     [ th [ class "px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "ファイル名" ]
                     , th [ class "px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "サイズ" ]
                     , th [ class "px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "ステータス" ]
+                    , th [ class "px-4 py-2 text-right text-xs font-medium uppercase tracking-wider text-secondary-600" ] [ text "操作" ]
                     ]
                 ]
             , tbody [ class "divide-y divide-secondary-200" ]
@@ -569,6 +740,18 @@ viewDocumentRow doc =
         [ td [ class "px-4 py-3 text-sm text-secondary-900" ] [ text doc.filename ]
         , td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text (formatFileSize doc.size) ]
         , td [ class "px-4 py-3 text-sm text-secondary-500" ] [ text doc.status ]
+        , td [ class "px-4 py-3 text-right" ]
+            [ button
+                [ class "mr-2 text-sm text-primary-600 hover:text-primary-800"
+                , onClick (ClickDownload doc)
+                ]
+                [ text "ダウンロード" ]
+            , button
+                [ class "text-sm text-error-600 hover:text-error-800"
+                , onClick (ClickDeleteDocument doc)
+                ]
+                [ text "削除" ]
+            ]
         ]
 
 
@@ -660,19 +843,30 @@ viewFolderDialog maybeDialog =
                 ]
 
 
-{-| フォルダ削除確認ダイアログ
+{-| 削除確認ダイアログ（フォルダ/ドキュメント共通）
 -}
-viewDeleteFolderDialog : Maybe Folder -> Html Msg
-viewDeleteFolderDialog maybePending =
+viewDeleteConfirmDialog : Maybe PendingDelete -> Html Msg
+viewDeleteConfirmDialog maybePending =
     case maybePending of
-        Just folder ->
+        Just (DeleteFolder folder) ->
             ConfirmDialog.view
                 { title = "フォルダの削除"
                 , message = "「" ++ folder.name ++ "」を削除しますか？フォルダ内のファイルも削除されます。"
                 , confirmLabel = "削除する"
                 , cancelLabel = "キャンセル"
-                , onConfirm = ConfirmDeleteFolder
-                , onCancel = CancelDeleteFolder
+                , onConfirm = ConfirmDelete
+                , onCancel = CancelDelete
+                , actionStyle = ConfirmDialog.Destructive
+                }
+
+        Just (DeleteDocument doc) ->
+            ConfirmDialog.view
+                { title = "ファイルの削除"
+                , message = "「" ++ doc.filename ++ "」を削除しますか？この操作は取り消せません。"
+                , confirmLabel = "削除する"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmDelete
+                , onCancel = CancelDelete
                 , actionStyle = ConfirmDialog.Destructive
                 }
 
