@@ -2,6 +2,7 @@ module Component.Icons exposing
     ( auditLog
     , checkCircle
     , dashboard
+    , documents
     , menu
     , roles
     , tasks
@@ -158,6 +159,21 @@ workflowDefinitions =
         , Svg.rect [ SvgAttr.x "9", SvgAttr.y "16", SvgAttr.width "6", SvgAttr.height "5", SvgAttr.rx "1" ] []
         , Svg.path [ SvgAttr.d "M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" ] []
         , Svg.line [ SvgAttr.x1 "12", SvgAttr.y1 "13", SvgAttr.x2 "12", SvgAttr.y2 "16" ] []
+        ]
+
+
+{-| ドキュメント管理（フォルダ）
+-}
+documents : Html msg
+documents =
+    svg
+        [ SvgAttr.viewBox "0 0 24 24"
+        , SvgAttr.fill "none"
+        , SvgAttr.stroke "currentColor"
+        , SvgAttr.strokeWidth "2"
+        , SvgAttr.class "h-5 w-5"
+        ]
+        [ Svg.path [ SvgAttr.d "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" ] []
         ]
 
 

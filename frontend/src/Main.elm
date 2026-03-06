@@ -19,6 +19,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
 import Page.AuditLog.List as AuditLogList
+import Page.Document.List as DocumentList
 import Page.Home as Home
 import Page.NotFound
 import Page.Role.Edit as RoleEdit
@@ -102,6 +103,7 @@ type Page
     | AuditLogsPage AuditLogList.Model
     | WorkflowDefinitionsPage WorkflowDefinitionList.Model
     | DesignerPage DesignerTypes.Model
+    | DocumentsPage DocumentList.Model
     | NotFoundPage
 
 
@@ -305,6 +307,13 @@ initPage key route shared =
             in
             ( DesignerPage model, Cmd.map DesignerMsg cmd )
 
+        Route.Documents ->
+            let
+                ( model, cmd ) =
+                    DocumentList.init shared
+            in
+            ( DocumentsPage model, Cmd.map DocumentsMsg cmd )
+
         Route.NotFound ->
             ( NotFoundPage, Cmd.none )
 
@@ -366,6 +375,9 @@ updatePageShared shared page =
         DesignerPage subModel ->
             DesignerPage (Designer.updateShared shared subModel)
 
+        DocumentsPage subModel ->
+            DocumentsPage (DocumentList.updateShared shared subModel)
+
         NotFoundPage ->
             NotFoundPage
 
@@ -404,6 +416,7 @@ type Msg
     | AuditLogsMsg AuditLogList.Msg
     | WorkflowDefinitionsMsg WorkflowDefinitionList.Msg
     | DesignerMsg DesignerTypes.Msg
+    | DocumentsMsg DocumentList.Msg
 
 
 {-| メッセージに基づいて Model を更新
@@ -749,6 +762,20 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        DocumentsMsg subMsg ->
+            case model.page of
+                DocumentsPage subModel ->
+                    let
+                        ( newSubModel, subCmd ) =
+                            DocumentList.update subMsg subModel
+                    in
+                    ( { model | page = DocumentsPage newSubModel }
+                    , Cmd.map DocumentsMsg subCmd
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 {-| 現在のページに未保存の変更があるかを判定
 -}
@@ -801,6 +828,9 @@ subscriptions model =
 
         WorkflowNewPage subModel ->
             Sub.map WorkflowNewMsg (WorkflowNew.subscriptions subModel)
+
+        DocumentsPage subModel ->
+            Sub.map DocumentsMsg (DocumentList.subscriptions subModel)
 
         _ ->
             Sub.none
@@ -874,6 +904,7 @@ viewSidebar currentRoute isOpen shared =
             ([ viewNavItem currentRoute Route.Home "ダッシュボード" Icons.dashboard
              , viewNavItem currentRoute (Route.Workflows Route.emptyWorkflowFilter) "申請一覧" Icons.workflows
              , viewNavItem currentRoute Route.Tasks "タスク一覧" Icons.tasks
+             , viewNavItem currentRoute Route.Documents "ドキュメント管理" Icons.documents
              ]
                 ++ viewAdminSection currentRoute shared
             )
@@ -1060,6 +1091,10 @@ viewPage model =
         DesignerPage subModel ->
             Designer.view subModel
                 |> Html.map DesignerMsg
+
+        DocumentsPage subModel ->
+            DocumentList.view subModel
+                |> Html.map DocumentsMsg
 
         NotFoundPage ->
             Page.NotFound.view

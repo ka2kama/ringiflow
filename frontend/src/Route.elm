@@ -95,6 +95,7 @@ type Route
     | AuditLogs
     | WorkflowDefinitions
     | WorkflowDefinitionDesignerEdit String
+    | Documents
     | NotFound
 
 
@@ -173,6 +174,7 @@ parser =
         , Parser.map AuditLogs (s "audit-logs")
         , Parser.map WorkflowDefinitionDesignerEdit (s "workflow-definitions" </> string </> s "edit")
         , Parser.map WorkflowDefinitions (s "workflow-definitions")
+        , Parser.map Documents (s "documents")
         ]
 
 
@@ -325,6 +327,9 @@ toString route =
         WorkflowDefinitionDesignerEdit defId ->
             "/workflow-definitions/" ++ defId ++ "/edit"
 
+        Documents ->
+            "/documents"
+
         NotFound ->
             "/not-found"
 
@@ -415,6 +420,9 @@ isRouteActive navRoute currentRoute =
         ( WorkflowDefinitions, WorkflowDefinitionDesignerEdit _ ) ->
             True
 
+        ( Documents, Documents ) ->
+            True
+
         _ ->
             False
 
@@ -471,6 +479,9 @@ pageTitle route =
 
         WorkflowDefinitionDesignerEdit _ ->
             "ワークフローデザイナー"
+
+        Documents ->
+            "ドキュメント管理"
 
         NotFound ->
             "ページが見つかりません"
