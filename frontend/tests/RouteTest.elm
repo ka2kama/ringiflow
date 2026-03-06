@@ -55,6 +55,10 @@ fromUrlTests =
             \_ ->
                 parseUrl "/tasks"
                     |> Expect.equal Tasks
+        , test "/documents → Documents" <|
+            \_ ->
+                parseUrl "/documents"
+                    |> Expect.equal Documents
         , test "/unknown → NotFound" <|
             \_ ->
                 parseUrl "/unknown/path"
@@ -168,6 +172,10 @@ toStringTests =
             \_ ->
                 Route.toString (WorkflowDetail 42)
                     |> Expect.equal "/workflows/42"
+        , test "Documents → /documents" <|
+            \_ ->
+                Route.toString Documents
+                    |> Expect.equal "/documents"
         , test "NotFound → /not-found" <|
             \_ ->
                 Route.toString NotFound

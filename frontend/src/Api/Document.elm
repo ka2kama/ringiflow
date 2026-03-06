@@ -1,9 +1,12 @@
 module Api.Document exposing
     ( UploadRequest
     , confirmUpload
+    , deleteDocument
+    , listDocuments
     , listWorkflowAttachments
     , requestDownloadUrl
     , requestUploadUrl
+    , requestUploadUrlForFolder
     , uploadToS3
     )
 
@@ -72,6 +75,40 @@ requestUploadUrl { config, body, toMsg } =
         }
 
 
+{-| フォルダ用のアップロード URL を取得
+
+`POST /api/v1/documents/upload-url`
+
+`folder_id` を指定してアップロード URL を発行する。
+
+-}
+requestUploadUrlForFolder :
+    { config : RequestConfig
+    , filename : String
+    , contentType : String
+    , size : Int
+    , folderId : String
+    , toMsg : Result ApiError UploadUrlResponse -> msg
+    }
+    -> Cmd msg
+requestUploadUrlForFolder { config, filename, contentType, size, folderId, toMsg } =
+    Api.post
+        { config = config
+        , url = "/api/v1/documents/upload-url"
+        , body =
+            Http.jsonBody
+                (Encode.object
+                    [ ( "filename", Encode.string filename )
+                    , ( "content_type", Encode.string contentType )
+                    , ( "size", Encode.int size )
+                    , ( "folder_id", Encode.string folderId )
+                    ]
+                )
+        , decoder = Document.uploadUrlResponseDecoder
+        , toMsg = toMsg
+        }
+
+
 {-| アップロード完了を通知
 
 `POST /api/v1/documents/{documentId}/confirm`
@@ -114,6 +151,47 @@ requestDownloadUrl { config, documentId, toMsg } =
         , url = "/api/v1/documents/" ++ documentId ++ "/download-url"
         , decoder = Document.downloadUrlResponseDecoder
         , body = Http.emptyBody
+        , toMsg = toMsg
+        }
+
+
+{-| フォルダ内のドキュメント一覧を取得
+
+`GET /api/v1/documents?folder_id={folderId}`
+
+-}
+listDocuments :
+    { config : RequestConfig
+    , folderId : String
+    , toMsg : Result ApiError (List Document) -> msg
+    }
+    -> Cmd msg
+listDocuments { config, folderId, toMsg } =
+    Api.get
+        { config = config
+        , url = "/api/v1/documents?folder_id=" ++ folderId
+        , decoder = Document.listDecoder
+        , toMsg = toMsg
+        }
+
+
+{-| ドキュメントを削除（ソフトデリート）
+
+`DELETE /api/v1/documents/{documentId}`
+
+204 No Content を返す。
+
+-}
+deleteDocument :
+    { config : RequestConfig
+    , documentId : String
+    , toMsg : Result ApiError () -> msg
+    }
+    -> Cmd msg
+deleteDocument { config, documentId, toMsg } =
+    Api.deleteNoContent
+        { config = config
+        , url = "/api/v1/documents/" ++ documentId
         , toMsg = toMsg
         }
 
