@@ -15,7 +15,7 @@ import Component.Button as Button
 import Component.ConfirmDialog as ConfirmDialog
 import Component.EmptyState as EmptyState
 import Component.ErrorState as ErrorState
-import Component.FolderTree as FolderTree exposing (FolderNode(..), childrenOf, folderOf)
+import Component.FolderTree as FolderTree exposing (FolderNode, childrenOf, folderOf)
 import Component.LoadingSpinner as LoadingSpinner
 import Component.MessageAlert as MessageAlert
 import Data.Document exposing (Document, DownloadUrlResponse, UploadUrlResponse)
@@ -25,7 +25,6 @@ import File.Select as Select
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit, stopPropagationOn)
-import Http
 import Json.Decode as Decode
 import Ports
 import RemoteData exposing (RemoteData(..))
@@ -119,7 +118,6 @@ type Msg
     | SelectFile
     | FileSelected File
     | GotUploadUrl (Result ApiError UploadUrlResponse)
-    | UploadCompleted String (Result Http.Error ())
     | GotConfirmUpload (Result ApiError Document)
     | ClickDownload Document
     | GotDownloadUrl (Result ApiError DownloadUrlResponse)
@@ -376,10 +374,6 @@ update msg model =
                     , Cmd.none
                     )
 
-        UploadCompleted _ _ ->
-            -- S3 アップロード完了（簡略化: 直接 confirm に進む）
-            ( model, Cmd.none )
-
         GotConfirmUpload result ->
             case result of
                 Ok _ ->
@@ -476,8 +470,8 @@ setDialogNotSubmitting dialog =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions : Sub Msg
+subscriptions =
     Sub.none
 
 

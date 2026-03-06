@@ -829,8 +829,8 @@ subscriptions model =
         WorkflowNewPage subModel ->
             Sub.map WorkflowNewMsg (WorkflowNew.subscriptions subModel)
 
-        DocumentsPage subModel ->
-            Sub.map DocumentsMsg (DocumentList.subscriptions subModel)
+        DocumentsPage _ ->
+            Sub.map DocumentsMsg DocumentList.subscriptions
 
         _ ->
             Sub.none

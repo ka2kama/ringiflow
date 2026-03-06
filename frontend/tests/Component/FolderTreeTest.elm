@@ -3,7 +3,7 @@ module Component.FolderTreeTest exposing (suite)
 {-| フォルダツリー構築ロジックのテスト
 -}
 
-import Component.FolderTree exposing (FolderNode(..), buildTree, childrenOf, folderOf)
+import Component.FolderTree exposing (buildTree, childrenOf, folderOf)
 import Data.Folder exposing (Folder)
 import Expect
 import Test exposing (Test, describe, test)
