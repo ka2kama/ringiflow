@@ -11,16 +11,20 @@ import Api exposing (ApiError)
 import Api.Document as DocumentApi
 import Api.ErrorMessage as ErrorMessage
 import Api.Folder as FolderApi
+import Component.Button as Button
+import Component.ConfirmDialog as ConfirmDialog
 import Component.EmptyState as EmptyState
 import Component.ErrorState as ErrorState
 import Component.FolderTree as FolderTree exposing (FolderNode(..), childrenOf, folderOf)
 import Component.LoadingSpinner as LoadingSpinner
+import Component.MessageAlert as MessageAlert
 import Data.Document exposing (Document)
 import Data.Folder exposing (Folder)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, stopPropagationOn)
+import Html.Events exposing (onClick, onInput, onSubmit, stopPropagationOn)
 import Json.Decode as Decode
+import Ports
 import RemoteData exposing (RemoteData(..))
 import Set exposing (Set)
 import Shared exposing (Shared)
@@ -36,7 +40,18 @@ type alias Model =
     , selectedFolderId : Maybe String
     , expandedFolderIds : Set String
     , documents : RemoteData ApiError (List Document)
+    , folderDialog : Maybe FolderDialog
+    , pendingDeleteFolder : Maybe Folder
+    , successMessage : Maybe String
+    , errorMessage : Maybe String
     }
+
+
+{-| フォルダ作成/名前変更ダイアログの状態
+-}
+type FolderDialog
+    = CreateFolderDialog { name : String, parentId : Maybe String, isSubmitting : Bool }
+    | RenameFolderDialog { folderId : String, name : String, isSubmitting : Bool }
 
 
 init : Shared -> ( Model, Cmd Msg )
@@ -46,6 +61,10 @@ init shared =
       , selectedFolderId = Nothing
       , expandedFolderIds = Set.empty
       , documents = NotAsked
+      , folderDialog = Nothing
+      , pendingDeleteFolder = Nothing
+      , successMessage = Nothing
+      , errorMessage = Nothing
       }
     , FolderApi.listFolders
         { config = Shared.toRequestConfig shared
@@ -69,6 +88,19 @@ type Msg
     | ToggleFolder String
     | GotDocuments (Result ApiError (List Document))
     | Refresh
+      -- フォルダ CRUD
+    | OpenCreateFolderDialog
+    | OpenRenameFolderDialog Folder
+    | UpdateFolderDialogName String
+    | SubmitFolderDialog
+    | CloseFolderDialog
+    | GotCreateFolderResult (Result ApiError Folder)
+    | GotRenameFolderResult (Result ApiError Folder)
+    | ClickDeleteFolder Folder
+    | ConfirmDeleteFolder
+    | CancelDeleteFolder
+    | GotDeleteFolderResult (Result ApiError ())
+    | DismissMessage
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -121,6 +153,173 @@ update msg model =
                 }
             )
 
+        -- フォルダ作成ダイアログ
+        OpenCreateFolderDialog ->
+            ( { model
+                | folderDialog =
+                    Just (CreateFolderDialog { name = "", parentId = model.selectedFolderId, isSubmitting = False })
+              }
+            , Cmd.none
+            )
+
+        OpenRenameFolderDialog folder ->
+            ( { model
+                | folderDialog =
+                    Just (RenameFolderDialog { folderId = folder.id, name = folder.name, isSubmitting = False })
+              }
+            , Cmd.none
+            )
+
+        UpdateFolderDialogName name ->
+            ( { model | folderDialog = Maybe.map (updateDialogName name) model.folderDialog }
+            , Cmd.none
+            )
+
+        SubmitFolderDialog ->
+            case model.folderDialog of
+                Just (CreateFolderDialog dialog) ->
+                    if String.isEmpty (String.trim dialog.name) then
+                        ( model, Cmd.none )
+
+                    else
+                        ( { model | folderDialog = Just (CreateFolderDialog { dialog | isSubmitting = True }) }
+                        , FolderApi.createFolder
+                            { config = Shared.toRequestConfig model.shared
+                            , name = String.trim dialog.name
+                            , parentId = dialog.parentId
+                            , toMsg = GotCreateFolderResult
+                            }
+                        )
+
+                Just (RenameFolderDialog dialog) ->
+                    if String.isEmpty (String.trim dialog.name) then
+                        ( model, Cmd.none )
+
+                    else
+                        ( { model | folderDialog = Just (RenameFolderDialog { dialog | isSubmitting = True }) }
+                        , FolderApi.updateFolder
+                            { config = Shared.toRequestConfig model.shared
+                            , folderId = dialog.folderId
+                            , name = String.trim dialog.name
+                            , toMsg = GotRenameFolderResult
+                            }
+                        )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        CloseFolderDialog ->
+            ( { model | folderDialog = Nothing }, Cmd.none )
+
+        GotCreateFolderResult result ->
+            case result of
+                Ok _ ->
+                    ( { model
+                        | folderDialog = Nothing
+                        , folders = Loading
+                        , successMessage = Just "フォルダを作成しました"
+                      }
+                    , FolderApi.listFolders
+                        { config = Shared.toRequestConfig model.shared
+                        , toMsg = GotFolders
+                        }
+                    )
+
+                Err err ->
+                    ( { model
+                        | folderDialog = Maybe.map setDialogNotSubmitting model.folderDialog
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "フォルダ" } err)
+                      }
+                    , Cmd.none
+                    )
+
+        GotRenameFolderResult result ->
+            case result of
+                Ok _ ->
+                    ( { model
+                        | folderDialog = Nothing
+                        , folders = Loading
+                        , successMessage = Just "フォルダ名を変更しました"
+                      }
+                    , FolderApi.listFolders
+                        { config = Shared.toRequestConfig model.shared
+                        , toMsg = GotFolders
+                        }
+                    )
+
+                Err err ->
+                    ( { model
+                        | folderDialog = Maybe.map setDialogNotSubmitting model.folderDialog
+                        , errorMessage = Just (ErrorMessage.toUserMessage { entityName = "フォルダ" } err)
+                      }
+                    , Cmd.none
+                    )
+
+        ClickDeleteFolder folder ->
+            ( { model | pendingDeleteFolder = Just folder }
+            , Ports.showModalDialog ConfirmDialog.dialogId
+            )
+
+        ConfirmDeleteFolder ->
+            case model.pendingDeleteFolder of
+                Just folder ->
+                    ( { model | pendingDeleteFolder = Nothing }
+                    , FolderApi.deleteFolder
+                        { config = Shared.toRequestConfig model.shared
+                        , folderId = folder.id
+                        , toMsg = GotDeleteFolderResult
+                        }
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        CancelDeleteFolder ->
+            ( { model | pendingDeleteFolder = Nothing }, Cmd.none )
+
+        GotDeleteFolderResult result ->
+            case result of
+                Ok () ->
+                    ( { model
+                        | folders = Loading
+                        , selectedFolderId = Nothing
+                        , documents = NotAsked
+                        , successMessage = Just "フォルダを削除しました"
+                      }
+                    , FolderApi.listFolders
+                        { config = Shared.toRequestConfig model.shared
+                        , toMsg = GotFolders
+                        }
+                    )
+
+                Err err ->
+                    ( { model | errorMessage = Just (ErrorMessage.toUserMessage { entityName = "フォルダ" } err) }
+                    , Cmd.none
+                    )
+
+        DismissMessage ->
+            ( { model | successMessage = Nothing, errorMessage = Nothing }, Cmd.none )
+
+
+updateDialogName : String -> FolderDialog -> FolderDialog
+updateDialogName name dialog =
+    case dialog of
+        CreateFolderDialog d ->
+            CreateFolderDialog { d | name = name }
+
+        RenameFolderDialog d ->
+            RenameFolderDialog { d | name = name }
+
+
+setDialogNotSubmitting : FolderDialog -> FolderDialog
+setDialogNotSubmitting dialog =
+    case dialog of
+        CreateFolderDialog d ->
+            CreateFolderDialog { d | isSubmitting = False }
+
+        RenameFolderDialog d ->
+            RenameFolderDialog { d | isSubmitting = False }
+
 
 
 -- SUBSCRIPTIONS
@@ -138,16 +337,33 @@ subscriptions _ =
 view : Model -> Html Msg
 view model =
     div []
-        [ viewHeader
+        [ viewHeader model
+        , MessageAlert.view
+            { onDismiss = DismissMessage
+            , successMessage = model.successMessage
+            , errorMessage = model.errorMessage
+            }
         , viewContent model
+        , viewFolderDialog model.folderDialog
+        , viewDeleteFolderDialog model.pendingDeleteFolder
         ]
 
 
-viewHeader : Html Msg
-viewHeader =
-    div [ class "mb-6" ]
+viewHeader : Model -> Html Msg
+viewHeader model =
+    div [ class "mb-6 flex items-center justify-between" ]
         [ h1 [ class "text-2xl font-bold text-secondary-900" ]
             [ text "ドキュメント管理" ]
+        , if Shared.isAdmin model.shared then
+            Button.view
+                { variant = Button.Primary
+                , disabled = False
+                , onClick = OpenCreateFolderDialog
+                }
+                [ text "フォルダ作成" ]
+
+          else
+            text ""
         ]
 
 
@@ -249,7 +465,27 @@ viewFolderNode model depth node =
 
               else
                 span [ class "mr-1 h-4 w-4 shrink-0" ] []
-            , span [ class "truncate" ] [ text folder.name ]
+            , span [ class "flex-1 truncate" ] [ text folder.name ]
+            , if isSelected && Shared.isAdmin model.shared then
+                span [ class "ml-1 flex shrink-0 gap-0.5" ]
+                    [ button
+                        [ class "rounded p-0.5 text-xs text-secondary-400 hover:text-secondary-600"
+                        , stopPropagationOn "click"
+                            (Decode.succeed ( OpenRenameFolderDialog folder, True ))
+                        , title "名前変更"
+                        ]
+                        [ text "✏" ]
+                    , button
+                        [ class "rounded p-0.5 text-xs text-secondary-400 hover:text-error-600"
+                        , stopPropagationOn "click"
+                            (Decode.succeed ( ClickDeleteFolder folder, True ))
+                        , title "削除"
+                        ]
+                        [ text "🗑" ]
+                    ]
+
+              else
+                text ""
             ]
         , if hasChildren && isExpanded then
             ul [ class "space-y-0.5" ]
@@ -357,3 +593,88 @@ roundTo decimals value =
             toFloat (10 ^ decimals)
     in
     toFloat (round (value * factor)) / factor
+
+
+
+-- FOLDER DIALOGS
+
+
+{-| フォルダ作成/名前変更ダイアログ
+-}
+viewFolderDialog : Maybe FolderDialog -> Html Msg
+viewFolderDialog maybeDialog =
+    case maybeDialog of
+        Nothing ->
+            text ""
+
+        Just dialog ->
+            let
+                ( dialogTitle, dialogName, isSubmitting, submitLabel ) =
+                    case dialog of
+                        CreateFolderDialog d ->
+                            ( "フォルダ作成", d.name, d.isSubmitting, "作成" )
+
+                        RenameFolderDialog d ->
+                            ( "フォルダ名変更", d.name, d.isSubmitting, "変更" )
+            in
+            div [ class "fixed inset-0 z-50 flex items-center justify-center bg-black/50" ]
+                [ Html.form
+                    [ class "w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+                    , onSubmit SubmitFolderDialog
+                    ]
+                    [ h2 [ class "text-lg font-semibold text-secondary-900" ] [ text dialogTitle ]
+                    , div [ class "mt-4" ]
+                        [ label [ class "block text-sm font-medium text-secondary-700 mb-1" ] [ text "フォルダ名" ]
+                        , input
+                            [ type_ "text"
+                            , value dialogName
+                            , onInput UpdateFolderDialogName
+                            , class "w-full rounded-lg border border-secondary-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+                            , Html.Attributes.autofocus True
+                            , placeholder "フォルダ名を入力"
+                            ]
+                            []
+                        ]
+                    , div [ class "mt-6 flex justify-end gap-3" ]
+                        [ Button.view
+                            { variant = Button.Outline
+                            , disabled = isSubmitting
+                            , onClick = CloseFolderDialog
+                            }
+                            [ text "キャンセル" ]
+                        , Button.view
+                            { variant = Button.Primary
+                            , disabled = isSubmitting || String.isEmpty (String.trim dialogName)
+                            , onClick = SubmitFolderDialog
+                            }
+                            [ text
+                                (if isSubmitting then
+                                    "処理中..."
+
+                                 else
+                                    submitLabel
+                                )
+                            ]
+                        ]
+                    ]
+                ]
+
+
+{-| フォルダ削除確認ダイアログ
+-}
+viewDeleteFolderDialog : Maybe Folder -> Html Msg
+viewDeleteFolderDialog maybePending =
+    case maybePending of
+        Just folder ->
+            ConfirmDialog.view
+                { title = "フォルダの削除"
+                , message = "「" ++ folder.name ++ "」を削除しますか？フォルダ内のファイルも削除されます。"
+                , confirmLabel = "削除する"
+                , cancelLabel = "キャンセル"
+                , onConfirm = ConfirmDeleteFolder
+                , onCancel = CancelDeleteFolder
+                , actionStyle = ConfirmDialog.Destructive
+                }
+
+        Nothing ->
+            text ""
