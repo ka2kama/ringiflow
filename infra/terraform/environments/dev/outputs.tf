@@ -17,3 +17,14 @@ output "ses_domain_name" {
   description = "SES 検証対象ドメイン名"
   value       = module.ses.domain_name
 }
+
+# S3 ドキュメントバケット
+output "s3_documents_bucket_name" {
+  description = "S3 ドキュメントバケット名"
+  value       = module.s3_documents.bucket_name
+}
+
+output "s3_documents_bucket_arn" {
+  description = "S3 ドキュメントバケット ARN"
+  value       = module.s3_documents.bucket_arn
+}

@@ -9,11 +9,14 @@
 mod common;
 
 use common::{create_other_tenant, insert_user_raw, setup_test_data};
-use ringiflow_domain::tenant::TenantId;
+use ringiflow_domain::{tenant::TenantId, user::UserId};
 use ringiflow_infra::deletion::{
     AuthCredentialsDeleter,
     DeletionRegistry,
     PostgresDisplayIdCounterDeleter,
+    PostgresDocumentDeleter,
+    PostgresFoldersDeleter,
+    PostgresNotificationLogDeleter,
     PostgresRoleDeleter,
     PostgresUserDeleter,
     PostgresWorkflowDeleter,
@@ -259,12 +262,168 @@ async fn test_auth_credentials_deleter_他テナントのcredentialsは削除さ
 }
 
 // =============================================================================
+// PostgresNotificationLogDeleter
+// =============================================================================
+
+/// notification_logs テスト用ヘルパー: ワークフローインスタンスを作成し、通知ログを挿入する
+async fn insert_notification_log(pool: &PgPool, tenant_id: &TenantId, user_id: &UserId) {
+    // ワークフロー定義
+    let def_id = Uuid::now_v7();
+    sqlx::query!(
+        "INSERT INTO workflow_definitions (id, tenant_id, name, description, definition, version, status, created_by) VALUES ($1, $2, 'NL Test WF', 'desc', '{}', 1, 'published', $3)",
+        def_id,
+        tenant_id.as_uuid(),
+        user_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+
+    // ワークフローインスタンス
+    let inst_id = Uuid::now_v7();
+    sqlx::query!(
+        "INSERT INTO workflow_instances (id, tenant_id, definition_id, definition_version, display_number, title, form_data, status, initiated_by) VALUES ($1, $2, $3, 1, 300, 'NL Test', '{}', 'pending', $4)",
+        inst_id,
+        tenant_id.as_uuid(),
+        def_id,
+        user_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+
+    // 通知ログ
+    sqlx::query!(
+        "INSERT INTO notification_logs (id, tenant_id, event_type, workflow_instance_id, workflow_title, workflow_display_id, recipient_user_id, recipient_email, subject, status) VALUES ($1, $2, 'step_assigned', $3, 'NL Test', 'WF-300', $4, 'test@example.com', 'Test Subject', 'sent')",
+        Uuid::now_v7(),
+        tenant_id.as_uuid(),
+        inst_id,
+        user_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_notification_log_deleter_countとdeleteが正しく動作する(pool: PgPool) {
+    let (tenant_id, user_id) = setup_test_data(&pool).await;
+    insert_notification_log(&pool, &tenant_id, &user_id).await;
+
+    let sut = PostgresNotificationLogDeleter::new(pool);
+
+    assert_count_delete_count(&sut, &tenant_id, 1, 1).await;
+}
+
+// =============================================================================
+// PostgresDocumentDeleter
+// =============================================================================
+
+/// documents テスト用ヘルパー: ワークフローインスタンスに紐づくドキュメントを挿入する
+async fn insert_document_with_workflow(
+    pool: &PgPool,
+    tenant_id: &TenantId,
+    user_id: &UserId,
+) -> Uuid {
+    // ワークフロー定義
+    let def_id = Uuid::now_v7();
+    sqlx::query!(
+        "INSERT INTO workflow_definitions (id, tenant_id, name, description, definition, version, status, created_by) VALUES ($1, $2, 'Doc Test WF', 'desc', '{}', 1, 'published', $3)",
+        def_id,
+        tenant_id.as_uuid(),
+        user_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+
+    // ワークフローインスタンス
+    let inst_id = Uuid::now_v7();
+    sqlx::query!(
+        "INSERT INTO workflow_instances (id, tenant_id, definition_id, definition_version, display_number, title, form_data, status, initiated_by) VALUES ($1, $2, $3, 1, 400, 'Doc Test', '{}', 'pending', $4)",
+        inst_id,
+        tenant_id.as_uuid(),
+        def_id,
+        user_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+
+    // ドキュメント（workflow_instance_id コンテキスト）
+    sqlx::query!(
+        "INSERT INTO documents (id, tenant_id, filename, content_type, size, s3_key, workflow_instance_id, status, uploaded_by) VALUES ($1, $2, 'test.pdf', 'application/pdf', 1024, $3, $4, 'uploaded', $5)",
+        Uuid::now_v7(),
+        tenant_id.as_uuid(),
+        format!("{}/workflows/{}/doc.pdf", tenant_id.as_uuid(), inst_id),
+        inst_id,
+        user_id.as_uuid()
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+
+    inst_id
+}
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_document_deleter_countとdeleteが正しく動作する(pool: PgPool) {
+    let (tenant_id, user_id) = setup_test_data(&pool).await;
+    insert_document_with_workflow(&pool, &tenant_id, &user_id).await;
+
+    let sut = PostgresDocumentDeleter::new(pool);
+
+    assert_count_delete_count(&sut, &tenant_id, 1, 1).await;
+}
+
+// =============================================================================
+// PostgresFoldersDeleter
+// =============================================================================
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn test_folders_deleter_countとdeleteが正しく動作する(pool: PgPool) {
+    let (tenant_id, user_id) = setup_test_data(&pool).await;
+
+    // ルートフォルダ（depth=1）
+    let root_id = Uuid::now_v7();
+    sqlx::query!(
+        "INSERT INTO folders (id, tenant_id, name, parent_id, path, depth, created_by) VALUES ($1, $2, 'root', NULL, '/root/', 1, $3)",
+        root_id,
+        tenant_id.as_uuid(),
+        user_id.as_uuid()
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    // 子フォルダ（depth=2）
+    sqlx::query!(
+        "INSERT INTO folders (id, tenant_id, name, parent_id, path, depth, created_by) VALUES ($1, $2, 'child', $3, '/root/child/', 2, $4)",
+        Uuid::now_v7(),
+        tenant_id.as_uuid(),
+        root_id,
+        user_id.as_uuid()
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let sut = PostgresFoldersDeleter::new(pool);
+
+    // depth 降順で削除されるため、自己参照 FK に違反しない
+    assert_count_delete_count(&sut, &tenant_id, 2, 2).await;
+}
+
+// =============================================================================
 // DeletionRegistry::delete_all 統合テスト
 // =============================================================================
 
 /// 全 PostgreSQL Deleter + Auth の delete_all が FK
 /// 制約に違反せず完了することを検証する。 DynamoDB / Redis は DB
 /// 統合テスト環境では接続できないため、PostgreSQL 系のみ登録。
+///
+/// FK 安全な削除順序:
+///   notification_logs → documents → workflows → auth → display_id_counters → folders → roles → users
 #[sqlx::test(migrations = "../../migrations")]
 async fn test_delete_allがfk制約に違反せず全テーブルを削除できる(pool: PgPool) {
     let (tenant_id, user_id) = setup_test_data(&pool).await;
@@ -316,6 +475,54 @@ async fn test_delete_allがfk制約に違反せず全テーブルを削除でき
    .await
    .unwrap();
 
+    // 通知ログを作成（workflow_instance_id → workflow_instances FK）
+    sqlx::query!(
+      "INSERT INTO notification_logs (id, tenant_id, event_type, workflow_instance_id, workflow_title, workflow_display_id, recipient_user_id, recipient_email, subject, status) VALUES ($1, $2, 'step_assigned', $3, 'Instance', 'WF-200', $4, 'test@example.com', 'Subject', 'sent')",
+      Uuid::now_v7(),
+      tenant_id.as_uuid(),
+      inst_id,
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+    // ドキュメントを作成（workflow_instance_id → workflow_instances FK）
+    sqlx::query!(
+      "INSERT INTO documents (id, tenant_id, filename, content_type, size, s3_key, workflow_instance_id, status, uploaded_by) VALUES ($1, $2, 'test.pdf', 'application/pdf', 1024, $3, $4, 'uploaded', $5)",
+      Uuid::now_v7(),
+      tenant_id.as_uuid(),
+      format!("{}/workflows/{}/test.pdf", tenant_id.as_uuid(), inst_id),
+      inst_id,
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+    // フォルダを作成（自己参照 FK: parent_id → folders(id) ON DELETE RESTRICT）
+    let root_folder_id = Uuid::now_v7();
+    sqlx::query!(
+      "INSERT INTO folders (id, tenant_id, name, parent_id, path, depth, created_by) VALUES ($1, $2, 'root', NULL, '/root/', 1, $3)",
+      root_folder_id,
+      tenant_id.as_uuid(),
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
+    sqlx::query!(
+      "INSERT INTO folders (id, tenant_id, name, parent_id, path, depth, created_by) VALUES ($1, $2, 'child', $3, '/root/child/', 2, $4)",
+      Uuid::now_v7(),
+      tenant_id.as_uuid(),
+      root_folder_id,
+      user_id.as_uuid()
+   )
+   .execute(&pool)
+   .await
+   .unwrap();
+
     // カウンターを作成
     sqlx::query!(
       "INSERT INTO display_id_counters (tenant_id, entity_type, last_number) VALUES ($1, 'user', 10)",
@@ -338,9 +545,12 @@ async fn test_delete_allがfk制約に違反せず全テーブルを削除でき
 
     // DeletionRegistry に PostgreSQL 系 Deleter のみ登録（FK 安全な順序で）
     let mut registry = DeletionRegistry::new();
+    registry.register(Box::new(PostgresNotificationLogDeleter::new(pool.clone())));
+    registry.register(Box::new(PostgresDocumentDeleter::new(pool.clone())));
     registry.register(Box::new(PostgresWorkflowDeleter::new(pool.clone())));
     registry.register(Box::new(AuthCredentialsDeleter::new(pool.clone())));
     registry.register(Box::new(PostgresDisplayIdCounterDeleter::new(pool.clone())));
+    registry.register(Box::new(PostgresFoldersDeleter::new(pool.clone())));
     registry.register(Box::new(PostgresRoleDeleter::new(pool.clone())));
     registry.register(Box::new(PostgresUserDeleter::new(pool.clone())));
 
@@ -352,12 +562,18 @@ async fn test_delete_allがfk制約に違反せず全テーブルを削除でき
         report.failed
     );
 
+    assert_eq!(
+        report.succeeded["postgres:notification_logs"].deleted_count,
+        1
+    );
+    assert_eq!(report.succeeded["postgres:documents"].deleted_count, 1);
     assert_eq!(report.succeeded["postgres:workflows"].deleted_count, 3); // step + instance + definition
     assert_eq!(report.succeeded["auth:credentials"].deleted_count, 1);
     assert_eq!(
         report.succeeded["postgres:display_id_counters"].deleted_count,
         1
     );
+    assert_eq!(report.succeeded["postgres:folders"].deleted_count, 2); // child + root
     assert_eq!(report.succeeded["postgres:roles"].deleted_count, 1);
     assert_eq!(report.succeeded["postgres:users"].deleted_count, 1);
 
