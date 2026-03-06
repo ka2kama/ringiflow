@@ -304,11 +304,7 @@ UI/UX 品質確認（フロントエンド変更がある場合）:
 
 ### 6.4 計画ファイルの確認
 
-```bash
-git status prompts/plans/
-```
-
-未コミットファイルがあり、現在の作業と関連があればコミットする。
+lefthook pre-commit の `check-uncommitted-plans` が `prompts/plans/` の未コミット変更を自動検出する（警告のみ）。品質ゲートでは警告が出ていないことを確認し、未コミットファイルがあればコミットする。
 
 ### 6.5 base branch との同期確認
 
