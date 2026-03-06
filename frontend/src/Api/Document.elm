@@ -2,6 +2,7 @@ module Api.Document exposing
     ( UploadRequest
     , confirmUpload
     , deleteDocument
+    , encodeUploadRequest
     , listDocuments
     , listWorkflowAttachments
     , requestDownloadUrl
@@ -100,7 +101,7 @@ requestUploadUrlForFolder { config, filename, contentType, size, folderId, toMsg
                 (Encode.object
                     [ ( "filename", Encode.string filename )
                     , ( "content_type", Encode.string contentType )
-                    , ( "size", Encode.int size )
+                    , ( "content_length", Encode.int size )
                     , ( "folder_id", Encode.string folderId )
                     ]
                 )
@@ -261,6 +262,6 @@ encodeUploadRequest req =
     Encode.object
         [ ( "filename", Encode.string req.filename )
         , ( "content_type", Encode.string req.contentType )
-        , ( "size", Encode.int req.size )
+        , ( "content_length", Encode.int req.size )
         , ( "workflow_instance_id", Encode.string req.workflowInstanceId )
         ]
