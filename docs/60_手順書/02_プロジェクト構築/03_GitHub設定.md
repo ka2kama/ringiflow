@@ -524,6 +524,8 @@ Issue を分類するためのラベルを設定する。
 | `priority:high` | 優先度: 高 | 赤 `#d73a4a` |
 | `priority:medium` | 優先度: 中 | 黄 `#fbca04` |
 | `priority:low` | 優先度: 低 | 緑 `#0e8a16` |
+| **ステータス** | | |
+| `pending` | 外部要因でブロックされ保留中 | 薄紫 `#D4C5F9` |
 
 ### 7.2 ラベル作成（CLI）
 
@@ -544,6 +546,9 @@ gh label create "process" --description "開発プロセスの改善・振り返
 gh label create "priority:high" --description "優先度: 高" --color "d73a4a"
 gh label create "priority:medium" --description "優先度: 中" --color "fbca04"
 gh label create "priority:low" --description "優先度: 低" --color "0e8a16"
+
+# ステータス
+gh label create "pending" --description "外部要因でブロックされ保留中" --color "D4C5F9"
 ```
 
 `bug`, `enhancement` はリポジトリ作成時にデフォルトで存在するため、作成不要。

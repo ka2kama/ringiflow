@@ -130,10 +130,13 @@ setup-labels:
     @gh label create "frontend" --description "Elm / UI 関連" --color "28a745" 2>/dev/null || echo "  スキップ: frontend（既存）"
     @gh label create "infra" --description "Docker / Terraform / AWS" --color "6f42c1" 2>/dev/null || echo "  スキップ: infra（既存）"
     @gh label create "docs" --description "ドキュメント" --color "0075ca" 2>/dev/null || echo "  スキップ: docs（既存）"
+    @gh label create "process" --description "開発プロセスの改善・振り返り" --color "0e8a16" 2>/dev/null || echo "  スキップ: process（既存）"
     @# 優先度
     @gh label create "priority:high" --description "優先度: 高" --color "d73a4a" 2>/dev/null || echo "  スキップ: priority:high（既存）"
     @gh label create "priority:medium" --description "優先度: 中" --color "fbca04" 2>/dev/null || echo "  スキップ: priority:medium（既存）"
     @gh label create "priority:low" --description "優先度: 低" --color "0e8a16" 2>/dev/null || echo "  スキップ: priority:low（既存）"
+    @# ステータス
+    @gh label create "pending" --description "外部要因でブロックされ保留中" --color "D4C5F9" 2>/dev/null || echo "  スキップ: pending（既存）"
     @echo "✓ GitHub ラベルセットアップ完了"
 
 # =============================================================================
