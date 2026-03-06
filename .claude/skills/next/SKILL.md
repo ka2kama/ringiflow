@@ -40,6 +40,7 @@ gh issue list --state open --json number,title,labels,body --limit 50
 |---------|------|
 | `type:epic` ラベル | Epic はコンテナ、直接作業しない |
 | `idea` ラベル | 将来検討用 |
+| `pending` ラベル | 外部要因でブロックされ保留中 |
 | `IN_PROGRESS_ISSUES` に含まれる | 既に着手中 |
 | `Blocked by #N` で N がオープン | ブロックされている |
 
