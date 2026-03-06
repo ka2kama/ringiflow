@@ -792,13 +792,29 @@ viewFolderDialog maybeDialog =
 
         Just dialog ->
             let
-                ( dialogTitle, dialogName, isSubmitting, submitLabel ) =
+                dialogTitle =
+                    case dialog of
+                        CreateFolderDialog _ ->
+                            "フォルダ作成"
+
+                        RenameFolderDialog _ ->
+                            "フォルダ名変更"
+
+                ( dialogName, isSubmitting ) =
                     case dialog of
                         CreateFolderDialog d ->
-                            ( "フォルダ作成", d.name, d.isSubmitting, "作成" )
+                            ( d.name, d.isSubmitting )
 
                         RenameFolderDialog d ->
-                            ( "フォルダ名変更", d.name, d.isSubmitting, "変更" )
+                            ( d.name, d.isSubmitting )
+
+                submitLabel =
+                    case dialog of
+                        CreateFolderDialog _ ->
+                            "作成"
+
+                        RenameFolderDialog _ ->
+                            "変更"
             in
             div [ class "fixed inset-0 z-50 flex items-center justify-center bg-black/50" ]
                 [ Html.form
