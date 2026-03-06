@@ -24,8 +24,7 @@ fi
 # ステージ済み（X のみ変更、Y が空白）はコミットに含まれるので除外する。
 # 検出対象:
 #   ?? = untracked（未追跡）
-#   ?M = unstaged modification（Y が M: ワーキングツリーに変更あり）
-#   !! = ignored（通常 .gitignore で除外されるが念のため）
+#   Y が非空白 = ワーキングツリーに変更あり（例: " M", "AM"）
 all_status=$(git status --porcelain -- "prompts/plans/" 2>/dev/null || true)
 
 if [ -z "$all_status" ]; then
