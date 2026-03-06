@@ -59,7 +59,6 @@ use crate::InfraError;
 pub async fn create_client(endpoint: &str) -> Client {
     let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
         .endpoint_url(endpoint)
-        .region(aws_config::Region::new("ap-northeast-1"))
         // DynamoDB Local はクレデンシャルを検証しないが、SDK はプロバイダが必要
         .credentials_provider(aws_sdk_dynamodb::config::Credentials::new(
             "local", "local", None, None, "local",

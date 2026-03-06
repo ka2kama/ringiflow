@@ -176,6 +176,7 @@ DYNAMODB_ENDPOINT=http://localhost:$DYNAMODB_PORT
 # -----------------------------------------------------------------------------
 S3_ENDPOINT_URL=http://localhost:$MINIO_API_PORT
 S3_BUCKET_NAME=ringiflow-dev-documents
+AWS_REGION=ap-northeast-1
 AWS_ACCESS_KEY_ID=minioadmin
 AWS_SECRET_ACCESS_KEY=minioadmin
 
@@ -261,6 +262,7 @@ DYNAMODB_ENDPOINT=http://localhost:$API_TEST_DYNAMODB_PORT
 # -----------------------------------------------------------------------------
 S3_ENDPOINT_URL=http://localhost:$API_TEST_MINIO_API_PORT
 S3_BUCKET_NAME=ringiflow-dev-documents
+AWS_REGION=ap-northeast-1
 AWS_ACCESS_KEY_ID=minioadmin
 AWS_SECRET_ACCESS_KEY=minioadmin
 

@@ -44,6 +44,7 @@ static TABLE_INITIALIZED: OnceCell<()> = OnceCell::const_new();
 
 /// テスト用のリポジトリをセットアップする
 async fn setup() -> DynamoDbAuditLogRepository {
+    dotenvy::dotenv().ok();
     let client = dynamodb::create_client(&dynamodb_endpoint()).await;
     TABLE_INITIALIZED
         .get_or_init(|| {
