@@ -46,6 +46,9 @@ pre-commit:
       glob: "*.{rs,elm}"
       exclude: "*/tests/*|*_test.rs"
       run: ./scripts/check/file-size.sh --pre-commit {staged_files}
+    check-uncommitted-plans:
+      # 計画ファイルの未コミット変更を検出（警告のみ、コミットはブロックしない）
+      run: ./scripts/check/check-uncommitted-plans.sh
 
 # プッシュ前のチェック（lint + unit test、DB 不要）
 pre-push:
