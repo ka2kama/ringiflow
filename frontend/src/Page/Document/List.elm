@@ -1,4 +1,4 @@
-module Page.Document.List exposing (Model, Msg, init, subscriptions, update, updateShared, view)
+module Page.Document.List exposing (FolderDialog(..), Model, Msg(..), PendingDelete(..), init, subscriptions, update, updateShared, view)
 
 {-| ドキュメント管理画面
 

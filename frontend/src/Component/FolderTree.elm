@@ -1,4 +1,4 @@
-module Component.FolderTree exposing (FolderNode(..), buildTree, childrenOf, folderOf)
+module Component.FolderTree exposing (FolderNode, buildTree, childrenOf, folderOf)
 
 {-| フォルダツリーコンポーネント
 
