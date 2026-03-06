@@ -1,6 +1,8 @@
 module Api.Document exposing
     ( UploadRequest
     , confirmUpload
+    , deleteDocument
+    , listDocuments
     , listWorkflowAttachments
     , requestDownloadUrl
     , requestUploadUrl
@@ -114,6 +116,47 @@ requestDownloadUrl { config, documentId, toMsg } =
         , url = "/api/v1/documents/" ++ documentId ++ "/download-url"
         , decoder = Document.downloadUrlResponseDecoder
         , body = Http.emptyBody
+        , toMsg = toMsg
+        }
+
+
+{-| フォルダ内のドキュメント一覧を取得
+
+`GET /api/v1/documents?folder_id={folderId}`
+
+-}
+listDocuments :
+    { config : RequestConfig
+    , folderId : String
+    , toMsg : Result ApiError (List Document) -> msg
+    }
+    -> Cmd msg
+listDocuments { config, folderId, toMsg } =
+    Api.get
+        { config = config
+        , url = "/api/v1/documents?folder_id=" ++ folderId
+        , decoder = Document.listDecoder
+        , toMsg = toMsg
+        }
+
+
+{-| ドキュメントを削除（ソフトデリート）
+
+`DELETE /api/v1/documents/{documentId}`
+
+204 No Content を返す。
+
+-}
+deleteDocument :
+    { config : RequestConfig
+    , documentId : String
+    , toMsg : Result ApiError () -> msg
+    }
+    -> Cmd msg
+deleteDocument { config, documentId, toMsg } =
+    Api.deleteNoContent
+        { config = config
+        , url = "/api/v1/documents/" ++ documentId
         , toMsg = toMsg
         }
 
