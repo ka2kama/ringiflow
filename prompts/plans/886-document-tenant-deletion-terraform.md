@@ -46,8 +46,8 @@
 - AWS provider `~> 5.0`、Terraform `>= 1.0, < 2.0`
 
 ### 進捗
-- [ ] Phase 1: 統合テスト追加（notification_logs, documents, folders の個別テスト + delete_all 拡張）
-- [ ] Phase 2: S3 バケット Terraform モジュール
+- [x] Phase 1: 統合テスト追加（notification_logs, documents, folders の個別テスト + delete_all 拡張）
+- [x] Phase 2: S3 バケット Terraform モジュール
 
 ## 仕様整理
 
