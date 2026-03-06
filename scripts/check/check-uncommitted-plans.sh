@@ -19,9 +19,22 @@ if [ -z "$BRANCH" ] || [ "$BRANCH" = "main" ]; then
 fi
 
 # --- 未コミット変更の検出 ---
-# git status --porcelain で prompts/plans/ 配下の変更を検出
-# ?? = untracked, M = modified, A = added(unstaged), etc.
-uncommitted=$(git status --porcelain -- "prompts/plans/" 2>/dev/null || true)
+# git status --porcelain の出力形式: XY filename
+#   X = ステージング領域の状態、Y = ワーキングツリーの状態
+# ステージ済み（X のみ変更、Y が空白）はコミットに含まれるので除外する。
+# 検出対象:
+#   ?? = untracked（未追跡）
+#   ?M = unstaged modification（Y が M: ワーキングツリーに変更あり）
+#   !! = ignored（通常 .gitignore で除外されるが念のため）
+all_status=$(git status --porcelain -- "prompts/plans/" 2>/dev/null || true)
+
+if [ -z "$all_status" ]; then
+    exit 0
+fi
+
+# ステージ済みのみ（Y が空白）の行を除外
+# XY の Y（2文字目）が空白でない行、または ?? の行を抽出
+uncommitted=$(echo "$all_status" | grep -E '^(\?\?|.[^ ])' || true)
 
 if [ -z "$uncommitted" ]; then
     exit 0
