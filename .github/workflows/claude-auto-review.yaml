@@ -421,7 +421,7 @@ jobs:
             --allowedTools "Bash(cat:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(gh pr checks:*),Bash(gh pr comment:*),Bash(gh pr review:*),Bash(gh issue view:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git status:*),mcp__github_inline_comment__create_inline_comment"
 
   # ──────────────────────────────────────────────
-  # validation: 完了基準との整合チェック（Sonnet）
+  # validation: 完了基準との整合チェック（Opus）
   # ──────────────────────────────────────────────
   validation:
     name: Validation
