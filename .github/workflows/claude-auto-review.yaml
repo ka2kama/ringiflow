@@ -6,7 +6,7 @@
 # 責務分離:
 # - このワークフロー:
 #   - Verification（コード品質、設計、セキュリティ）→ Opus
-#   - Validation（完了基準との整合）→ Sonnet
+#   - Validation（完了基準との整合）→ Opus
 # - claude-rules-check.yaml: .claude/rules/ のルール準拠チェック
 #
 # ジョブ構成:
@@ -580,7 +580,7 @@ jobs:
             )"
             ```
           claude_args: |
-            --model claude-sonnet-4-6
+            --model claude-opus-4-6
             --max-turns 25
             --allowedTools "Read,Bash(cat:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(git diff:*),mcp__github_inline_comment__create_inline_comment"
 
