@@ -65,13 +65,13 @@ flowchart LR
 
 ## Development Status
 
-**Phase 2 (Feature Expansion) in progress** — Phase 1 MVP complete
+**Phase 3 (Enterprise Features) planning** — Phase 2 complete
 
 | Phase | Status | Description |
 |-------|--------|-------------|
 | Phase 0 | ✅ Complete | Development foundation (CI/CD, project structure, documentation system) |
 | Phase 1 | ✅ Complete | Minimum viable workflow system |
-| Phase 2 | 🚧 In Progress | Feature expansion (multi-tenant, notifications, document management) |
+| Phase 2 | ✅ Complete | Feature expansion (multi-tenant, notifications, document management) |
 | Phase 3 | 📋 Planning | Enterprise features (SSO/MFA, complex workflows) |
 | Phase 4 | 📋 Planning | Advanced features (CQRS/ES, real-time) |
 
@@ -197,7 +197,7 @@ Development is led by an AI agent (Claude Code), with guardrails to ensure quali
 
 ### AI Behavioral Rules
 
-[CLAUDE.md](CLAUDE.md) (~400 lines) and [26 rule files](.claude/rules/) structurally govern the AI's behavior. The AI doesn't write freely — it follows rules.
+[CLAUDE.md](CLAUDE.md) (~400 lines) and [27 rule files](.claude/rules/) structurally govern the AI's behavior. The AI doesn't write freely — it follows rules.
 
 Key rules:
 
@@ -219,7 +219,7 @@ flowchart LR
     E -.->|Next session| A
 ```
 
-Currently [110 improvement records](process/improvements/) exist. Examples:
+Currently [115 improvement records](process/improvements/) exist. Examples:
 
 | Case | Problem | Countermeasure |
 |------|---------|----------------|
