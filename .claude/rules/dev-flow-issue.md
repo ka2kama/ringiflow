@@ -256,6 +256,7 @@ Issue との整合:
   - 新規ハンドラモジュール → `openapi.rs` の `paths()` に登録
   - 新規タグ → `openapi.rs` の `tags()` に登録
   - `just openapi-generate` → `git diff openapi/openapi.yaml` で確認
+  - フロントエンドのエンコーダ/デコーダ → JSON フィールド名が OpenAPI 仕様と一致
 - [ ] レイヤー間接続: 全レイヤーにフィールド変更が伝播、DB 制約への影響確認
 - [ ] YAGNI/KISS の正しい適用: シンプル化を理由にしたレイヤー違反・型安全性省略がない
 - [ ] 技術的前提の確認: ツール仕様が公式ドキュメントで確認されている
