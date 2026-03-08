@@ -140,7 +140,7 @@ confirmUpload { config, documentId, toMsg } =
         { config = config
         , url = "/api/v1/documents/" ++ documentId ++ "/confirm"
         , body = Http.emptyBody
-        , decoder = Document.decoder
+        , decoder = Document.detailDecoder
         , toMsg = toMsg
         }
 
