@@ -355,7 +355,7 @@ jobs:
 
   # シェルスクリプト・CI ワークフロー チェック: ShellCheck + actionlint
   shell:
-    name: Shell
+    name: Shell & CI Workflow
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.shell == 'true' || needs.changes.outputs.ci == 'true'
