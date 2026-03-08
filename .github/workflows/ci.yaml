@@ -522,7 +522,7 @@ jobs:
             backend/target/release/ringiflow-bff
             backend/target/release/ringiflow-core-service
             backend/target/release/ringiflow-auth-service
-          key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock') }}
+          key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock', 'backend/migrations/**') }}
 
       - name: Build services (production config, no dev features)
         if: steps.backend-cache.outputs.cache-hit != 'true'
@@ -649,7 +649,7 @@ jobs:
             backend/target/release/ringiflow-bff
             backend/target/release/ringiflow-core-service
             backend/target/release/ringiflow-auth-service
-          key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock') }}
+          key: ${{ runner.os }}-backend-release-${{ hashFiles('backend/**/*.rs', 'backend/**/Cargo.toml', 'backend/Cargo.lock', 'backend/migrations/**') }}
 
       - name: Build backend services (production config, no dev features)
         if: steps.backend-cache.outputs.cache-hit != 'true'
