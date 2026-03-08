@@ -1,7 +1,10 @@
 module Api.Document exposing
-    ( UploadRequest
+    ( FolderUploadRequest
+    , UploadRequest
     , confirmUpload
     , deleteDocument
+    , encodeFolderUploadRequest
+    , encodeUploadRequest
     , listDocuments
     , listWorkflowAttachments
     , requestDownloadUrl
@@ -52,6 +55,16 @@ type alias UploadRequest =
     }
 
 
+{-| フォルダ用アップロード URL リクエスト
+-}
+type alias FolderUploadRequest =
+    { filename : String
+    , contentType : String
+    , size : Int
+    , folderId : String
+    }
+
+
 {-| アップロード URL を取得
 
 `POST /api/v1/documents/upload-url`
@@ -97,12 +110,12 @@ requestUploadUrlForFolder { config, filename, contentType, size, folderId, toMsg
         , url = "/api/v1/documents/upload-url"
         , body =
             Http.jsonBody
-                (Encode.object
-                    [ ( "filename", Encode.string filename )
-                    , ( "content_type", Encode.string contentType )
-                    , ( "size", Encode.int size )
-                    , ( "folder_id", Encode.string folderId )
-                    ]
+                (encodeFolderUploadRequest
+                    { filename = filename
+                    , contentType = contentType
+                    , size = size
+                    , folderId = folderId
+                    }
                 )
         , decoder = Document.uploadUrlResponseDecoder
         , toMsg = toMsg
@@ -261,6 +274,16 @@ encodeUploadRequest req =
     Encode.object
         [ ( "filename", Encode.string req.filename )
         , ( "content_type", Encode.string req.contentType )
-        , ( "size", Encode.int req.size )
+        , ( "content_length", Encode.int req.size )
         , ( "workflow_instance_id", Encode.string req.workflowInstanceId )
+        ]
+
+
+encodeFolderUploadRequest : FolderUploadRequest -> Encode.Value
+encodeFolderUploadRequest req =
+    Encode.object
+        [ ( "filename", Encode.string req.filename )
+        , ( "content_type", Encode.string req.contentType )
+        , ( "content_length", Encode.int req.size )
+        , ( "folder_id", Encode.string req.folderId )
         ]
