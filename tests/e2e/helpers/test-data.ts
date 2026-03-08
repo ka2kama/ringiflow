@@ -31,6 +31,10 @@ export const WORKFLOW_DEFINITION_ID =
 export const MULTI_STEP_DEFINITION_ID =
   "00000000-0000-0000-0000-000000000002";
 
+/** ワークフロー定義（シードデータ: ファイル添付申請） */
+export const FILE_UPLOAD_DEFINITION_ID =
+  "00000000-0000-0000-0000-000000000003";
+
 /** 認証 storageState ファイルパス */
 export const ADMIN_AUTH_FILE = "tests/.auth/admin.json";
 export const USER_AUTH_FILE = "tests/.auth/user.json";
