@@ -71,29 +71,27 @@ decoderTests =
 listDecoderTests : Test
 listDecoderTests =
     describe "listDecoder"
-        [ test "data フィールドから一覧をデコード" <|
+        [ test "一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "00000000-0000-0000-0000-000000000001",
-                                    "display_id": "USER-1",
-                                    "display_number": 1,
-                                    "name": "山田太郎",
-                                    "email": "yamada.taro@example.com"
-                                },
-                                {
-                                    "id": "00000000-0000-0000-0000-000000000002",
-                                    "display_id": "USER-2",
-                                    "display_number": 2,
-                                    "name": "田中花子",
-                                    "email": "tanaka.hanako@example.com"
-                                }
-                            ]
-                        }
+                        [
+                            {
+                                "id": "00000000-0000-0000-0000-000000000001",
+                                "display_id": "USER-1",
+                                "display_number": 1,
+                                "name": "山田太郎",
+                                "email": "yamada.taro@example.com"
+                            },
+                            {
+                                "id": "00000000-0000-0000-0000-000000000002",
+                                "display_id": "USER-2",
+                                "display_number": 2,
+                                "name": "田中花子",
+                                "email": "tanaka.hanako@example.com"
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString UserItem.listDecoder json
@@ -101,26 +99,8 @@ listDecoderTests =
                     |> Expect.equal (Ok 2)
         , test "空の一覧をデコード" <|
             \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": []
-                        }
-                        """
-                in
-                Decode.decodeString UserItem.listDecoder json
+                Decode.decodeString UserItem.listDecoder "[]"
                     |> Expect.equal (Ok [])
-        , test "data フィールドがない場合はエラー" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        []
-                        """
-                in
-                Decode.decodeString UserItem.listDecoder json
-                    |> Expect.err
         ]
 
 

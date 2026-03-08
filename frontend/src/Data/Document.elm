@@ -69,38 +69,34 @@ decoder =
         |> required "created_at" Decode.string
 
 
-{-| data フィールドから単一ドキュメントをデコード
+{-| 単一ドキュメントをデコード
 -}
 detailDecoder : Decoder Document
 detailDecoder =
-    Decode.field "data" decoder
+    decoder
 
 
-{-| data フィールドからアップロード URL レスポンスをデコード
+{-| アップロード URL レスポンスをデコード
 -}
 uploadUrlResponseDecoder : Decoder UploadUrlResponse
 uploadUrlResponseDecoder =
-    Decode.field "data"
-        (Decode.succeed UploadUrlResponse
-            |> required "document_id" Decode.string
-            |> required "upload_url" Decode.string
-            |> required "expires_in" Decode.int
-        )
+    Decode.succeed UploadUrlResponse
+        |> required "document_id" Decode.string
+        |> required "upload_url" Decode.string
+        |> required "expires_in" Decode.int
 
 
-{-| data フィールドからダウンロード URL レスポンスをデコード
+{-| ダウンロード URL レスポンスをデコード
 -}
 downloadUrlResponseDecoder : Decoder DownloadUrlResponse
 downloadUrlResponseDecoder =
-    Decode.field "data"
-        (Decode.succeed DownloadUrlResponse
-            |> required "download_url" Decode.string
-            |> required "expires_in" Decode.int
-        )
+    Decode.succeed DownloadUrlResponse
+        |> required "download_url" Decode.string
+        |> required "expires_in" Decode.int
 
 
-{-| data フィールドからドキュメント一覧をデコード
+{-| ドキュメント一覧をデコード
 -}
 listDecoder : Decoder (List Document)
 listDecoder =
-    Decode.field "data" (Decode.list decoder)
+    Decode.list decoder

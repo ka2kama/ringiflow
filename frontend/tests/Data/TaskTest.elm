@@ -260,34 +260,32 @@ taskItemTests =
 listDecoderTests : Test
 listDecoderTests =
     describe "listDecoder"
-        [ test "data フィールドから一覧をデコード" <|
+        [ test "一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "step-001",
+                        [
+                            {
+                                "id": "step-001",
+                                "display_number": 1,
+                                "step_name": "承認",
+                                "status": "Pending",
+                                "version": 1,
+                                "created_at": "2026-01-15T10:00:00Z",
+                                "workflow": {
+                                    "id": "wf-001",
+                                    "display_id": "WF-1",
                                     "display_number": 1,
-                                    "step_name": "承認",
+                                    "title": "テスト",
                                     "status": "Pending",
-                                    "version": 1,
-                                    "created_at": "2026-01-15T10:00:00Z",
-                                    "workflow": {
-                                        "id": "wf-001",
-                                        "display_id": "WF-1",
-                                        "display_number": 1,
-                                        "title": "テスト",
-                                        "status": "Pending",
-                                        "initiated_by": {
-                                            "id": "user-001",
-                                            "name": "山田太郎"
-                                        }
+                                    "initiated_by": {
+                                        "id": "user-001",
+                                        "name": "山田太郎"
                                     }
                                 }
-                            ]
-                        }
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString Task.listDecoder json
@@ -295,7 +293,7 @@ listDecoderTests =
                     |> Expect.equal (Ok 1)
         , test "空の一覧をデコード" <|
             \_ ->
-                Decode.decodeString Task.listDecoder """{ "data": [] }"""
+                Decode.decodeString Task.listDecoder "[]"
                     |> Result.map List.length
                     |> Expect.equal (Ok 0)
         ]
@@ -316,39 +314,37 @@ detailDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "step": {
-                                    "id": "step-001",
-                                    "display_id": "STEP-1",
-                                    "display_number": 1,
-                                    "step_name": "部長承認",
-                                    "status": "Pending",
-                                    "version": 1,
-                                    "assigned_to": {
-                                        "id": "user-002",
-                                        "name": "鈴木一郎"
-                                    },
-                                    "decision": null,
-                                    "comment": null
+                            "step": {
+                                "id": "step-001",
+                                "display_id": "STEP-1",
+                                "display_number": 1,
+                                "step_name": "部長承認",
+                                "status": "Pending",
+                                "version": 1,
+                                "assigned_to": {
+                                    "id": "user-002",
+                                    "name": "鈴木一郎"
                                 },
-                                "workflow": {
-                                    "id": "wf-001",
-                                    "display_id": "WF-1",
-                                    "display_number": 1,
-                                    "title": "テスト申請",
-                                    "definition_id": "def-001",
-                                    "status": "InProgress",
-                                    "version": 1,
-                                    "form_data": {},
-                                    "initiated_by": {
-                                        "id": "user-001",
-                                        "name": "山田太郎"
-                                    },
-                                    "steps": [],
-                                    "submitted_at": "2026-01-15T10:00:00Z",
-                                    "created_at": "2026-01-15T10:00:00Z",
-                                    "updated_at": "2026-01-15T10:00:00Z"
-                                }
+                                "decision": null,
+                                "comment": null
+                            },
+                            "workflow": {
+                                "id": "wf-001",
+                                "display_id": "WF-1",
+                                "display_number": 1,
+                                "title": "テスト申請",
+                                "definition_id": "def-001",
+                                "status": "InProgress",
+                                "version": 1,
+                                "form_data": {},
+                                "initiated_by": {
+                                    "id": "user-001",
+                                    "name": "山田太郎"
+                                },
+                                "steps": [],
+                                "submitted_at": "2026-01-15T10:00:00Z",
+                                "created_at": "2026-01-15T10:00:00Z",
+                                "updated_at": "2026-01-15T10:00:00Z"
                             }
                         }
                         """

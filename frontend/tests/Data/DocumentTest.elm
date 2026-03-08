@@ -91,11 +91,9 @@ uploadUrlResponseDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "document_id": "doc-001",
-                                "upload_url": "https://s3.example.com/presigned-put-url",
-                                "expires_in": 300
-                            }
+                            "document_id": "doc-001",
+                            "upload_url": "https://s3.example.com/presigned-put-url",
+                            "expires_in": 300
                         }
                         """
                 in
@@ -128,10 +126,8 @@ downloadUrlResponseDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "download_url": "https://s3.example.com/presigned-get-url",
-                                "expires_in": 900
-                            }
+                            "download_url": "https://s3.example.com/presigned-get-url",
+                            "expires_in": 900
                         }
                         """
                 in
@@ -148,31 +144,29 @@ downloadUrlResponseDecoderTests =
 listDecoderTests : Test
 listDecoderTests =
     describe "listDecoder"
-        [ test "data フィールドからドキュメント一覧をデコード" <|
+        [ test "ドキュメント一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "doc-001",
-                                    "filename": "領収書.pdf",
-                                    "content_type": "application/pdf",
-                                    "size": 1258291,
-                                    "status": "active",
-                                    "created_at": "2026-03-01T10:00:00Z"
-                                },
-                                {
-                                    "id": "doc-002",
-                                    "filename": "見積書.xlsx",
-                                    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                    "size": 524288,
-                                    "status": "active",
-                                    "created_at": "2026-03-01T11:00:00Z"
-                                }
-                            ]
-                        }
+                        [
+                            {
+                                "id": "doc-001",
+                                "filename": "領収書.pdf",
+                                "content_type": "application/pdf",
+                                "size": 1258291,
+                                "status": "active",
+                                "created_at": "2026-03-01T10:00:00Z"
+                            },
+                            {
+                                "id": "doc-002",
+                                "filename": "見積書.xlsx",
+                                "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                "size": 524288,
+                                "status": "active",
+                                "created_at": "2026-03-01T11:00:00Z"
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString Document.listDecoder json
@@ -180,14 +174,6 @@ listDecoderTests =
                     |> Expect.equal (Ok 2)
         , test "空のドキュメント一覧をデコード" <|
             \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": []
-                        }
-                        """
-                in
-                Decode.decodeString Document.listDecoder json
+                Decode.decodeString Document.listDecoder "[]"
                     |> Expect.equal (Ok [])
         ]

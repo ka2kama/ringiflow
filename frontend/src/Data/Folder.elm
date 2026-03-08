@@ -50,15 +50,15 @@ decoder =
         |> required "updated_at" Decode.string
 
 
-{-| data フィールドから単一フォルダをデコード
+{-| 単一フォルダをデコード
 -}
 detailDecoder : Decoder Folder
 detailDecoder =
-    Decode.field "data" decoder
+    decoder
 
 
-{-| data フィールドからフォルダ一覧をデコード
+{-| フォルダ一覧をデコード
 -}
 listDecoder : Decoder (List Folder)
 listDecoder =
-    Decode.field "data" (Decode.list decoder)
+    Decode.list decoder

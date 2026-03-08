@@ -117,24 +117,16 @@ taskItemDecoder =
 
 
 {-| タスク一覧をデコード
-
-API レスポンスの `{ data: [...] }` 形式に対応。
-
 -}
 listDecoder : Decoder (List TaskItem)
 listDecoder =
-    Decode.field "data" (Decode.list taskItemDecoder)
+    Decode.list taskItemDecoder
 
 
 {-| タスク詳細をデコード
-
-API レスポンスの `{ data: { step: ..., workflow: ... } }` 形式に対応。
-
 -}
 detailDecoder : Decoder TaskDetail
 detailDecoder =
-    Decode.field "data"
-        (Decode.succeed TaskDetail
-            |> required "step" WorkflowInstance.stepDecoder
-            |> required "workflow" WorkflowInstance.decoder
-        )
+    Decode.succeed TaskDetail
+        |> required "step" WorkflowInstance.stepDecoder
+        |> required "workflow" WorkflowInstance.decoder

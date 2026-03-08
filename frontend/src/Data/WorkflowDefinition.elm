@@ -288,23 +288,17 @@ decoder =
 
 
 {-| 単一のワークフロー定義レスポンスをデコード
-
-API レスポンスの `{ data: {...} }` 形式に対応。
-
 -}
 detailDecoder : Decoder WorkflowDefinition
 detailDecoder =
-    Decode.field "data" decoder
+    decoder
 
 
 {-| ワークフロー定義一覧をデコード
-
-API レスポンスの `{ data: [...] }` 形式に対応。
-
 -}
 listDecoder : Decoder (List WorkflowDefinition)
 listDecoder =
-    Decode.field "data" (Decode.list decoder)
+    Decode.list decoder
 
 
 
@@ -335,17 +329,12 @@ type alias ValidationError =
 
 
 {-| バリデーション結果デコーダー
-
-API レスポンスの `{ data: { valid, errors } }` 形式に対応。
-
 -}
 validationResultDecoder : Decode.Decoder ValidationResult
 validationResultDecoder =
-    Decode.field "data"
-        (Decode.map2 ValidationResult
-            (Decode.field "valid" Decode.bool)
-            (Decode.field "errors" (Decode.list validationErrorDecoder))
-        )
+    Decode.map2 ValidationResult
+        (Decode.field "valid" Decode.bool)
+        (Decode.field "errors" (Decode.list validationErrorDecoder))
 
 
 validationErrorDecoder : Decode.Decoder ValidationError
