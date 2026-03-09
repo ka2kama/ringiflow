@@ -132,8 +132,7 @@ async fn create_definition_via_api(
 
     let response = app.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
-    let json = parse_body(response).await;
-    json
+    parse_body(response).await
 }
 
 /// 定義を公開するヘルパー
@@ -154,8 +153,7 @@ async fn publish_definition_via_api(
 
     let response = app.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
-    let json = parse_body(response).await;
-    json
+    parse_body(response).await
 }
 
 // --- テストケース ---
