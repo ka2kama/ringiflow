@@ -31,7 +31,7 @@ auditLogListDecoderTests =
                     json =
                         """
                         {
-                            "data": [
+                            "items": [
                                 {
                                     "id": "log-1",
                                     "actor_id": "user-1",
@@ -58,7 +58,7 @@ auditLogListDecoderTests =
                     json =
                         """
                         {
-                            "data": [],
+                            "items": [],
                             "next_cursor": null
                         }
                         """
@@ -72,7 +72,7 @@ auditLogListDecoderTests =
                     json =
                         """
                         {
-                            "data": [
+                            "items": [
                                 {
                                     "id": "log-1",
                                     "actor_id": "user-1",
@@ -91,7 +91,7 @@ auditLogListDecoderTests =
                         """
                 in
                 Decode.decodeString AuditLog.auditLogListDecoder json
-                    |> Result.map (\list -> List.head list.data |> Maybe.map .detail)
+                    |> Result.map (\list -> List.head list.items |> Maybe.map .detail)
                     |> Expect.equal (Ok (Just Nothing))
         ]
 

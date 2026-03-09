@@ -6,14 +6,13 @@ use serde::{Deserialize, Serialize};
 
 /// ページネーション付きレスポンス
 ///
-/// `ApiResponse<T>` が単一データ用であるのに対し、
-/// `PaginatedResponse<T>` はリスト + カーソルのページネーション形式。
+/// リスト + カーソルのページネーション形式。
 ///
 /// ## JSON 形式
 ///
 /// ```json
 /// {
-///   "data": [...],
+///   "items": [...],
 ///   "next_cursor": "opaque-cursor-string"
 /// }
 /// ```
@@ -22,6 +21,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(utoipa::ToSchema))]
 pub struct PaginatedResponse<T> {
-    pub data:        Vec<T>,
+    pub items:       Vec<T>,
     pub next_cursor: Option<String>,
 }

@@ -310,7 +310,7 @@ viewContent model =
 
 viewAuditLogList : Model -> AuditLogList -> Html Msg
 viewAuditLogList model auditLogList =
-    if List.isEmpty auditLogList.data then
+    if List.isEmpty auditLogList.items then
         EmptyState.view
             { message = "監査ログが見つかりません。"
             , description = Nothing
@@ -318,7 +318,7 @@ viewAuditLogList model auditLogList =
 
     else
         div []
-            [ viewAuditLogTable model auditLogList.data
+            [ viewAuditLogTable model auditLogList.items
             , viewPagination auditLogList.nextCursor
             ]
 

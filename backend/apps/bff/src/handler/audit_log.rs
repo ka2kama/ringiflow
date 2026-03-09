@@ -161,7 +161,7 @@ pub async fn list_audit_logs(
                 .collect();
 
             let response = PaginatedResponse {
-                data:        items,
+                items,
                 next_cursor: page.next_cursor,
             };
             Ok((StatusCode::OK, Json(response)).into_response())
