@@ -129,8 +129,7 @@ pub async fn list_roles(
         })
         .collect();
 
-    let response = items;
-    Ok((StatusCode::OK, Json(response)))
+    Ok((StatusCode::OK, Json(items)))
 }
 
 /// GET /internal/roles/{role_id}

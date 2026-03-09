@@ -106,8 +106,7 @@ pub async fn list_folders(
             updated_at: dto.updated_at,
         })
         .collect();
-    let response = items;
-    Ok((StatusCode::OK, Json(response)).into_response())
+    Ok((StatusCode::OK, Json(items)).into_response())
 }
 
 /// POST /api/v1/folders
@@ -141,13 +140,11 @@ pub async fn create_folder(
         created_by: *session_data.user_id().as_uuid(),
     };
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .create_folder(&core_request)
         .await
         .map_err(|e| log_and_convert_core_error("フォルダ作成", e))?;
-
-    let dto = core_response;
     let response = FolderData {
         id:         dto.id.to_string(),
         name:       dto.name,
@@ -193,13 +190,11 @@ pub async fn update_folder(
         parent_id: req.parent_id,
     };
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .update_folder(folder_id, &core_request)
         .await
         .map_err(|e| log_and_convert_core_error("フォルダ更新", e))?;
-
-    let dto = core_response;
     let response = FolderData {
         id:         dto.id.to_string(),
         name:       dto.name,

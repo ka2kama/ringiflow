@@ -122,8 +122,7 @@ pub async fn list_roles(
             user_count:  dto.user_count,
         })
         .collect();
-    let response = items;
-    Ok((StatusCode::OK, Json(response)).into_response())
+    Ok((StatusCode::OK, Json(items)).into_response())
 }
 
 /// GET /api/v1/roles/{role_id}
@@ -149,13 +148,11 @@ pub async fn get_role(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .get_role(role_id, *session_data.tenant_id().as_uuid())
         .await
         .map_err(|e| log_and_convert_core_error("ロール詳細取得", e))?;
-
-    let dto = core_response;
     let response = RoleDetailData {
         id:          dto.id.to_string(),
         name:        dto.name,
@@ -200,9 +197,7 @@ pub async fn create_role(
     };
 
     match state.core_service_client.create_role(&core_request).await {
-        Ok(core_response) => {
-            let dto = core_response;
-
+        Ok(dto) => {
             // 監査ログ記録
             let audit_log = AuditLog::new_success(
                 session_data.tenant_id().clone(),
@@ -273,9 +268,7 @@ pub async fn update_role(
         .update_role(role_id, &core_request)
         .await
     {
-        Ok(core_response) => {
-            let dto = core_response;
-
+        Ok(dto) => {
             // 監査ログ記録
             let audit_log = AuditLog::new_success(
                 session_data.tenant_id().clone(),

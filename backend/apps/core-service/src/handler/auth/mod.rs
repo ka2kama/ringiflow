@@ -251,8 +251,7 @@ pub async fn list_users(
         })
         .collect();
 
-    let response = items;
-    (StatusCode::OK, Json(response)).into_response()
+    (StatusCode::OK, Json(items)).into_response()
 }
 
 /// GET /internal/users/by-email

@@ -336,13 +336,11 @@ pub async fn validate_definition(
         definition: req.definition,
     };
 
-    let core_response = state
+    let result = state
         .core_service_client
         .validate_workflow_definition(&core_request)
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義バリデーション", e))?;
-
-    let result = core_response;
     let response = ValidationResultData {
         valid:  result.valid,
         errors: result

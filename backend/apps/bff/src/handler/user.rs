@@ -245,13 +245,11 @@ pub async fn create_user(
         role_id,
     };
 
-    let core_response = state
+    let user_data = state
         .core_service_client
         .create_user(&core_request)
         .await
         .map_err(|e| log_and_convert_core_error("ユーザー作成", e))?;
-
-    let user_data = core_response;
 
     // Auth Service で認証情報作成
     if let Err(e) = state
@@ -323,13 +321,11 @@ pub async fn get_user_detail(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let data = state
         .core_service_client
         .get_user_by_display_number(*session_data.tenant_id().as_uuid(), display_number)
         .await
         .map_err(|e| log_and_convert_core_error("ユーザー詳細取得", e))?;
-
-    let data = core_response;
     let response = UserDetailData {
         id: data.user.id.to_string(),
         display_id: format!("USR-{:06}", display_number),
@@ -400,9 +396,7 @@ pub async fn update_user(
         .update_user(user_data.user.id, &core_request)
         .await
     {
-        Ok(core_response) => {
-            let user = core_response;
-
+        Ok(user) => {
             // 監査ログ記録
             let audit_log = AuditLog::new_success(
                 session_data.tenant_id().clone(),
@@ -477,9 +471,7 @@ pub async fn update_user_status(
         .update_user_status(user_data.user.id, &core_request)
         .await
     {
-        Ok(core_response) => {
-            let user = core_response;
-
+        Ok(user) => {
             // 監査ログ記録: ステータスに応じて Deactivate / Activate を使い分ける
             let action = if user.status == "inactive" {
                 AuditAction::UserDeactivate

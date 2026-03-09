@@ -95,8 +95,7 @@ pub async fn list_folders(
         })
         .collect();
 
-    let response = items;
-    Ok((StatusCode::OK, Json(response)))
+    Ok((StatusCode::OK, Json(items)))
 }
 
 /// POST /internal/folders

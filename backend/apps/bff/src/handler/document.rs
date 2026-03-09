@@ -125,13 +125,11 @@ pub async fn request_upload_url(
         uploaded_by: *session_data.user_id().as_uuid(),
     };
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .request_upload_url(&core_request)
         .await
         .map_err(|e| log_and_convert_core_error("Upload URL 発行", e))?;
-
-    let dto = core_response;
     let response = UploadUrlData {
         document_id: dto.document_id.to_string(),
         upload_url:  dto.upload_url,
@@ -165,13 +163,11 @@ pub async fn confirm_upload(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .confirm_upload(document_id, *session_data.tenant_id().as_uuid())
         .await
         .map_err(|e| log_and_convert_core_error("アップロード確認", e))?;
-
-    let dto = core_response;
     let response = DocumentData {
         id:           dto.id.to_string(),
         filename:     dto.filename,
@@ -208,13 +204,11 @@ pub async fn generate_download_url(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .generate_download_url(document_id, *session_data.tenant_id().as_uuid())
         .await
         .map_err(|e| log_and_convert_core_error("ダウンロード URL 発行", e))?;
-
-    let dto = core_response;
     let response = DownloadUrlData {
         download_url: dto.download_url,
         expires_in:   dto.expires_in,
