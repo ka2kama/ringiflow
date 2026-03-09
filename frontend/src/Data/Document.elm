@@ -3,6 +3,7 @@ module Data.Document exposing
     , DownloadUrlResponse
     , UploadUrlResponse
     , decoder
+    , detailDecoder
     , downloadUrlResponseDecoder
     , listDecoder
     , uploadUrlResponseDecoder
@@ -66,6 +67,13 @@ decoder =
         |> required "size" Decode.int
         |> required "status" Decode.string
         |> required "created_at" Decode.string
+
+
+{-| data フィールドから単一ドキュメントをデコード
+-}
+detailDecoder : Decoder Document
+detailDecoder =
+    Decode.field "data" decoder
 
 
 {-| data フィールドからアップロード URL レスポンスをデコード

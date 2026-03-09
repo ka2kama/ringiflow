@@ -42,7 +42,6 @@ import Api exposing (ApiError, RequestConfig)
 import Data.Document as Document exposing (Document, DownloadUrlResponse, UploadUrlResponse)
 import File exposing (File)
 import Http
-import Json.Decode as Decode
 import Json.Encode as Encode
 
 
@@ -141,7 +140,7 @@ confirmUpload { config, documentId, toMsg } =
         { config = config
         , url = "/api/v1/documents/" ++ documentId ++ "/confirm"
         , body = Http.emptyBody
-        , decoder = Decode.field "data" Document.decoder
+        , decoder = Document.detailDecoder
         , toMsg = toMsg
         }
 
