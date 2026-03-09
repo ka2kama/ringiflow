@@ -3241,12 +3241,12 @@ expression: json
       },
       "PaginatedResponse_AuditLogItemData": {
         "type": "object",
-        "description": "ページネーション付きレスポンス\n\n`ApiResponse<T>` が単一データ用であるのに対し、\n`PaginatedResponse<T>` はリスト + カーソルのページネーション形式。\n\n## JSON 形式\n\n```json\n{\n  \"data\": [...],\n  \"next_cursor\": \"opaque-cursor-string\"\n}\n```\n\n`next_cursor` が `null` の場合は最後のページを意味する。",
+        "description": "ページネーション付きレスポンス\n\nリスト + カーソルのページネーション形式。\n\n## JSON 形式\n\n```json\n{\n  \"items\": [...],\n  \"next_cursor\": \"opaque-cursor-string\"\n}\n```\n\n`next_cursor` が `null` の場合は最後のページを意味する。",
         "required": [
-          "data"
+          "items"
         ],
         "properties": {
-          "data": {
+          "items": {
             "type": "array",
             "items": {
               "type": "object",

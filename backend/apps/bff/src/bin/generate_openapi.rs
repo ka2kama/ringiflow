@@ -23,10 +23,10 @@ fn main() {
 
 /// utoipa が自動登録する未使用コンポーネントスキーマを除去する
 ///
-/// utoipa の `#[utoipa::path]` マクロは `body = ApiResponse<T>` を処理する際、
-/// ジェネリック型パラメータ `T` の standalone スキーマも自動登録する。
-/// `ApiResponse` は `T` のフィールドを inline 展開するため、standalone スキーマは
-/// どこからも `$ref` されず未使用になる。この関数でそれらを除去する。
+/// utoipa の `#[utoipa::path]` マクロはジェネリック型（例: `PaginatedResponse<T>`）を
+/// 処理する際、型パラメータ `T` の standalone スキーマも自動登録する。
+/// inline 展開されるため standalone スキーマはどこからも `$ref` されず未使用になる。
+/// この関数でそれらを除去する。
 fn remove_unused_schemas(openapi: &mut utoipa::openapi::OpenApi) {
     // JSON にシリアライズして全 $ref ターゲットを収集する
     let json = serde_json::to_string(openapi).expect("JSON シリアライズに失敗しました");

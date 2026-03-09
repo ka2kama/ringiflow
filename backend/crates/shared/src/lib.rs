@@ -9,7 +9,6 @@
 //! - ビジネスロジックを含まない純粋なユーティリティのみを配置
 //! - 外部クレートへの依存は最小限に抑える
 
-pub mod api_response;
 #[cfg(feature = "observability")]
 pub mod canonical_log;
 pub mod error_response;
@@ -19,7 +18,6 @@ pub mod health;
 pub mod observability;
 pub mod paginated_response;
 
-pub use api_response::ApiResponse;
 pub use error_response::ErrorResponse;
 pub use health::{CheckStatus, HealthResponse, ReadinessResponse, ReadinessStatus};
 pub use paginated_response::PaginatedResponse;

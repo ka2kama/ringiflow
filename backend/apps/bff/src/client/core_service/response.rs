@@ -6,7 +6,7 @@ use super::error::CoreServiceError;
 
 /// Core Service レスポンスの共通ハンドリング
 ///
-/// 成功時はレスポンスボディを `ApiResponse<T>` にデシリアライズし、
+/// 成功時はレスポンスボディを `T` にデシリアライズし、
 /// エラー時はステータスコードに応じた `CoreServiceError` を返す。
 ///
 /// # 引数
