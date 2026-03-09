@@ -32,14 +32,14 @@
 - Core Service ハンドラテスト: `response_body` ヘルパーで `ApiResponse<T>` にデシリアライズ（folder.rs, document.rs）
 
 ### 進捗
-- [ ] Phase 1: Core Service ハンドラ — ApiResponse 除去
-- [ ] Phase 2: BFF クライアント — ApiResponse 除去
-- [ ] Phase 3: BFF ハンドラ — ApiResponse 除去
-- [ ] Phase 4: PaginatedResponse — `data` → `items` リネーム
-- [ ] Phase 5: フロントエンド — auto-unwrap 除去、getRaw 廃止
-- [ ] Phase 6: OpenAPI — アノテーション更新、スナップショット再生成
-- [ ] Phase 7: Hurl テスト — `$.data.xxx` → `$.xxx` 置換
-- [ ] Phase 8: クリーンアップ — `ApiResponse` 型削除
+- [x] Phase 1: Core Service ハンドラ — ApiResponse 除去
+- [x] Phase 2: BFF クライアント — ApiResponse 除去
+- [x] Phase 3: BFF ハンドラ — ApiResponse 除去
+- [x] Phase 4: PaginatedResponse — `data` → `items` リネーム
+- [x] Phase 5: フロントエンド — auto-unwrap 除去、getRaw 廃止
+- [x] Phase 6: OpenAPI — アノテーション更新、スナップショット再生成
+- [x] Phase 7: Hurl テスト — `$.data.xxx` → `$.xxx` 置換
+- [x] Phase 8: クリーンアップ — `ApiResponse` 型削除
 
 ## 仕様整理
 
