@@ -27,7 +27,6 @@ use ringiflow_domain::{
     value_objects::WorkflowName,
     workflow::WorkflowDefinitionId,
 };
-use ringiflow_shared::ApiResponse;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -105,12 +104,10 @@ pub async fn list_definitions(
 
     let definitions = state.usecase.list_definitions(&tenant_id).await?;
 
-    let response = ApiResponse::new(
-        definitions
-            .into_iter()
-            .map(WorkflowDefinitionDto::from)
-            .collect::<Vec<_>>(),
-    );
+    let response = definitions
+        .into_iter()
+        .map(WorkflowDefinitionDto::from)
+        .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -137,7 +134,7 @@ pub async fn get_definition(
         .get_definition(&definition_id, &tenant_id)
         .await?;
 
-    let response = ApiResponse::new(WorkflowDefinitionDto::from(definition));
+    let response = WorkflowDefinitionDto::from(definition);
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -168,7 +165,7 @@ pub async fn create_definition(
         )
         .await?;
 
-    let response = ApiResponse::new(WorkflowDefinitionDto::from(definition));
+    let response = WorkflowDefinitionDto::from(definition);
 
     Ok((StatusCode::CREATED, Json(response)))
 }
@@ -206,7 +203,7 @@ pub async fn update_definition(
         )
         .await?;
 
-    let response = ApiResponse::new(WorkflowDefinitionDto::from(updated));
+    let response = WorkflowDefinitionDto::from(updated);
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -263,7 +260,7 @@ pub async fn publish_definition(
         .publish_definition(&definition_id, version, &tenant_id)
         .await?;
 
-    let response = ApiResponse::new(WorkflowDefinitionDto::from(published));
+    let response = WorkflowDefinitionDto::from(published);
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -293,7 +290,7 @@ pub async fn archive_definition(
         .archive_definition(&definition_id, version, &tenant_id)
         .await?;
 
-    let response = ApiResponse::new(WorkflowDefinitionDto::from(archived));
+    let response = WorkflowDefinitionDto::from(archived);
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -313,7 +310,7 @@ pub async fn validate_definition(
 ) -> Result<impl IntoResponse, CoreError> {
     let result = state.usecase.validate_definition_json(&req.definition);
 
-    let response = ApiResponse::new(result);
+    let response = result;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -501,7 +498,7 @@ mod tests {
             .await
             .unwrap();
         let created: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        let def_id = created["data"]["id"].as_str().unwrap();
+        let def_id = created["id"].as_str().unwrap();
 
         // When: 更新
         let update_request = Request::builder()
@@ -553,7 +550,7 @@ mod tests {
             .await
             .unwrap();
         let created: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        let def_id = created["data"]["id"].as_str().unwrap();
+        let def_id = created["id"].as_str().unwrap();
 
         // When
         let delete_request = Request::builder()
@@ -598,7 +595,7 @@ mod tests {
             .await
             .unwrap();
         let created: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        let def_id = created["data"]["id"].as_str().unwrap();
+        let def_id = created["id"].as_str().unwrap();
 
         // When
         let publish_request = Request::builder()
@@ -646,7 +643,7 @@ mod tests {
             .await
             .unwrap();
         let created: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        let def_id = created["data"]["id"].as_str().unwrap();
+        let def_id = created["id"].as_str().unwrap();
 
         // When
         let publish_request = Request::builder()
@@ -774,7 +771,7 @@ mod tests {
             .await
             .unwrap();
         let created: serde_json::Value = serde_json::from_slice(&body).unwrap();
-        let def_id = created["data"]["id"].as_str().unwrap();
+        let def_id = created["id"].as_str().unwrap();
 
         // When: 不正なバージョンで更新
         let update_request = Request::builder()

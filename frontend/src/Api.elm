@@ -5,7 +5,6 @@ module Api exposing
     , delete
     , deleteNoContent
     , get
-    , getRaw
     , patch
     , post
     , problemDetailsDecoder
@@ -17,11 +16,7 @@ module Api exposing
 BFF への API リクエストを型安全に行うためのモジュール。
 CSRF トークン、X-Tenant-ID ヘッダーの付与と RFC 9457 エラーハンドリングを提供。
 
-BFF の全エンドポイントは `ApiResponse<T>` で `{"data": ...}` 形式にラップされる。
-`get`/`post`/`put`/`patch`/`delete` は内部で `Decode.field "data"` を自動適用するため、
-呼び出し側は生のデコーダーを渡すだけでよい。
-
-`PaginatedResponse` 等 `ApiResponse` を使わないレスポンスには `getRaw` を使用する。
+各 HTTP メソッドに対応するヘルパー関数を提供する。
 
 
 ## 使用例
@@ -135,31 +130,6 @@ get { config, url, decoder, toMsg } =
         , url = config.baseUrl ++ url
         , body = Http.emptyBody
         , expect = expectJson toMsg decoder
-        , timeout = Just 30000
-        , tracker = Nothing
-        }
-
-
-{-| GET リクエスト（auto-unwrap なし）
-
-`PaginatedResponse` 等 `ApiResponse<T>` を使わないエンドポイント用。
-デコーダーをそのまま適用する。
-
--}
-getRaw :
-    { config : RequestConfig
-    , url : String
-    , decoder : Decoder a
-    , toMsg : Result ApiError a -> msg
-    }
-    -> Cmd msg
-getRaw { config, url, decoder, toMsg } =
-    Http.request
-        { method = "GET"
-        , headers = buildHeaders config False
-        , url = config.baseUrl ++ url
-        , body = Http.emptyBody
-        , expect = expectJsonRaw toMsg decoder
         , timeout = Just 30000
         , tracker = Nothing
         }
@@ -323,24 +293,13 @@ buildHeaders config includeCsrf =
     tenantHeader ++ csrfHeader
 
 
-{-| JSON レスポンスを期待するヘルパー（ApiResponse auto-unwrap）
+{-| JSON レスポンスを期待するヘルパー
 
 HTTP エラーを ApiError に変換し、RFC 9457 レスポンスをデコードする。
-`Decode.field "data"` を自動適用して `ApiResponse<T>` のラッパーを除去する。
 
 -}
 expectJson : (Result ApiError a -> msg) -> Decoder a -> Http.Expect msg
 expectJson toMsg decoder =
-    Http.expectStringResponse toMsg (handleResponse (Decode.field "data" decoder))
-
-
-{-| JSON レスポンスを期待するヘルパー（auto-unwrap なし）
-
-`PaginatedResponse` 等 `ApiResponse<T>` を使わないレスポンス用。
-
--}
-expectJsonRaw : (Result ApiError a -> msg) -> Decoder a -> Http.Expect msg
-expectJsonRaw toMsg decoder =
     Http.expectStringResponse toMsg (handleResponse decoder)
 
 

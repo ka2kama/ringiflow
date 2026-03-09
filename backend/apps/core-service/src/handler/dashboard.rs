@@ -12,7 +12,6 @@ use axum::{
 };
 use chrono::Utc;
 use ringiflow_domain::{tenant::TenantId, user::UserId};
-use ringiflow_shared::ApiResponse;
 use serde::Serialize;
 
 use crate::{error::CoreError, handler::workflow::UserQuery, usecase::dashboard::DashboardStats};
@@ -57,7 +56,7 @@ pub async fn get_dashboard_stats(
         .get_stats(tenant_id, user_id, Utc::now())
         .await?;
 
-    let response = ApiResponse::new(DashboardStatsDto::from(stats));
+    let response = DashboardStatsDto::from(stats);
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }

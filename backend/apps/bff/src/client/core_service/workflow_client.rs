@@ -1,7 +1,6 @@
 //! ワークフロー関連の Core Service クライアント
 
 use async_trait::async_trait;
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -36,7 +35,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
     async fn create_workflow(
         &self,
         req: CreateWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// ワークフローを申請する
     ///
@@ -45,7 +44,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         workflow_id: Uuid,
         req: SubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// ワークフロー定義一覧を取得する
     ///
@@ -53,7 +52,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
     async fn list_workflow_definitions(
         &self,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowDefinitionDto>>, CoreServiceError>;
+    ) -> Result<Vec<WorkflowDefinitionDto>, CoreServiceError>;
 
     /// ワークフロー定義の詳細を取得する
     ///
@@ -62,7 +61,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         definition_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError>;
 
     /// 自分のワークフロー一覧を取得する
     ///
@@ -71,7 +70,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowInstanceSummaryDto>>, CoreServiceError>;
+    ) -> Result<Vec<WorkflowInstanceSummaryDto>, CoreServiceError>;
 
     /// ワークフローの詳細を取得する
     ///
@@ -80,7 +79,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         workflow_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// ワークフローステップを承認する
     ///
@@ -91,7 +90,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         workflow_id: Uuid,
         step_id: Uuid,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// ワークフローステップを却下する
     ///
@@ -102,7 +101,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         workflow_id: Uuid,
         step_id: Uuid,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// display_number でワークフローの詳細を取得する
     ///
@@ -112,7 +111,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         display_number: i64,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// display_number でワークフローを申請する
     ///
@@ -123,7 +122,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         display_number: i64,
         req: SubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// display_number でワークフローステップを承認する
     ///
@@ -135,7 +134,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         workflow_display_number: i64,
         step_display_number: i64,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// display_number でワークフローステップを却下する
     ///
@@ -147,7 +146,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         workflow_display_number: i64,
         step_display_number: i64,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// display_number でワークフローステップを差し戻す
     ///
@@ -159,7 +158,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         workflow_display_number: i64,
         step_display_number: i64,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// display_number でワークフローを再申請する
     ///
@@ -169,7 +168,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         display_number: i64,
         req: ResubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError>;
+    ) -> Result<WorkflowInstanceDto, CoreServiceError>;
 
     /// ワークフローにコメントを投稿する
     ///
@@ -180,7 +179,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         display_number: i64,
         req: PostCommentCoreRequest,
-    ) -> Result<ApiResponse<WorkflowCommentDto>, CoreServiceError>;
+    ) -> Result<WorkflowCommentDto, CoreServiceError>;
 
     /// ワークフローのコメント一覧を取得する
     ///
@@ -191,7 +190,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         display_number: i64,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowCommentDto>>, CoreServiceError>;
+    ) -> Result<Vec<WorkflowCommentDto>, CoreServiceError>;
 
     // ===== ワークフロー定義管理 =====
 
@@ -201,7 +200,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
     async fn create_workflow_definition(
         &self,
         req: &CreateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError>;
 
     /// ワークフロー定義を更新する
     ///
@@ -210,7 +209,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         definition_id: Uuid,
         req: &UpdateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError>;
 
     /// ワークフロー定義を削除する
     ///
@@ -229,7 +228,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         definition_id: Uuid,
         req: &PublishArchiveCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError>;
 
     /// ワークフロー定義をアーカイブする
     ///
@@ -239,7 +238,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
         &self,
         definition_id: Uuid,
         req: &PublishArchiveCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError>;
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError>;
 
     /// ワークフロー定義をバリデーションする
     ///
@@ -248,7 +247,7 @@ pub trait CoreServiceWorkflowClient: Send + Sync {
     async fn validate_workflow_definition(
         &self,
         req: &ValidateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<ValidationResultDto>, CoreServiceError>;
+    ) -> Result<ValidationResultDto, CoreServiceError>;
 }
 
 #[async_trait]
@@ -257,7 +256,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
     async fn create_workflow(
         &self,
         req: CreateWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!("{}/internal/workflows", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))
@@ -272,7 +271,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         workflow_id: Uuid,
         req: SubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/{}/submit",
             self.base_url, workflow_id
@@ -289,7 +288,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
     async fn list_workflow_definitions(
         &self,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowDefinitionDto>>, CoreServiceError> {
+    ) -> Result<Vec<WorkflowDefinitionDto>, CoreServiceError> {
         let url = format!(
             "{}/internal/workflow-definitions?tenant_id={}",
             self.base_url, tenant_id
@@ -304,7 +303,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         definition_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflow-definitions/{}?tenant_id={}",
             self.base_url, definition_id, tenant_id
@@ -319,7 +318,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowInstanceSummaryDto>>, CoreServiceError> {
+    ) -> Result<Vec<WorkflowInstanceSummaryDto>, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows?tenant_id={}&user_id={}",
             self.base_url, tenant_id, user_id
@@ -334,7 +333,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         workflow_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/{}?tenant_id={}",
             self.base_url, workflow_id, tenant_id
@@ -350,7 +349,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         workflow_id: Uuid,
         step_id: Uuid,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/{}/steps/{}/approve",
             self.base_url, workflow_id, step_id
@@ -369,7 +368,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         workflow_id: Uuid,
         step_id: Uuid,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/{}/steps/{}/reject",
             self.base_url, workflow_id, step_id
@@ -387,7 +386,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         display_number: i64,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}?tenant_id={}",
             self.base_url, display_number, tenant_id
@@ -402,7 +401,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         display_number: i64,
         req: SubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/submit",
             self.base_url, display_number
@@ -425,7 +424,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         workflow_display_number: i64,
         step_display_number: i64,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/steps/by-display-number/{}/approve",
             self.base_url, workflow_display_number, step_display_number
@@ -448,7 +447,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         workflow_display_number: i64,
         step_display_number: i64,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/steps/by-display-number/{}/reject",
             self.base_url, workflow_display_number, step_display_number
@@ -471,7 +470,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         workflow_display_number: i64,
         step_display_number: i64,
         req: ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/steps/by-display-number/{}/request-changes",
             self.base_url, workflow_display_number, step_display_number
@@ -489,7 +488,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         display_number: i64,
         req: ResubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/resubmit",
             self.base_url, display_number
@@ -507,7 +506,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         display_number: i64,
         req: PostCommentCoreRequest,
-    ) -> Result<ApiResponse<WorkflowCommentDto>, CoreServiceError> {
+    ) -> Result<WorkflowCommentDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/comments",
             self.base_url, display_number
@@ -525,7 +524,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         display_number: i64,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowCommentDto>>, CoreServiceError> {
+    ) -> Result<Vec<WorkflowCommentDto>, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/comments?tenant_id={}",
             self.base_url, display_number, tenant_id
@@ -541,7 +540,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
     async fn create_workflow_definition(
         &self,
         req: &CreateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         let url = format!("{}/internal/workflow-definitions", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))
@@ -556,7 +555,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         definition_id: Uuid,
         req: &UpdateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflow-definitions/{}",
             self.base_url, definition_id
@@ -603,7 +602,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         definition_id: Uuid,
         req: &PublishArchiveCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflow-definitions/{}/publish",
             self.base_url, definition_id
@@ -621,7 +620,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
         &self,
         definition_id: Uuid,
         req: &PublishArchiveCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflow-definitions/{}/archive",
             self.base_url, definition_id
@@ -638,7 +637,7 @@ impl CoreServiceWorkflowClient for CoreServiceClientImpl {
     async fn validate_workflow_definition(
         &self,
         req: &ValidateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<ValidationResultDto>, CoreServiceError> {
+    ) -> Result<ValidationResultDto, CoreServiceError> {
         let url = format!("{}/internal/workflow-definitions/validate", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))

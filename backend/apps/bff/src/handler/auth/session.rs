@@ -10,7 +10,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 
 use super::{AuthState, CsrfResponseData, MeResponseData, SESSION_COOKIE_NAME};
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
    tag = "auth",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "ユーザー情報", body = ApiResponse<MeResponseData>),
+      (status = 200, description = "ユーザー情報", body = MeResponseData),
       (status = 401, description = "未認証", body = ErrorResponse)
    )
 )]
@@ -65,7 +65,7 @@ pub async fn me(
     let user_id = *session_data.user_id().as_uuid();
     match state.core_service_client.get_user(user_id).await {
         Ok(user_info) => {
-            let response = ApiResponse::new(MeResponseData::from(user_info.data));
+            let response = MeResponseData::from(user_info);
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(CoreServiceError::UserNotFound) => {
@@ -89,7 +89,7 @@ pub async fn me(
    tag = "auth",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "CSRF トークン", body = ApiResponse<CsrfResponseData>),
+      (status = 200, description = "CSRF トークン", body = CsrfResponseData),
       (status = 401, description = "未認証", body = ErrorResponse)
    )
 )]
@@ -150,7 +150,7 @@ pub async fn csrf(
         }
     };
 
-    let response = ApiResponse::new(CsrfResponseData { token });
+    let response = CsrfResponseData { token };
     (StatusCode::OK, Json(response)).into_response()
 }
 
@@ -196,11 +196,11 @@ mod tests {
             .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-        assert!(json["data"]["id"].is_string());
-        assert_eq!(json["data"]["email"], "user@example.com");
-        assert_eq!(json["data"]["tenant_name"], "Development Tenant");
-        assert!(json["data"]["roles"].is_array());
-        assert!(json["data"]["permissions"].is_array());
+        assert!(json["id"].is_string());
+        assert_eq!(json["email"], "user@example.com");
+        assert_eq!(json["tenant_name"], "Development Tenant");
+        assert!(json["roles"].is_array());
+        assert!(json["permissions"].is_array());
     }
 
     #[tokio::test]
@@ -259,8 +259,8 @@ mod tests {
             .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-        assert!(json["data"]["token"].is_string());
-        let token = json["data"]["token"].as_str().unwrap();
+        assert!(json["token"].is_string());
+        let token = json["token"].as_str().unwrap();
         assert_eq!(token.len(), 64);
     }
 

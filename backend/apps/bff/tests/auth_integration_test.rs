@@ -49,7 +49,6 @@ use ringiflow_bff::{
     middleware::{CsrfState, csrf_middleware},
 };
 use ringiflow_infra::{RedisSessionManager, SessionManager};
-use ringiflow_shared::ApiResponse;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -133,42 +132,39 @@ impl CoreServiceUserClient for StubCoreServiceClient {
         &self,
         _tenant_id: Uuid,
         _email: &str,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+    ) -> Result<UserResponse, CoreServiceError> {
         if !self.config.user_exists {
             return Err(CoreServiceError::UserNotFound);
         }
 
-        Ok(ApiResponse::new(Self::create_user_response()))
+        Ok(Self::create_user_response())
     }
 
-    async fn get_user(
-        &self,
-        _user_id: Uuid,
-    ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+    async fn get_user(&self, _user_id: Uuid) -> Result<UserWithPermissionsData, CoreServiceError> {
         if !self.config.user_exists {
             return Err(CoreServiceError::UserNotFound);
         }
 
-        Ok(ApiResponse::new(UserWithPermissionsData {
+        Ok(UserWithPermissionsData {
             user:        Self::create_user_response(),
             tenant_name: "Development Tenant".to_string(),
             roles:       vec!["user".to_string()],
             permissions: vec!["workflow:read".to_string()],
-        }))
+        })
     }
 
     async fn list_users(
         &self,
         _tenant_id: Uuid,
         _status: Option<&str>,
-    ) -> Result<ApiResponse<Vec<ringiflow_bff::client::UserItemDto>>, CoreServiceError> {
+    ) -> Result<Vec<ringiflow_bff::client::UserItemDto>, CoreServiceError> {
         unimplemented!("list_users is not used in auth tests")
     }
 
     async fn create_user(
         &self,
         _req: &ringiflow_bff::client::CreateUserCoreRequest,
-    ) -> Result<ApiResponse<ringiflow_bff::client::CreateUserCoreResponse>, CoreServiceError> {
+    ) -> Result<ringiflow_bff::client::CreateUserCoreResponse, CoreServiceError> {
         unimplemented!("create_user is not used in auth tests")
     }
 
@@ -176,7 +172,7 @@ impl CoreServiceUserClient for StubCoreServiceClient {
         &self,
         _user_id: Uuid,
         _req: &ringiflow_bff::client::UpdateUserCoreRequest,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+    ) -> Result<UserResponse, CoreServiceError> {
         unimplemented!("update_user is not used in auth tests")
     }
 
@@ -184,7 +180,7 @@ impl CoreServiceUserClient for StubCoreServiceClient {
         &self,
         _user_id: Uuid,
         _req: &ringiflow_bff::client::UpdateUserStatusCoreRequest,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+    ) -> Result<UserResponse, CoreServiceError> {
         unimplemented!("update_user_status is not used in auth tests")
     }
 
@@ -192,7 +188,7 @@ impl CoreServiceUserClient for StubCoreServiceClient {
         &self,
         _tenant_id: Uuid,
         _display_number: i64,
-    ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+    ) -> Result<UserWithPermissionsData, CoreServiceError> {
         unimplemented!("get_user_by_display_number is not used in auth tests")
     }
 }
@@ -202,10 +198,7 @@ impl CoreServiceRoleClient for StubCoreServiceClient {
     async fn list_roles(
         &self,
         _tenant_id: Uuid,
-    ) -> Result<
-        ringiflow_shared::ApiResponse<Vec<ringiflow_bff::client::RoleItemDto>>,
-        CoreServiceError,
-    > {
+    ) -> Result<Vec<ringiflow_bff::client::RoleItemDto>, CoreServiceError> {
         unimplemented!("list_roles is not used in auth tests")
     }
 
@@ -213,16 +206,14 @@ impl CoreServiceRoleClient for StubCoreServiceClient {
         &self,
         _role_id: Uuid,
         _tenant_id: Uuid,
-    ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
-    {
+    ) -> Result<ringiflow_bff::client::RoleDetailDto, CoreServiceError> {
         unimplemented!("get_role is not used in auth tests")
     }
 
     async fn create_role(
         &self,
         _req: &ringiflow_bff::client::CreateRoleCoreRequest,
-    ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
-    {
+    ) -> Result<ringiflow_bff::client::RoleDetailDto, CoreServiceError> {
         unimplemented!("create_role is not used in auth tests")
     }
 
@@ -230,8 +221,7 @@ impl CoreServiceRoleClient for StubCoreServiceClient {
         &self,
         _role_id: Uuid,
         _req: &ringiflow_bff::client::UpdateRoleCoreRequest,
-    ) -> Result<ringiflow_shared::ApiResponse<ringiflow_bff::client::RoleDetailDto>, CoreServiceError>
-    {
+    ) -> Result<ringiflow_bff::client::RoleDetailDto, CoreServiceError> {
         unimplemented!("update_role is not used in auth tests")
     }
 
@@ -421,7 +411,7 @@ async fn get_csrf_token_via_api(sut: &Router, session_id: &str) -> String {
         .await
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    json["data"]["token"].as_str().unwrap().to_string()
+    json["token"].as_str().unwrap().to_string()
 }
 
 /// セッションと CSRF トークンの Redis クリーンアップ
@@ -475,8 +465,8 @@ async fn test_ログインからログアウトまでの一連フロー() {
         .await
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(json["data"]["email"], "user@example.com");
-    assert_eq!(json["data"]["name"], "Test User");
+    assert_eq!(json["email"], "user@example.com");
+    assert_eq!(json["name"], "Test User");
 
     // CSRF トークンを取得
     let tenant_id = ringiflow_domain::tenant::TenantId::from_uuid(test_tenant_id());

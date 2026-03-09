@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # テスト用ユーザーを作成
 POST {{bff_url}}/api/v1/users
@@ -42,7 +42,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-target_user_display_number: jsonpath "$.data.display_number"
+target_user_display_number: jsonpath "$.display_number"
 
 # =============================================================================
 # 正常系: ユーザー名を更新できる
@@ -63,10 +63,10 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（UserResponseData）
-jsonpath "$.data.id" exists
-jsonpath "$.data.name" == "更新後ユーザー"
-jsonpath "$.data.email" == "update-test-user@example.com"
-jsonpath "$.data.status" == "active"
+jsonpath "$.id" exists
+jsonpath "$.name" == "更新後ユーザー"
+jsonpath "$.email" == "update-test-user@example.com"
+jsonpath "$.status" == "active"
 
 # =============================================================================
 # 正常系: ロールを変更できる
@@ -86,10 +86,10 @@ Content-Type: application/json
 
 HTTP 200
 [Asserts]
-jsonpath "$.data.id" exists
-jsonpath "$.data.name" == "更新後ユーザー"
-jsonpath "$.data.email" == "update-test-user@example.com"
-jsonpath "$.data.status" == "active"
+jsonpath "$.id" exists
+jsonpath "$.name" == "更新後ユーザー"
+jsonpath "$.email" == "update-test-user@example.com"
+jsonpath "$.status" == "active"
 
 # =============================================================================
 # 異常系: 存在しないユーザーの更新 → 404

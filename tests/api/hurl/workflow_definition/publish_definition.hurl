@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # セットアップ: 公開対象の Draft 定義を作成する
@@ -56,8 +56,8 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-def_id: jsonpath "$.data.id"
-def_name: jsonpath "$.data.name"
+def_id: jsonpath "$.id"
+def_name: jsonpath "$.name"
 
 # =============================================================================
 # 正常系: Draft 状態の定義を公開できる（Draft → Published）
@@ -78,17 +78,17 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（WorkflowDefinitionData）
-jsonpath "$.data.id" == "{{def_id}}"
-jsonpath "$.data.name" == "{{def_name}}"
-jsonpath "$.data.version" == 2
-jsonpath "$.data.status" == "Published"
-jsonpath "$.data.definition" exists
-jsonpath "$.data.created_by" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{def_id}}"
+jsonpath "$.name" == "{{def_name}}"
+jsonpath "$.version" == 2
+jsonpath "$.status" == "Published"
+jsonpath "$.definition" exists
+jsonpath "$.created_by" matches "^[a-f0-9-]{36}$"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド
-jsonpath "$.data.description" exists
+jsonpath "$.description" exists
 
 # =============================================================================
 # 異常系: 存在しない定義の公開 → 404

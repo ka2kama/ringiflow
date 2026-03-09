@@ -23,7 +23,6 @@ use ringiflow_domain::{
     tenant::TenantId,
 };
 use ringiflow_infra::repository::RoleRepository;
-use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -130,8 +129,7 @@ pub async fn list_roles(
         })
         .collect();
 
-    let response = ApiResponse::new(items);
-    Ok((StatusCode::OK, Json(response)))
+    Ok((StatusCode::OK, Json(items)))
 }
 
 /// GET /internal/roles/{role_id}
@@ -159,7 +157,7 @@ pub async fn get_role(
         return Err(CoreError::NotFound("ロールが見つかりません".to_string()));
     }
 
-    let response = ApiResponse::new(RoleDetailDto::from(&role));
+    let response = RoleDetailDto::from(&role);
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -187,7 +185,7 @@ pub async fn create_role(
 
     let role = state.usecase.create_role(input).await?;
 
-    let response = ApiResponse::new(RoleDetailDto::from(&role));
+    let response = RoleDetailDto::from(&role);
 
     Ok((StatusCode::CREATED, Json(response)))
 }
@@ -216,7 +214,7 @@ pub async fn update_role(
 
     let role = state.usecase.update_role(input).await?;
 
-    let response = ApiResponse::new(RoleDetailDto::from(&role));
+    let response = RoleDetailDto::from(&role);
 
     Ok((StatusCode::OK, Json(response)))
 }

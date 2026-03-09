@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 正常系: ユーザーを作成できる
@@ -49,16 +49,16 @@ Content-Type: application/json
 HTTP 201
 [Asserts]
 # required フィールド
-jsonpath "$.data.id" exists
-jsonpath "$.data.display_id" matches "^USER-\\d+$"
-jsonpath "$.data.display_number" >= 1
-jsonpath "$.data.name" == "テストユーザー"
-jsonpath "$.data.email" == "new-test-user@example.com"
-jsonpath "$.data.role" == "user"
-jsonpath "$.data.initial_password" exists
+jsonpath "$.id" exists
+jsonpath "$.display_id" matches "^USER-\\d+$"
+jsonpath "$.display_number" >= 1
+jsonpath "$.name" == "テストユーザー"
+jsonpath "$.email" == "new-test-user@example.com"
+jsonpath "$.role" == "user"
+jsonpath "$.initial_password" exists
 
 [Captures]
-new_user_display_number: jsonpath "$.data.display_number"
+new_user_display_number: jsonpath "$.display_number"
 
 # =============================================================================
 # 異常系: バリデーションエラー（email なし）
@@ -167,4 +167,4 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.data.name" == "<b>テスト</b>ユーザー"
+jsonpath "$.name" == "<b>テスト</b>ユーザー"

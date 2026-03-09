@@ -9,7 +9,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::ApiResponse;
 
 use super::{
     ApproveRejectRequest,
@@ -40,7 +39,7 @@ use crate::error::{authenticate, log_and_convert_core_error, validation_error_re
    security(("session_auth" = [])),
    request_body = CreateWorkflowRequest,
    responses(
-      (status = 201, description = "ワークフロー作成", body = ApiResponse<WorkflowData>),
+      (status = 201, description = "ワークフロー作成", body = WorkflowData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse)
    )
@@ -68,7 +67,7 @@ pub async fn create_workflow(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー作成", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
 
@@ -89,7 +88,7 @@ pub async fn create_workflow(
    params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
    request_body = SubmitWorkflowRequest,
    responses(
-      (status = 200, description = "申請成功", body = ApiResponse<WorkflowData>),
+      (status = 200, description = "申請成功", body = WorkflowData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
@@ -128,7 +127,7 @@ pub async fn submit_workflow(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー申請", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -151,7 +150,7 @@ pub async fn submit_workflow(
    params(StepPathParams),
    request_body = ApproveRejectRequest,
    responses(
-      (status = 200, description = "承認成功", body = ApiResponse<WorkflowData>),
+      (status = 200, description = "承認成功", body = WorkflowData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "ステップが見つからない", body = ringiflow_shared::ErrorResponse),
@@ -192,7 +191,7 @@ pub async fn approve_step(
         .await
         .map_err(|e| log_and_convert_core_error("ステップ承認", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -213,7 +212,7 @@ pub async fn approve_step(
    params(StepPathParams),
    request_body = ApproveRejectRequest,
    responses(
-      (status = 200, description = "却下成功", body = ApiResponse<WorkflowData>),
+      (status = 200, description = "却下成功", body = WorkflowData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "ステップが見つからない", body = ringiflow_shared::ErrorResponse),
@@ -254,7 +253,7 @@ pub async fn reject_step(
         .await
         .map_err(|e| log_and_convert_core_error("ステップ却下", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -275,7 +274,7 @@ pub async fn reject_step(
    params(StepPathParams),
    request_body = ApproveRejectRequest,
    responses(
-      (status = 200, description = "差し戻し成功", body = ApiResponse<WorkflowData>),
+      (status = 200, description = "差し戻し成功", body = WorkflowData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "ステップが見つからない", body = ringiflow_shared::ErrorResponse),
@@ -320,7 +319,7 @@ pub async fn request_changes_step(
         .await
         .map_err(|e| log_and_convert_core_error("ステップ差し戻し", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -341,7 +340,7 @@ pub async fn request_changes_step(
    params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
    request_body = ResubmitWorkflowRequest,
    responses(
-      (status = 200, description = "再申請成功", body = ApiResponse<WorkflowData>),
+      (status = 200, description = "再申請成功", body = WorkflowData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse),
@@ -385,7 +384,7 @@ pub async fn resubmit_workflow(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー再申請", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -408,7 +407,7 @@ pub async fn resubmit_workflow(
    params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
    request_body = PostCommentRequest,
    responses(
-      (status = 201, description = "コメント投稿成功", body = ApiResponse<WorkflowCommentData>),
+      (status = 201, description = "コメント投稿成功", body = WorkflowCommentData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 403, description = "権限なし", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
@@ -442,6 +441,6 @@ pub async fn post_comment(
         .await
         .map_err(|e| log_and_convert_core_error("コメント投稿", e))?;
 
-    let response = ApiResponse::new(WorkflowCommentData::from(core_response.data));
+    let response = WorkflowCommentData::from(core_response);
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }

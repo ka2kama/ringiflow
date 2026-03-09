@@ -17,7 +17,6 @@ use ringiflow_domain::{
     value_objects::{DisplayId, DisplayNumber, display_prefix},
     workflow::{WorkflowInstance, WorkflowStepId},
 };
-use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -141,12 +140,10 @@ pub async fn list_my_tasks(
         .collect();
     let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
 
-    let response = ApiResponse::new(
-        tasks
-            .iter()
-            .map(|t| TaskItemDto::from_task_item(t, &user_names))
-            .collect::<Vec<_>>(),
-    );
+    let response = tasks
+        .iter()
+        .map(|t| TaskItemDto::from_task_item(t, &user_names))
+        .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -172,7 +169,7 @@ pub async fn get_task(
         crate::usecase::workflow::collect_user_ids_from_workflow(&detail.workflow, &detail.steps);
     let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
-    let response = ApiResponse::new(TaskDetailDto {
+    let response = TaskDetailDto {
         step:     WorkflowStepDto::from_step(&detail.step, &user_names),
         workflow: WorkflowInstanceDetailDto::from_workflow_with_steps(
             &crate::usecase::workflow::WorkflowWithSteps {
@@ -181,7 +178,7 @@ pub async fn get_task(
             },
             &user_names,
         ),
-    });
+    };
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -216,7 +213,7 @@ pub async fn get_task_by_display_numbers(
         crate::usecase::workflow::collect_user_ids_from_workflow(&detail.workflow, &detail.steps);
     let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
-    let response = ApiResponse::new(TaskDetailDto {
+    let response = TaskDetailDto {
         step:     WorkflowStepDto::from_step(&detail.step, &user_names),
         workflow: WorkflowInstanceDetailDto::from_workflow_with_steps(
             &crate::usecase::workflow::WorkflowWithSteps {
@@ -225,7 +222,7 @@ pub async fn get_task_by_display_numbers(
             },
             &user_names,
         ),
-    });
+    };
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }

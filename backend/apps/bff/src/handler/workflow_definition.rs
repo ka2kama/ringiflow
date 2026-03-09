@@ -23,7 +23,6 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_infra::SessionManager;
-use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -116,7 +115,7 @@ pub struct ValidationErrorData {
    security(("session_auth" = [])),
    request_body = CreateDefinitionRequest,
    responses(
-      (status = 201, description = "定義作成成功", body = ApiResponse<WorkflowDefinitionData>),
+      (status = 201, description = "定義作成成功", body = WorkflowDefinitionData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -143,7 +142,7 @@ pub async fn create_definition(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義作成", e))?;
 
-    let response = ApiResponse::new(WorkflowDefinitionData::from(core_response.data));
+    let response = WorkflowDefinitionData::from(core_response);
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
 
@@ -158,7 +157,7 @@ pub async fn create_definition(
    params(("id" = Uuid, Path, description = "ワークフロー定義 ID")),
    request_body = UpdateDefinitionRequest,
    responses(
-      (status = 200, description = "定義更新成功", body = ApiResponse<WorkflowDefinitionData>),
+      (status = 200, description = "定義更新成功", body = WorkflowDefinitionData),
       (status = 400, description = "バリデーションエラー", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse),
       (status = 409, description = "バージョン競合", body = ringiflow_shared::ErrorResponse)
@@ -188,7 +187,7 @@ pub async fn update_definition(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義更新", e))?;
 
-    let response = ApiResponse::new(WorkflowDefinitionData::from(core_response.data));
+    let response = WorkflowDefinitionData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -236,7 +235,7 @@ pub async fn delete_definition(
    params(("id" = Uuid, Path, description = "ワークフロー定義 ID")),
    request_body = PublishArchiveRequest,
    responses(
-      (status = 200, description = "公開成功", body = ApiResponse<WorkflowDefinitionData>),
+      (status = 200, description = "公開成功", body = WorkflowDefinitionData),
       (status = 400, description = "バリデーション失敗 or Draft 以外", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse),
       (status = 409, description = "バージョン競合", body = ringiflow_shared::ErrorResponse)
@@ -263,7 +262,7 @@ pub async fn publish_definition(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義公開", e))?;
 
-    let response = ApiResponse::new(WorkflowDefinitionData::from(core_response.data));
+    let response = WorkflowDefinitionData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -278,7 +277,7 @@ pub async fn publish_definition(
    params(("id" = Uuid, Path, description = "ワークフロー定義 ID")),
    request_body = PublishArchiveRequest,
    responses(
-      (status = 200, description = "アーカイブ成功", body = ApiResponse<WorkflowDefinitionData>),
+      (status = 200, description = "アーカイブ成功", body = WorkflowDefinitionData),
       (status = 400, description = "Published 以外", body = ringiflow_shared::ErrorResponse),
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse),
       (status = 409, description = "バージョン競合", body = ringiflow_shared::ErrorResponse)
@@ -305,7 +304,7 @@ pub async fn archive_definition(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義アーカイブ", e))?;
 
-    let response = ApiResponse::new(WorkflowDefinitionData::from(core_response.data));
+    let response = WorkflowDefinitionData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -319,7 +318,7 @@ pub async fn archive_definition(
    security(("session_auth" = [])),
    request_body = ValidateDefinitionRequest,
    responses(
-      (status = 200, description = "バリデーション結果", body = ApiResponse<ValidationResultData>),
+      (status = 200, description = "バリデーション結果", body = ValidationResultData),
       (status = 400, description = "リクエスト不正", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -337,14 +336,12 @@ pub async fn validate_definition(
         definition: req.definition,
     };
 
-    let core_response = state
+    let result = state
         .core_service_client
         .validate_workflow_definition(&core_request)
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義バリデーション", e))?;
-
-    let result = core_response.data;
-    let response = ApiResponse::new(ValidationResultData {
+    let response = ValidationResultData {
         valid:  result.valid,
         errors: result
             .errors
@@ -355,6 +352,6 @@ pub async fn validate_definition(
                 step_id: e.step_id,
             })
             .collect(),
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }

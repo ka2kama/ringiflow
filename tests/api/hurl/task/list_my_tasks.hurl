@@ -26,7 +26,7 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # ワークフローを作成
 POST {{bff_url}}/api/v1/workflows
@@ -45,9 +45,9 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-workflow_id: jsonpath "$.data.id"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_display_number: jsonpath "$.data.display_number"
+workflow_id: jsonpath "$.id"
+workflow_display_id: jsonpath "$.display_id"
+workflow_display_number: jsonpath "$.display_number"
 
 # ワークフローを申請（user に割り当て）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -93,26 +93,26 @@ Cookie: session_id={{user_session_cookie}}
 HTTP 200
 [Asserts]
 # 少なくとも 1 件存在する
-jsonpath "$.data" count >= 1
+jsonpath "$" count >= 1
 
 # 先頭要素で構造を検証（TaskItem required フィールド）
 # 注: テスト順序によって複数タスクが存在する可能性があるため、
 # capture した値との一致ではなく存在確認と型検証を行う
-jsonpath "$.data[0].id" exists
-jsonpath "$.data[0].display_number" isInteger
-jsonpath "$.data[0].step_name" isString
-jsonpath "$.data[0].status" isString
-jsonpath "$.data[0].version" isInteger
-jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[0].id" exists
+jsonpath "$[0].display_number" isInteger
+jsonpath "$[0].step_name" isString
+jsonpath "$[0].status" isString
+jsonpath "$[0].version" isInteger
+jsonpath "$[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # TaskWorkflowSummary required フィールドの構造検証
-jsonpath "$.data[0].workflow.id" exists
-jsonpath "$.data[0].workflow.display_id" isString
-jsonpath "$.data[0].workflow.display_number" isInteger
-jsonpath "$.data[0].workflow.title" isString
-jsonpath "$.data[0].workflow.status" isString
-jsonpath "$.data[0].workflow.initiated_by.id" exists
-jsonpath "$.data[0].workflow.initiated_by.name" isString
+jsonpath "$[0].workflow.id" exists
+jsonpath "$[0].workflow.display_id" isString
+jsonpath "$[0].workflow.display_number" isInteger
+jsonpath "$[0].workflow.title" isString
+jsonpath "$[0].workflow.status" isString
+jsonpath "$[0].workflow.initiated_by.id" exists
+jsonpath "$[0].workflow.initiated_by.name" isString
 
 # =============================================================================
 # 正常系: 割り当てられたタスクがないユーザーは空配列を返す
@@ -128,7 +128,7 @@ Cookie: session_id={{admin_session_cookie}}
 HTTP 200
 [Asserts]
 # admin にはタスクが割り当てられていない（テスト環境の初期状態による）
-jsonpath "$.data" isCollection
+jsonpath "$" isCollection
 
 # =============================================================================
 # 異常系: 未認証では取得できない

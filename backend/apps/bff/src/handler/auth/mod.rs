@@ -153,7 +153,6 @@ pub(super) mod test_utils {
     };
     use ringiflow_domain::{tenant::TenantId, user::UserId};
     use ringiflow_infra::{InfraError, SessionData, SessionManager};
-    use ringiflow_shared::ApiResponse;
     use uuid::Uuid;
 
     use super::{AuthState, csrf, login, logout, me};
@@ -168,8 +167,8 @@ pub(super) mod test_utils {
     };
 
     pub struct StubCoreServiceClient {
-        pub user_by_email_result: Result<ApiResponse<UserResponse>, CoreServiceError>,
-        pub get_user_result:      Result<ApiResponse<UserWithPermissionsData>, CoreServiceError>,
+        pub user_by_email_result: Result<UserResponse, CoreServiceError>,
+        pub get_user_result:      Result<UserWithPermissionsData, CoreServiceError>,
     }
 
     impl StubCoreServiceClient {
@@ -182,13 +181,13 @@ pub(super) mod test_utils {
                 status:    "active".to_string(),
             };
             Self {
-                user_by_email_result: Ok(ApiResponse::new(user.clone())),
-                get_user_result:      Ok(ApiResponse::new(UserWithPermissionsData {
+                user_by_email_result: Ok(user.clone()),
+                get_user_result:      Ok(UserWithPermissionsData {
                     user,
                     tenant_name: "Development Tenant".to_string(),
                     roles: vec!["user".to_string()],
                     permissions: vec!["workflow:read".to_string()],
-                })),
+                }),
             }
         }
 
@@ -206,7 +205,7 @@ pub(super) mod test_utils {
             &self,
             _tenant_id: Uuid,
             _status: Option<&str>,
-        ) -> Result<ApiResponse<Vec<crate::client::UserItemDto>>, CoreServiceError> {
+        ) -> Result<Vec<crate::client::UserItemDto>, CoreServiceError> {
             unimplemented!("list_users is not used in auth tests")
         }
 
@@ -214,21 +213,21 @@ pub(super) mod test_utils {
             &self,
             _tenant_id: Uuid,
             _email: &str,
-        ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+        ) -> Result<UserResponse, CoreServiceError> {
             self.user_by_email_result.clone()
         }
 
         async fn get_user(
             &self,
             _user_id: Uuid,
-        ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+        ) -> Result<UserWithPermissionsData, CoreServiceError> {
             self.get_user_result.clone()
         }
 
         async fn create_user(
             &self,
             _req: &crate::client::CreateUserCoreRequest,
-        ) -> Result<ApiResponse<crate::client::CreateUserCoreResponse>, CoreServiceError> {
+        ) -> Result<crate::client::CreateUserCoreResponse, CoreServiceError> {
             unimplemented!("create_user is not used in auth tests")
         }
 
@@ -236,7 +235,7 @@ pub(super) mod test_utils {
             &self,
             _user_id: Uuid,
             _req: &crate::client::UpdateUserCoreRequest,
-        ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+        ) -> Result<UserResponse, CoreServiceError> {
             unimplemented!("update_user is not used in auth tests")
         }
 
@@ -244,7 +243,7 @@ pub(super) mod test_utils {
             &self,
             _user_id: Uuid,
             _req: &crate::client::UpdateUserStatusCoreRequest,
-        ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+        ) -> Result<UserResponse, CoreServiceError> {
             unimplemented!("update_user_status is not used in auth tests")
         }
 
@@ -252,7 +251,7 @@ pub(super) mod test_utils {
             &self,
             _tenant_id: Uuid,
             _display_number: i64,
-        ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+        ) -> Result<UserWithPermissionsData, CoreServiceError> {
             unimplemented!("get_user_by_display_number is not used in auth tests")
         }
     }

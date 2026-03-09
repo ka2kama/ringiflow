@@ -1,7 +1,6 @@
 //! ドキュメント関連の Core Service クライアント
 
 use async_trait::async_trait;
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -26,7 +25,7 @@ pub trait CoreServiceDocumentClient: Send + Sync {
     async fn request_upload_url(
         &self,
         req: &RequestUploadUrlCoreRequest,
-    ) -> Result<ApiResponse<UploadUrlCoreDto>, CoreServiceError>;
+    ) -> Result<UploadUrlCoreDto, CoreServiceError>;
 
     /// アップロード完了を確認する
     ///
@@ -35,7 +34,7 @@ pub trait CoreServiceDocumentClient: Send + Sync {
         &self,
         document_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<DocumentDetailCoreDto>, CoreServiceError>;
+    ) -> Result<DocumentDetailCoreDto, CoreServiceError>;
 
     /// ダウンロード URL を発行する
     ///
@@ -44,7 +43,7 @@ pub trait CoreServiceDocumentClient: Send + Sync {
         &self,
         document_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<DownloadUrlCoreDto>, CoreServiceError>;
+    ) -> Result<DownloadUrlCoreDto, CoreServiceError>;
 
     /// ドキュメントを削除する（ソフトデリート）
     ///
@@ -64,7 +63,7 @@ pub trait CoreServiceDocumentClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         folder_id: Uuid,
-    ) -> Result<ApiResponse<Vec<DocumentDetailCoreDto>>, CoreServiceError>;
+    ) -> Result<Vec<DocumentDetailCoreDto>, CoreServiceError>;
 
     /// ワークフロー添付ファイル一覧を取得する
     ///
@@ -73,7 +72,7 @@ pub trait CoreServiceDocumentClient: Send + Sync {
         &self,
         workflow_instance_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<DocumentDetailCoreDto>>, CoreServiceError>;
+    ) -> Result<Vec<DocumentDetailCoreDto>, CoreServiceError>;
 }
 
 #[async_trait]
@@ -82,7 +81,7 @@ impl CoreServiceDocumentClient for CoreServiceClientImpl {
     async fn request_upload_url(
         &self,
         req: &RequestUploadUrlCoreRequest,
-    ) -> Result<ApiResponse<UploadUrlCoreDto>, CoreServiceError> {
+    ) -> Result<UploadUrlCoreDto, CoreServiceError> {
         let url = format!("{}/internal/documents/upload-url", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))
@@ -97,7 +96,7 @@ impl CoreServiceDocumentClient for CoreServiceClientImpl {
         &self,
         document_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<DocumentDetailCoreDto>, CoreServiceError> {
+    ) -> Result<DocumentDetailCoreDto, CoreServiceError> {
         let url = format!(
             "{}/internal/documents/{}/confirm?tenant_id={}",
             self.base_url, document_id, tenant_id
@@ -112,7 +111,7 @@ impl CoreServiceDocumentClient for CoreServiceClientImpl {
         &self,
         document_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<DownloadUrlCoreDto>, CoreServiceError> {
+    ) -> Result<DownloadUrlCoreDto, CoreServiceError> {
         let url = format!(
             "{}/internal/documents/{}/download-url?tenant_id={}",
             self.base_url, document_id, tenant_id
@@ -159,7 +158,7 @@ impl CoreServiceDocumentClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         folder_id: Uuid,
-    ) -> Result<ApiResponse<Vec<DocumentDetailCoreDto>>, CoreServiceError> {
+    ) -> Result<Vec<DocumentDetailCoreDto>, CoreServiceError> {
         let url = format!(
             "{}/internal/documents?tenant_id={}&folder_id={}",
             self.base_url, tenant_id, folder_id
@@ -174,7 +173,7 @@ impl CoreServiceDocumentClient for CoreServiceClientImpl {
         &self,
         workflow_instance_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<DocumentDetailCoreDto>>, CoreServiceError> {
+    ) -> Result<Vec<DocumentDetailCoreDto>, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/{}/attachments?tenant_id={}",
             self.base_url, workflow_instance_id, tenant_id

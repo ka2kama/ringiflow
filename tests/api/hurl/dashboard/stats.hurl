@@ -34,6 +34,6 @@ HTTP 200
 [Asserts]
 # DashboardStats required フィールドすべて検証
 # カウント値はテスト実行順序に依存するため >= 0 で検証
-jsonpath "$.data.pending_tasks" >= 0
-jsonpath "$.data.my_workflows_in_progress" >= 0
-jsonpath "$.data.completed_today" >= 0
+jsonpath "$.pending_tasks" >= 0
+jsonpath "$.my_workflows_in_progress" >= 0
+jsonpath "$.completed_today" >= 0

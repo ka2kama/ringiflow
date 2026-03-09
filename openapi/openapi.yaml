@@ -97,7 +97,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_CsrfResponseData'
+                $ref: '#/components/schemas/CsrfResponseData'
         '401':
           description: 未認証
           content:
@@ -150,7 +150,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_LoginResponseData'
+                $ref: '#/components/schemas/LoginResponseData'
         '401':
           description: 認証失敗
           content:
@@ -194,7 +194,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_MeResponseData'
+                $ref: '#/components/schemas/MeResponseData'
         '401':
           description: 未認証
           content:
@@ -216,7 +216,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_DashboardStatsData'
+                $ref: '#/components/schemas/DashboardStatsData'
         '401':
           description: 認証エラー
           content:
@@ -245,7 +245,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_DocumentData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentData'
         '401':
           description: 認証エラー
           content:
@@ -273,7 +275,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_UploadUrlData'
+                $ref: '#/components/schemas/UploadUrlData'
         '400':
           description: バリデーションエラー
           content:
@@ -355,7 +357,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_DocumentData'
+                $ref: '#/components/schemas/DocumentData'
         '400':
           description: ステータスエラー / S3 にファイルが存在しない
           content:
@@ -397,7 +399,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_DownloadUrlData'
+                $ref: '#/components/schemas/DownloadUrlData'
         '400':
           description: ステータスエラー
           content:
@@ -431,7 +433,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_FolderData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/FolderData'
         '401':
           description: 認証エラー
           content:
@@ -458,7 +462,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_FolderData'
+                $ref: '#/components/schemas/FolderData'
         '400':
           description: バリデーションエラー
           content:
@@ -500,7 +504,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_FolderData'
+                $ref: '#/components/schemas/FolderData'
         '400':
           description: バリデーションエラー
           content:
@@ -567,7 +571,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_RoleItemData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleItemData'
         '401':
           description: 認証エラー
           content:
@@ -594,7 +600,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_RoleDetailData'
+                $ref: '#/components/schemas/RoleDetailData'
         '400':
           description: バリデーションエラー
           content:
@@ -630,7 +636,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_RoleDetailData'
+                $ref: '#/components/schemas/RoleDetailData'
         '404':
           description: ロールが見つからない
           content:
@@ -690,7 +696,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_RoleDetailData'
+                $ref: '#/components/schemas/RoleDetailData'
         '400':
           description: バリデーションエラー
           content:
@@ -718,7 +724,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_TaskItemData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskItemData'
         '401':
           description: 認証エラー
           content:
@@ -748,7 +756,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_UserItemData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserItemData'
         '401':
           description: 認証エラー
           content:
@@ -784,7 +794,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_CreateUserResponseData'
+                $ref: '#/components/schemas/CreateUserResponseData'
         '400':
           description: バリデーションエラー
           content:
@@ -820,7 +830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_UserDetailData'
+                $ref: '#/components/schemas/UserDetailData'
         '404':
           description: ユーザーが見つからない
           content:
@@ -855,7 +865,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_UserResponseData'
+                $ref: '#/components/schemas/UserResponseData'
         '400':
           description: バリデーションエラー
           content:
@@ -899,7 +909,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_UserResponseData'
+                $ref: '#/components/schemas/UserResponseData'
         '400':
           description: バリデーションエラー
           content:
@@ -934,7 +944,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_WorkflowDefinitionData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowDefinitionData'
         '401':
           description: 認証エラー
           content:
@@ -961,7 +973,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowDefinitionData'
+                $ref: '#/components/schemas/WorkflowDefinitionData'
         '400':
           description: バリデーションエラー
           content:
@@ -989,7 +1001,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_ValidationResultData'
+                $ref: '#/components/schemas/ValidationResultData'
         '400':
           description: リクエスト不正
           content:
@@ -1026,7 +1038,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowDefinitionData'
+                $ref: '#/components/schemas/WorkflowDefinitionData'
         '404':
           description: 定義が見つからない
           content:
@@ -1061,7 +1073,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowDefinitionData'
+                $ref: '#/components/schemas/WorkflowDefinitionData'
         '400':
           description: バリデーションエラー
           content:
@@ -1140,7 +1152,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowDefinitionData'
+                $ref: '#/components/schemas/WorkflowDefinitionData'
         '400':
           description: Published 以外
           content:
@@ -1188,7 +1200,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowDefinitionData'
+                $ref: '#/components/schemas/WorkflowDefinitionData'
         '400':
           description: バリデーション失敗 or Draft 以外
           content:
@@ -1229,7 +1241,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_WorkflowSummaryData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowSummaryData'
         '401':
           description: 認証エラー
           content:
@@ -1263,7 +1277,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '400':
           description: バリデーションエラー
           content:
@@ -1306,7 +1320,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '404':
           description: ワークフローが見つからない
           content:
@@ -1343,7 +1357,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_WorkflowCommentData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowCommentData'
         '404':
           description: ワークフローが見つからない
           content:
@@ -1385,7 +1401,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowCommentData'
+                $ref: '#/components/schemas/WorkflowCommentData'
         '400':
           description: バリデーションエラー
           content:
@@ -1440,7 +1456,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '400':
           description: バリデーションエラー
           content:
@@ -1508,7 +1524,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '400':
           description: バリデーションエラー
           content:
@@ -1576,7 +1592,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '400':
           description: バリデーションエラー
           content:
@@ -1644,7 +1660,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '400':
           description: バリデーションエラー
           content:
@@ -1705,7 +1721,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_WorkflowData'
+                $ref: '#/components/schemas/WorkflowData'
         '400':
           description: バリデーションエラー
           content:
@@ -1748,7 +1764,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_TaskDetailData'
+                $ref: '#/components/schemas/TaskDetailData'
         '404':
           description: タスクが見つからない
           content:
@@ -1778,7 +1794,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse_Vec_DocumentData'
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentData'
         '401':
           description: 認証エラー
           content:
@@ -1811,1213 +1829,6 @@ paths:
                 $ref: '#/components/schemas/ReadinessResponse'
 components:
   schemas:
-    ApiResponse_CreateUserResponseData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ユーザー作成レスポンス（初期パスワード付き）
-          required:
-          - id
-          - display_id
-          - display_number
-          - name
-          - email
-          - role
-          - initial_password
-          properties:
-            id:
-              type: string
-            display_id:
-              type: string
-            display_number:
-              type: integer
-              format: int64
-            name:
-              type: string
-            email:
-              type: string
-            role:
-              type: string
-            initial_password:
-              type: string
-    ApiResponse_CsrfResponseData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: CSRF トークンデータ
-          required:
-          - token
-          properties:
-            token:
-              type: string
-    ApiResponse_DashboardStatsData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ダッシュボード統計データ
-          required:
-          - pending_tasks
-          - my_workflows_in_progress
-          - completed_today
-          properties:
-            pending_tasks:
-              type: integer
-              format: int64
-            my_workflows_in_progress:
-              type: integer
-              format: int64
-            completed_today:
-              type: integer
-              format: int64
-    ApiResponse_DocumentData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ドキュメントデータ
-          required:
-          - id
-          - filename
-          - content_type
-          - size
-          - status
-          - created_at
-          properties:
-            id:
-              type: string
-            filename:
-              type: string
-            content_type:
-              type: string
-            size:
-              type: integer
-              format: int64
-            status:
-              type: string
-            created_at:
-              type: string
-    ApiResponse_DownloadUrlData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ダウンロード URL データ
-          required:
-          - download_url
-          - expires_in
-          properties:
-            download_url:
-              type: string
-            expires_in:
-              type: integer
-              format: int64
-              minimum: 0
-    ApiResponse_FolderData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: フォルダデータ
-          required:
-          - id
-          - name
-          - path
-          - depth
-          - created_at
-          - updated_at
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            parent_id:
-              type:
-              - string
-              - 'null'
-            path:
-              type: string
-            depth:
-              type: integer
-              format: int32
-            created_at:
-              type: string
-            updated_at:
-              type: string
-    ApiResponse_LoginResponseData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ログインレスポンスデータ
-          required:
-          - user
-          properties:
-            user:
-              $ref: '#/components/schemas/LoginUserResponse'
-    ApiResponse_MeResponseData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: 現在のユーザー情報データ
-          required:
-          - id
-          - email
-          - name
-          - tenant_id
-          - tenant_name
-          - roles
-          - permissions
-          properties:
-            id:
-              type: string
-              format: uuid
-            email:
-              type: string
-            name:
-              type: string
-            tenant_id:
-              type: string
-              format: uuid
-            tenant_name:
-              type: string
-            roles:
-              type: array
-              items:
-                type: string
-            permissions:
-              type: array
-              items:
-                type: string
-    ApiResponse_RoleDetailData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ロール詳細データ
-          required:
-          - id
-          - name
-          - permissions
-          - is_system
-          - created_at
-          - updated_at
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            description:
-              type:
-              - string
-              - 'null'
-            permissions:
-              type: array
-              items:
-                type: string
-            is_system:
-              type: boolean
-            created_at:
-              type: string
-            updated_at:
-              type: string
-    ApiResponse_TaskDetailData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: タスク詳細データ
-          required:
-          - step
-          - workflow
-          properties:
-            step:
-              $ref: '#/components/schemas/WorkflowStepData'
-            workflow:
-              $ref: '#/components/schemas/WorkflowData'
-    ApiResponse_UploadUrlData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: Upload URL データ
-          required:
-          - document_id
-          - upload_url
-          - expires_in
-          properties:
-            document_id:
-              type: string
-            upload_url:
-              type: string
-            expires_in:
-              type: integer
-              format: int64
-              minimum: 0
-    ApiResponse_UserDetailData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ユーザー詳細レスポンス
-          required:
-          - id
-          - display_id
-          - display_number
-          - name
-          - email
-          - status
-          - roles
-          - permissions
-          - tenant_name
-          properties:
-            id:
-              type: string
-            display_id:
-              type: string
-            display_number:
-              type: integer
-              format: int64
-            name:
-              type: string
-            email:
-              type: string
-            status:
-              type: string
-            roles:
-              type: array
-              items:
-                type: string
-            permissions:
-              type: array
-              items:
-                type: string
-            tenant_name:
-              type: string
-    ApiResponse_UserResponseData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ユーザー簡易レスポンス（更新・ステータス変更用）
-          required:
-          - id
-          - name
-          - email
-          - status
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            email:
-              type: string
-            status:
-              type: string
-    ApiResponse_ValidationResultData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: バリデーション結果データ
-          required:
-          - valid
-          - errors
-          properties:
-            valid:
-              type: boolean
-            errors:
-              type: array
-              items:
-                $ref: '#/components/schemas/ValidationErrorData'
-    ApiResponse_Vec_DocumentData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: ドキュメントデータ
-            required:
-            - id
-            - filename
-            - content_type
-            - size
-            - status
-            - created_at
-            properties:
-              id:
-                type: string
-              filename:
-                type: string
-              content_type:
-                type: string
-              size:
-                type: integer
-                format: int64
-              status:
-                type: string
-              created_at:
-                type: string
-    ApiResponse_Vec_FolderData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: フォルダデータ
-            required:
-            - id
-            - name
-            - path
-            - depth
-            - created_at
-            - updated_at
-            properties:
-              id:
-                type: string
-              name:
-                type: string
-              parent_id:
-                type:
-                - string
-                - 'null'
-              path:
-                type: string
-              depth:
-                type: integer
-                format: int32
-              created_at:
-                type: string
-              updated_at:
-                type: string
-    ApiResponse_Vec_RoleItemData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: ロール一覧の要素データ
-            required:
-            - id
-            - name
-            - permissions
-            - is_system
-            - user_count
-            properties:
-              id:
-                type: string
-              name:
-                type: string
-              description:
-                type:
-                - string
-                - 'null'
-              permissions:
-                type: array
-                items:
-                  type: string
-              is_system:
-                type: boolean
-              user_count:
-                type: integer
-                format: int64
-    ApiResponse_Vec_TaskItemData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: タスク一覧の要素データ
-            required:
-            - id
-            - display_number
-            - step_name
-            - status
-            - version
-            - created_at
-            - workflow
-            properties:
-              id:
-                type: string
-              display_number:
-                type: integer
-                format: int64
-              step_name:
-                type: string
-              status:
-                type: string
-              version:
-                type: integer
-                format: int32
-              assigned_to:
-                oneOf:
-                - type: 'null'
-                - $ref: '#/components/schemas/UserRefData'
-              due_date:
-                type:
-                - string
-                - 'null'
-              started_at:
-                type:
-                - string
-                - 'null'
-              created_at:
-                type: string
-              workflow:
-                $ref: '#/components/schemas/TaskWorkflowSummaryData'
-    ApiResponse_Vec_UserItemData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: ユーザー一覧の要素データ
-            required:
-            - id
-            - display_id
-            - display_number
-            - name
-            - email
-            - status
-            - roles
-            properties:
-              id:
-                type: string
-              display_id:
-                type: string
-              display_number:
-                type: integer
-                format: int64
-              name:
-                type: string
-              email:
-                type: string
-              status:
-                type: string
-              roles:
-                type: array
-                items:
-                  type: string
-    ApiResponse_Vec_WorkflowCommentData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: ワークフローコメントデータ
-            required:
-            - id
-            - posted_by
-            - body
-            - created_at
-            properties:
-              id:
-                type: string
-              posted_by:
-                $ref: '#/components/schemas/UserRefData'
-              body:
-                type: string
-              created_at:
-                type: string
-    ApiResponse_Vec_WorkflowDefinitionData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: ワークフロー定義データ
-            required:
-            - id
-            - name
-            - version
-            - definition
-            - status
-            - created_by
-            - created_at
-            - updated_at
-            properties:
-              id:
-                type: string
-              name:
-                type: string
-              description:
-                type:
-                - string
-                - 'null'
-              version:
-                type: integer
-                format: int32
-              definition: {}
-              status:
-                type: string
-              created_by:
-                type: string
-              created_at:
-                type: string
-              updated_at:
-                type: string
-    ApiResponse_Vec_WorkflowSummaryData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: array
-          items:
-            type: object
-            description: |-
-              ワークフロー一覧用データ（ステップなし）
-
-              一覧 API のレスポンスで使用。`steps` フィールドを含まない。
-            required:
-            - id
-            - display_id
-            - display_number
-            - title
-            - definition_id
-            - status
-            - version
-            - form_data
-            - initiated_by
-            - created_at
-            - updated_at
-            properties:
-              id:
-                type: string
-              display_id:
-                type: string
-              display_number:
-                type: integer
-                format: int64
-              title:
-                type: string
-              definition_id:
-                type: string
-              status:
-                type: string
-              version:
-                type: integer
-                format: int32
-              form_data: {}
-              initiated_by:
-                $ref: '#/components/schemas/UserRefData'
-              current_step_id:
-                type:
-                - string
-                - 'null'
-              submitted_at:
-                type:
-                - string
-                - 'null'
-              completed_at:
-                type:
-                - string
-                - 'null'
-              created_at:
-                type: string
-              updated_at:
-                type: string
-    ApiResponse_WorkflowCommentData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ワークフローコメントデータ
-          required:
-          - id
-          - posted_by
-          - body
-          - created_at
-          properties:
-            id:
-              type: string
-            posted_by:
-              $ref: '#/components/schemas/UserRefData'
-            body:
-              type: string
-            created_at:
-              type: string
-    ApiResponse_WorkflowData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: |-
-            ワークフロー詳細用データ（ステップ付き）
-
-            詳細 API およびコマンド系 API のレスポンスで使用。
-          required:
-          - id
-          - display_id
-          - display_number
-          - title
-          - definition_id
-          - status
-          - version
-          - form_data
-          - initiated_by
-          - steps
-          - created_at
-          - updated_at
-          properties:
-            id:
-              type: string
-            display_id:
-              type: string
-            display_number:
-              type: integer
-              format: int64
-            title:
-              type: string
-            definition_id:
-              type: string
-            status:
-              type: string
-            version:
-              type: integer
-              format: int32
-            form_data: {}
-            initiated_by:
-              $ref: '#/components/schemas/UserRefData'
-            current_step_id:
-              type:
-              - string
-              - 'null'
-            steps:
-              type: array
-              items:
-                $ref: '#/components/schemas/WorkflowStepData'
-            submitted_at:
-              type:
-              - string
-              - 'null'
-            completed_at:
-              type:
-              - string
-              - 'null'
-            created_at:
-              type: string
-            updated_at:
-              type: string
-    ApiResponse_WorkflowDefinitionData:
-      type: object
-      description: |-
-        公開 API の統一レスポンス型
-
-        すべての公開 API エンドポイントは `{ "data": T }` 形式でレスポンスを返す。
-        この型は以下の場所で使用される:
-        - Core Service ハンドラ（Serialize でレスポンスを返す）
-        - BFF ハンドラ（Serialize でクライアントにレスポンスを返す）
-        - BFF クライアント（Deserialize で Core Service のレスポンスを受け取る）
-
-        ## 使用例
-
-        ```
-        use ringiflow_shared::ApiResponse;
-
-        let response = ApiResponse::new("hello");
-        assert_eq!(response.data, "hello");
-        ```
-      required:
-      - data
-      properties:
-        data:
-          type: object
-          description: ワークフロー定義データ
-          required:
-          - id
-          - name
-          - version
-          - definition
-          - status
-          - created_by
-          - created_at
-          - updated_at
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            description:
-              type:
-              - string
-              - 'null'
-            version:
-              type: integer
-              format: int32
-            definition: {}
-            status:
-              type: string
-            created_by:
-              type: string
-            created_at:
-              type: string
-            updated_at:
-              type: string
     ApproveRejectRequest:
       type: object
       description: ステップ承認/却下リクエスト（BFF 公開 API）
@@ -3101,6 +1912,33 @@ components:
         role_id:
           type: string
           format: uuid
+    CreateUserResponseData:
+      type: object
+      description: ユーザー作成レスポンス（初期パスワード付き）
+      required:
+      - id
+      - display_id
+      - display_number
+      - name
+      - email
+      - role
+      - initial_password
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        initial_password:
+          type: string
     CreateWorkflowRequest:
       type: object
       description: ワークフロー作成リクエスト（BFF 公開 API）
@@ -3118,6 +1956,96 @@ components:
           description: ワークフロータイトル
         form_data:
           description: フォームデータ
+    CsrfResponseData:
+      type: object
+      description: CSRF トークンデータ
+      required:
+      - token
+      properties:
+        token:
+          type: string
+    DashboardStatsData:
+      type: object
+      description: ダッシュボード統計データ
+      required:
+      - pending_tasks
+      - my_workflows_in_progress
+      - completed_today
+      properties:
+        pending_tasks:
+          type: integer
+          format: int64
+        my_workflows_in_progress:
+          type: integer
+          format: int64
+        completed_today:
+          type: integer
+          format: int64
+    DocumentData:
+      type: object
+      description: ドキュメントデータ
+      required:
+      - id
+      - filename
+      - content_type
+      - size
+      - status
+      - created_at
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        content_type:
+          type: string
+        size:
+          type: integer
+          format: int64
+        status:
+          type: string
+        created_at:
+          type: string
+    DownloadUrlData:
+      type: object
+      description: ダウンロード URL データ
+      required:
+      - download_url
+      - expires_in
+      properties:
+        download_url:
+          type: string
+        expires_in:
+          type: integer
+          format: int64
+          minimum: 0
+    FolderData:
+      type: object
+      description: フォルダデータ
+      required:
+      - id
+      - name
+      - path
+      - depth
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        parent_id:
+          type:
+          - string
+          - 'null'
+        path:
+          type: string
+        depth:
+          type: integer
+          format: int32
+        created_at:
+          type: string
+        updated_at:
+          type: string
     LoginRequest:
       type: object
       description: ログインリクエスト
@@ -3129,6 +2057,14 @@ components:
           type: string
         password:
           type: string
+    LoginResponseData:
+      type: object
+      description: ログインレスポンスデータ
+      required:
+      - user
+      properties:
+        user:
+          $ref: '#/components/schemas/LoginUserResponse'
     LoginUserResponse:
       type: object
       description: ログインユーザー情報
@@ -3153,28 +2089,59 @@ components:
           type: array
           items:
             type: string
+    MeResponseData:
+      type: object
+      description: 現在のユーザー情報データ
+      required:
+      - id
+      - email
+      - name
+      - tenant_id
+      - tenant_name
+      - roles
+      - permissions
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        tenant_id:
+          type: string
+          format: uuid
+        tenant_name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
     PaginatedResponse_AuditLogItemData:
       type: object
       description: |-
         ページネーション付きレスポンス
 
-        `ApiResponse<T>` が単一データ用であるのに対し、
-        `PaginatedResponse<T>` はリスト + カーソルのページネーション形式。
+        リスト + カーソルのページネーション形式。
 
         ## JSON 形式
 
         ```json
         {
-          "data": [...],
+          "items": [...],
           "next_cursor": "opaque-cursor-string"
         }
         ```
 
         `next_cursor` が `null` の場合は最後のページを意味する。
       required:
-      - data
+      - items
       properties:
-        data:
+        items:
           type: array
           items:
             type: object
@@ -3347,6 +2314,62 @@ components:
           type: integer
           format: int32
           description: 楽観的ロック用バージョン
+    RoleDetailData:
+      type: object
+      description: ロール詳細データ
+      required:
+      - id
+      - name
+      - permissions
+      - is_system
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    RoleItemData:
+      type: object
+      description: ロール一覧の要素データ
+      required:
+      - id
+      - name
+      - permissions
+      - is_system
+      - user_count
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        permissions:
+          type: array
+          items:
+            type: string
+        is_system:
+          type: boolean
+        user_count:
+          type: integer
+          format: int64
     StepApproverRequest:
       type: object
       description: ステップ承認者リクエスト（BFF 公開 API）
@@ -3372,6 +2395,57 @@ components:
           items:
             $ref: '#/components/schemas/StepApproverRequest'
           description: 各承認ステップの承認者リスト
+    TaskDetailData:
+      type: object
+      description: タスク詳細データ
+      required:
+      - step
+      - workflow
+      properties:
+        step:
+          $ref: '#/components/schemas/WorkflowStepData'
+        workflow:
+          $ref: '#/components/schemas/WorkflowData'
+    TaskItemData:
+      type: object
+      description: タスク一覧の要素データ
+      required:
+      - id
+      - display_number
+      - step_name
+      - status
+      - version
+      - created_at
+      - workflow
+      properties:
+        id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        step_name:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+          format: int32
+        assigned_to:
+          oneOf:
+          - type: 'null'
+          - $ref: '#/components/schemas/UserRefData'
+        due_date:
+          type:
+          - string
+          - 'null'
+        started_at:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+        workflow:
+          $ref: '#/components/schemas/TaskWorkflowSummaryData'
     TaskWorkflowSummaryData:
       type: object
       description: ワークフロー概要データ（タスク一覧用）
@@ -3474,6 +2548,88 @@ components:
       properties:
         status:
           type: string
+    UploadUrlData:
+      type: object
+      description: Upload URL データ
+      required:
+      - document_id
+      - upload_url
+      - expires_in
+      properties:
+        document_id:
+          type: string
+        upload_url:
+          type: string
+        expires_in:
+          type: integer
+          format: int64
+          minimum: 0
+    UserDetailData:
+      type: object
+      description: ユーザー詳細レスポンス
+      required:
+      - id
+      - display_id
+      - display_number
+      - name
+      - email
+      - status
+      - roles
+      - permissions
+      - tenant_name
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        tenant_name:
+          type: string
+    UserItemData:
+      type: object
+      description: ユーザー一覧の要素データ
+      required:
+      - id
+      - display_id
+      - display_number
+      - name
+      - email
+      - status
+      - roles
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: string
+        status:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
     UserRefData:
       type: object
       description: ユーザー参照データ（フロントエンドへの Serialize 用）
@@ -3484,6 +2640,23 @@ components:
         id:
           type: string
         name:
+          type: string
+    UserResponseData:
+      type: object
+      description: ユーザー簡易レスポンス（更新・ステータス変更用）
+      required:
+      - id
+      - name
+      - email
+      - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        status:
           type: string
     ValidateDefinitionRequest:
       type: object
@@ -3508,6 +2681,36 @@ components:
           type:
           - string
           - 'null'
+    ValidationResultData:
+      type: object
+      description: バリデーション結果データ
+      required:
+      - valid
+      - errors
+      properties:
+        valid:
+          type: boolean
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationErrorData'
+    WorkflowCommentData:
+      type: object
+      description: ワークフローコメントデータ
+      required:
+      - id
+      - posted_by
+      - body
+      - created_at
+      properties:
+        id:
+          type: string
+        posted_by:
+          $ref: '#/components/schemas/UserRefData'
+        body:
+          type: string
+        created_at:
+          type: string
     WorkflowData:
       type: object
       description: |-
@@ -3567,6 +2770,39 @@ components:
           type: string
         updated_at:
           type: string
+    WorkflowDefinitionData:
+      type: object
+      description: ワークフロー定義データ
+      required:
+      - id
+      - name
+      - version
+      - definition
+      - status
+      - created_by
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+          format: int32
+        definition: {}
+        status:
+          type: string
+        created_by:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
     WorkflowStepData:
       type: object
       description: ワークフローステップデータ
@@ -3617,6 +2853,60 @@ components:
           - string
           - 'null'
         started_at:
+          type:
+          - string
+          - 'null'
+        completed_at:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    WorkflowSummaryData:
+      type: object
+      description: |-
+        ワークフロー一覧用データ（ステップなし）
+
+        一覧 API のレスポンスで使用。`steps` フィールドを含まない。
+      required:
+      - id
+      - display_id
+      - display_number
+      - title
+      - definition_id
+      - status
+      - version
+      - form_data
+      - initiated_by
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+        display_id:
+          type: string
+        display_number:
+          type: integer
+          format: int64
+        title:
+          type: string
+        definition_id:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+          format: int32
+        form_data: {}
+        initiated_by:
+          $ref: '#/components/schemas/UserRefData'
+        current_step_id:
+          type:
+          - string
+          - 'null'
+        submitted_at:
           type:
           - string
           - 'null'

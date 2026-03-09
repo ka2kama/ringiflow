@@ -21,7 +21,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_infra::SessionManager;
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -101,7 +101,7 @@ pub struct ListDocumentsQuery {
    security(("session_auth" = [])),
    request_body = RequestUploadUrlRequest,
    responses(
-      (status = 200, description = "Upload URL 発行成功", body = ApiResponse<UploadUrlData>),
+      (status = 200, description = "Upload URL 発行成功", body = UploadUrlData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
@@ -125,18 +125,16 @@ pub async fn request_upload_url(
         uploaded_by: *session_data.user_id().as_uuid(),
     };
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .request_upload_url(&core_request)
         .await
         .map_err(|e| log_and_convert_core_error("Upload URL 発行", e))?;
-
-    let dto = core_response.data;
-    let response = ApiResponse::new(UploadUrlData {
+    let response = UploadUrlData {
         document_id: dto.document_id.to_string(),
         upload_url:  dto.upload_url,
         expires_in:  dto.expires_in,
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -150,7 +148,7 @@ pub async fn request_upload_url(
    security(("session_auth" = [])),
    params(("document_id" = Uuid, Path, description = "ドキュメントID")),
    responses(
-      (status = 200, description = "アップロード確認成功", body = ApiResponse<DocumentData>),
+      (status = 200, description = "アップロード確認成功", body = DocumentData),
       (status = 400, description = "ステータスエラー / S3 にファイルが存在しない", body = ErrorResponse),
       (status = 401, description = "認証エラー", body = ErrorResponse),
       (status = 404, description = "ドキュメントが見つからない", body = ErrorResponse)
@@ -165,21 +163,19 @@ pub async fn confirm_upload(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .confirm_upload(document_id, *session_data.tenant_id().as_uuid())
         .await
         .map_err(|e| log_and_convert_core_error("アップロード確認", e))?;
-
-    let dto = core_response.data;
-    let response = ApiResponse::new(DocumentData {
+    let response = DocumentData {
         id:           dto.id.to_string(),
         filename:     dto.filename,
         content_type: dto.content_type,
         size:         dto.size,
         status:       dto.status,
         created_at:   dto.created_at,
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -193,7 +189,7 @@ pub async fn confirm_upload(
    security(("session_auth" = [])),
    params(("document_id" = Uuid, Path, description = "ドキュメントID")),
    responses(
-      (status = 200, description = "ダウンロード URL 発行成功", body = ApiResponse<DownloadUrlData>),
+      (status = 200, description = "ダウンロード URL 発行成功", body = DownloadUrlData),
       (status = 400, description = "ステータスエラー", body = ErrorResponse),
       (status = 401, description = "認証エラー", body = ErrorResponse),
       (status = 404, description = "ドキュメントが見つからない", body = ErrorResponse)
@@ -208,17 +204,15 @@ pub async fn generate_download_url(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .generate_download_url(document_id, *session_data.tenant_id().as_uuid())
         .await
         .map_err(|e| log_and_convert_core_error("ダウンロード URL 発行", e))?;
-
-    let dto = core_response.data;
-    let response = ApiResponse::new(DownloadUrlData {
+    let response = DownloadUrlData {
         download_url: dto.download_url,
         expires_in:   dto.expires_in,
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -275,7 +269,7 @@ pub async fn delete_document(
    security(("session_auth" = [])),
    params(ListDocumentsQuery),
    responses(
-      (status = 200, description = "ドキュメント一覧", body = ApiResponse<Vec<DocumentData>>),
+      (status = 200, description = "ドキュメント一覧", body = Vec<DocumentData>),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
@@ -295,7 +289,6 @@ pub async fn list_documents(
         .map_err(|e| log_and_convert_core_error("ドキュメント一覧取得", e))?;
 
     let documents: Vec<DocumentData> = core_response
-        .data
         .into_iter()
         .map(|dto| DocumentData {
             id:           dto.id.to_string(),
@@ -307,7 +300,7 @@ pub async fn list_documents(
         })
         .collect();
 
-    Ok((StatusCode::OK, Json(ApiResponse::new(documents))).into_response())
+    Ok((StatusCode::OK, Json(documents)).into_response())
 }
 
 /// GET /api/v1/workflows/{workflow_instance_id}/attachments
@@ -320,7 +313,7 @@ pub async fn list_documents(
    security(("session_auth" = [])),
    params(("workflow_instance_id" = Uuid, Path, description = "ワークフローインスタンスID")),
    responses(
-      (status = 200, description = "添付ファイル一覧", body = ApiResponse<Vec<DocumentData>>),
+      (status = 200, description = "添付ファイル一覧", body = Vec<DocumentData>),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
@@ -340,7 +333,6 @@ pub async fn list_workflow_attachments(
         .map_err(|e| log_and_convert_core_error("ワークフロー添付ファイル一覧取得", e))?;
 
     let documents: Vec<DocumentData> = core_response
-        .data
         .into_iter()
         .map(|dto| DocumentData {
             id:           dto.id.to_string(),
@@ -352,5 +344,5 @@ pub async fn list_workflow_attachments(
         })
         .collect();
 
-    Ok((StatusCode::OK, Json(ApiResponse::new(documents))).into_response())
+    Ok((StatusCode::OK, Json(documents)).into_response())
 }

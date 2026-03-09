@@ -64,7 +64,7 @@ test.describe("デザイナー定義ワークフローフロー", () => {
     });
     expect(csrfResponse.status()).toBe(200);
     const csrfBody = await csrfResponse.json();
-    const csrfToken = csrfBody.data.token;
+    const csrfToken = csrfBody.token;
 
     const apiHeaders = {
       "X-Tenant-ID": TENANT_ID,
@@ -79,7 +79,7 @@ test.describe("デザイナー定義ワークフローフロー", () => {
     expect(createResponse.status()).toBe(201);
 
     const createBody = await createResponse.json();
-    const definitionId = createBody.data.id;
+    const definitionId = createBody.id;
 
     // Given: 作成した定義を公開する
     const publishResponse = await page.request.post(

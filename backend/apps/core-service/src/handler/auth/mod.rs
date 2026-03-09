@@ -25,7 +25,7 @@ use ringiflow_domain::{
     value_objects::{DisplayId, DisplayNumber, UserName, display_prefix},
 };
 use ringiflow_infra::repository::{TenantRepository, UserRepository};
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -251,8 +251,7 @@ pub async fn list_users(
         })
         .collect();
 
-    let response = ApiResponse::new(items);
-    (StatusCode::OK, Json(response)).into_response()
+    (StatusCode::OK, Json(items)).into_response()
 }
 
 /// GET /internal/users/by-email
@@ -294,7 +293,7 @@ pub async fn get_user_by_email(
         .await
     {
         Ok(Some(user)) => {
-            let response = ApiResponse::new(UserResponse::from(&user));
+            let response = UserResponse::from(&user);
             (StatusCode::OK, Json(response)).into_response()
         }
         Ok(None) => (
@@ -371,7 +370,7 @@ pub async fn get_user(
         }
     };
 
-    let response = ApiResponse::new(build_user_with_permissions(&user, &roles, tenant_name));
+    let response = build_user_with_permissions(&user, &roles, tenant_name);
     (StatusCode::OK, Json(response)).into_response()
 }
 
@@ -408,14 +407,14 @@ pub async fn create_user(
 
     let (user, role) = state.usecase.create_user(input).await?;
 
-    let response = ApiResponse::new(CreateUserResponseDto {
+    let response = CreateUserResponseDto {
         id: *user.id().as_uuid(),
         display_id: DisplayId::new(display_prefix::USER, user.display_number()).to_string(),
         display_number: user.display_number().as_i64(),
         name: user.name().as_str().to_string(),
         email: user.email().as_str().to_string(),
         role: role.name().to_string(),
-    });
+    };
 
     Ok((StatusCode::CREATED, Json(response)))
 }
@@ -467,7 +466,7 @@ pub async fn get_user_by_display_number(
         .map(|t| t.name().to_string())
         .unwrap_or_default();
 
-    let response = ApiResponse::new(build_user_with_permissions(&user, &roles, tenant_name));
+    let response = build_user_with_permissions(&user, &roles, tenant_name);
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -510,7 +509,7 @@ pub async fn update_user(
 
     let user = state.usecase.update_user(input).await?;
 
-    let response = ApiResponse::new(UserResponse::from(&user));
+    let response = UserResponse::from(&user);
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -553,7 +552,7 @@ pub async fn update_user_status(
 
     let user = state.usecase.update_user_status(input).await?;
 
-    let response = ApiResponse::new(UserResponse::from(&user));
+    let response = UserResponse::from(&user);
     Ok((StatusCode::OK, Json(response)))
 }
 

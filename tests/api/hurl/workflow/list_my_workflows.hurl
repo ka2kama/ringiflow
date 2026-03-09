@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # ワークフローを作成（一覧に含まれることを保証するため）
 POST {{bff_url}}/api/v1/workflows
@@ -59,24 +59,24 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # 配列型で 1 件以上
-jsonpath "$.data" isCollection
-jsonpath "$.data" count >= 1
+jsonpath "$" isCollection
+jsonpath "$" count >= 1
 
 # 先頭要素の WorkflowInstance required フィールド検証
 # 注: 一覧にはシードデータ + テスト作成分が含まれるため、
 # data[0] がどのワークフローかは不定。構造検証 + 決定的なフィールドのみ == を使用
-jsonpath "$.data[0].id" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data[0].display_id" matches "^WF-\\d+$"
-jsonpath "$.data[0].display_number" >= 1
-jsonpath "$.data[0].title" isString
-jsonpath "$.data[0].definition_id" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data[0].status" isString
-jsonpath "$.data[0].version" >= 1
-jsonpath "$.data[0].form_data" exists
-jsonpath "$.data[0].initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data[0].initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[0].id" matches "^[a-f0-9-]{36}$"
+jsonpath "$[0].display_id" matches "^WF-\\d+$"
+jsonpath "$[0].display_number" >= 1
+jsonpath "$[0].title" isString
+jsonpath "$[0].definition_id" matches "^[a-f0-9-]{36}$"
+jsonpath "$[0].status" isString
+jsonpath "$[0].version" >= 1
+jsonpath "$[0].form_data" exists
+jsonpath "$[0].initiated_by.id" == "{{admin_id}}"
+jsonpath "$[0].initiated_by.name" == "{{admin_name}}"
+jsonpath "$[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # 一覧レスポンスには steps フィールドが含まれないことを検証
-jsonpath "$.data[0].steps" not exists
+jsonpath "$[0].steps" not exists

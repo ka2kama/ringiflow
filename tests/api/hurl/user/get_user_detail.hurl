@@ -33,16 +33,16 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # required フィールド
-jsonpath "$.data.id" == "{{admin_id}}"
-jsonpath "$.data.display_id" matches "^USR-\\d{6}$"
-jsonpath "$.data.display_number" == 1
-jsonpath "$.data.name" == "{{admin_name}}"
-jsonpath "$.data.email" == "{{admin_email}}"
-jsonpath "$.data.status" == "active"
-jsonpath "$.data.roles" isCollection
-jsonpath "$.data.roles" count >= 1
-jsonpath "$.data.permissions" isCollection
-jsonpath "$.data.tenant_name" == "Development Tenant"
+jsonpath "$.id" == "{{admin_id}}"
+jsonpath "$.display_id" matches "^USR-\\d{6}$"
+jsonpath "$.display_number" == 1
+jsonpath "$.name" == "{{admin_name}}"
+jsonpath "$.email" == "{{admin_email}}"
+jsonpath "$.status" == "active"
+jsonpath "$.roles" isCollection
+jsonpath "$.roles" count >= 1
+jsonpath "$.permissions" isCollection
+jsonpath "$.tenant_name" == "Development Tenant"
 
 # =============================================================================
 # 異常系: 存在しないユーザーは 404

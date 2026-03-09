@@ -283,8 +283,8 @@ async fn test_get_user_by_email_ユーザーが見つかる() {
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-    assert_eq!(json["data"]["email"], "user@example.com");
-    assert_eq!(json["data"]["status"], "active");
+    assert_eq!(json["email"], "user@example.com");
+    assert_eq!(json["status"], "active");
 }
 
 #[tokio::test]
@@ -361,7 +361,7 @@ async fn test_get_user_ユーザー情報を取得できる() {
         .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-    assert_eq!(json["data"]["tenant_name"], "Test Tenant");
+    assert_eq!(json["tenant_name"], "Test Tenant");
 }
 
 #[tokio::test]

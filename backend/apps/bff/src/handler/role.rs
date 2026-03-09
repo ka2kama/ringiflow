@@ -21,7 +21,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::audit_log::{AuditAction, AuditLog};
 use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -93,7 +93,7 @@ pub struct RoleDetailData {
    tag = "roles",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "ロール一覧", body = ApiResponse<Vec<RoleItemData>>),
+      (status = 200, description = "ロール一覧", body = Vec<RoleItemData>),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
@@ -112,7 +112,6 @@ pub async fn list_roles(
         .map_err(|e| log_and_convert_core_error("ロール一覧取得", e))?;
 
     let items: Vec<RoleItemData> = core_response
-        .data
         .into_iter()
         .map(|dto| RoleItemData {
             id:          dto.id.to_string(),
@@ -123,8 +122,7 @@ pub async fn list_roles(
             user_count:  dto.user_count,
         })
         .collect();
-    let response = ApiResponse::new(items);
-    Ok((StatusCode::OK, Json(response)).into_response())
+    Ok((StatusCode::OK, Json(items)).into_response())
 }
 
 /// GET /api/v1/roles/{role_id}
@@ -137,7 +135,7 @@ pub async fn list_roles(
    security(("session_auth" = [])),
    params(("role_id" = Uuid, Path, description = "ロールID")),
    responses(
-      (status = 200, description = "ロール詳細", body = ApiResponse<RoleDetailData>),
+      (status = 200, description = "ロール詳細", body = RoleDetailData),
       (status = 404, description = "ロールが見つからない", body = ErrorResponse)
    )
 )]
@@ -150,14 +148,12 @@ pub async fn get_role(
 ) -> Result<Response, Response> {
     let session_data = authenticate(state.session_manager.as_ref(), &headers, &jar).await?;
 
-    let core_response = state
+    let dto = state
         .core_service_client
         .get_role(role_id, *session_data.tenant_id().as_uuid())
         .await
         .map_err(|e| log_and_convert_core_error("ロール詳細取得", e))?;
-
-    let dto = core_response.data;
-    let response = ApiResponse::new(RoleDetailData {
+    let response = RoleDetailData {
         id:          dto.id.to_string(),
         name:        dto.name,
         description: dto.description,
@@ -165,7 +161,7 @@ pub async fn get_role(
         is_system:   dto.is_system,
         created_at:  dto.created_at,
         updated_at:  dto.updated_at,
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -179,7 +175,7 @@ pub async fn get_role(
    security(("session_auth" = [])),
    request_body = CreateRoleRequest,
    responses(
-      (status = 201, description = "ロール作成成功", body = ApiResponse<RoleDetailData>),
+      (status = 201, description = "ロール作成成功", body = RoleDetailData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 409, description = "ロール名重複", body = ErrorResponse)
    )
@@ -201,9 +197,7 @@ pub async fn create_role(
     };
 
     match state.core_service_client.create_role(&core_request).await {
-        Ok(core_response) => {
-            let dto = core_response.data;
-
+        Ok(dto) => {
             // 監査ログ記録
             let audit_log = AuditLog::new_success(
                 session_data.tenant_id().clone(),
@@ -222,7 +216,7 @@ pub async fn create_role(
                 tracing::error!("監査ログ記録に失敗: {}", e);
             }
 
-            let response = ApiResponse::new(RoleDetailData {
+            let response = RoleDetailData {
                 id:          dto.id.to_string(),
                 name:        dto.name,
                 description: dto.description,
@@ -230,7 +224,7 @@ pub async fn create_role(
                 is_system:   dto.is_system,
                 created_at:  dto.created_at,
                 updated_at:  dto.updated_at,
-            });
+            };
             Ok((StatusCode::CREATED, Json(response)).into_response())
         }
         Err(e) => Err(log_and_convert_core_error("ロール作成", e)),
@@ -248,7 +242,7 @@ pub async fn create_role(
    params(("role_id" = Uuid, Path, description = "ロールID")),
    request_body = UpdateRoleRequest,
    responses(
-      (status = 200, description = "ロール更新成功", body = ApiResponse<RoleDetailData>),
+      (status = 200, description = "ロール更新成功", body = RoleDetailData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 404, description = "ロールが見つからない", body = ErrorResponse)
    )
@@ -274,9 +268,7 @@ pub async fn update_role(
         .update_role(role_id, &core_request)
         .await
     {
-        Ok(core_response) => {
-            let dto = core_response.data;
-
+        Ok(dto) => {
             // 監査ログ記録
             let audit_log = AuditLog::new_success(
                 session_data.tenant_id().clone(),
@@ -295,7 +287,7 @@ pub async fn update_role(
                 tracing::error!("監査ログ記録に失敗: {}", e);
             }
 
-            let response = ApiResponse::new(RoleDetailData {
+            let response = RoleDetailData {
                 id:          dto.id.to_string(),
                 name:        dto.name,
                 description: dto.description,
@@ -303,7 +295,7 @@ pub async fn update_role(
                 is_system:   dto.is_system,
                 created_at:  dto.created_at,
                 updated_at:  dto.updated_at,
-            });
+            };
             Ok((StatusCode::OK, Json(response)).into_response())
         }
         Err(e) => Err(log_and_convert_core_error("ロール更新", e)),

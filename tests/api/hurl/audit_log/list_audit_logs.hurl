@@ -27,7 +27,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 準備: 監査ログを生成するためにロールを 2 件作成する
@@ -71,19 +71,19 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # PaginatedResponse 構造
-jsonpath "$.data" isCollection
-jsonpath "$.data" count >= 2
+jsonpath "$.items" isCollection
+jsonpath "$.items" count >= 2
 
-# 最新エントリ（data[0]）の required フィールド検証（AuditLogItemData）
-# 監査ログは新しい順 → data[0] は直近のロール作成
-jsonpath "$.data[0].id" exists
-jsonpath "$.data[0].actor_id" == "{{admin_id}}"
-jsonpath "$.data[0].actor_name" == "{{admin_name}}"
-jsonpath "$.data[0].action" == "role.create"
-jsonpath "$.data[0].result" == "success"
-jsonpath "$.data[0].resource_type" == "role"
-jsonpath "$.data[0].resource_id" exists
-jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+# 最新エントリ（items[0]）の required フィールド検証（AuditLogItemData）
+# 監査ログは新しい順 → items[0] は直近のロール作成
+jsonpath "$.items[0].id" exists
+jsonpath "$.items[0].actor_id" == "{{admin_id}}"
+jsonpath "$.items[0].actor_name" == "{{admin_name}}"
+jsonpath "$.items[0].action" == "role.create"
+jsonpath "$.items[0].result" == "success"
+jsonpath "$.items[0].resource_type" == "role"
+jsonpath "$.items[0].resource_id" exists
+jsonpath "$.items[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 正常系: limit パラメータでページネーションが機能する
@@ -98,8 +98,8 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
-jsonpath "$.data" count == 1
+jsonpath "$.items" isCollection
+jsonpath "$.items" count == 1
 jsonpath "$.next_cursor" != null
 
 # =============================================================================
@@ -115,7 +115,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.items" isCollection
 
 # =============================================================================
 # 異常系: ページネーション無効値 — limit=-1
@@ -130,7 +130,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.items" isCollection
 
 # =============================================================================
 # 準正常系: 不正な cursor パラメータで 400 Bad Request が返る

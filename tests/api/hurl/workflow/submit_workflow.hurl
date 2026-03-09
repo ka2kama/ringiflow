@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # ワークフローを作成
 POST {{bff_url}}/api/v1/workflows
@@ -45,9 +45,9 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-workflow_id: jsonpath "$.data.id"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_display_number: jsonpath "$.data.display_number"
+workflow_id: jsonpath "$.id"
+workflow_display_id: jsonpath "$.display_id"
+workflow_display_number: jsonpath "$.display_number"
 
 # =============================================================================
 # 正常系: ワークフローを申請できる
@@ -74,16 +74,16 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # ワークフローのステータスが更新される
-jsonpath "$.data.id" == "{{workflow_id}}"
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "経費申請"
-jsonpath "$.data.status" == "InProgress"
-jsonpath "$.data.version" == 2
-jsonpath "$.data.current_step_id" == "approval"
-jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.id" == "{{workflow_id}}"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "経費申請"
+jsonpath "$.status" == "InProgress"
+jsonpath "$.version" == 2
+jsonpath "$.current_step_id" == "approval"
+jsonpath "$.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
 
 # =============================================================================
 # 通知検証: 承認依頼メールが Mailpit に送信されている

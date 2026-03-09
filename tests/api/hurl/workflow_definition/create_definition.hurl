@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 正常系: ワークフロー定義を作成できる
@@ -60,14 +60,14 @@ Content-Type: application/json
 HTTP 201
 [Asserts]
 # required フィールド（WorkflowDefinitionData）
-jsonpath "$.data.id" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data.name" == "テスト申請"
-jsonpath "$.data.version" == 1
-jsonpath "$.data.status" == "Draft"
-jsonpath "$.data.definition" exists
-jsonpath "$.data.created_by" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" matches "^[a-f0-9-]{36}$"
+jsonpath "$.name" == "テスト申請"
+jsonpath "$.version" == 1
+jsonpath "$.status" == "Draft"
+jsonpath "$.definition" exists
+jsonpath "$.created_by" matches "^[a-f0-9-]{36}$"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド（description は省略時 null）
-jsonpath "$.data.description" exists
+jsonpath "$.description" exists

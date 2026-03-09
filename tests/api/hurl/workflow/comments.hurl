@@ -29,7 +29,7 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Captures]
-admin_csrf_token: jsonpath "$.data.token"
+admin_csrf_token: jsonpath "$.token"
 
 # ワークフローを作成
 POST {{bff_url}}/api/v1/workflows
@@ -48,7 +48,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-workflow_display_number: jsonpath "$.data.display_number"
+workflow_display_number: jsonpath "$.display_number"
 
 # ワークフローを申請（user に割り当て）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -82,11 +82,11 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.data.id" matches "^[0-9a-f]{8}-"
-jsonpath "$.data.posted_by.id" == "{{admin_id}}"
-jsonpath "$.data.posted_by.name" == "{{admin_name}}"
-jsonpath "$.data.body" == "承認をお願いします。至急対応ください。"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" matches "^[0-9a-f]{8}-"
+jsonpath "$.posted_by.id" == "{{admin_id}}"
+jsonpath "$.posted_by.name" == "{{admin_name}}"
+jsonpath "$.body" == "承認をお願いします。至急対応ください。"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 異常系: CSRF トークンなしではコメントを投稿できない
@@ -152,7 +152,7 @@ Cookie: session_id={{user_session_cookie}}
 
 HTTP 200
 [Captures]
-user_csrf_token: jsonpath "$.data.token"
+user_csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 正常系: 承認者（user）がコメントを投稿できる
@@ -172,11 +172,11 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.data.id" matches "^[0-9a-f]{8}-"
-jsonpath "$.data.posted_by.id" == "{{user_id}}"
-jsonpath "$.data.posted_by.name" == "{{user_name}}"
-jsonpath "$.data.body" == "確認しました。問題ありません。"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" matches "^[0-9a-f]{8}-"
+jsonpath "$.posted_by.id" == "{{user_id}}"
+jsonpath "$.posted_by.name" == "{{user_name}}"
+jsonpath "$.body" == "確認しました。問題ありません。"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 正常系: コメント一覧を時系列で取得できる
@@ -191,17 +191,17 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Asserts]
-jsonpath "$.data" count == 2
+jsonpath "$" count == 2
 # 1件目: admin のコメント（先に投稿）
-jsonpath "$.data[0].posted_by.id" == "{{admin_id}}"
-jsonpath "$.data[0].posted_by.name" == "{{admin_name}}"
-jsonpath "$.data[0].body" == "承認をお願いします。至急対応ください。"
-jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[0].posted_by.id" == "{{admin_id}}"
+jsonpath "$[0].posted_by.name" == "{{admin_name}}"
+jsonpath "$[0].body" == "承認をお願いします。至急対応ください。"
+jsonpath "$[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # 2件目: user のコメント（後に投稿）
-jsonpath "$.data[1].posted_by.id" == "{{user_id}}"
-jsonpath "$.data[1].posted_by.name" == "{{user_name}}"
-jsonpath "$.data[1].body" == "確認しました。問題ありません。"
-jsonpath "$.data[1].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[1].posted_by.id" == "{{user_id}}"
+jsonpath "$[1].posted_by.name" == "{{user_name}}"
+jsonpath "$[1].body" == "確認しました。問題ありません。"
+jsonpath "$[1].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 異常系: 存在しないワークフローにはコメントできない

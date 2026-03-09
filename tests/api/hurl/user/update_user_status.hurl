@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # テスト用ユーザーを作成
 POST {{bff_url}}/api/v1/users
@@ -42,7 +42,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-target_user_display_number: jsonpath "$.data.display_number"
+target_user_display_number: jsonpath "$.display_number"
 
 # =============================================================================
 # 正常系: ユーザーを無効化できる
@@ -63,10 +63,10 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（UserResponseData）
-jsonpath "$.data.id" exists
-jsonpath "$.data.name" == "ステータステスト"
-jsonpath "$.data.email" == "status-test-user@example.com"
-jsonpath "$.data.status" == "inactive"
+jsonpath "$.id" exists
+jsonpath "$.name" == "ステータステスト"
+jsonpath "$.email" == "status-test-user@example.com"
+jsonpath "$.status" == "inactive"
 
 # =============================================================================
 # 正常系: ユーザーを再有効化できる
@@ -86,10 +86,10 @@ Content-Type: application/json
 
 HTTP 200
 [Asserts]
-jsonpath "$.data.id" exists
-jsonpath "$.data.name" == "ステータステスト"
-jsonpath "$.data.email" == "status-test-user@example.com"
-jsonpath "$.data.status" == "active"
+jsonpath "$.id" exists
+jsonpath "$.name" == "ステータステスト"
+jsonpath "$.email" == "status-test-user@example.com"
+jsonpath "$.status" == "active"
 
 # =============================================================================
 # 異常系: 存在しないユーザーのステータス変更 → 404

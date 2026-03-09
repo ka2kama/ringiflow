@@ -41,7 +41,7 @@ type alias AuditLogItem =
 {-| 監査ログ一覧（カーソルページネーション付き）
 -}
 type alias AuditLogList =
-    { data : List AuditLogItem
+    { items : List AuditLogItem
     , nextCursor : Maybe String
     }
 
@@ -69,13 +69,13 @@ auditLogItemDecoder =
 
 {-| AuditLogList のデコーダー
 
-`{ "data": [...], "next_cursor": "..." | null }` 形式に対応。
+`{ "items": [...], "next_cursor": "..." | null }` 形式に対応。
 
 -}
 auditLogListDecoder : Decoder AuditLogList
 auditLogListDecoder =
     Decode.succeed AuditLogList
-        |> required "data" (Decode.list auditLogItemDecoder)
+        |> required "items" (Decode.list auditLogItemDecoder)
         |> optional "next_cursor" (Decode.nullable Decode.string) Nothing
 
 
