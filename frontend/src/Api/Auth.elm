@@ -79,7 +79,6 @@ getMe { config, toMsg } =
 {-| CSRF トークンレスポンスのデコーダー
 
 レスポンス形式: `{ "token": "..." }`
-（`Api.get` が `ApiResponse` の `data` ラッパーを自動除去済み）
 
 -}
 csrfTokenDecoder : Decoder String
@@ -92,8 +91,6 @@ csrfTokenDecoder =
 レスポンス形式:
 
     { "id": "...", "email": "...", "name": "...", "tenant_id": "...", "roles": [...] }
-
-（`Api.get` が `ApiResponse` の `data` ラッパーを自動除去済み）
 
 -}
 userDecoder : Decoder User
