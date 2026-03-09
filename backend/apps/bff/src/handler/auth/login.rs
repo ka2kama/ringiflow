@@ -11,7 +11,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::tenant::TenantId;
 use ringiflow_infra::SessionData;
-use ringiflow_shared::{ApiResponse, ErrorResponse, event_log::event, log_business_event};
+use ringiflow_shared::{ErrorResponse, event_log::event, log_business_event};
 use uuid::Uuid;
 
 use super::{
@@ -66,7 +66,7 @@ use crate::{
    tag = "auth",
    request_body = LoginRequest,
    responses(
-      (status = 200, description = "ログイン成功", body = ApiResponse<LoginResponseData>),
+      (status = 200, description = "ログイン成功", body = LoginResponseData),
       (status = 401, description = "認証失敗", body = ErrorResponse),
       (status = 503, description = "サービス利用不可", body = ErrorResponse)
    )
@@ -123,7 +123,7 @@ pub async fn login(
         }
     };
 
-    let user = &user_response.data;
+    let user = &user_response;
 
     // Step 2: Auth Service でパスワードを検証
     if let Err(e) = state
@@ -178,8 +178,8 @@ pub async fn login(
         TenantId::from_uuid(user.tenant_id),
         user.email.clone(),
         user.name.clone(),
-        user_with_roles.data.roles.clone(),
-        user_with_roles.data.permissions.clone(),
+        user_with_roles.roles.clone(),
+        user_with_roles.permissions.clone(),
     );
 
     let session_id = match state.session_manager.create(&session_data).await {
@@ -216,15 +216,15 @@ pub async fn login(
     let jar = jar.add(cookie);
 
     // レスポンスを返す
-    let response = ApiResponse::new(LoginResponseData {
+    let response = LoginResponseData {
         user: LoginUserResponse {
             id:        user.id,
             email:     user.email.clone(),
             name:      user.name.clone(),
             tenant_id: user.tenant_id,
-            roles:     user_with_roles.data.roles,
+            roles:     user_with_roles.roles,
         },
-    });
+    };
 
     log_business_event!(
         event.category = event::category::AUTH,
@@ -380,9 +380,9 @@ mod tests {
             .unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
 
-        assert!(json["data"]["user"]["id"].is_string());
-        assert_eq!(json["data"]["user"]["email"], "user@example.com");
-        assert_eq!(json["data"]["user"]["name"], "Test User");
+        assert!(json["user"]["id"].is_string());
+        assert_eq!(json["user"]["email"], "user@example.com");
+        assert_eq!(json["user"]["name"], "Test User");
     }
 
     #[tokio::test]

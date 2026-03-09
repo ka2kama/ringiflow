@@ -1,7 +1,6 @@
 //! ロール関連の Core Service クライアント
 
 use async_trait::async_trait;
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -22,10 +21,7 @@ pub trait CoreServiceRoleClient: Send + Sync {
     /// # 引数
     ///
     /// - `tenant_id`: テナント ID
-    async fn list_roles(
-        &self,
-        tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<RoleItemDto>>, CoreServiceError>;
+    async fn list_roles(&self, tenant_id: Uuid) -> Result<Vec<RoleItemDto>, CoreServiceError>;
 
     /// ロール詳細を取得する
     ///
@@ -39,7 +35,7 @@ pub trait CoreServiceRoleClient: Send + Sync {
         &self,
         role_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError>;
+    ) -> Result<RoleDetailDto, CoreServiceError>;
 
     /// カスタムロールを作成する
     ///
@@ -47,7 +43,7 @@ pub trait CoreServiceRoleClient: Send + Sync {
     async fn create_role(
         &self,
         req: &CreateRoleCoreRequest,
-    ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError>;
+    ) -> Result<RoleDetailDto, CoreServiceError>;
 
     /// カスタムロールを更新する
     ///
@@ -56,7 +52,7 @@ pub trait CoreServiceRoleClient: Send + Sync {
         &self,
         role_id: Uuid,
         req: &UpdateRoleCoreRequest,
-    ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError>;
+    ) -> Result<RoleDetailDto, CoreServiceError>;
 
     /// カスタムロールを削除する
     ///
@@ -67,10 +63,7 @@ pub trait CoreServiceRoleClient: Send + Sync {
 #[async_trait]
 impl CoreServiceRoleClient for CoreServiceClientImpl {
     #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
-    async fn list_roles(
-        &self,
-        tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<RoleItemDto>>, CoreServiceError> {
+    async fn list_roles(&self, tenant_id: Uuid) -> Result<Vec<RoleItemDto>, CoreServiceError> {
         let url = format!("{}/internal/roles?tenant_id={}", self.base_url, tenant_id);
 
         let response = inject_request_id(self.client.get(&url)).send().await?;
@@ -82,7 +75,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
         &self,
         role_id: Uuid,
         tenant_id: Uuid,
-    ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
+    ) -> Result<RoleDetailDto, CoreServiceError> {
         let url = format!(
             "{}/internal/roles/{}?tenant_id={}",
             self.base_url, role_id, tenant_id
@@ -96,7 +89,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
     async fn create_role(
         &self,
         req: &CreateRoleCoreRequest,
-    ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
+    ) -> Result<RoleDetailDto, CoreServiceError> {
         let url = format!("{}/internal/roles", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))
@@ -111,7 +104,7 @@ impl CoreServiceRoleClient for CoreServiceClientImpl {
         &self,
         role_id: Uuid,
         req: &UpdateRoleCoreRequest,
-    ) -> Result<ApiResponse<RoleDetailDto>, CoreServiceError> {
+    ) -> Result<RoleDetailDto, CoreServiceError> {
         let url = format!("{}/internal/roles/{}", self.base_url, role_id);
 
         let response = inject_request_id(self.client.patch(&url))

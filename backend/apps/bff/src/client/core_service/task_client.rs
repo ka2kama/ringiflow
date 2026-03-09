@@ -1,7 +1,6 @@
 //! タスク・ダッシュボード関連の Core Service クライアント
 
 use async_trait::async_trait;
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -22,7 +21,7 @@ pub trait CoreServiceTaskClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<TaskItemDto>>, CoreServiceError>;
+    ) -> Result<Vec<TaskItemDto>, CoreServiceError>;
 
     /// タスク詳細を取得する
     ///
@@ -32,7 +31,7 @@ pub trait CoreServiceTaskClient: Send + Sync {
         task_id: Uuid,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError>;
+    ) -> Result<TaskDetailDto, CoreServiceError>;
 
     /// ダッシュボード統計情報を取得する
     ///
@@ -41,7 +40,7 @@ pub trait CoreServiceTaskClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<DashboardStatsDto>, CoreServiceError>;
+    ) -> Result<DashboardStatsDto, CoreServiceError>;
 
     /// display_number でタスク詳細を取得する
     ///
@@ -54,7 +53,7 @@ pub trait CoreServiceTaskClient: Send + Sync {
         step_display_number: i64,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError>;
+    ) -> Result<TaskDetailDto, CoreServiceError>;
 }
 
 #[async_trait]
@@ -64,7 +63,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<TaskItemDto>>, CoreServiceError> {
+    ) -> Result<Vec<TaskItemDto>, CoreServiceError> {
         let url = format!(
             "{}/internal/tasks/my?tenant_id={}&user_id={}",
             self.base_url, tenant_id, user_id
@@ -80,7 +79,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         task_id: Uuid,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError> {
+    ) -> Result<TaskDetailDto, CoreServiceError> {
         let url = format!(
             "{}/internal/tasks/{}?tenant_id={}&user_id={}",
             self.base_url, task_id, tenant_id, user_id
@@ -95,7 +94,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<DashboardStatsDto>, CoreServiceError> {
+    ) -> Result<DashboardStatsDto, CoreServiceError> {
         let url = format!(
             "{}/internal/dashboard/stats?tenant_id={}&user_id={}",
             self.base_url, tenant_id, user_id
@@ -112,7 +111,7 @@ impl CoreServiceTaskClient for CoreServiceClientImpl {
         step_display_number: i64,
         tenant_id: Uuid,
         user_id: Uuid,
-    ) -> Result<ApiResponse<TaskDetailDto>, CoreServiceError> {
+    ) -> Result<TaskDetailDto, CoreServiceError> {
         let url = format!(
             "{}/internal/workflows/by-display-number/{}/tasks/{}?tenant_id={}&user_id={}",
             self.base_url, workflow_display_number, step_display_number, tenant_id, user_id

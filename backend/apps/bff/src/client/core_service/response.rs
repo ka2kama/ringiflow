@@ -1,6 +1,5 @@
 //! Core Service レスポンスの共通ハンドリング
 
-use ringiflow_shared::ApiResponse;
 use serde::de::DeserializeOwned;
 
 use super::error::CoreServiceError;
@@ -18,11 +17,11 @@ use super::error::CoreServiceError;
 pub(super) async fn handle_response<T: DeserializeOwned>(
     response: reqwest::Response,
     not_found_error: Option<CoreServiceError>,
-) -> Result<ApiResponse<T>, CoreServiceError> {
+) -> Result<T, CoreServiceError> {
     let status = response.status();
 
     if status.is_success() {
-        let body = response.json::<ApiResponse<T>>().await?;
+        let body = response.json::<T>().await?;
         return Ok(body);
     }
 
@@ -68,13 +67,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_成功レスポンスをデシリアライズする() {
-        let response = make_response(200, r#"{"data": {"value": "hello"}}"#);
+        let response = make_response(200, r#"{"value": "hello"}"#);
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         let api_response = result.unwrap();
         assert_eq!(
-            api_response.data,
+            api_response,
             TestData {
                 value: "hello".to_string(),
             }
@@ -85,7 +84,7 @@ mod tests {
     async fn test_404でnot_found_errorありのとき指定エラーを返す() {
         let response = make_response(404, "");
 
-        let result: Result<ApiResponse<TestData>, _> =
+        let result: Result<TestData, _> =
             handle_response(response, Some(CoreServiceError::UserNotFound)).await;
 
         assert!(matches!(result, Err(CoreServiceError::UserNotFound)));
@@ -95,7 +94,7 @@ mod tests {
     async fn test_404でnot_found_errorなしのときunexpectedを返す() {
         let response = make_response(404, "not found");
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         match result {
             Err(CoreServiceError::Unexpected(msg)) => {
@@ -112,7 +111,7 @@ mod tests {
     async fn test_400でvalidation_errorを返す() {
         let response = make_response(400, "invalid input");
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         assert!(matches!(
             result,
@@ -124,7 +123,7 @@ mod tests {
     async fn test_403でforbiddenを返す() {
         let response = make_response(403, "access denied");
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         assert!(matches!(
             result,
@@ -136,7 +135,7 @@ mod tests {
     async fn test_409でconflictを返す() {
         let response = make_response(409, "conflict occurred");
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         assert!(matches!(
             result,
@@ -148,7 +147,7 @@ mod tests {
     async fn test_500でunexpectedを返す() {
         let response = make_response(500, "server error");
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         match result {
             Err(CoreServiceError::Unexpected(msg)) => {
@@ -169,7 +168,7 @@ mod tests {
     async fn test_成功だが不正なjsonでnetworkエラーを返す() {
         let response = make_response(200, "not json");
 
-        let result: Result<ApiResponse<TestData>, _> = handle_response(response, None).await;
+        let result: Result<TestData, _> = handle_response(response, None).await;
 
         assert!(matches!(result, Err(CoreServiceError::Network(_))));
     }

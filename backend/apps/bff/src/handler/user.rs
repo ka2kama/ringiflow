@@ -21,7 +21,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use ringiflow_domain::audit_log::{AuditAction, AuditLog};
 use ringiflow_infra::{SessionManager, repository::AuditLogRepository};
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
@@ -167,7 +167,7 @@ fn generate_initial_password() -> String {
    security(("session_auth" = [])),
    params(ListUsersQuery),
    responses(
-      (status = 200, description = "ユーザー一覧", body = ApiResponse<Vec<UserItemData>>),
+      (status = 200, description = "ユーザー一覧", body = Vec<UserItemData>),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
@@ -186,13 +186,10 @@ pub async fn list_users(
         .await
         .map_err(|e| log_and_convert_core_error("ユーザー一覧取得", e))?;
 
-    let response = ApiResponse::new(
-        core_response
-            .data
-            .into_iter()
-            .map(UserItemData::from)
-            .collect::<Vec<_>>(),
-    );
+    let response = core_response
+        .into_iter()
+        .map(UserItemData::from)
+        .collect::<Vec<_>>();
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -214,7 +211,7 @@ pub async fn list_users(
    security(("session_auth" = [])),
    request_body = CreateUserRequest,
    responses(
-      (status = 201, description = "ユーザー作成", body = ApiResponse<CreateUserResponseData>),
+      (status = 201, description = "ユーザー作成", body = CreateUserResponseData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 409, description = "メールアドレス重複", body = ErrorResponse)
    )
@@ -254,7 +251,7 @@ pub async fn create_user(
         .await
         .map_err(|e| log_and_convert_core_error("ユーザー作成", e))?;
 
-    let user_data = core_response.data;
+    let user_data = core_response;
 
     // Auth Service で認証情報作成
     if let Err(e) = state
@@ -290,7 +287,7 @@ pub async fn create_user(
         tracing::error!("監査ログ記録に失敗: {}", e);
     }
 
-    let response = ApiResponse::new(CreateUserResponseData {
+    let response = CreateUserResponseData {
         id: user_data.id.to_string(),
         display_id: user_data.display_id,
         display_number: user_data.display_number,
@@ -298,7 +295,7 @@ pub async fn create_user(
         email: user_data.email,
         role: user_data.role,
         initial_password,
-    });
+    };
 
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
@@ -313,7 +310,7 @@ pub async fn create_user(
    security(("session_auth" = [])),
    params(("display_number" = i64, Path, description = "ユーザー表示番号")),
    responses(
-      (status = 200, description = "ユーザー詳細", body = ApiResponse<UserDetailData>),
+      (status = 200, description = "ユーザー詳細", body = UserDetailData),
       (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
    )
 )]
@@ -332,8 +329,8 @@ pub async fn get_user_detail(
         .await
         .map_err(|e| log_and_convert_core_error("ユーザー詳細取得", e))?;
 
-    let data = core_response.data;
-    let response = ApiResponse::new(UserDetailData {
+    let data = core_response;
+    let response = UserDetailData {
         id: data.user.id.to_string(),
         display_id: format!("USR-{:06}", display_number),
         display_number,
@@ -343,7 +340,7 @@ pub async fn get_user_detail(
         roles: data.roles,
         permissions: data.permissions,
         tenant_name: data.tenant_name,
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -358,7 +355,7 @@ pub async fn get_user_detail(
    params(("display_number" = i64, Path, description = "ユーザー表示番号")),
    request_body = UpdateUserRequest,
    responses(
-      (status = 200, description = "更新成功", body = ApiResponse<UserResponseData>),
+      (status = 200, description = "更新成功", body = UserResponseData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
    )
@@ -378,8 +375,7 @@ pub async fn update_user(
         .core_service_client
         .get_user_by_display_number(*session_data.tenant_id().as_uuid(), display_number)
         .await
-        .map_err(|e| log_and_convert_core_error("ユーザー取得", e))?
-        .data;
+        .map_err(|e| log_and_convert_core_error("ユーザー取得", e))?;
 
     // role_id の UUID パース
     let role_id = req
@@ -405,7 +401,7 @@ pub async fn update_user(
         .await
     {
         Ok(core_response) => {
-            let user = core_response.data;
+            let user = core_response;
 
             // 監査ログ記録
             let audit_log = AuditLog::new_success(
@@ -424,12 +420,12 @@ pub async fn update_user(
                 tracing::error!("監査ログ記録に失敗: {}", e);
             }
 
-            let response = ApiResponse::new(UserResponseData {
+            let response = UserResponseData {
                 id:     user.id.to_string(),
                 name:   user.name,
                 email:  user.email,
                 status: user.status,
-            });
+            };
             Ok((StatusCode::OK, Json(response)).into_response())
         }
         Err(e) => Err(log_and_convert_core_error("ユーザー更新", e)),
@@ -448,7 +444,7 @@ pub async fn update_user(
    params(("display_number" = i64, Path, description = "ユーザー表示番号")),
    request_body = UpdateUserStatusRequest,
    responses(
-      (status = 200, description = "ステータス変更成功", body = ApiResponse<UserResponseData>),
+      (status = 200, description = "ステータス変更成功", body = UserResponseData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 404, description = "ユーザーが見つからない", body = ErrorResponse)
    )
@@ -468,8 +464,7 @@ pub async fn update_user_status(
         .core_service_client
         .get_user_by_display_number(*session_data.tenant_id().as_uuid(), display_number)
         .await
-        .map_err(|e| log_and_convert_core_error("ユーザー取得", e))?
-        .data;
+        .map_err(|e| log_and_convert_core_error("ユーザー取得", e))?;
 
     let core_request = UpdateUserStatusCoreRequest {
         status:       req.status,
@@ -483,7 +478,7 @@ pub async fn update_user_status(
         .await
     {
         Ok(core_response) => {
-            let user = core_response.data;
+            let user = core_response;
 
             // 監査ログ記録: ステータスに応じて Deactivate / Activate を使い分ける
             let action = if user.status == "inactive" {
@@ -507,12 +502,12 @@ pub async fn update_user_status(
                 tracing::error!("監査ログ記録に失敗: {}", e);
             }
 
-            let response = ApiResponse::new(UserResponseData {
+            let response = UserResponseData {
                 id:     user.id.to_string(),
                 name:   user.name,
                 email:  user.email,
                 status: user.status,
-            });
+            };
             Ok((StatusCode::OK, Json(response)).into_response())
         }
         Err(e) => Err(log_and_convert_core_error("ユーザーステータス変更", e)),

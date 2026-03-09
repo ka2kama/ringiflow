@@ -17,7 +17,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -111,7 +111,7 @@ impl From<crate::client::TaskDetailDto> for TaskDetailData {
    tag = "tasks",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "タスク一覧", body = ApiResponse<Vec<TaskItemData>>),
+      (status = 200, description = "タスク一覧", body = Vec<TaskItemData>),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
@@ -132,12 +132,9 @@ pub async fn list_my_tasks(
         .await
         .map_err(|e| log_and_convert_core_error("タスク一覧取得", e))?;
 
-    let response = ApiResponse::new(
-        core_response
-            .data
-            .into_iter()
-            .map(TaskItemData::from)
-            .collect::<Vec<_>>(),
-    );
+    let response = core_response
+        .into_iter()
+        .map(TaskItemData::from)
+        .collect::<Vec<_>>();
     Ok((StatusCode::OK, Json(response)).into_response())
 }

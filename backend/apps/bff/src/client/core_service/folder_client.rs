@@ -1,7 +1,6 @@
 //! フォルダ関連の Core Service クライアント
 
 use async_trait::async_trait;
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -22,10 +21,7 @@ pub trait CoreServiceFolderClient: Send + Sync {
     /// # 引数
     ///
     /// - `tenant_id`: テナント ID
-    async fn list_folders(
-        &self,
-        tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<FolderItemDto>>, CoreServiceError>;
+    async fn list_folders(&self, tenant_id: Uuid) -> Result<Vec<FolderItemDto>, CoreServiceError>;
 
     /// フォルダを作成する
     ///
@@ -33,7 +29,7 @@ pub trait CoreServiceFolderClient: Send + Sync {
     async fn create_folder(
         &self,
         req: &CreateFolderCoreRequest,
-    ) -> Result<ApiResponse<FolderItemDto>, CoreServiceError>;
+    ) -> Result<FolderItemDto, CoreServiceError>;
 
     /// フォルダを更新する（名前変更・移動）
     ///
@@ -42,7 +38,7 @@ pub trait CoreServiceFolderClient: Send + Sync {
         &self,
         folder_id: Uuid,
         req: &UpdateFolderCoreRequest,
-    ) -> Result<ApiResponse<FolderItemDto>, CoreServiceError>;
+    ) -> Result<FolderItemDto, CoreServiceError>;
 
     /// フォルダを削除する
     ///
@@ -54,10 +50,7 @@ pub trait CoreServiceFolderClient: Send + Sync {
 #[async_trait]
 impl CoreServiceFolderClient for CoreServiceClientImpl {
     #[tracing::instrument(skip_all, level = "debug", fields(%tenant_id))]
-    async fn list_folders(
-        &self,
-        tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<FolderItemDto>>, CoreServiceError> {
+    async fn list_folders(&self, tenant_id: Uuid) -> Result<Vec<FolderItemDto>, CoreServiceError> {
         let url = format!("{}/internal/folders?tenant_id={}", self.base_url, tenant_id);
 
         let response = inject_request_id(self.client.get(&url)).send().await?;
@@ -68,7 +61,7 @@ impl CoreServiceFolderClient for CoreServiceClientImpl {
     async fn create_folder(
         &self,
         req: &CreateFolderCoreRequest,
-    ) -> Result<ApiResponse<FolderItemDto>, CoreServiceError> {
+    ) -> Result<FolderItemDto, CoreServiceError> {
         let url = format!("{}/internal/folders", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))
@@ -83,7 +76,7 @@ impl CoreServiceFolderClient for CoreServiceClientImpl {
         &self,
         folder_id: Uuid,
         req: &UpdateFolderCoreRequest,
-    ) -> Result<ApiResponse<FolderItemDto>, CoreServiceError> {
+    ) -> Result<FolderItemDto, CoreServiceError> {
         let url = format!("{}/internal/folders/{}", self.base_url, folder_id);
 
         let response = inject_request_id(self.client.put(&url))

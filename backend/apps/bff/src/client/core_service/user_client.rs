@@ -1,7 +1,6 @@
 //! ユーザー関連の Core Service クライアント
 
 use async_trait::async_trait;
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -35,7 +34,7 @@ pub trait CoreServiceUserClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         status: Option<&str>,
-    ) -> Result<ApiResponse<Vec<UserItemDto>>, CoreServiceError>;
+    ) -> Result<Vec<UserItemDto>, CoreServiceError>;
 
     /// メールアドレスでユーザーを検索する
     ///
@@ -44,15 +43,12 @@ pub trait CoreServiceUserClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         email: &str,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError>;
+    ) -> Result<UserResponse, CoreServiceError>;
 
     /// ユーザー情報を取得する
     ///
     /// Core Service の `GET /internal/users/{user_id}` を呼び出す。
-    async fn get_user(
-        &self,
-        user_id: Uuid,
-    ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError>;
+    async fn get_user(&self, user_id: Uuid) -> Result<UserWithPermissionsData, CoreServiceError>;
 
     /// ユーザーを作成する
     ///
@@ -60,7 +56,7 @@ pub trait CoreServiceUserClient: Send + Sync {
     async fn create_user(
         &self,
         req: &CreateUserCoreRequest,
-    ) -> Result<ApiResponse<CreateUserCoreResponse>, CoreServiceError>;
+    ) -> Result<CreateUserCoreResponse, CoreServiceError>;
 
     /// ユーザー情報を更新する
     ///
@@ -69,7 +65,7 @@ pub trait CoreServiceUserClient: Send + Sync {
         &self,
         user_id: Uuid,
         req: &UpdateUserCoreRequest,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError>;
+    ) -> Result<UserResponse, CoreServiceError>;
 
     /// ユーザーステータスを変更する
     ///
@@ -78,7 +74,7 @@ pub trait CoreServiceUserClient: Send + Sync {
         &self,
         user_id: Uuid,
         req: &UpdateUserStatusCoreRequest,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError>;
+    ) -> Result<UserResponse, CoreServiceError>;
 
     /// 表示用連番でユーザーを取得する
     ///
@@ -88,7 +84,7 @@ pub trait CoreServiceUserClient: Send + Sync {
         &self,
         tenant_id: Uuid,
         display_number: i64,
-    ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError>;
+    ) -> Result<UserWithPermissionsData, CoreServiceError>;
 }
 
 #[async_trait]
@@ -98,7 +94,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         status: Option<&str>,
-    ) -> Result<ApiResponse<Vec<UserItemDto>>, CoreServiceError> {
+    ) -> Result<Vec<UserItemDto>, CoreServiceError> {
         let mut url = format!("{}/internal/users?tenant_id={}", self.base_url, tenant_id);
         if let Some(s) = status {
             url.push_str(&format!("&status={}", s));
@@ -113,7 +109,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         email: &str,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+    ) -> Result<UserResponse, CoreServiceError> {
         let url = format!(
             "{}/internal/users/by-email?email={}&tenant_id={}",
             self.base_url,
@@ -126,10 +122,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
     }
 
     #[tracing::instrument(skip_all, level = "debug", fields(%user_id))]
-    async fn get_user(
-        &self,
-        user_id: Uuid,
-    ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+    async fn get_user(&self, user_id: Uuid) -> Result<UserWithPermissionsData, CoreServiceError> {
         let url = format!("{}/internal/users/{}", self.base_url, user_id);
 
         let response = inject_request_id(self.client.get(&url)).send().await?;
@@ -140,7 +133,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
     async fn create_user(
         &self,
         req: &CreateUserCoreRequest,
-    ) -> Result<ApiResponse<CreateUserCoreResponse>, CoreServiceError> {
+    ) -> Result<CreateUserCoreResponse, CoreServiceError> {
         let url = format!("{}/internal/users", self.base_url);
 
         let response = inject_request_id(self.client.post(&url))
@@ -155,7 +148,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         &self,
         user_id: Uuid,
         req: &UpdateUserCoreRequest,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+    ) -> Result<UserResponse, CoreServiceError> {
         let url = format!("{}/internal/users/{}", self.base_url, user_id);
 
         let response = inject_request_id(self.client.patch(&url))
@@ -170,7 +163,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         &self,
         user_id: Uuid,
         req: &UpdateUserStatusCoreRequest,
-    ) -> Result<ApiResponse<UserResponse>, CoreServiceError> {
+    ) -> Result<UserResponse, CoreServiceError> {
         let url = format!("{}/internal/users/{}/status", self.base_url, user_id);
 
         let response = inject_request_id(self.client.patch(&url))
@@ -185,7 +178,7 @@ impl CoreServiceUserClient for CoreServiceClientImpl {
         &self,
         tenant_id: Uuid,
         display_number: i64,
-    ) -> Result<ApiResponse<UserWithPermissionsData>, CoreServiceError> {
+    ) -> Result<UserWithPermissionsData, CoreServiceError> {
         let url = format!(
             "{}/internal/users/by-display-number/{}?tenant_id={}",
             self.base_url, display_number, tenant_id

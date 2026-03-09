@@ -9,7 +9,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
-use ringiflow_shared::ApiResponse;
 
 use super::{
     StepPathParams,
@@ -44,7 +43,7 @@ use crate::{
    tag = "workflows",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "ワークフロー定義一覧", body = ApiResponse<Vec<WorkflowDefinitionData>>),
+      (status = 200, description = "ワークフロー定義一覧", body = Vec<WorkflowDefinitionData>),
       (status = 401, description = "認証エラー", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -62,13 +61,10 @@ pub async fn list_workflow_definitions(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義一覧取得", e))?;
 
-    let response = ApiResponse::new(
-        core_response
-            .data
-            .into_iter()
-            .map(WorkflowDefinitionData::from)
-            .collect::<Vec<_>>(),
-    );
+    let response = core_response
+        .into_iter()
+        .map(WorkflowDefinitionData::from)
+        .collect::<Vec<_>>();
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -88,7 +84,7 @@ pub async fn list_workflow_definitions(
    security(("session_auth" = [])),
    params(("id" = uuid::Uuid, Path, description = "ワークフロー定義 ID")),
    responses(
-      (status = 200, description = "ワークフロー定義詳細", body = ApiResponse<WorkflowDefinitionData>),
+      (status = 200, description = "ワークフロー定義詳細", body = WorkflowDefinitionData),
       (status = 404, description = "定義が見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -107,7 +103,7 @@ pub async fn get_workflow_definition(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー定義取得", e))?;
 
-    let response = ApiResponse::new(WorkflowDefinitionData::from(core_response.data));
+    let response = WorkflowDefinitionData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -126,7 +122,7 @@ pub async fn get_workflow_definition(
    tag = "workflows",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "自分のワークフロー一覧", body = ApiResponse<Vec<WorkflowSummaryData>>),
+      (status = 200, description = "自分のワークフロー一覧", body = Vec<WorkflowSummaryData>),
       (status = 401, description = "認証エラー", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -147,13 +143,10 @@ pub async fn list_my_workflows(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー一覧取得", e))?;
 
-    let response = ApiResponse::new(
-        core_response
-            .data
-            .into_iter()
-            .map(WorkflowSummaryData::from)
-            .collect::<Vec<_>>(),
-    );
+    let response = core_response
+        .into_iter()
+        .map(WorkflowSummaryData::from)
+        .collect::<Vec<_>>();
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -173,7 +166,7 @@ pub async fn list_my_workflows(
    security(("session_auth" = [])),
    params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
    responses(
-      (status = 200, description = "ワークフロー詳細", body = ApiResponse<WorkflowData>),
+      (status = 200, description = "ワークフロー詳細", body = WorkflowData),
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -198,7 +191,7 @@ pub async fn get_workflow(
         .await
         .map_err(|e| log_and_convert_core_error("ワークフロー取得", e))?;
 
-    let response = ApiResponse::new(WorkflowData::from(core_response.data));
+    let response = WorkflowData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -214,7 +207,7 @@ pub async fn get_workflow(
    security(("session_auth" = [])),
    params(StepPathParams),
    responses(
-      (status = 200, description = "タスク詳細", body = ApiResponse<crate::handler::task::TaskDetailData>),
+      (status = 200, description = "タスク詳細", body = crate::handler::task::TaskDetailData),
       (status = 404, description = "タスクが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -255,9 +248,7 @@ pub async fn get_task_by_display_numbers(
             e => log_and_convert_core_error("タスク詳細取得", e),
         })?;
 
-    let response = ApiResponse::new(crate::handler::task::TaskDetailData::from(
-        core_response.data,
-    ));
+    let response = crate::handler::task::TaskDetailData::from(core_response);
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -279,7 +270,7 @@ pub async fn get_task_by_display_numbers(
    security(("session_auth" = [])),
    params(("display_number" = i64, Path, description = "ワークフロー表示番号")),
    responses(
-      (status = 200, description = "コメント一覧", body = ApiResponse<Vec<WorkflowCommentData>>),
+      (status = 200, description = "コメント一覧", body = Vec<WorkflowCommentData>),
       (status = 404, description = "ワークフローが見つからない", body = ringiflow_shared::ErrorResponse)
    )
 )]
@@ -304,12 +295,9 @@ pub async fn list_comments(
         .await
         .map_err(|e| log_and_convert_core_error("コメント一覧取得", e))?;
 
-    let response = ApiResponse::new(
-        core_response
-            .data
-            .into_iter()
-            .map(WorkflowCommentData::from)
-            .collect::<Vec<_>>(),
-    );
+    let response = core_response
+        .into_iter()
+        .map(WorkflowCommentData::from)
+        .collect::<Vec<_>>();
     Ok((StatusCode::OK, Json(response)).into_response())
 }

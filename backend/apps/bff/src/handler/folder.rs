@@ -19,7 +19,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use ringiflow_infra::SessionManager;
-use ringiflow_shared::{ApiResponse, ErrorResponse};
+use ringiflow_shared::ErrorResponse;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -76,7 +76,7 @@ pub struct FolderData {
    tag = "folders",
    security(("session_auth" = [])),
    responses(
-      (status = 200, description = "フォルダ一覧", body = ApiResponse<Vec<FolderData>>),
+      (status = 200, description = "フォルダ一覧", body = Vec<FolderData>),
       (status = 401, description = "認証エラー", body = ErrorResponse)
    )
 )]
@@ -95,7 +95,6 @@ pub async fn list_folders(
         .map_err(|e| log_and_convert_core_error("フォルダ一覧取得", e))?;
 
     let items: Vec<FolderData> = core_response
-        .data
         .into_iter()
         .map(|dto| FolderData {
             id:         dto.id.to_string(),
@@ -107,7 +106,7 @@ pub async fn list_folders(
             updated_at: dto.updated_at,
         })
         .collect();
-    let response = ApiResponse::new(items);
+    let response = items;
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
@@ -121,7 +120,7 @@ pub async fn list_folders(
    security(("session_auth" = [])),
    request_body = CreateFolderRequest,
    responses(
-      (status = 201, description = "フォルダ作成成功", body = ApiResponse<FolderData>),
+      (status = 201, description = "フォルダ作成成功", body = FolderData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 409, description = "フォルダ名重複", body = ErrorResponse)
    )
@@ -148,8 +147,8 @@ pub async fn create_folder(
         .await
         .map_err(|e| log_and_convert_core_error("フォルダ作成", e))?;
 
-    let dto = core_response.data;
-    let response = ApiResponse::new(FolderData {
+    let dto = core_response;
+    let response = FolderData {
         id:         dto.id.to_string(),
         name:       dto.name,
         parent_id:  dto.parent_id.map(|p| p.to_string()),
@@ -157,7 +156,7 @@ pub async fn create_folder(
         depth:      dto.depth,
         created_at: dto.created_at,
         updated_at: dto.updated_at,
-    });
+    };
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
 
@@ -172,7 +171,7 @@ pub async fn create_folder(
    params(("folder_id" = Uuid, Path, description = "フォルダID")),
    request_body = UpdateFolderRequest,
    responses(
-      (status = 200, description = "フォルダ更新成功", body = ApiResponse<FolderData>),
+      (status = 200, description = "フォルダ更新成功", body = FolderData),
       (status = 400, description = "バリデーションエラー", body = ErrorResponse),
       (status = 404, description = "フォルダが見つからない", body = ErrorResponse),
       (status = 409, description = "フォルダ名重複", body = ErrorResponse)
@@ -200,8 +199,8 @@ pub async fn update_folder(
         .await
         .map_err(|e| log_and_convert_core_error("フォルダ更新", e))?;
 
-    let dto = core_response.data;
-    let response = ApiResponse::new(FolderData {
+    let dto = core_response;
+    let response = FolderData {
         id:         dto.id.to_string(),
         name:       dto.name,
         parent_id:  dto.parent_id.map(|p| p.to_string()),
@@ -209,7 +208,7 @@ pub async fn update_folder(
         depth:      dto.depth,
         created_at: dto.created_at,
         updated_at: dto.updated_at,
-    });
+    };
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 

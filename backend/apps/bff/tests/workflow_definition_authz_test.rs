@@ -37,7 +37,6 @@ use ringiflow_bff::{
 };
 use ringiflow_domain::{tenant::TenantId, user::UserId};
 use ringiflow_infra::{InfraError, SessionData, SessionManager};
-use ringiflow_shared::ApiResponse;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -149,7 +148,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
     async fn create_workflow(
         &self,
         _req: ringiflow_bff::client::CreateWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!("ミドルウェアが拒否するため呼ばれない")
     }
 
@@ -157,14 +156,14 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _workflow_id: Uuid,
         _req: ringiflow_bff::client::SubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
     async fn list_workflow_definitions(
         &self,
         _tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowDefinitionDto>>, CoreServiceError> {
+    ) -> Result<Vec<WorkflowDefinitionDto>, CoreServiceError> {
         unimplemented!()
     }
 
@@ -172,7 +171,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _definition_id: Uuid,
         _tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -180,7 +179,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _tenant_id: Uuid,
         _user_id: Uuid,
-    ) -> Result<ApiResponse<Vec<WorkflowInstanceSummaryDto>>, CoreServiceError> {
+    ) -> Result<Vec<WorkflowInstanceSummaryDto>, CoreServiceError> {
         unimplemented!()
     }
 
@@ -188,7 +187,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _workflow_id: Uuid,
         _tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -197,7 +196,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         _workflow_id: Uuid,
         _step_id: Uuid,
         _req: ringiflow_bff::client::ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -206,7 +205,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         _workflow_id: Uuid,
         _step_id: Uuid,
         _req: ringiflow_bff::client::ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -214,7 +213,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _display_number: i64,
         _tenant_id: Uuid,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -222,7 +221,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _display_number: i64,
         _req: ringiflow_bff::client::SubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -231,7 +230,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         _workflow_display_number: i64,
         _step_display_number: i64,
         _req: ringiflow_bff::client::ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -240,7 +239,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         _workflow_display_number: i64,
         _step_display_number: i64,
         _req: ringiflow_bff::client::ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -249,7 +248,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         _workflow_display_number: i64,
         _step_display_number: i64,
         _req: ringiflow_bff::client::ApproveRejectRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -257,7 +256,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _display_number: i64,
         _req: ringiflow_bff::client::ResubmitWorkflowRequest,
-    ) -> Result<ApiResponse<WorkflowInstanceDto>, CoreServiceError> {
+    ) -> Result<WorkflowInstanceDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -265,7 +264,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _display_number: i64,
         _req: ringiflow_bff::client::PostCommentCoreRequest,
-    ) -> Result<ApiResponse<ringiflow_bff::client::WorkflowCommentDto>, CoreServiceError> {
+    ) -> Result<ringiflow_bff::client::WorkflowCommentDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -273,14 +272,14 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _display_number: i64,
         _tenant_id: Uuid,
-    ) -> Result<ApiResponse<Vec<ringiflow_bff::client::WorkflowCommentDto>>, CoreServiceError> {
+    ) -> Result<Vec<ringiflow_bff::client::WorkflowCommentDto>, CoreServiceError> {
         unimplemented!()
     }
 
     async fn create_workflow_definition(
         &self,
         _req: &CreateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         // 認可通過テストではハンドラまで到達するため、パニックではなくエラーを返す
         Err(CoreServiceError::Unexpected("テスト用スタブ".to_string()))
     }
@@ -289,7 +288,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _definition_id: Uuid,
         _req: &UpdateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -305,7 +304,7 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _definition_id: Uuid,
         _req: &PublishArchiveCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         unimplemented!()
     }
 
@@ -313,14 +312,14 @@ impl CoreServiceWorkflowClient for UnusedWorkflowClient {
         &self,
         _definition_id: Uuid,
         _req: &PublishArchiveCoreRequest,
-    ) -> Result<ApiResponse<WorkflowDefinitionDto>, CoreServiceError> {
+    ) -> Result<WorkflowDefinitionDto, CoreServiceError> {
         unimplemented!()
     }
 
     async fn validate_workflow_definition(
         &self,
         _req: &ValidateDefinitionCoreRequest,
-    ) -> Result<ApiResponse<ValidationResultDto>, CoreServiceError> {
+    ) -> Result<ValidationResultDto, CoreServiceError> {
         unimplemented!()
     }
 }
