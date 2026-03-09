@@ -9,9 +9,11 @@
 |--------|---------|------|
 | `ApiDoc` | [`bff/src/openapi.rs:108`](../../../backend/apps/bff/src/openapi.rs) | OpenAPI ルート定義。全パス・スキーマ・タグを集約 |
 | `SecurityAddon` | [`bff/src/openapi.rs:113`](../../../backend/apps/bff/src/openapi.rs) | `Modify` トレイト実装。Cookie 認証スキームを追加 |
-| `ApiResponse<T>` | [`shared/src/api_response.rs:24`](../../../backend/crates/shared/src/api_response.rs) | 共通レスポンスラッパー。条件付き `ToSchema` |
 | `ErrorResponse` | [`shared/src/error_response.rs:22`](../../../backend/crates/shared/src/error_response.rs) | エラーレスポンス。`schema(as = ProblemDetails)` |
 | `generate-openapi` | [`bff/src/bin/generate_openapi.rs`](../../../backend/apps/bff/src/bin/generate_openapi.rs) | YAML 生成バイナリ |
+
+> 注: `ApiResponse<T>` は [ADR-065](../../70_ADR/065_ApiResponseエンベロープパターンの評価.md) により廃止済み（PR #1095）。
+> 以下の解説は導入時点のアーキテクチャを記録するもの。
 
 ### 型の関係
 
