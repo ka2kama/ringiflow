@@ -133,7 +133,7 @@ async fn create_definition_via_api(
     let response = app.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
     let json = parse_body(response).await;
-    json["data"].clone()
+    json
 }
 
 /// 定義を公開するヘルパー
@@ -155,7 +155,7 @@ async fn publish_definition_via_api(
     let response = app.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
     let json = parse_body(response).await;
-    json["data"].clone()
+    json
 }
 
 // --- テストケース ---
@@ -186,7 +186,7 @@ async fn test_作成した定義を取得すると全フィールドが一致す
     let create_response = app.clone().oneshot(create_request).await.unwrap();
     assert_eq!(create_response.status(), StatusCode::CREATED);
     let created = parse_body(create_response).await;
-    let created_data = &created["data"];
+    let created_data = &created;
     let def_id = created_data["id"].as_str().unwrap();
 
     // When: 取得
@@ -202,7 +202,7 @@ async fn test_作成した定義を取得すると全フィールドが一致す
     let get_response = app.oneshot(get_request).await.unwrap();
     assert_eq!(get_response.status(), StatusCode::OK);
     let got = parse_body(get_response).await;
-    let got_data = &got["data"];
+    let got_data = &got;
 
     // Then: 全フィールドが一致
     assert_eq!(got_data["id"], created_data["id"]);
@@ -258,7 +258,7 @@ async fn test_更新した定義を取得すると更新内容が反映されて
     let get_response = app.oneshot(get_request).await.unwrap();
     assert_eq!(get_response.status(), StatusCode::OK);
     let got = parse_body(get_response).await;
-    let got_data = &got["data"];
+    let got_data = &got;
 
     // Then: 更新内容が反映されている
     assert_eq!(got_data["name"], "更新後の名前");
@@ -292,7 +292,7 @@ async fn test_作成して公開すると一覧でpublished状態で取得でき
     let list_response = app.oneshot(list_request).await.unwrap();
     assert_eq!(list_response.status(), StatusCode::OK);
     let list = parse_body(list_response).await;
-    let definitions = list["data"].as_array().unwrap();
+    let definitions = list.as_array().unwrap();
 
     // Then: Published 状態の定義が1件
     assert_eq!(definitions.len(), 1);
@@ -340,8 +340,8 @@ async fn test_公開後にアーカイブするとarchived状態になる() {
     let got = parse_body(get_response).await;
 
     // Then: Archived 状態、バージョンは 3
-    assert_eq!(got["data"]["status"], "Archived");
-    assert_eq!(got["data"]["version"], 3);
+    assert_eq!(got["status"], "Archived");
+    assert_eq!(got["version"], 3);
 }
 
 #[tokio::test]

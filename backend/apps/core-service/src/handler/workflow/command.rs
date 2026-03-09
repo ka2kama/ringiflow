@@ -13,7 +13,6 @@ use ringiflow_domain::{
     user::UserId,
     workflow::{WorkflowDefinitionId, WorkflowInstanceId, WorkflowStepId},
 };
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -75,7 +74,7 @@ pub async fn create_workflow(
 
     // ユーザー名を解決してレスポンスを返す
     let dto = WorkflowInstanceDetailDto::resolve_from_instance(&instance, &state.usecase).await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }
@@ -112,7 +111,7 @@ pub async fn submit_workflow(
 
     // ユーザー名を解決してレスポンスを返す
     let dto = WorkflowInstanceDetailDto::resolve_from_instance(&instance, &state.usecase).await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -153,7 +152,7 @@ pub async fn approve_step(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -194,7 +193,7 @@ pub async fn reject_step(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -230,7 +229,7 @@ pub async fn submit_workflow_by_display_number(
         .await?;
 
     let dto = WorkflowInstanceDetailDto::resolve_from_instance(&instance, &state.usecase).await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -280,7 +279,7 @@ pub async fn approve_step_by_display_number(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -315,7 +314,7 @@ pub async fn request_changes_step(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -351,7 +350,7 @@ pub async fn resubmit_workflow(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -401,7 +400,7 @@ pub async fn reject_step_by_display_number(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -445,7 +444,7 @@ pub async fn request_changes_step_by_display_number(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -481,7 +480,7 @@ pub async fn resubmit_workflow_by_display_number(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -519,7 +518,7 @@ pub async fn post_comment(
     let user_ids = vec![comment.posted_by().clone()];
     let user_names = state.usecase.resolve_user_names(&user_ids).await?;
 
-    let response = ApiResponse::new(WorkflowCommentDto::from_comment(&comment, &user_names));
+    let response = WorkflowCommentDto::from_comment(&comment, &user_names);
 
     Ok((StatusCode::CREATED, Json(response)).into_response())
 }

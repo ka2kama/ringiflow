@@ -18,7 +18,6 @@ use axum::{
     response::IntoResponse,
 };
 use ringiflow_domain::{folder::FolderId, tenant::TenantId};
-use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -96,7 +95,7 @@ pub async fn list_folders(
         })
         .collect();
 
-    let response = ApiResponse::new(items);
+    let response = items;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -134,7 +133,7 @@ pub async fn create_folder(
         updated_at: folder.updated_at().to_rfc3339(),
     };
 
-    let response = ApiResponse::new(dto);
+    let response = dto;
     Ok((StatusCode::CREATED, Json(response)))
 }
 
@@ -173,7 +172,7 @@ pub async fn update_folder(
         updated_at: folder.updated_at().to_rfc3339(),
     };
 
-    let response = ApiResponse::new(dto);
+    let response = dto;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -214,7 +213,6 @@ mod tests {
         user::UserId,
     };
     use ringiflow_infra::{InfraError, repository::FolderRepository};
-    use ringiflow_shared::ApiResponse;
     use tower::ServiceExt;
 
     use super::*;
@@ -400,11 +398,11 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::CREATED);
-        let body: ApiResponse<FolderDto> = response_body(response).await;
-        assert_eq!(body.data.name, "2026年度");
-        assert_eq!(body.data.path, "/2026年度/");
-        assert_eq!(body.data.depth, 1);
-        assert!(body.data.parent_id.is_none());
+        let body: FolderDto = response_body(response).await;
+        assert_eq!(body.name, "2026年度");
+        assert_eq!(body.path, "/2026年度/");
+        assert_eq!(body.depth, 1);
+        assert!(body.parent_id.is_none());
     }
 
     #[tokio::test]
@@ -435,11 +433,11 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::CREATED);
-        let body: ApiResponse<FolderDto> = response_body(response).await;
-        assert_eq!(body.data.name, "経費精算");
-        assert_eq!(body.data.path, "/2026年度/経費精算/");
-        assert_eq!(body.data.depth, 2);
-        assert_eq!(body.data.parent_id, Some(parent_id));
+        let body: FolderDto = response_body(response).await;
+        assert_eq!(body.name, "経費精算");
+        assert_eq!(body.path, "/2026年度/経費精算/");
+        assert_eq!(body.depth, 2);
+        assert_eq!(body.parent_id, Some(parent_id));
     }
 
     #[tokio::test]
@@ -531,9 +529,9 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<FolderDto> = response_body(response).await;
-        assert_eq!(body.data.name, "new-name");
-        assert_eq!(body.data.path, "/new-name/");
+        let body: FolderDto = response_body(response).await;
+        assert_eq!(body.name, "new-name");
+        assert_eq!(body.path, "/new-name/");
     }
 
     #[tokio::test]
@@ -615,11 +613,11 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<Vec<FolderDto>> = response_body(response).await;
-        assert_eq!(body.data.len(), 3);
-        assert_eq!(body.data[0].name, "a");
-        assert_eq!(body.data[1].name, "ab");
-        assert_eq!(body.data[2].name, "b");
+        let body: Vec<FolderDto> = response_body(response).await;
+        assert_eq!(body.len(), 3);
+        assert_eq!(body[0].name, "a");
+        assert_eq!(body[1].name, "ab");
+        assert_eq!(body[2].name, "b");
     }
 
     #[tokio::test]

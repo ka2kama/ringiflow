@@ -9,7 +9,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use ringiflow_domain::{tenant::TenantId, user::UserId, workflow::WorkflowInstanceId};
-use ringiflow_shared::ApiResponse;
 use uuid::Uuid;
 
 use super::{
@@ -51,12 +50,10 @@ pub async fn list_my_workflows(
         .collect();
     let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
 
-    let response = ApiResponse::new(
-        workflows
-            .iter()
-            .map(|w| WorkflowInstanceSummaryDto::from_instance(w, &user_names))
-            .collect::<Vec<_>>(),
-    );
+    let response = workflows
+        .iter()
+        .map(|w| WorkflowInstanceSummaryDto::from_instance(w, &user_names))
+        .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -87,7 +84,7 @@ pub async fn get_workflow(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -122,7 +119,7 @@ pub async fn get_workflow_by_display_number(
         &state.usecase,
     )
     .await?;
-    let response = ApiResponse::new(dto);
+    let response = dto;
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }
@@ -161,12 +158,10 @@ pub async fn list_comments(
         .collect();
     let user_names = state.usecase.resolve_user_names(&all_user_ids).await?;
 
-    let response = ApiResponse::new(
-        comments
-            .iter()
-            .map(|c| WorkflowCommentDto::from_comment(c, &user_names))
-            .collect::<Vec<_>>(),
-    );
+    let response = comments
+        .iter()
+        .map(|c| WorkflowCommentDto::from_comment(c, &user_names))
+        .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(response)).into_response())
 }

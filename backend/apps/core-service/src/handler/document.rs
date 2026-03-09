@@ -19,7 +19,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use ringiflow_shared::ApiResponse;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -133,7 +132,7 @@ pub async fn request_upload_url(
         expires_in:  output.expires_in,
     };
 
-    let response = ApiResponse::new(dto);
+    let response = dto;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -169,7 +168,7 @@ pub async fn confirm_upload(
         created_at:   document.created_at().to_rfc3339(),
     };
 
-    let response = ApiResponse::new(dto);
+    let response = dto;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -201,7 +200,7 @@ pub async fn generate_download_url(
         expires_in:   output.expires_in,
     };
 
-    let response = ApiResponse::new(dto);
+    let response = dto;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -262,7 +261,7 @@ pub async fn list_documents(
         })
         .collect();
 
-    let response = ApiResponse::new(dtos);
+    let response = dtos;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -300,7 +299,7 @@ pub async fn list_workflow_attachments(
         })
         .collect();
 
-    let response = ApiResponse::new(dtos);
+    let response = dtos;
     Ok((StatusCode::OK, Json(response)))
 }
 
@@ -337,7 +336,6 @@ mod tests {
         repository::{DocumentRepository, WorkflowInstanceRepository},
         s3::S3Client,
     };
-    use ringiflow_shared::ApiResponse;
     use tower::ServiceExt;
 
     use super::*;
@@ -744,9 +742,9 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<UploadUrlDto> = response_body(response).await;
-        assert_eq!(body.data.upload_url, "https://s3.example.com/presigned");
-        assert_eq!(body.data.expires_in, 300);
+        let body: UploadUrlDto = response_body(response).await;
+        assert_eq!(body.upload_url, "https://s3.example.com/presigned");
+        assert_eq!(body.expires_in, 300);
     }
 
     // upload-url 準正常系
@@ -918,9 +916,9 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<DocumentDto> = response_body(response).await;
-        assert_eq!(body.data.status, "active");
-        assert_eq!(body.data.filename, "test.pdf");
+        let body: DocumentDto = response_body(response).await;
+        assert_eq!(body.status, "active");
+        assert_eq!(body.filename, "test.pdf");
     }
 
     // confirm 準正常系
@@ -1058,9 +1056,9 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<DownloadUrlDto> = response_body(response).await;
-        assert_eq!(body.data.download_url, "https://s3.example.com/download");
-        assert_eq!(body.data.expires_in, 900);
+        let body: DownloadUrlDto = response_body(response).await;
+        assert_eq!(body.download_url, "https://s3.example.com/download");
+        assert_eq!(body.expires_in, 900);
     }
 
     #[tokio::test]
@@ -1347,9 +1345,9 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<Vec<DocumentDto>> = response_body(response).await;
-        assert_eq!(body.data.len(), 1);
-        assert_eq!(body.data[0].filename, "test.pdf");
+        let body: Vec<DocumentDto> = response_body(response).await;
+        assert_eq!(body.len(), 1);
+        assert_eq!(body[0].filename, "test.pdf");
     }
 
     // --- list_workflow_attachments テスト ---
@@ -1383,8 +1381,8 @@ mod tests {
 
         // Then
         assert_eq!(response.status(), StatusCode::OK);
-        let body: ApiResponse<Vec<DocumentDto>> = response_body(response).await;
-        assert_eq!(body.data.len(), 1);
-        assert_eq!(body.data[0].filename, "attachment.pdf");
+        let body: Vec<DocumentDto> = response_body(response).await;
+        assert_eq!(body.len(), 1);
+        assert_eq!(body[0].filename, "attachment.pdf");
     }
 }
