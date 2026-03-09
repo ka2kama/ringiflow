@@ -28,7 +28,7 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{admin_session_id}}
 HTTP 200
 [Captures]
-admin_csrf_token: jsonpath "$.data.token"
+admin_csrf_token: jsonpath "$.token"
 
 # ワークフロー作成
 POST {{bff_url}}/api/v1/workflows
@@ -46,9 +46,9 @@ Content-Type: application/json
 }
 HTTP 201
 [Captures]
-workflow_display_number: jsonpath "$.data.display_number"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_id: jsonpath "$.data.id"
+workflow_display_number: jsonpath "$.display_number"
+workflow_display_id: jsonpath "$.display_id"
+workflow_id: jsonpath "$.id"
 
 # ワークフロー申請（user に承認タスクを割り当て）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -72,8 +72,8 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{admin_session_id}}
 HTTP 200
 [Captures]
-step_display_number: jsonpath "$.data.steps[0].display_number"
-step_version: jsonpath "$.data.steps[0].version"
+step_display_number: jsonpath "$.steps[0].display_number"
+step_version: jsonpath "$.steps[0].version"
 
 # ===== user がステップを差し戻す =====
 
@@ -95,7 +95,7 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{user_session_id}}
 HTTP 200
 [Captures]
-user_csrf_token: jsonpath "$.data.token"
+user_csrf_token: jsonpath "$.token"
 
 # ステップ差し戻し
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step_display_number}}/request-changes
@@ -109,9 +109,9 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.data.status" == "ChangesRequested"
+jsonpath "$.status" == "ChangesRequested"
 [Captures]
-workflow_version: jsonpath "$.data.version"
+workflow_version: jsonpath "$.version"
 
 # ===== 異常系テスト =====
 
@@ -130,7 +130,7 @@ Content-Type: application/json
 }
 HTTP 201
 [Captures]
-invalid_wf_display_number: jsonpath "$.data.display_number"
+invalid_wf_display_number: jsonpath "$.display_number"
 
 POST {{bff_url}}/api/v1/workflows/{{invalid_wf_display_number}}/submit
 X-Tenant-ID: {{tenant_id}}
@@ -197,29 +197,29 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # ワークフローインスタンスの状態（required フィールドすべて検証）
-jsonpath "$.data.id" == "{{workflow_id}}"
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "再申請テスト申請"
-jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
-jsonpath "$.data.status" == "InProgress"
-jsonpath "$.data.version" == 4
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.id" == "{{workflow_id}}"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "再申請テスト申請"
+jsonpath "$.definition_id" == "{{workflow_definition_id}}"
+jsonpath "$.status" == "InProgress"
+jsonpath "$.version" == 4
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
 # form_data が更新されている
-jsonpath "$.data.form_data.reason" == "修正後のデータ"
-jsonpath "$.data.form_data.amount" == 15000
+jsonpath "$.form_data.reason" == "修正後のデータ"
+jsonpath "$.form_data.amount" == 15000
 # completed_at はクリアされる
-jsonpath "$.data.completed_at" == null
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.completed_at" == null
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # 新しいステップが作成されている
-jsonpath "$.data.steps" count == 1
-jsonpath "$.data.steps[0].status" == "Active"
-jsonpath "$.data.steps[0].version" == 1
-jsonpath "$.data.steps[0].decision" == null
-jsonpath "$.data.steps[0].comment" == null
+jsonpath "$.steps" count == 1
+jsonpath "$.steps[0].status" == "Active"
+jsonpath "$.steps[0].version" == 1
+jsonpath "$.steps[0].decision" == null
+jsonpath "$.steps[0].comment" == null
 
 # =============================================================================
 # 通知検証: 再申請後に承認依頼メールが Mailpit に送信されている

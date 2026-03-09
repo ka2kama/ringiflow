@@ -33,6 +33,6 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Asserts]
-jsonpath "$.data.token" exists
+jsonpath "$.token" exists
 # 64文字の16進数（256ビット）
-jsonpath "$.data.token" matches "^[a-f0-9]{64}$"
+jsonpath "$.token" matches "^[a-f0-9]{64}$"

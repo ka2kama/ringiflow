@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 正常系: ワークフローを作成できる
@@ -52,25 +52,25 @@ Content-Type: application/json
 HTTP 201
 [Asserts]
 # ワークフローインスタンスの情報が正しく返される
-jsonpath "$.data.id" exists
-jsonpath "$.data.display_id" matches "^WF-\\d+$"
-jsonpath "$.data.display_number" >= 1
-jsonpath "$.data.title" == "経費申請"
-jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
-jsonpath "$.data.status" == "Draft"
-jsonpath "$.data.version" == 1
-jsonpath "$.data.form_data.title" == "交通費"
-jsonpath "$.data.form_data.description" == "出張時の交通費"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.current_step_id" == null
-jsonpath "$.data.submitted_at" == null
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" exists
+jsonpath "$.display_id" matches "^WF-\\d+$"
+jsonpath "$.display_number" >= 1
+jsonpath "$.title" == "経費申請"
+jsonpath "$.definition_id" == "{{workflow_definition_id}}"
+jsonpath "$.status" == "Draft"
+jsonpath "$.version" == 1
+jsonpath "$.form_data.title" == "交通費"
+jsonpath "$.form_data.description" == "出張時の交通費"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.current_step_id" == null
+jsonpath "$.submitted_at" == null
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 [Captures]
-workflow_id: jsonpath "$.data.id"
-workflow_display_number: jsonpath "$.data.display_number"
+workflow_id: jsonpath "$.id"
+workflow_display_number: jsonpath "$.display_number"
 
 # =============================================================================
 # 異常系: 未認証では作成できない（CSRF トークンなしで 403）
@@ -159,8 +159,8 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.data.title" == ""
-jsonpath "$.data.status" == "Draft"
+jsonpath "$.title" == ""
+jsonpath "$.status" == "Draft"
 
 # =============================================================================
 # 正常系: 入力値境界 — 改行を含むタイトル（500 にならないことを確認）
@@ -182,5 +182,5 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.data.title" == "テスト申請\n改行含む"
-jsonpath "$.data.status" == "Draft"
+jsonpath "$.title" == "テスト申請\n改行含む"
+jsonpath "$.status" == "Draft"

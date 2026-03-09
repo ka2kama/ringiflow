@@ -22,11 +22,11 @@ HTTP 200
 [Asserts]
 header "x-request-id" matches "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 # ユーザー情報が正しく返される
-jsonpath "$.data.user.id" exists
-jsonpath "$.data.user.email" == "admin@example.com"
-jsonpath "$.data.user.name" == "管理者"
-jsonpath "$.data.user.tenant_id" == "00000000-0000-0000-0000-000000000001"
-jsonpath "$.data.user.roles" exists
+jsonpath "$.user.id" exists
+jsonpath "$.user.email" == "admin@example.com"
+jsonpath "$.user.name" == "管理者"
+jsonpath "$.user.tenant_id" == "00000000-0000-0000-0000-000000000001"
+jsonpath "$.user.roles" exists
 # セッション Cookie がセキュリティ属性付きで設定される
 header "Set-Cookie" contains "session_id="
 header "Set-Cookie" contains "HttpOnly"

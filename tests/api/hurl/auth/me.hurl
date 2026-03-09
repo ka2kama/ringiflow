@@ -33,11 +33,11 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Asserts]
-jsonpath "$.data.id" exists
-jsonpath "$.data.email" == "user@example.com"
-jsonpath "$.data.name" == "一般ユーザー"
-jsonpath "$.data.tenant_id" == "00000000-0000-0000-0000-000000000001"
-jsonpath "$.data.tenant_name" == "Development Tenant"
+jsonpath "$.id" exists
+jsonpath "$.email" == "user@example.com"
+jsonpath "$.name" == "一般ユーザー"
+jsonpath "$.tenant_id" == "00000000-0000-0000-0000-000000000001"
+jsonpath "$.tenant_name" == "Development Tenant"
 # フロントエンドでの権限チェックに使用（配列型であることを検証）
-jsonpath "$.data.roles" count >= 0
-jsonpath "$.data.permissions" count >= 0
+jsonpath "$.roles" count >= 0
+jsonpath "$.permissions" count >= 0

@@ -33,22 +33,22 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # 配列型で 2 件以上（seed データに tenant_admin と user が存在）
-jsonpath "$.data" isCollection
-jsonpath "$.data" count >= 2
+jsonpath "$" isCollection
+jsonpath "$" count >= 2
 
 # 各要素の required フィールド（RoleItemData）
 # tenant_admin（seed: id=00000000-...-000000000002）
-jsonpath "$.data[0].id" == "{{tenant_admin_role_id}}"
-jsonpath "$.data[0].name" == "tenant_admin"
-jsonpath "$.data[0].permissions" isCollection
-jsonpath "$.data[0].permissions" count >= 1
-jsonpath "$.data[0].is_system" == true
-jsonpath "$.data[0].user_count" >= 1
+jsonpath "$[0].id" == "{{tenant_admin_role_id}}"
+jsonpath "$[0].name" == "tenant_admin"
+jsonpath "$[0].permissions" isCollection
+jsonpath "$[0].permissions" count >= 1
+jsonpath "$[0].is_system" == true
+jsonpath "$[0].user_count" >= 1
 
 # user（seed: id=00000000-...-000000000003）
-jsonpath "$.data[1].id" == "{{user_role_id}}"
-jsonpath "$.data[1].name" == "user"
-jsonpath "$.data[1].permissions" isCollection
-jsonpath "$.data[1].permissions" count >= 1
-jsonpath "$.data[1].is_system" == true
-jsonpath "$.data[1].user_count" >= 1
+jsonpath "$[1].id" == "{{user_role_id}}"
+jsonpath "$[1].name" == "user"
+jsonpath "$[1].permissions" isCollection
+jsonpath "$[1].permissions" count >= 1
+jsonpath "$[1].is_system" == true
+jsonpath "$[1].user_count" >= 1

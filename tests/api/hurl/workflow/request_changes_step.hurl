@@ -28,7 +28,7 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{admin_session_id}}
 HTTP 200
 [Captures]
-admin_csrf_token: jsonpath "$.data.token"
+admin_csrf_token: jsonpath "$.token"
 
 # ワークフロー作成
 POST {{bff_url}}/api/v1/workflows
@@ -45,9 +45,9 @@ Content-Type: application/json
 }
 HTTP 201
 [Captures]
-workflow_display_number: jsonpath "$.data.display_number"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_id: jsonpath "$.data.id"
+workflow_display_number: jsonpath "$.display_number"
+workflow_display_id: jsonpath "$.display_id"
+workflow_id: jsonpath "$.id"
 
 # ワークフロー申請（user に承認タスクを割り当て）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -71,8 +71,8 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{admin_session_id}}
 HTTP 200
 [Captures]
-step_display_number: jsonpath "$.data.steps[0].display_number"
-step_version: jsonpath "$.data.steps[0].version"
+step_display_number: jsonpath "$.steps[0].display_number"
+step_version: jsonpath "$.steps[0].version"
 
 # ===== 異常系テスト =====
 
@@ -124,7 +124,7 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{user_session_id}}
 HTTP 200
 [Captures]
-user_csrf_token: jsonpath "$.data.token"
+user_csrf_token: jsonpath "$.token"
 
 # Mailpit のメールをクリア（通知テスト用）
 DELETE {{mailpit_url}}/api/v1/messages
@@ -143,29 +143,29 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # ワークフローインスタンスの状態（required フィールドすべて検証）
-jsonpath "$.data.id" == "{{workflow_id}}"
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "差し戻しテスト申請"
-jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
-jsonpath "$.data.status" == "ChangesRequested"
-jsonpath "$.data.version" == 3
-jsonpath "$.data.form_data.reason" == "テスト"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{workflow_id}}"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "差し戻しテスト申請"
+jsonpath "$.definition_id" == "{{workflow_definition_id}}"
+jsonpath "$.status" == "ChangesRequested"
+jsonpath "$.version" == 3
+jsonpath "$.form_data.reason" == "テスト"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # completed_at は設定されない（ChangesRequested は中間状態）
-jsonpath "$.data.completed_at" == null
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.completed_at" == null
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # ステップの状態
-jsonpath "$.data.steps" count == 1
-jsonpath "$.data.steps[0].status" == "Completed"
-jsonpath "$.data.steps[0].version" == 2
-jsonpath "$.data.steps[0].decision" == "RequestChanges"
-jsonpath "$.data.steps[0].comment" == "フォームデータに不備があります。修正をお願いします。"
-jsonpath "$.data.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.steps" count == 1
+jsonpath "$.steps[0].status" == "Completed"
+jsonpath "$.steps[0].version" == 2
+jsonpath "$.steps[0].decision" == "RequestChanges"
+jsonpath "$.steps[0].comment" == "フォームデータに不備があります。修正をお願いします。"
+jsonpath "$.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 通知検証: 差し戻しメールが申請者（admin）に送信されている

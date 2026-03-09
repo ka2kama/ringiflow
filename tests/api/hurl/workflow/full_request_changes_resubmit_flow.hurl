@@ -28,7 +28,7 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{admin_session_id}}
 HTTP 200
 [Captures]
-admin_csrf_token: jsonpath "$.data.token"
+admin_csrf_token: jsonpath "$.token"
 
 # ===== ワークフロー作成（2段階承認） =====
 
@@ -47,9 +47,9 @@ Content-Type: application/json
 }
 HTTP 201
 [Captures]
-workflow_display_number: jsonpath "$.data.display_number"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_id: jsonpath "$.data.id"
+workflow_display_number: jsonpath "$.display_number"
+workflow_display_id: jsonpath "$.display_id"
+workflow_id: jsonpath "$.id"
 
 # ワークフロー申請（Step1: admin、Step2: user）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -77,9 +77,9 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{admin_session_id}}
 HTTP 200
 [Captures]
-step1_display_number: jsonpath "$.data.steps[0].display_number"
-step1_version: jsonpath "$.data.steps[0].version"
-step2_display_number: jsonpath "$.data.steps[1].display_number"
+step1_display_number: jsonpath "$.steps[0].display_number"
+step1_version: jsonpath "$.steps[0].version"
+step2_display_number: jsonpath "$.steps[1].display_number"
 
 # ===== ステップ1: admin による上長承認 =====
 
@@ -93,12 +93,12 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.data.status" == "InProgress"
-jsonpath "$.data.steps[0].status" == "Completed"
-jsonpath "$.data.steps[0].decision" == "Approved"
-jsonpath "$.data.steps[1].status" == "Active"
+jsonpath "$.status" == "InProgress"
+jsonpath "$.steps[0].status" == "Completed"
+jsonpath "$.steps[0].decision" == "Approved"
+jsonpath "$.steps[1].status" == "Active"
 [Captures]
-step2_version: jsonpath "$.data.steps[1].version"
+step2_version: jsonpath "$.steps[1].version"
 
 # ===== ステップ2: user による差し戻し =====
 
@@ -119,7 +119,7 @@ X-Tenant-ID: {{tenant_id}}
 Cookie: session_id={{user_session_id}}
 HTTP 200
 [Captures]
-user_csrf_token: jsonpath "$.data.token"
+user_csrf_token: jsonpath "$.token"
 
 # 経理承認ステップで差し戻し
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/steps/{{step2_display_number}}/request-changes
@@ -134,23 +134,23 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # 差し戻し後の状態（required フィールドすべて検証）
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "フルフロー差し戻しテスト"
-jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
-jsonpath "$.data.status" == "ChangesRequested"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.completed_at" == null
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.steps[0].status" == "Completed"
-jsonpath "$.data.steps[0].decision" == "Approved"
-jsonpath "$.data.steps[1].status" == "Completed"
-jsonpath "$.data.steps[1].decision" == "RequestChanges"
-jsonpath "$.data.steps[1].comment" == "金額の根拠を追記してください"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "フルフロー差し戻しテスト"
+jsonpath "$.definition_id" == "{{multi_step_definition_id}}"
+jsonpath "$.status" == "ChangesRequested"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.completed_at" == null
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.steps[0].status" == "Completed"
+jsonpath "$.steps[0].decision" == "Approved"
+jsonpath "$.steps[1].status" == "Completed"
+jsonpath "$.steps[1].decision" == "RequestChanges"
+jsonpath "$.steps[1].comment" == "金額の根拠を追記してください"
 [Captures]
-workflow_version: jsonpath "$.data.version"
+workflow_version: jsonpath "$.version"
 
 # ===== admin が再申請する =====
 
@@ -180,26 +180,26 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # 再申請後の状態（required フィールドすべて検証）
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "フルフロー差し戻しテスト"
-jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
-jsonpath "$.data.status" == "InProgress"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.form_data.justification" == "見積書 No.12345 参照"
-jsonpath "$.data.completed_at" == null
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "フルフロー差し戻しテスト"
+jsonpath "$.definition_id" == "{{multi_step_definition_id}}"
+jsonpath "$.status" == "InProgress"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.form_data.justification" == "見積書 No.12345 参照"
+jsonpath "$.completed_at" == null
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # 新しいステップが作成されている
-jsonpath "$.data.steps" count == 2
-jsonpath "$.data.steps[0].status" == "Active"
-jsonpath "$.data.steps[0].version" == 1
-jsonpath "$.data.steps[1].status" == "Pending"
-jsonpath "$.data.steps[1].version" == 1
+jsonpath "$.steps" count == 2
+jsonpath "$.steps[0].status" == "Active"
+jsonpath "$.steps[0].version" == 1
+jsonpath "$.steps[1].status" == "Pending"
+jsonpath "$.steps[1].version" == 1
 [Captures]
-new_step1_display_number: jsonpath "$.data.steps[0].display_number"
-new_step1_version: jsonpath "$.data.steps[0].version"
+new_step1_display_number: jsonpath "$.steps[0].display_number"
+new_step1_version: jsonpath "$.steps[0].version"
 
 # ===== ステップ1 再承認: admin による上長承認 =====
 
@@ -213,13 +213,13 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.data.status" == "InProgress"
-jsonpath "$.data.steps[0].status" == "Completed"
-jsonpath "$.data.steps[0].decision" == "Approved"
-jsonpath "$.data.steps[1].status" == "Active"
+jsonpath "$.status" == "InProgress"
+jsonpath "$.steps[0].status" == "Completed"
+jsonpath "$.steps[0].decision" == "Approved"
+jsonpath "$.steps[1].status" == "Active"
 [Captures]
-new_step2_display_number: jsonpath "$.data.steps[1].display_number"
-new_step2_version: jsonpath "$.data.steps[1].version"
+new_step2_display_number: jsonpath "$.steps[1].display_number"
+new_step2_version: jsonpath "$.steps[1].version"
 
 # ===== ステップ2 承認: user による経理承認 → Approved =====
 
@@ -234,18 +234,18 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # ワークフロー完了（required フィールドすべて検証）
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "フルフロー差し戻しテスト"
-jsonpath "$.data.definition_id" == "{{multi_step_definition_id}}"
-jsonpath "$.data.status" == "Approved"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "フルフロー差し戻しテスト"
+jsonpath "$.definition_id" == "{{multi_step_definition_id}}"
+jsonpath "$.status" == "Approved"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 # 両ステップとも承認完了
-jsonpath "$.data.steps[0].status" == "Completed"
-jsonpath "$.data.steps[0].decision" == "Approved"
-jsonpath "$.data.steps[1].status" == "Completed"
-jsonpath "$.data.steps[1].decision" == "Approved"
+jsonpath "$.steps[0].status" == "Completed"
+jsonpath "$.steps[0].decision" == "Approved"
+jsonpath "$.steps[1].status" == "Completed"
+jsonpath "$.steps[1].decision" == "Approved"

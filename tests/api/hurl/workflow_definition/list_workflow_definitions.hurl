@@ -33,15 +33,15 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # 配列型（シードデータに「汎用申請」と「2段階承認申請」が存在。他テストの書込で増える場合がある）
-jsonpath "$.data" isCollection
-jsonpath "$.data" count >= 2
+jsonpath "$" isCollection
+jsonpath "$" count >= 2
 
 # 先頭要素の構造検証（required フィールドがすべて存在すること）
-jsonpath "$.data[0].id" exists
-jsonpath "$.data[0].name" isString
-jsonpath "$.data[0].status" isString
-jsonpath "$.data[0].version" >= 1
-jsonpath "$.data[0].definition" exists
-jsonpath "$.data[0].created_by" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[0].id" exists
+jsonpath "$[0].name" isString
+jsonpath "$[0].status" isString
+jsonpath "$[0].version" >= 1
+jsonpath "$[0].definition" exists
+jsonpath "$[0].created_by" matches "^[a-f0-9-]{36}$"
+jsonpath "$[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"

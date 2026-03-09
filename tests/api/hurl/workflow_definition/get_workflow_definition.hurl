@@ -33,17 +33,17 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # required フィールドすべて検証
-jsonpath "$.data.id" == "{{workflow_definition_id}}"
-jsonpath "$.data.name" == "汎用申請"
-jsonpath "$.data.status" == "Published"
-jsonpath "$.data.version" >= 1
-jsonpath "$.data.definition" exists
-jsonpath "$.data.created_by" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{workflow_definition_id}}"
+jsonpath "$.name" == "汎用申請"
+jsonpath "$.status" == "Published"
+jsonpath "$.version" >= 1
+jsonpath "$.definition" exists
+jsonpath "$.created_by" matches "^[a-f0-9-]{36}$"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド
-jsonpath "$.data.description" exists
+jsonpath "$.description" exists
 
 # =============================================================================
 # 異常系: 存在しない ID は 404

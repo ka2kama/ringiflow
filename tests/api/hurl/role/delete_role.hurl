@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # テスト用カスタムロールを作成
 POST {{bff_url}}/api/v1/roles
@@ -41,7 +41,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-target_role_id: jsonpath "$.data.id"
+target_role_id: jsonpath "$.id"
 
 # =============================================================================
 # 正常系: カスタムロールを削除できる

@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # テスト用カスタムロールを作成
 POST {{bff_url}}/api/v1/roles
@@ -42,7 +42,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-target_role_id: jsonpath "$.data.id"
+target_role_id: jsonpath "$.id"
 
 # =============================================================================
 # 正常系: ロール名と権限を更新できる
@@ -65,14 +65,14 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（RoleDetailData）
-jsonpath "$.data.id" == "{{target_role_id}}"
-jsonpath "$.data.name" == "更新後ロール"
-jsonpath "$.data.description" == "更新後の説明"
-jsonpath "$.data.permissions" isCollection
-jsonpath "$.data.permissions" count == 3
-jsonpath "$.data.is_system" == false
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{target_role_id}}"
+jsonpath "$.name" == "更新後ロール"
+jsonpath "$.description" == "更新後の説明"
+jsonpath "$.permissions" isCollection
+jsonpath "$.permissions" count == 3
+jsonpath "$.is_system" == false
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 異常系: 存在しないロールの更新 → 404

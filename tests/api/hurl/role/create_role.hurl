@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 正常系: カスタムロールを作成できる
@@ -49,14 +49,14 @@ Content-Type: application/json
 HTTP 201
 [Asserts]
 # required フィールド（RoleDetailData）
-jsonpath "$.data.id" exists
-jsonpath "$.data.name" == "テストロール"
-jsonpath "$.data.description" == "API テスト用のカスタムロール"
-jsonpath "$.data.permissions" isCollection
-jsonpath "$.data.permissions" count == 2
-jsonpath "$.data.is_system" == false
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" exists
+jsonpath "$.name" == "テストロール"
+jsonpath "$.description" == "API テスト用のカスタムロール"
+jsonpath "$.permissions" isCollection
+jsonpath "$.permissions" count == 2
+jsonpath "$.is_system" == false
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 異常系: 同名のロールは作成できない（409 Conflict）
@@ -99,5 +99,5 @@ Content-Type: application/json
 
 HTTP 201
 [Asserts]
-jsonpath "$.data.name" == ""
-jsonpath "$.data.is_system" == false
+jsonpath "$.name" == ""
+jsonpath "$.is_system" == false

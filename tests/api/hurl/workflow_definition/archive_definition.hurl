@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # セットアップ 1: Draft 定義を作成する
@@ -56,11 +56,11 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-def_id: jsonpath "$.data.id"
-def_name: jsonpath "$.data.name"
+def_id: jsonpath "$.id"
+def_name: jsonpath "$.name"
 [Asserts]
-jsonpath "$.data.status" == "Draft"
-jsonpath "$.data.version" == 1
+jsonpath "$.status" == "Draft"
+jsonpath "$.version" == 1
 
 # =============================================================================
 # セットアップ 2: Draft → Published に遷移する
@@ -77,8 +77,8 @@ Content-Type: application/json
 
 HTTP 200
 [Asserts]
-jsonpath "$.data.status" == "Published"
-jsonpath "$.data.version" == 2
+jsonpath "$.status" == "Published"
+jsonpath "$.version" == 2
 
 # =============================================================================
 # 正常系: Published 状態の定義をアーカイブできる（Published → Archived）
@@ -99,17 +99,17 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（WorkflowDefinitionData）
-jsonpath "$.data.id" == "{{def_id}}"
-jsonpath "$.data.name" == "{{def_name}}"
-jsonpath "$.data.version" == 3
-jsonpath "$.data.status" == "Archived"
-jsonpath "$.data.definition" exists
-jsonpath "$.data.created_by" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{def_id}}"
+jsonpath "$.name" == "{{def_name}}"
+jsonpath "$.version" == 3
+jsonpath "$.status" == "Archived"
+jsonpath "$.definition" exists
+jsonpath "$.created_by" matches "^[a-f0-9-]{36}$"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド
-jsonpath "$.data.description" exists
+jsonpath "$.description" exists
 
 # =============================================================================
 # 異常系: 存在しない定義のアーカイブ → 404

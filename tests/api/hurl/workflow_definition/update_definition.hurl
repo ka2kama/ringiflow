@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # セットアップ: 更新対象の定義を作成する
@@ -56,7 +56,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-def_id: jsonpath "$.data.id"
+def_id: jsonpath "$.id"
 
 # =============================================================================
 # 正常系: Draft 状態の定義を更新できる
@@ -91,17 +91,17 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（WorkflowDefinitionData）
-jsonpath "$.data.id" == "{{def_id}}"
-jsonpath "$.data.name" == "更新後の申請"
-jsonpath "$.data.version" == 2
-jsonpath "$.data.status" == "Draft"
-jsonpath "$.data.definition" exists
-jsonpath "$.data.created_by" matches "^[a-f0-9-]{36}$"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{def_id}}"
+jsonpath "$.name" == "更新後の申請"
+jsonpath "$.version" == 2
+jsonpath "$.status" == "Draft"
+jsonpath "$.definition" exists
+jsonpath "$.created_by" matches "^[a-f0-9-]{36}$"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # nullable フィールド
-jsonpath "$.data.description" exists
+jsonpath "$.description" exists
 
 # =============================================================================
 # 異常系: 存在しない定義の更新 → 404

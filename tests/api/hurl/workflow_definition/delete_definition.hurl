@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 準正常系: Published 状態の定義は削除できない（400）
@@ -73,7 +73,7 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-def_id: jsonpath "$.data.id"
+def_id: jsonpath "$.id"
 
 # =============================================================================
 # 正常系: Draft 状態の定義を削除できる

@@ -26,7 +26,7 @@ Cookie: session_id={{session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 正常系: 有効な定義 JSON を検証する（valid: true）
@@ -59,8 +59,8 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（ValidationResultData）
-jsonpath "$.data.valid" == true
-jsonpath "$.data.errors" count == 0
+jsonpath "$.valid" == true
+jsonpath "$.errors" count == 0
 
 # =============================================================================
 # 準正常系: 無効な定義 JSON を検証する（valid: false）
@@ -89,7 +89,7 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # required フィールド（ValidationResultData）
-jsonpath "$.data.valid" == false
-jsonpath "$.data.errors" count >= 1
-jsonpath "$.data.errors[0].code" == "missing_approval_step"
-jsonpath "$.data.errors[0].message" == "承認ステップが必要です"
+jsonpath "$.valid" == false
+jsonpath "$.errors" count >= 1
+jsonpath "$.errors[0].code" == "missing_approval_step"
+jsonpath "$.errors[0].message" == "承認ステップが必要です"

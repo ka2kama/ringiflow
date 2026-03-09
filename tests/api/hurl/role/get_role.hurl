@@ -33,14 +33,14 @@ Cookie: session_id={{session_cookie}}
 HTTP 200
 [Asserts]
 # required フィールド（RoleDetailData）
-jsonpath "$.data.id" == "{{tenant_admin_role_id}}"
-jsonpath "$.data.name" == "tenant_admin"
-jsonpath "$.data.description" == "テナント管理者"
-jsonpath "$.data.permissions" isCollection
-jsonpath "$.data.permissions" count >= 1
-jsonpath "$.data.is_system" == true
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{tenant_admin_role_id}}"
+jsonpath "$.name" == "tenant_admin"
+jsonpath "$.description" == "テナント管理者"
+jsonpath "$.permissions" isCollection
+jsonpath "$.permissions" count >= 1
+jsonpath "$.is_system" == true
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 異常系: 存在しないロール ID は 404

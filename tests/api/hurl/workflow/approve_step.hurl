@@ -27,7 +27,7 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Captures]
-admin_csrf_token: jsonpath "$.data.token"
+admin_csrf_token: jsonpath "$.token"
 
 # ワークフローを作成
 POST {{bff_url}}/api/v1/workflows
@@ -46,9 +46,9 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-workflow_id: jsonpath "$.data.id"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_display_number: jsonpath "$.data.display_number"
+workflow_id: jsonpath "$.id"
+workflow_display_id: jsonpath "$.display_id"
+workflow_display_number: jsonpath "$.display_number"
 
 # ワークフローを申請（user に割り当て）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -71,8 +71,8 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Captures]
-step_display_number: jsonpath "$.data.steps[0].display_number"
-step_version: jsonpath "$.data.steps[0].version"
+step_display_number: jsonpath "$.steps[0].display_number"
+step_version: jsonpath "$.steps[0].version"
 
 # =============================================================================
 # 異常系: CSRF トークンなしでは承認できない
@@ -162,7 +162,7 @@ Cookie: session_id={{user_session_cookie}}
 
 HTTP 200
 [Captures]
-user_csrf_token: jsonpath "$.data.token"
+user_csrf_token: jsonpath "$.token"
 
 # =============================================================================
 # 異常系: バージョン不一致では承認できない（楽観的ロック）
@@ -210,35 +210,35 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 # ワークフローインスタンスの状態遷移を検証
-jsonpath "$.data.id" == "{{workflow_id}}"
-jsonpath "$.data.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.display_number" == {{workflow_display_number}}
-jsonpath "$.data.title" == "経費申請（承認テスト用）"
-jsonpath "$.data.definition_id" == "{{workflow_definition_id}}"
-jsonpath "$.data.status" == "Approved"
-jsonpath "$.data.version" == 3
-jsonpath "$.data.form_data.title" == "交通費"
-jsonpath "$.data.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.id" == "{{workflow_id}}"
+jsonpath "$.display_id" == "{{workflow_display_id}}"
+jsonpath "$.display_number" == {{workflow_display_number}}
+jsonpath "$.title" == "経費申請（承認テスト用）"
+jsonpath "$.definition_id" == "{{workflow_definition_id}}"
+jsonpath "$.status" == "Approved"
+jsonpath "$.version" == 3
+jsonpath "$.form_data.title" == "交通費"
+jsonpath "$.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # ステップの状態遷移を検証
-jsonpath "$.data.steps" count == 1
-jsonpath "$.data.steps[0].step_id" == "approval"
-jsonpath "$.data.steps[0].step_name" == "承認"
-jsonpath "$.data.steps[0].step_type" == "approval"
-jsonpath "$.data.steps[0].status" == "Completed"
-jsonpath "$.data.steps[0].version" == 2
-jsonpath "$.data.steps[0].decision" == "Approved"
-jsonpath "$.data.steps[0].comment" == "承認します"
-jsonpath "$.data.steps[0].assigned_to.id" == "{{user_id}}"
-jsonpath "$.data.steps[0].assigned_to.name" == "{{user_name}}"
-jsonpath "$.data.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.steps[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.steps[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.steps" count == 1
+jsonpath "$.steps[0].step_id" == "approval"
+jsonpath "$.steps[0].step_name" == "承認"
+jsonpath "$.steps[0].step_type" == "approval"
+jsonpath "$.steps[0].status" == "Completed"
+jsonpath "$.steps[0].version" == 2
+jsonpath "$.steps[0].decision" == "Approved"
+jsonpath "$.steps[0].comment" == "承認します"
+jsonpath "$.steps[0].assigned_to.id" == "{{user_id}}"
+jsonpath "$.steps[0].assigned_to.name" == "{{user_name}}"
+jsonpath "$.steps[0].completed_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.steps[0].created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.steps[0].updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # =============================================================================
 # 通知検証: 承認完了メールが申請者（admin）に送信されている

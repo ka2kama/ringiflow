@@ -26,7 +26,7 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Captures]
-csrf_token: jsonpath "$.data.token"
+csrf_token: jsonpath "$.token"
 
 # ワークフローを作成
 POST {{bff_url}}/api/v1/workflows
@@ -45,9 +45,9 @@ Content-Type: application/json
 
 HTTP 201
 [Captures]
-workflow_id: jsonpath "$.data.id"
-workflow_display_id: jsonpath "$.data.display_id"
-workflow_display_number: jsonpath "$.data.display_number"
+workflow_id: jsonpath "$.id"
+workflow_display_id: jsonpath "$.display_id"
+workflow_display_number: jsonpath "$.display_number"
 
 # ワークフローを申請（user に割り当て）
 POST {{bff_url}}/api/v1/workflows/{{workflow_display_number}}/submit
@@ -70,7 +70,7 @@ Cookie: session_id={{admin_session_cookie}}
 
 HTTP 200
 [Captures]
-step_display_number: jsonpath "$.data.steps[0].display_number"
+step_display_number: jsonpath "$.steps[0].display_number"
 
 # =============================================================================
 # user でログインしてタスクを取得
@@ -102,35 +102,35 @@ Cookie: session_id={{user_session_cookie}}
 HTTP 200
 [Asserts]
 # ステップ情報
-jsonpath "$.data.step.id" exists
-jsonpath "$.data.step.display_id" exists
-jsonpath "$.data.step.display_number" == {{step_display_number}}
-jsonpath "$.data.step.step_id" == "approval"
-jsonpath "$.data.step.step_name" == "承認"
-jsonpath "$.data.step.step_type" == "approval"
-jsonpath "$.data.step.status" == "Active"
-jsonpath "$.data.step.version" == 1
-jsonpath "$.data.step.assigned_to.id" == "{{user_id}}"
-jsonpath "$.data.step.decision" == null
-jsonpath "$.data.step.comment" == null
-jsonpath "$.data.step.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.step.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.step.id" exists
+jsonpath "$.step.display_id" exists
+jsonpath "$.step.display_number" == {{step_display_number}}
+jsonpath "$.step.step_id" == "approval"
+jsonpath "$.step.step_name" == "承認"
+jsonpath "$.step.step_type" == "approval"
+jsonpath "$.step.status" == "Active"
+jsonpath "$.step.version" == 1
+jsonpath "$.step.assigned_to.id" == "{{user_id}}"
+jsonpath "$.step.decision" == null
+jsonpath "$.step.comment" == null
+jsonpath "$.step.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.step.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
 
 # ワークフロー情報（WorkflowInstance required フィールド）
-jsonpath "$.data.workflow.id" == "{{workflow_id}}"
-jsonpath "$.data.workflow.display_id" == "{{workflow_display_id}}"
-jsonpath "$.data.workflow.display_number" == {{workflow_display_number}}
-jsonpath "$.data.workflow.title" == "経費申請（タスク詳細テスト用）"
-jsonpath "$.data.workflow.definition_id" == "{{workflow_definition_id}}"
-jsonpath "$.data.workflow.status" == "InProgress"
-jsonpath "$.data.workflow.version" == 2
-jsonpath "$.data.workflow.form_data" exists
-jsonpath "$.data.workflow.initiated_by.id" == "{{admin_id}}"
-jsonpath "$.data.workflow.initiated_by.name" == "{{admin_name}}"
-jsonpath "$.data.workflow.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.workflow.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.workflow.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
-jsonpath "$.data.workflow.steps" count == 1
+jsonpath "$.workflow.id" == "{{workflow_id}}"
+jsonpath "$.workflow.display_id" == "{{workflow_display_id}}"
+jsonpath "$.workflow.display_number" == {{workflow_display_number}}
+jsonpath "$.workflow.title" == "経費申請（タスク詳細テスト用）"
+jsonpath "$.workflow.definition_id" == "{{workflow_definition_id}}"
+jsonpath "$.workflow.status" == "InProgress"
+jsonpath "$.workflow.version" == 2
+jsonpath "$.workflow.form_data" exists
+jsonpath "$.workflow.initiated_by.id" == "{{admin_id}}"
+jsonpath "$.workflow.initiated_by.name" == "{{admin_name}}"
+jsonpath "$.workflow.created_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.workflow.updated_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.workflow.submitted_at" matches "^\\d{4}-\\d{2}-\\d{2}T"
+jsonpath "$.workflow.steps" count == 1
 
 # =============================================================================
 # 異常系: 未認証では取得できない
