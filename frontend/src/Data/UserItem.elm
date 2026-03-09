@@ -52,9 +52,6 @@ decoder =
 
 
 {-| ユーザー一覧をデコード
-
-API レスポンスの `{ data: [...] }` 形式に対応。
-
 -}
 listDecoder : Decoder (List UserItem)
 listDecoder =
