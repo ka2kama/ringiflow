@@ -85,7 +85,7 @@ done
 # Vite 開発サーバーを起動（BFF_PORT でプロキシ先を API テスト BFF に向ける）
 echo "Vite 開発サーバーを起動中..."
 cd "$PROJECT_ROOT/frontend"
-VITE_PORT=$E2E_VITE_PORT pnpm run dev &
+VITE_PORT=$E2E_VITE_PORT npx vite &
 
 # Vite 開発サーバーの起動を待機
 cd "$PROJECT_ROOT"
