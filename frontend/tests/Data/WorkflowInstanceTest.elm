@@ -467,43 +467,7 @@ decoderTests =
 detailDecoderTests : Test
 detailDecoderTests =
     describe "detailDecoder"
-        [ test "data フィールドから単一インスタンスをデコード" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": {
-                                "id": "inst-001",
-                                "display_id": "WF-1",
-                                "display_number": 1,
-                                "title": "経費精算申請",
-                                "definition_id": "def-001",
-                                "status": "Draft",
-                                "form_data": {},
-                                "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
-                                "created_at": "2026-01-01T00:00:00Z",
-                                "updated_at": "2026-01-01T00:00:00Z"
-                            }
-                        }
-                        """
-                in
-                Decode.decodeString WorkflowInstance.detailDecoder json
-                    |> Result.map
-                        (\i ->
-                            { id = i.id
-                            , title = i.title
-                            , status = i.status
-                            }
-                        )
-                    |> Expect.equal
-                        (Ok
-                            { id = "inst-001"
-                            , title = "経費精算申請"
-                            , status = Draft
-                            }
-                        )
-        , test "data フィールドがない場合はエラー" <|
+        [ test "単一インスタンスをデコード" <|
             \_ ->
                 let
                     json =
@@ -523,7 +487,20 @@ detailDecoderTests =
                         """
                 in
                 Decode.decodeString WorkflowInstance.detailDecoder json
-                    |> Expect.err
+                    |> Result.map
+                        (\i ->
+                            { id = i.id
+                            , title = i.title
+                            , status = i.status
+                            }
+                        )
+                    |> Expect.equal
+                        (Ok
+                            { id = "inst-001"
+                            , title = "経費精算申請"
+                            , status = Draft
+                            }
+                        )
         ]
 
 
@@ -534,39 +511,37 @@ detailDecoderTests =
 listDecoderTests : Test
 listDecoderTests =
     describe "listDecoder"
-        [ test "data フィールドから一覧をデコード" <|
+        [ test "一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "inst-001",
-                                    "display_id": "WF-1",
-                                    "display_number": 1,
-                                    "title": "経費精算",
-                                    "definition_id": "def-001",
-                                    "status": "Draft",
-                                    "form_data": {},
-                                    "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
-                                    "created_at": "2026-01-01T00:00:00Z",
-                                    "updated_at": "2026-01-01T00:00:00Z"
-                                },
-                                {
-                                    "id": "inst-002",
-                                    "display_id": "WF-2",
-                                    "display_number": 2,
-                                    "title": "休暇申請",
-                                    "definition_id": "def-002",
-                                    "status": "Approved",
-                                    "form_data": {},
-                                    "initiated_by": {"id": "user-002", "name": "テストユーザー2"},
-                                    "created_at": "2026-01-01T00:00:00Z",
-                                    "updated_at": "2026-01-01T00:00:00Z"
-                                }
-                            ]
-                        }
+                        [
+                            {
+                                "id": "inst-001",
+                                "display_id": "WF-1",
+                                "display_number": 1,
+                                "title": "経費精算",
+                                "definition_id": "def-001",
+                                "status": "Draft",
+                                "form_data": {},
+                                "initiated_by": {"id": "user-001", "name": "テストユーザー1"},
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "updated_at": "2026-01-01T00:00:00Z"
+                            },
+                            {
+                                "id": "inst-002",
+                                "display_id": "WF-2",
+                                "display_number": 2,
+                                "title": "休暇申請",
+                                "definition_id": "def-002",
+                                "status": "Approved",
+                                "form_data": {},
+                                "initiated_by": {"id": "user-002", "name": "テストユーザー2"},
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "updated_at": "2026-01-01T00:00:00Z"
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString WorkflowInstance.listDecoder json
@@ -574,24 +549,6 @@ listDecoderTests =
                     |> Expect.equal (Ok 2)
         , test "空の一覧をデコード" <|
             \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": []
-                        }
-                        """
-                in
-                Decode.decodeString WorkflowInstance.listDecoder json
+                Decode.decodeString WorkflowInstance.listDecoder "[]"
                     |> Expect.equal (Ok [])
-        , test "data フィールドがない場合はエラー" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        []
-                        """
-                in
-                Decode.decodeString WorkflowInstance.listDecoder json
-                    |> Expect.err
         ]

@@ -22,17 +22,15 @@ suite =
 decoderTests : Test
 decoderTests =
     describe "decoder"
-        [ test "全フィールドをデコード（data ラッパー含む）" <|
+        [ test "全フィールドをデコード" <|
             \_ ->
                 let
                     json =
                         """
                         {
-                            "data": {
-                                "pending_tasks": 3,
-                                "my_workflows_in_progress": 5,
-                                "completed_today": 2
-                            }
+                            "pending_tasks": 3,
+                            "my_workflows_in_progress": 5,
+                            "completed_today": 2
                         }
                         """
                 in
@@ -50,9 +48,7 @@ decoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "pending_tasks": 3
-                            }
+                            "pending_tasks": 3
                         }
                         """
                 in

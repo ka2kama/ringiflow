@@ -75,33 +75,31 @@ adminUserItemDecoderTests =
 adminUserItemListDecoderTests : Test
 adminUserItemListDecoderTests =
     describe "adminUserItemListDecoder"
-        [ test "data フィールドから一覧をデコード" <|
+        [ test "一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "id-1",
-                                    "display_id": "USR-000001",
-                                    "display_number": 1,
-                                    "name": "山田太郎",
-                                    "email": "yamada@example.com",
-                                    "status": "active",
-                                    "roles": ["admin"]
-                                },
-                                {
-                                    "id": "id-2",
-                                    "display_id": "USR-000002",
-                                    "display_number": 2,
-                                    "name": "田中花子",
-                                    "email": "tanaka@example.com",
-                                    "status": "inactive",
-                                    "roles": ["user"]
-                                }
-                            ]
-                        }
+                        [
+                            {
+                                "id": "id-1",
+                                "display_id": "USR-000001",
+                                "display_number": 1,
+                                "name": "山田太郎",
+                                "email": "yamada@example.com",
+                                "status": "active",
+                                "roles": ["admin"]
+                            },
+                            {
+                                "id": "id-2",
+                                "display_id": "USR-000002",
+                                "display_number": 2,
+                                "name": "田中花子",
+                                "email": "tanaka@example.com",
+                                "status": "inactive",
+                                "roles": ["user"]
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString AdminUser.adminUserItemListDecoder json
@@ -109,13 +107,7 @@ adminUserItemListDecoderTests =
                     |> Expect.equal (Ok 2)
         , test "空の一覧をデコード" <|
             \_ ->
-                let
-                    json =
-                        """
-                        { "data": [] }
-                        """
-                in
-                Decode.decodeString AdminUser.adminUserItemListDecoder json
+                Decode.decodeString AdminUser.adminUserItemListDecoder "[]"
                     |> Expect.equal (Ok [])
         ]
 
@@ -133,17 +125,15 @@ userDetailDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "id": "00000000-0000-0000-0000-000000000001",
-                                "display_id": "USR-000005",
-                                "display_number": 5,
-                                "name": "山田太郎",
-                                "email": "yamada@example.com",
-                                "status": "active",
-                                "roles": ["admin"],
-                                "permissions": ["workflow:read", "workflow:create"],
-                                "tenant_name": "テスト企業"
-                            }
+                            "id": "00000000-0000-0000-0000-000000000001",
+                            "display_id": "USR-000005",
+                            "display_number": 5,
+                            "name": "山田太郎",
+                            "email": "yamada@example.com",
+                            "status": "active",
+                            "roles": ["admin"],
+                            "permissions": ["workflow:read", "workflow:create"],
+                            "tenant_name": "テスト企業"
                         }
                         """
                 in
@@ -177,15 +167,13 @@ createUserResponseDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "id": "00000000-0000-0000-0000-000000000001",
-                                "display_id": "USR-000010",
-                                "display_number": 10,
-                                "name": "新規ユーザー",
-                                "email": "new@example.com",
-                                "role": "user",
-                                "initial_password": "Abc123!@#$%^&*XY"
-                            }
+                            "id": "00000000-0000-0000-0000-000000000001",
+                            "display_id": "USR-000010",
+                            "display_number": 10,
+                            "name": "新規ユーザー",
+                            "email": "new@example.com",
+                            "role": "user",
+                            "initial_password": "Abc123!@#$%^&*XY"
                         }
                         """
                 in

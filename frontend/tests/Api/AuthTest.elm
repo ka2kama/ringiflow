@@ -29,21 +29,7 @@ suite =
 csrfTokenDecoderTests : Test
 csrfTokenDecoderTests =
     describe "csrfTokenDecoder"
-        [ test "data.token をデコード" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": {
-                                "token": "csrf-token-abc123"
-                            }
-                        }
-                        """
-                in
-                Decode.decodeString Auth.csrfTokenDecoder json
-                    |> Expect.equal (Ok "csrf-token-abc123")
-        , test "data フィールド欠落でエラー" <|
+        [ test "token をデコード" <|
             \_ ->
                 let
                     json =
@@ -54,18 +40,10 @@ csrfTokenDecoderTests =
                         """
                 in
                 Decode.decodeString Auth.csrfTokenDecoder json
-                    |> Expect.err
+                    |> Expect.equal (Ok "csrf-token-abc123")
         , test "token フィールド欠落でエラー" <|
             \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": {}
-                        }
-                        """
-                in
-                Decode.decodeString Auth.csrfTokenDecoder json
+                Decode.decodeString Auth.csrfTokenDecoder "{}"
                     |> Expect.err
         ]
 
@@ -85,13 +63,11 @@ userDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "id": "user-001",
-                                "email": "yamada@example.com",
-                                "name": "山田太郎",
-                                "tenant_id": "tenant-001",
-                                "roles": ["admin", "approver"]
-                            }
+                            "id": "user-001",
+                            "email": "yamada@example.com",
+                            "name": "山田太郎",
+                            "tenant_id": "tenant-001",
+                            "roles": ["admin", "approver"]
                         }
                         """
                 in
@@ -111,13 +87,11 @@ userDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "id": "user-001",
-                                "email": "yamada@example.com",
-                                "name": "山田太郎",
-                                "tenant_id": "tenant-001",
-                                "roles": []
-                            }
+                            "id": "user-001",
+                            "email": "yamada@example.com",
+                            "name": "山田太郎",
+                            "tenant_id": "tenant-001",
+                            "roles": []
                         }
                         """
                 in
@@ -130,10 +104,8 @@ userDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "id": "user-001",
-                                "email": "yamada@example.com"
-                            }
+                            "id": "user-001",
+                            "email": "yamada@example.com"
                         }
                         """
                 in

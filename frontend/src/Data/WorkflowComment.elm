@@ -55,20 +55,14 @@ decoder =
 
 
 {-| 単一のコメントレスポンスをデコード
-
-API レスポンスの `{ data: {...} }` 形式に対応。
-
 -}
 detailDecoder : Decoder WorkflowComment
 detailDecoder =
-    Decode.field "data" decoder
+    decoder
 
 
 {-| コメント一覧をデコード
-
-API レスポンスの `{ data: [...] }` 形式に対応。
-
 -}
 listDecoder : Decoder (List WorkflowComment)
 listDecoder =
-    Decode.field "data" (Decode.list decoder)
+    Decode.list decoder

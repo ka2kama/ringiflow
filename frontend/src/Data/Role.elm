@@ -63,23 +63,17 @@ roleItemDecoder =
 
 
 {-| RoleItem 一覧のデコーダー
-
-`{ "data": [...] }` 形式に対応。
-
 -}
 roleItemListDecoder : Decoder (List RoleItem)
 roleItemListDecoder =
-    Decode.field "data" (Decode.list roleItemDecoder)
+    Decode.list roleItemDecoder
 
 
 {-| RoleDetail のデコーダー
-
-`{ "data": {...} }` 形式に対応。
-
 -}
 roleDetailDecoder : Decoder RoleDetail
 roleDetailDecoder =
-    Decode.field "data" roleDetailInnerDecoder
+    roleDetailInnerDecoder
 
 
 roleDetailInnerDecoder : Decoder RoleDetail

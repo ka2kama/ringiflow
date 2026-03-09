@@ -425,20 +425,14 @@ decoder =
 
 
 {-| 単一のワークフローインスタンスレスポンスをデコード
-
-API レスポンスの `{ data: {...} }` 形式に対応。
-
 -}
 detailDecoder : Decoder WorkflowInstance
 detailDecoder =
-    Decode.field "data" decoder
+    decoder
 
 
 {-| ワークフローインスタンス一覧をデコード
-
-API レスポンスの `{ data: [...] }` 形式に対応。
-
 -}
 listDecoder : Decoder (List WorkflowInstance)
 listDecoder =
-    Decode.field "data" (Decode.list decoder)
+    Decode.list decoder

@@ -127,35 +127,33 @@ decoderTests =
 listDecoderTests : Test
 listDecoderTests =
     describe "listDecoder"
-        [ test "data フィールドから一覧をデコード" <|
+        [ test "一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "def-001",
-                                    "name": "経費精算",
-                                    "version": 1,
-                                    "definition": {},
-                                    "status": "active",
-                                    "created_by": "user-001",
-                                    "created_at": "2026-01-01T00:00:00Z",
-                                    "updated_at": "2026-01-01T00:00:00Z"
-                                },
-                                {
-                                    "id": "def-002",
-                                    "name": "休暇申請",
-                                    "version": 1,
-                                    "definition": {},
-                                    "status": "active",
-                                    "created_by": "user-001",
-                                    "created_at": "2026-01-01T00:00:00Z",
-                                    "updated_at": "2026-01-01T00:00:00Z"
-                                }
-                            ]
-                        }
+                        [
+                            {
+                                "id": "def-001",
+                                "name": "経費精算",
+                                "version": 1,
+                                "definition": {},
+                                "status": "active",
+                                "created_by": "user-001",
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "updated_at": "2026-01-01T00:00:00Z"
+                            },
+                            {
+                                "id": "def-002",
+                                "name": "休暇申請",
+                                "version": 1,
+                                "definition": {},
+                                "status": "active",
+                                "created_by": "user-001",
+                                "created_at": "2026-01-01T00:00:00Z",
+                                "updated_at": "2026-01-01T00:00:00Z"
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString WorkflowDefinition.listDecoder json
@@ -163,26 +161,8 @@ listDecoderTests =
                     |> Expect.equal (Ok 2)
         , test "空の一覧をデコード" <|
             \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": []
-                        }
-                        """
-                in
-                Decode.decodeString WorkflowDefinition.listDecoder json
+                Decode.decodeString WorkflowDefinition.listDecoder "[]"
                     |> Expect.equal (Ok [])
-        , test "data フィールドがない場合はエラー" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        []
-                        """
-                in
-                Decode.decodeString WorkflowDefinition.listDecoder json
-                    |> Expect.err
         ]
 
 
@@ -347,10 +327,8 @@ validationResultDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "valid": true,
-                                "errors": []
-                            }
+                            "valid": true,
+                            "errors": []
                         }
                         """
                 in
@@ -370,20 +348,18 @@ validationResultDecoderTests =
                     json =
                         """
                         {
-                            "data": {
-                                "valid": false,
-                                "errors": [
-                                    {
-                                        "code": "missing_start_step",
-                                        "message": "開始ステップが必要です"
-                                    },
-                                    {
-                                        "code": "orphaned_step",
-                                        "message": "ステップ 'approval_1' が接続されていません",
-                                        "step_id": "approval_1"
-                                    }
-                                ]
-                            }
+                            "valid": false,
+                            "errors": [
+                                {
+                                    "code": "missing_start_step",
+                                    "message": "開始ステップが必要です"
+                                },
+                                {
+                                    "code": "orphaned_step",
+                                    "message": "ステップ 'approval_1' が接続されていません",
+                                    "step_id": "approval_1"
+                                }
+                            ]
                         }
                         """
                 in

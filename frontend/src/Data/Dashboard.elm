@@ -38,13 +38,10 @@ type alias DashboardStats =
 
 
 {-| DashboardStats のデコーダー
-
-`{ "data": { "pending_tasks": 3, ... } }` 形式のレスポンスをデコードする。
-
 -}
 decoder : Decoder DashboardStats
 decoder =
-    Decode.field "data" statsDecoder
+    statsDecoder
 
 
 statsDecoder : Decoder DashboardStats

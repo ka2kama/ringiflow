@@ -78,28 +78,29 @@ getMe { config, toMsg } =
 
 {-| CSRF トークンレスポンスのデコーダー
 
-レスポンス形式: `{ "data": { "token": "..." } }`
+レスポンス形式: `{ "token": "..." }`
+（`Api.get` が `ApiResponse` の `data` ラッパーを自動除去済み）
 
 -}
 csrfTokenDecoder : Decoder String
 csrfTokenDecoder =
-    Decode.at [ "data", "token" ] Decode.string
+    Decode.field "token" Decode.string
 
 
 {-| ユーザー情報レスポンスのデコーダー
 
 レスポンス形式:
 
-    { "data": { "id": "...", "email": "...", "name": "...", "tenant_id": "...", "roles": [...] } }
+    { "id": "...", "email": "...", "name": "...", "tenant_id": "...", "roles": [...] }
+
+（`Api.get` が `ApiResponse` の `data` ラッパーを自動除去済み）
 
 -}
 userDecoder : Decoder User
 userDecoder =
-    Decode.field "data"
-        (Decode.map5 User
-            (Decode.field "id" Decode.string)
-            (Decode.field "email" Decode.string)
-            (Decode.field "name" Decode.string)
-            (Decode.field "tenant_id" Decode.string)
-            (Decode.field "roles" (Decode.list Decode.string))
-        )
+    Decode.map5 User
+        (Decode.field "id" Decode.string)
+        (Decode.field "email" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "tenant_id" Decode.string)
+        (Decode.field "roles" (Decode.list Decode.string))

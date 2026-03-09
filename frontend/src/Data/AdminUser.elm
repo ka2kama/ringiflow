@@ -131,23 +131,17 @@ adminUserItemDecoder =
 
 
 {-| AdminUserItem 一覧のデコーダー
-
-`{ "data": [...] }` 形式に対応。
-
 -}
 adminUserItemListDecoder : Decoder (List AdminUserItem)
 adminUserItemListDecoder =
-    Decode.field "data" (Decode.list adminUserItemDecoder)
+    Decode.list adminUserItemDecoder
 
 
 {-| UserDetail のデコーダー
-
-`{ "data": {...} }` 形式に対応。
-
 -}
 userDetailDecoder : Decoder UserDetail
 userDetailDecoder =
-    Decode.field "data" userDetailInnerDecoder
+    userDetailInnerDecoder
 
 
 userDetailInnerDecoder : Decoder UserDetail
@@ -165,13 +159,10 @@ userDetailInnerDecoder =
 
 
 {-| CreateUserResponse のデコーダー
-
-`{ "data": {...} }` 形式に対応。
-
 -}
 createUserResponseDecoder : Decoder CreateUserResponse
 createUserResponseDecoder =
-    Decode.field "data" createUserResponseInnerDecoder
+    createUserResponseInnerDecoder
 
 
 createUserResponseInnerDecoder : Decoder CreateUserResponse
@@ -187,13 +178,10 @@ createUserResponseInnerDecoder =
 
 
 {-| UserResponse のデコーダー
-
-`{ "data": {...} }` 形式に対応。
-
 -}
 userResponseDecoder : Decoder UserResponse
 userResponseDecoder =
-    Decode.field "data" userResponseInnerDecoder
+    userResponseInnerDecoder
 
 
 userResponseInnerDecoder : Decoder UserResponse

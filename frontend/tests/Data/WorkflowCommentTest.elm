@@ -80,18 +80,16 @@ decoderTests =
 detailDecoderTests : Test
 detailDecoderTests =
     describe "detailDecoder"
-        [ test "data フィールドから単一コメントをデコード" <|
+        [ test "単一コメントをデコード" <|
             \_ ->
                 let
                     json =
                         """
                         {
-                            "data": {
-                                "id": "comment-001",
-                                "posted_by": {"id": "user-001", "name": "テストユーザー"},
-                                "body": "承認をお願いします",
-                                "created_at": "2026-01-15T10:00:00Z"
-                            }
+                            "id": "comment-001",
+                            "posted_by": {"id": "user-001", "name": "テストユーザー"},
+                            "body": "承認をお願いします",
+                            "created_at": "2026-01-15T10:00:00Z"
                         }
                         """
                 in
@@ -108,21 +106,6 @@ detailDecoderTests =
                             , body = "承認をお願いします"
                             }
                         )
-        , test "data フィールドがない場合はエラー" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "id": "comment-001",
-                            "posted_by": {"id": "user-001", "name": "テストユーザー"},
-                            "body": "承認をお願いします",
-                            "created_at": "2026-01-15T10:00:00Z"
-                        }
-                        """
-                in
-                Decode.decodeString WorkflowComment.detailDecoder json
-                    |> Expect.err
         ]
 
 
@@ -133,27 +116,25 @@ detailDecoderTests =
 listDecoderTests : Test
 listDecoderTests =
     describe "listDecoder"
-        [ test "data フィールドからコメント一覧をデコード" <|
+        [ test "コメント一覧をデコード" <|
             \_ ->
                 let
                     json =
                         """
-                        {
-                            "data": [
-                                {
-                                    "id": "comment-001",
-                                    "posted_by": {"id": "user-001", "name": "ユーザー1"},
-                                    "body": "コメント1",
-                                    "created_at": "2026-01-15T10:00:00Z"
-                                },
-                                {
-                                    "id": "comment-002",
-                                    "posted_by": {"id": "user-002", "name": "ユーザー2"},
-                                    "body": "コメント2",
-                                    "created_at": "2026-01-15T11:00:00Z"
-                                }
-                            ]
-                        }
+                        [
+                            {
+                                "id": "comment-001",
+                                "posted_by": {"id": "user-001", "name": "ユーザー1"},
+                                "body": "コメント1",
+                                "created_at": "2026-01-15T10:00:00Z"
+                            },
+                            {
+                                "id": "comment-002",
+                                "posted_by": {"id": "user-002", "name": "ユーザー2"},
+                                "body": "コメント2",
+                                "created_at": "2026-01-15T11:00:00Z"
+                            }
+                        ]
                         """
                 in
                 Decode.decodeString WorkflowComment.listDecoder json
@@ -161,24 +142,6 @@ listDecoderTests =
                     |> Expect.equal (Ok 2)
         , test "空のコメント一覧をデコード" <|
             \_ ->
-                let
-                    json =
-                        """
-                        {
-                            "data": []
-                        }
-                        """
-                in
-                Decode.decodeString WorkflowComment.listDecoder json
+                Decode.decodeString WorkflowComment.listDecoder "[]"
                     |> Expect.equal (Ok [])
-        , test "data フィールドがない場合はエラー" <|
-            \_ ->
-                let
-                    json =
-                        """
-                        []
-                        """
-                in
-                Decode.decodeString WorkflowComment.listDecoder json
-                    |> Expect.err
         ]
