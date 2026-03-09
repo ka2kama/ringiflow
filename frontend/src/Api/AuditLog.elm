@@ -51,7 +51,7 @@ listAuditLogs :
     }
     -> Cmd msg
 listAuditLogs { config, filter, toMsg } =
-    Api.getRaw
+    Api.get
         { config = config
         , url = "/api/v1/audit-logs" ++ buildFilterQuery filter
         , decoder = AuditLog.auditLogListDecoder
