@@ -137,6 +137,10 @@ setup-labels:
     @gh label create "priority:low" --description "優先度: 低" --color "0e8a16" 2>/dev/null || echo "  スキップ: priority:low（既存）"
     @# ステータス
     @gh label create "pending" --description "外部要因でブロックされ保留中" --color "D4C5F9" 2>/dev/null || echo "  スキップ: pending（既存）"
+    @# Dependabot（dependabot.yaml で自動付与）
+    @gh label create "rust" --description "Rust / Cargo 依存関係の更新" --color "DEA584" 2>/dev/null || echo "  スキップ: rust（既存）"
+    @gh label create "elm" --description "Elm / フロントエンド依存関係の更新" --color "1293D8" 2>/dev/null || echo "  スキップ: elm（既存）"
+    @gh label create "ci" --description "CI/CD ワークフローの更新" --color "0E8A16" 2>/dev/null || echo "  スキップ: ci（既存）"
     @echo "✓ GitHub ラベルセットアップ完了"
 
 # =============================================================================
