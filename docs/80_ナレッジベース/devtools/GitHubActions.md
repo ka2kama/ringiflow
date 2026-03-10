@@ -311,7 +311,7 @@ concurrency:
 | `backend/**/Cargo.toml` | 依存関係、フィーチャー定義、release プロファイル設定 |
 | `backend/Cargo.lock` | ロックされた依存バージョン |
 
-Rust toolchain バージョンは含めない。ci.yaml にピン留め（1.93.0）されており、変更時は通常 Cargo.toml/Cargo.lock も変わるため。
+Rust toolchain バージョンは含めない。ci.yaml にピン留めされており、変更時は通常 Cargo.toml/Cargo.lock も変わるため。
 
 ### restore-keys を使わない理由
 

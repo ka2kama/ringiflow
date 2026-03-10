@@ -79,7 +79,7 @@ jobs:
       - name: Setup Rust toolchain (stable)
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
           components: clippy
 
       # rustfmt の unstable 機能を使用するため nightly が必要
@@ -144,7 +144,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -246,7 +246,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -468,7 +468,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -590,7 +590,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -788,7 +788,7 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
 
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
