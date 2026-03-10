@@ -48,7 +48,7 @@ jobs:
 
       # バックエンドイメージ（BFF / Core Service / Auth Service の3バイナリ）
       - name: Build and push backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: backend
           file: backend/Dockerfile
@@ -60,7 +60,7 @@ jobs:
 
       # フロントエンドイメージ（静的ファイル出力用）
       - name: Build and push frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: frontend
           file: frontend/Dockerfile
