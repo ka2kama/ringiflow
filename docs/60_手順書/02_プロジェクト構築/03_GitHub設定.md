@@ -526,6 +526,11 @@ Issue を分類するためのラベルを設定する。
 | `priority:low` | 優先度: 低 | 緑 `#0e8a16` |
 | **ステータス** | | |
 | `pending` | 外部要因でブロックされ保留中 | 薄紫 `#D4C5F9` |
+| **Dependabot** | | |
+| `dependencies` | 依存関係の更新 | 青 `#0366d6` |
+| `rust` | Rust / Cargo 依存関係の更新 | オレンジ `#DEA584` |
+| `elm` | Elm / フロントエンド依存関係の更新 | 青 `#1293D8` |
+| `ci` | CI/CD ワークフローの更新 | 緑 `#0E8A16` |
 
 ### 7.2 ラベル作成（CLI）
 
@@ -549,9 +554,14 @@ gh label create "priority:low" --description "優先度: 低" --color "0e8a16"
 
 # ステータス
 gh label create "pending" --description "外部要因でブロックされ保留中" --color "D4C5F9"
+
+# Dependabot（dependabot.yaml で自動付与）
+gh label create "rust" --description "Rust / Cargo 依存関係の更新" --color "DEA584"
+gh label create "elm" --description "Elm / フロントエンド依存関係の更新" --color "1293D8"
+gh label create "ci" --description "CI/CD ワークフローの更新" --color "0E8A16"
 ```
 
-`bug`, `enhancement` はリポジトリ作成時にデフォルトで存在するため、作成不要。
+`bug`, `enhancement`, `dependencies` はリポジトリ作成時にデフォルトで存在するため、作成不要。
 
 ### 7.3 ラベル一括作成（スクリプト）
 
