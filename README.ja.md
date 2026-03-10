@@ -3,7 +3,7 @@
 [English version](README.md)
 
 [![CI](https://github.com/ka2kama/ringiflow/actions/workflows/ci.yaml/badge.svg)](https://github.com/ka2kama/ringiflow/actions/workflows/ci.yaml)
-![Rust](https://img.shields.io/badge/Rust-1.93-orange?logo=rust)
+![Rust](https://img.shields.io/badge/Rust-1.94-orange?logo=rust)
 ![Elm](https://img.shields.io/badge/Elm-0.19-60B5CC?logo=elm)
 ![License](https://img.shields.io/badge/License-CC0--1.0-blue)
 

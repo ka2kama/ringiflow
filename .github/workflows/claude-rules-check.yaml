@@ -112,7 +112,7 @@ jobs:
         if: steps.check-draft.outputs.is_draft == 'false'
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.93.0
+          toolchain: 1.94.0
 
       - name: Setup sccache
         if: steps.check-draft.outputs.is_draft == 'false'
