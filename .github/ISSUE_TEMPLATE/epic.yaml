@@ -29,6 +29,7 @@ body:
         具体的な手段（How）ではなく、達成したい状態を記述してください。
       placeholder: |
         例: ユーザーが認証基盤を通じて安全にシステムにアクセスできる状態
+        NG例: OAuth 2.0 + OIDC を導入する（これは How）
     validations:
       required: true
 

@@ -65,6 +65,7 @@ body:
         具体的な手段（How）ではなく、達成したい状態を記述してください。
       placeholder: |
         例: パスワード入力後に正常にログインが完了し、ユーザーが作業を継続できる状態
+        NG例: submitHandler のイベントリスナーを修正する（これは How）
     validations:
       required: true
 
