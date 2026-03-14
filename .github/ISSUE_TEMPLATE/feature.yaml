@@ -20,6 +20,19 @@ body:
       required: true
 
   - type: textarea
+    id: want
+    attributes:
+      label: Want（本質的なニーズ）
+      description: |
+        この Issue が解決しようとしている本質的なニーズ。
+        具体的な手段（How）ではなく、達成したい状態を記述してください。
+      placeholder: |
+        例: ユーザーが安全にログインでき、不正アクセスから保護されている状態
+        NG例: POST /auth/login を実装する（これは How）
+    validations:
+      required: true
+
+  - type: textarea
     id: done-criteria
     attributes:
       label: 完了条件

@@ -21,6 +21,18 @@ body:
       required: true
 
   - type: textarea
+    id: want
+    attributes:
+      label: Want（本質的なニーズ）
+      description: |
+        この Epic が解決しようとしている本質的なニーズ。
+        具体的な手段（How）ではなく、達成したい状態を記述してください。
+      placeholder: |
+        例: ユーザーが認証基盤を通じて安全にシステムにアクセスできる状態
+    validations:
+      required: true
+
+  - type: textarea
     id: tasks
     attributes:
       label: タスク
