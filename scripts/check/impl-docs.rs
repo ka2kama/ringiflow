@@ -9,24 +9,14 @@
 // 実装解説ドキュメントのファイル命名規則をチェックする。
 //
 // チェック内容:
-// - ディレクトリ名: 旧形式（連番プレフィックス）を拒否
-// - ディレクトリ名: PR プレフィックスがある場合は PR<番号>_ 形式を検証
-// - ファイル名: NN_<トピック>_{機能解説,コード解説}.md パターンに合致すること
-// - ペアチェック: トピック単位で機能解説とコード解説がペアで存在すること
+// - ディレクトリ名: 機能ドメイン名であること（旧 PR プレフィックス形式を拒否）
+// - ファイル名: NN_<トピック>.md パターンに合致すること
 //
 // 命名規則の定義: [命名規則](../../docs/90_実装解説/README.md)
 //
 // Usage: rust-script ./scripts/check/impl-docs.rs
 
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
-
-/// ドキュメントの種類
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum DocType {
-    Feature, // 機能解説
-    Code,    // コード解説
-}
 
 /// ディレクトリ内のファイル情報
 struct DirFiles {
@@ -44,24 +34,23 @@ struct ValidationResult {
 fn validate_dir(dir: &DirFiles) -> ValidationResult {
     let mut errors = Vec::new();
 
-    let old_format = Regex::new(r"^[0-9]+_").unwrap();
-    let pr_prefix = Regex::new(r"^PR[0-9]+_").unwrap();
-    let file_pattern = Regex::new(r"^[0-9]{2}_.+_(機能解説|コード解説)\.md$").unwrap();
-    let topic_pattern = Regex::new(r"^[0-9]{2}_(.+)_(機能解説|コード解説)\.md$").unwrap();
+    let old_numbered = Regex::new(r"^[0-9]+_").unwrap();
+    let pr_prefix = Regex::new(r"^PR[0-9]+").unwrap();
+    let file_pattern = Regex::new(r"^[0-9]{2}_.+\.md$").unwrap();
+    let old_file_pattern = Regex::new(r"_(機能解説|コード解説)\.md$").unwrap();
 
-    // ディレクトリ名チェック: 旧形式（連番プレフィックス）を拒否
-    if old_format.is_match(&dir.dir_name) {
+    // ディレクトリ名チェック: 旧形式を拒否
+    if old_numbered.is_match(&dir.dir_name) {
         errors.push(format!(
-            "旧形式の連番ディレクトリ名です。PR<番号>_<機能名> に変更してください: {}/",
+            "旧形式の連番ディレクトリ名です。機能ドメイン名に変更してください: {}/",
             dir.dir_path
         ));
         return ValidationResult { errors };
     }
 
-    // PR プレフィックスがある場合は PR<数字>_ 形式を検証
-    if dir.dir_name.starts_with("PR") && !pr_prefix.is_match(&dir.dir_name) {
+    if pr_prefix.is_match(&dir.dir_name) {
         errors.push(format!(
-            "ディレクトリ名が PR<番号>_<機能名> パターンに合致しません: {}/",
+            "旧形式の PR プレフィックスです。機能ドメイン名に変更してください: {}/",
             dir.dir_path
         ));
         return ValidationResult { errors };
@@ -69,43 +58,25 @@ fn validate_dir(dir: &DirFiles) -> ValidationResult {
 
     // ファイル名チェック
     for file_name in &dir.file_names {
+        // 旧形式のサフィックスを拒否
+        if old_file_pattern.is_match(file_name) {
+            errors.push(format!(
+                "旧形式のファイル名です（_{} サフィックス）。NN_<トピック>.md に変更してください: {}/{}",
+                if file_name.contains("機能解説") {
+                    "機能解説"
+                } else {
+                    "コード解説"
+                },
+                dir.dir_path,
+                file_name
+            ));
+            continue;
+        }
+
         if !file_pattern.is_match(file_name) {
             errors.push(format!(
-                "ファイル名が NN_<トピック>_{{機能解説,コード解説}}.md パターンに合致しません: {}/{}",
+                "ファイル名が NN_<トピック>.md パターンに合致しません: {}/{}",
                 dir.dir_path, file_name
-            ));
-        }
-    }
-
-    // ペアチェック: トピック単位で機能解説とコード解説がペアで存在するか
-    let mut topics: HashMap<String, HashSet<DocType>> = HashMap::new();
-    for file_name in &dir.file_names {
-        if let Some(caps) = topic_pattern.captures(file_name) {
-            let topic = caps[1].to_string();
-            let doc_type = match &caps[2] {
-                "機能解説" => DocType::Feature,
-                "コード解説" => DocType::Code,
-                _ => unreachable!(),
-            };
-            topics.entry(topic).or_default().insert(doc_type);
-        }
-    }
-
-    // ペアのチェック — トピック名をソートして出力を安定化
-    let mut sorted_topics: Vec<_> = topics.iter().collect();
-    sorted_topics.sort_by_key(|(topic, _)| *topic);
-
-    for (topic, doc_types) in sorted_topics {
-        if !doc_types.contains(&DocType::Code) {
-            errors.push(format!(
-                "コード解説が欠如しています: {}/ トピック「{}」に機能解説はあるがコード解説がない",
-                dir.dir_path, topic
-            ));
-        }
-        if !doc_types.contains(&DocType::Feature) {
-            errors.push(format!(
-                "機能解説が欠如しています: {}/ トピック「{}」にコード解説はあるが機能解説がない",
-                dir.dir_path, topic
             ));
         }
     }
@@ -145,6 +116,11 @@ fn run() -> i32 {
                 }
             })
             .collect();
+
+        // .gitkeep のみのディレクトリはスキップ
+        if file_names.is_empty() {
+            continue;
+        }
 
         let dir_files = DirFiles {
             dir_name,
@@ -191,20 +167,20 @@ mod tests {
     // --- 正常系 ---
 
     #[test]
-    fn test_pr形式ディレクトリと正しいファイルペアでエラーなし() {
+    fn test_機能ドメインディレクトリと正しいファイル名でエラーなし() {
         let dir = make_dir(
-            "PR123_認証機能",
-            &["01_ログイン_機能解説.md", "01_ログイン_コード解説.md"],
+            "ワークフロー",
+            &["01_申請フロー.md", "02_承認・却下フロー.md"],
         );
         let result = validate_dir(&dir);
         assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
     }
 
     #[test]
-    fn test_feature形式ディレクトリでエラーなし() {
+    fn test_横断的関心事ディレクトリでエラーなし() {
         let dir = make_dir(
-            "認証機能",
-            &["01_ログイン_機能解説.md", "01_ログイン_コード解説.md"],
+            "横断的関心事",
+            &["01_マルチテナントRLS.md", "02_Observability.md"],
         );
         let result = validate_dir(&dir);
         assert!(result.errors.is_empty(), "errors: {:?}", result.errors);
@@ -214,51 +190,46 @@ mod tests {
 
     #[test]
     fn test_旧形式の連番ディレクトリ名でエラー() {
-        let dir = make_dir("01_認証機能", &["01_ログイン_機能解説.md"]);
+        let dir = make_dir("01_認証機能", &["01_認証フロー.md"]);
         let result = validate_dir(&dir);
         assert_eq!(result.errors.len(), 1);
         assert!(result.errors[0].contains("旧形式の連番ディレクトリ名です"));
     }
 
     #[test]
-    fn test_不正なprプレフィックスでエラー() {
-        let dir = make_dir("PRx_認証機能", &["01_ログイン_機能解説.md"]);
+    fn test_旧形式のprプレフィックスでエラー() {
+        let dir = make_dir("PR123_認証機能", &["01_認証フロー.md"]);
         let result = validate_dir(&dir);
         assert_eq!(result.errors.len(), 1);
-        assert!(result.errors[0].contains("PR<番号>_<機能名> パターンに合致しません"));
+        assert!(result.errors[0].contains("旧形式の PR プレフィックス"));
     }
 
     // --- 異常系: ファイル名 ---
 
     #[test]
     fn test_不正なファイル名でエラー() {
-        let dir = make_dir("PR123_認証機能", &["README.md"]);
+        let dir = make_dir("認証", &["README.md"]);
         let result = validate_dir(&dir);
         assert_eq!(result.errors.len(), 1);
-        assert!(
-            result.errors[0]
-                .contains("NN_<トピック>_{機能解説,コード解説}.md パターンに合致しません")
-        );
-    }
-
-    // --- 異常系: ペアチェック ---
-
-    #[test]
-    fn test_コード解説が欠如しているトピックでエラー() {
-        let dir = make_dir("PR123_認証機能", &["01_ログイン_機能解説.md"]);
-        let result = validate_dir(&dir);
-        assert_eq!(result.errors.len(), 1);
-        assert!(result.errors[0].contains("コード解説が欠如しています"));
-        assert!(result.errors[0].contains("ログイン"));
+        assert!(result.errors[0].contains("NN_<トピック>.md パターンに合致しません"));
     }
 
     #[test]
-    fn test_機能解説が欠如しているトピックでエラー() {
-        let dir = make_dir("PR123_認証機能", &["01_ログイン_コード解説.md"]);
+    fn test_旧形式の機能解説サフィックスでエラー() {
+        let dir = make_dir("ワークフロー", &["01_申請_機能解説.md"]);
         let result = validate_dir(&dir);
         assert_eq!(result.errors.len(), 1);
-        assert!(result.errors[0].contains("機能解説が欠如しています"));
-        assert!(result.errors[0].contains("ログイン"));
+        assert!(result.errors[0].contains("旧形式のファイル名です"));
+        assert!(result.errors[0].contains("_機能解説"));
+    }
+
+    #[test]
+    fn test_旧形式のコード解説サフィックスでエラー() {
+        let dir = make_dir("ワークフロー", &["01_申請_コード解説.md"]);
+        let result = validate_dir(&dir);
+        assert_eq!(result.errors.len(), 1);
+        assert!(result.errors[0].contains("旧形式のファイル名です"));
+        assert!(result.errors[0].contains("_コード解説"));
     }
 
     // --- 異常系: 複数エラー ---
@@ -266,15 +237,13 @@ mod tests {
     #[test]
     fn test_複数のエラーを同時に検出() {
         let dir = make_dir(
-            "PR123_認証機能",
+            "ワークフロー",
             &[
-                "README.md",               // 不正なファイル名
-                "01_ログイン_機能解説.md", // コード解説が欠如
-                "02_認可_コード解説.md",   // 機能解説が欠如
+                "README.md",           // 不正なファイル名
+                "01_申請_機能解説.md", // 旧形式
             ],
         );
         let result = validate_dir(&dir);
-        // 不正ファイル名(1) + コード解説欠如(1) + 機能解説欠如(1) = 3 件
-        assert_eq!(result.errors.len(), 3, "errors: {:?}", result.errors);
+        assert_eq!(result.errors.len(), 2, "errors: {:?}", result.errors);
     }
 }
