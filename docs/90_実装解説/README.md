@@ -72,6 +72,20 @@ NN_<トピック>.md
 
 ## sequenceDiagram の記法ルール
 
+### participant の命名: 役割で統一
+
+participant 名はアーキテクチャ上の役割で統一する。技術名（Elm, PostgreSQL 等）は使用しない。技術スタックは README や概要セクションで記載する。
+
+| participant ID | ラベル | 備考 |
+|---------------|--------|------|
+| `U` | ユーザー | 必要に応じて「（承認者）」等の補足 |
+| `FE` | Frontend | |
+| `BFF` | BFF | |
+| `Redis` | Redis | 技術名だが役割名（Session Store）より通じやすい |
+| `Core` | Core Service | |
+| `DB` | DB | |
+| `Notify` | Notification | |
+
 ### self-message の禁止
 
 `A->>A:` 形式の self-message は使用しない。self-message は実際の通信先を隠し、読者に暗黙知を要求する。
