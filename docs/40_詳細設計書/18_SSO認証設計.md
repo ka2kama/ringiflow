@@ -59,7 +59,7 @@ sequenceDiagram
     IdP-->>Browser: 認可コード + state (callback URL へリダイレクト)
 
     Browser->>BFF: GET /api/v1/auth/oidc/callback?code=xxx&state=yyy
-    BFF->>Auth: POST /internal/auth/oidc/exchange {code, state, tenant_id}
+    BFF->>Auth: POST /internal/auth/oidc/exchange {code, state, redirect_uri}
     Auth->>Redis: GET oidc_state:{state}
     Auth->>Auth: state 検証 + code_verifier 取得
     Auth->>Redis: DEL oidc_state:{state}
@@ -168,15 +168,15 @@ Set-Cookie: session_id=xxx; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2880
 **レスポンス（302 Found — エラー）:**
 
 ```
-Location: /login?error=sso_failed&message=xxx
+Location: /login?error=sso_failed
 ```
 
-SSO エラー時はログイン画面にリダイレクトし、エラーメッセージをクエリパラメータで渡す。
+SSO エラー時はログイン画面にリダイレクトし、エラーコードのみをクエリパラメータで渡す。フロントエンドがコードに対応するメッセージを表示する（URL にユーザー向けメッセージを含めない。XSS リスク回避、URL のクリーンさ維持）。
 
-| エラー種別 | error 値 | message |
-|-----------|---------|---------|
+| エラー種別 | error 値 | フロントエンドが表示するメッセージ |
+|-----------|---------|-------------------------------|
 | IdP がエラーを返した | sso_failed | SSO 認証に失敗しました |
-| state が無効 | sso_failed | 認証セッションが無効です。再度お試しください |
+| state が無効 | invalid_session | 認証セッションが無効です。再度お試しください |
 | トークン交換失敗 | sso_failed | SSO 認証に失敗しました |
 | ユーザーが無効化済み | account_disabled | アカウントが無効化されています |
 
@@ -329,7 +329,6 @@ OIDC 認証開始時の authorize URL を生成する。
 {
   "code": "authorization_code",
   "state": "state_value",
-  "tenant_id": "550e8400-e29b-41d4-a716-446655440001",
   "redirect_uri": "https://app.ringiflow.example.com/api/v1/auth/oidc/callback"
 }
 ```
@@ -653,10 +652,11 @@ pub trait OidcProviderRepository: Send + Sync {
         tenant_id: &TenantId,
     ) -> Result<Vec<OidcProvider>, InfraError>;
 
-    /// ID で OIDC プロバイダーを取得
+    /// ID で OIDC プロバイダーを取得（テナント分離を構造的に保証）
     async fn find_by_id(
         &self,
         id: &OidcProviderId,
+        tenant_id: &TenantId,
     ) -> Result<Option<OidcProvider>, InfraError>;
 
     /// OIDC プロバイダーを作成
@@ -671,10 +671,11 @@ pub trait OidcProviderRepository: Send + Sync {
         provider: &OidcProvider,
     ) -> Result<OidcProvider, InfraError>;
 
-    /// OIDC プロバイダーを削除
+    /// OIDC プロバイダーを削除（テナント分離を構造的に保証）
     async fn delete(
         &self,
         id: &OidcProviderId,
+        tenant_id: &TenantId,
     ) -> Result<(), InfraError>;
 }
 ```
@@ -693,11 +694,11 @@ pub trait OidcAuthenticator: Send + Sync {
     ) -> Result<String, AuthError>;
 
     /// 認可コードをトークンに交換し、ユーザー情報を返す
+    /// tenant_id は state から復元する（引数で渡さない）
     async fn exchange_code(
         &self,
         code: &str,
         state: &str,
-        tenant_id: &TenantId,
         redirect_uri: &str,
     ) -> Result<OidcAuthResult, AuthError>;
 }
