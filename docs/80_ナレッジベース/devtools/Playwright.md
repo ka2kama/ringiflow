@@ -234,8 +234,6 @@ tests/e2e/
     └── approval.spec.ts   # 承認フローテスト
 ```
 
-→ ファイルごとの詳細設計: [実装解説](../../90_実装解説/PR434_E2Eテスト/01_Playwright_E2Eテスト_コード解説.md)
-
 ## 参考
 
 - [Playwright 公式サイト](https://playwright.dev/)
