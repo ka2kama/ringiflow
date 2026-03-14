@@ -23,8 +23,8 @@
 - dev-flow-issue.md の PR 本文ルールに図に関する記述なし
 
 ### 進捗
-- [ ] Phase 1: zoom-rhythm.md にガイドラインを追加
-- [ ] Phase 2: dev-flow-issue.md にガイドラインを追加
+- [x] Phase 1: zoom-rhythm.md にガイドラインを追加
+- [x] Phase 2: dev-flow-issue.md にガイドラインを追加
 
 ## 仕様整理
 
