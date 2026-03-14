@@ -68,7 +68,7 @@ git diff main...HEAD
 | 差分全体 | `git diff main...HEAD` | 詳細分析 |
 | 関連 Issue | PR 本文から抽出 | コンテキスト |
 
-**E2E フローの追跡**: 変更されたファイルから、ユーザー操作 → Elm → BFF → Core Service → DB の流れを追跡する。1つのファイルではなく、リクエストがどのコンポーネントを通過するかを把握する。
+**E2E フローの追跡**: 変更されたファイルから、ユーザー操作 → Frontend → BFF → Core Service → DB の流れを追跡する。1つのファイルではなく、リクエストがどのコンポーネントを通過するかを把握する。
 
 #### feature モード
 
@@ -131,10 +131,10 @@ docs/90_実装解説/<機能ドメイン>/NN_<トピック>.md
 
 participant の選択基準:
 
-| 対象 | participant |
-|------|------------|
-| 常に含める | ユーザー、Elm Frontend、BFF、Core Service、PostgreSQL |
-| 該当する場合 | Auth Service、Redis、S3、DynamoDB |
+| 対象 | participant ID | ラベル |
+|------|---------------|--------|
+| 常に含める | U, FE, BFF, Core, DB | ユーザー, Frontend, BFF, Core Service, DB |
+| 該当する場合 | Redis, Auth, S3, DynamoDB, Notify | Redis, Auth Service, S3, DynamoDB, Notification |
 
 ### 準正常系（該当する場合）
 
@@ -165,14 +165,14 @@ sequenceDiagram の粒度:
 <リクエスト/レスポンスがレイヤーを通過する際の型変換を記述>
 
 ```
-Elm Encoder → JSON → BFF Handler(RequestBody) → CoreClient(CoreRequest) → Core Handler(Request) → UseCase → Domain Entity
+Frontend Encoder → JSON → BFF Handler(RequestBody) → CoreClient(CoreRequest) → Core Handler(Request) → UseCase → Domain Entity
 ```
 
 ### エラー伝播
 
 | エラー | 発生箇所 | 伝播経路 | HTTP Status | ユーザーへの表示 |
 |-------|---------|---------|-------------|---------------|
-| ... | ... | Core → BFF → Elm | ... | ... |
+| ... | ... | Core → BFF → Frontend | ... | ... |
 ```
 
 セクション内容の取捨選択:
