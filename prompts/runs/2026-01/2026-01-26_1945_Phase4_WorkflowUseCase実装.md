@@ -155,5 +155,5 @@ Phase 5: ワークフロー申請ユースケースの拡張
 ## 参照
 
 - Issue: [#35 ワークフロー申請機能](https://github.com/ka2kama/ringiflow/issues/35)
-- 実装解説: Phase 4: WorkflowUseCase（統合後のファイル: [02_ワークフロー申請_コード解説.md](../../../docs/90_実装解説/PR114_ワークフロー申請機能/02_ワークフロー申請_コード解説.md)）
+- 実装解説: Phase 4: WorkflowUseCase（統合後のファイル: 02_ワークフロー申請_コード解説.md（削除済み））
 - API設計: [docs/40_詳細設計書/03_API設計.md](../../../docs/40_詳細設計書/03_API設計.md)

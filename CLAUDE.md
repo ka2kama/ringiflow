@@ -180,7 +180,7 @@ GitHub Issues/PR は一時的なワークフロー用。判断・学びはロー
 | 技術選定・方針選択・見送り | ADR | `docs/70_ADR/` |
 | 新ツール・パターン導入 | ナレッジベース | `docs/80_ナレッジベース/` |
 | コード変更・設計判断 | セッションログ | `prompts/runs/` |
-| PR 単位の機能解説 | 実装解説（`/explain`） | `docs/90_実装解説/` |
+| E2E フローの解説 | 実装解説（`/explain`） | `docs/90_実装解説/` |
 | 非自明な問題解決 | 操作レシピ | `prompts/recipes/` |
 | プロセスの問題と対策 | 改善記録 | `process/improvements/` |
 | 仮説検証 2 回以上の調査 | 調査記録 | `process/investigations/` |
