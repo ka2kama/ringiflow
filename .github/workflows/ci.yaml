@@ -334,7 +334,7 @@ jobs:
         run: npm install -g elm elm-format
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Lint
         run: just lint-elm
@@ -365,7 +365,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Lint shell scripts
         if: needs.changes.outputs.shell == 'true'
@@ -406,7 +406,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Lint OpenAPI
         run: just lint-openapi
@@ -503,7 +503,7 @@ jobs:
           fi
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Setup environment
         run: just setup-env
@@ -630,7 +630,7 @@ jobs:
           fi
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Setup environment
         run: just setup-env
@@ -780,7 +780,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Check code duplicates
         run: just check-duplicates
