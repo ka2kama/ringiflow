@@ -15,7 +15,7 @@
     "@tailwindcss/vite": "^4.2.4",
     "elm-review": "^2.13.5",
     "elm-test": "0.19.1-revision17",
-    "tailwindcss": "^4.2.3",
+    "tailwindcss": "^4.2.4",
     "vite": "^8.0.9",
     "vite-plugin-elm": "^3.0.1"
   },
