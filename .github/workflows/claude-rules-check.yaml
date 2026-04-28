@@ -116,7 +116,7 @@ jobs:
 
       - name: Setup sccache
         if: steps.check-draft.outputs.is_draft == 'false'
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Cache Cargo
         if: steps.check-draft.outputs.is_draft == 'false'
