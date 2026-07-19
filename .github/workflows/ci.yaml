@@ -330,8 +330,9 @@ jobs:
         working-directory: frontend
 
       # elm-test は devDependencies、elm と elm-format はグローバル
+      # elm は elm.json の要求バージョンに固定（npm の latest は 0.19.2 系）
       - name: Install Elm tools
-        run: npm install -g elm elm-format
+        run: npm install -g elm@0.19.1 elm-format
 
       - name: Install just
         uses: extractions/setup-just@v4
@@ -617,8 +618,9 @@ jobs:
         with:
           version: 10
 
+      # elm は elm.json の要求バージョンに固定（npm の latest は 0.19.2 系）
       - name: Install Elm
-        run: npm install -g elm
+        run: npm install -g elm@0.19.1
 
       - name: Install cargo-binstall
         run: curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
