@@ -1,0 +1,6 @@
+# このファイルは e2e をリポジトリルートのワークスペースから独立させる境界マーカー。
+# ルートの pnpm-workspace.yaml（allowBuilds 設定用）が存在するため、
+# このファイルがないと pnpm の祖先探索で e2e がルートワークスペースに取り込まれ、
+# tests/e2e/node_modules が生成されなくなる。
+packages:
+  - .

@@ -1,0 +1,6 @@
+# pnpm 11 はビルドスクリプトの実行可否の明示（allowBuilds）を要求する。
+# core-js / protobufjs は @redocly/cli, jscpd の推移的依存で、
+# ビルドスクリプトなしで動作するため実行を拒否する（従来挙動の明示化）。
+allowBuilds:
+  core-js: false
+  protobufjs: false

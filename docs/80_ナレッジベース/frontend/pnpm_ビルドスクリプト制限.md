@@ -55,33 +55,29 @@ $ pnpm install
 │ Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.
 ```
 
-### 設定方法
+### 設定方法（pnpm v11 以降）
 
-`pnpm approve-builds` を実行すると、対話形式で許可/無視を選択できる：
+pnpm v11 で 2 つの変更が入った：
 
-```
-$ pnpm approve-builds
+1. `package.json` の `pnpm` フィールドが読まれなくなった（設定の新しい置き場所は `pnpm-workspace.yaml`）
+2. ビルドスクリプトを持つ依存が未判定のままだと、警告ではなく**インストールがエラー**になる（`ERR_PNPM_IGNORED_BUILDS`）。判定を促すテンプレートが `pnpm-workspace.yaml` に自動生成される
 
-? esbuild@0.27.2 has a build script. Allow it?
-> allow (run the script)
-  ignore (don't run, but don't warn)
-  deny (don't run, and warn if present)
-```
+設定は `pnpm-workspace.yaml` の `allowBuilds` に、パッケージごとの true/false で明示する：
 
-設定は `package.json` の `pnpm` フィールドに保存される：
-
-```json
-{
-  "pnpm": {
-    "neverBuiltDependencies": ["esbuild"]
-  }
-}
+```yaml
+# pnpm-workspace.yaml
+allowBuilds:
+  esbuild: false # スクリプトを実行しない
 ```
 
-| 設定 | 説明 |
-|------|------|
-| `neverBuiltDependencies` | スクリプトを実行しない（警告も出ない） |
-| `onlyBuiltDependencies` | 指定したパッケージのみスクリプトを実行 |
+`pnpm approve-builds` を実行すると、対話形式で許可/拒否を選択して同ファイルに保存できる。
+
+| 設定値 | 説明 |
+|--------|------|
+| `false` | スクリプトを実行しない（エラーも警告も出ない） |
+| `true` | スクリプトの実行を許可する（信頼できるパッケージのみ） |
+
+v10 以前の `neverBuiltDependencies` / `onlyBuiltDependencies`（package.json の `pnpm` フィールド）は廃止された。`overrides` も同様に `pnpm-workspace.yaml` へ移動した。
 
 ## esbuild の場合
 
@@ -108,41 +104,43 @@ esbuild は `optionalDependencies` としてプラットフォーム固有のパ
 ```
 
 pnpm は `postinstall` を実行しなくても、適切なオプショナル依存関係を解決してバイナリを取得できる。
-そのため `neverBuiltDependencies` で問題なく動作する。
+そのため `allowBuilds: esbuild: false` で問題なく動作する。
+
+補足: Vite 8（rolldown ベース）では esbuild はオプショナル peer 依存になったため、依存グラフ自体に現れないことがある。
 
 ## 設定の選択基準
 
-| 設定 | 用途 |
-|------|------|
-| `onlyBuiltDependencies` | 指定したパッケージのみスクリプトを実行 |
-| `neverBuiltDependencies` | 指定したパッケージのスクリプトを実行しない |
-
 判断のポイント:
-1. まず `neverBuiltDependencies` で試す
-2. 動作しなければ `onlyBuiltDependencies` に追加
-3. `onlyBuiltDependencies` にする場合、パッケージの信頼性を確認
+1. まず `false`（実行しない）で試す
+2. 動作しなければ `true` に変更
+3. `true` にする場合、パッケージの信頼性を確認
 
 ## プロジェクトでの運用
 
-本プロジェクトでは `esbuild` を `neverBuiltDependencies` に設定：
+各パッケージルートの `pnpm-workspace.yaml` で設定する：
 
-```json
-// frontend/package.json
-{
-  "pnpm": {
-    "neverBuiltDependencies": ["esbuild"]
-  }
-}
+```yaml
+# frontend/pnpm-workspace.yaml — esbuild のスクリプトを拒否
+allowBuilds:
+  esbuild: false
+```
+
+```yaml
+# pnpm-workspace.yaml（リポジトリルート）— redocly / jscpd の推移的依存を拒否
+allowBuilds:
+  core-js: false
+  protobufjs: false
 ```
 
 理由:
-- esbuild はオプショナル依存関係でバイナリを取得できる
-- 不要なスクリプト実行を避ける
-- `package.json` の設定が最も確実（`.npmrc` は効かないケースがある）
+- いずれもビルドスクリプトなしで動作する（core-js の postinstall は寄付案内の表示のみ）
+- 不要なスクリプト実行を避ける（サプライチェーン攻撃面の最小化）
+
+注意: リポジトリルートに `pnpm-workspace.yaml` を置くと、独自の `pnpm-workspace.yaml` を持たないサブディレクトリはルートのワークスペースに取り込まれる。`frontend/` が独立プロジェクトとして動作するのは `frontend/pnpm-workspace.yaml` が存在するため。
 
 ## 関連リソース
 
-- [pnpm: onlyBuiltDependencies](https://pnpm.io/package_json#pnpmonlybuiltdependencies)
+- [pnpm: Settings](https://pnpm.io/settings)
 - [pnpm v9 リリースノート](https://github.com/pnpm/pnpm/releases/tag/v9.0.0)
 
 ---
@@ -152,3 +150,4 @@ pnpm は `postinstall` を実行しなくても、適切なオプショナル依
 | 日付 | 変更内容 |
 |------|---------|
 | 2026-01-19 | 初版作成 |
+| 2026-07-19 | pnpm v11 対応（`allowBuilds` への移行、`pnpm-workspace.yaml` への設定移動） |

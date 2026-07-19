@@ -18,13 +18,5 @@
     "tailwindcss": "^4.2.3",
     "vite": "^8.0.9",
     "vite-plugin-elm": "^3.0.1"
-  },
-  "pnpm": {
-    "neverBuiltDependencies": [
-      "esbuild"
-    ],
-    "overrides": {
-      "cross-spawn@<6.0.6": "6.0.6"
-    }
   }
 }

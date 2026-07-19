@@ -1,0 +1,10 @@
+# pnpm 11 で package.json の "pnpm" フィールドが廃止されたため、設定をここへ移行。
+# 参照: https://pnpm.io/settings
+
+# esbuild のビルドスクリプトを実行しない（vite が WASM フォールバックで動作）
+allowBuilds:
+  esbuild: false
+
+# cross-spawn の脆弱性対応（ReDoS, GHSA-3xgq-45jj-v275）で 6.0.6 以上に固定
+overrides:
+  cross-spawn@<6.0.6: 6.0.6
