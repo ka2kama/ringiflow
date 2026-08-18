@@ -63,8 +63,8 @@ wildcards = "allow"
 # 既知の duplicate crate の旧バージョンを skip（上流の移行完了後に削除する）
 #
 # 主な原因:
-# - AWS SDK がまだ hyper 1.x / rustls 0.23 に完全移行していない
 # - sqlx / argon2 が旧 rand (0.8) / getrandom (0.2) エコシステムに依存
+# - AWS SDK 内部の smithy バージョン断層と後方互換 API サーフェス
 # - Windows プラットフォームクレートのバージョン断片化
 skip = [
     # rand / getrandom エコシステム（sqlx, argon2 経由）
@@ -74,24 +74,16 @@ skip = [
     { crate = "rand_chacha@0.3", reason = "rand 0.8 の推移的依存" },
     { crate = "rand_core@0.6", reason = "rand 0.8 の推移的依存" },
     # hyper / HTTP エコシステム（AWS SDK 経由）
-    { crate = "h2@0.3", reason = "AWS SDK が hyper 0.14 経由で依存" },
-    { crate = "http@0.2", reason = "AWS SDK が hyper 0.14 経由で依存" },
-    { crate = "http-body@0.4", reason = "AWS SDK が hyper 0.14 経由で依存" },
-    { crate = "hyper@0.14", reason = "AWS SDK がまだ hyper 1.x に移行していない" },
-    { crate = "hyper-rustls@0.24", reason = "AWS SDK が rustls 0.21 に依存" },
-    # TLS エコシステム（AWS SDK 経由）
-    { crate = "rustls@0.21", reason = "AWS SDK がまだ rustls 0.23 に移行していない" },
-    { crate = "rustls-webpki@0.101", reason = "rustls 0.21 の推移的依存" },
-    { crate = "tokio-rustls@0.24", reason = "rustls 0.21 の推移的依存" },
+    { crate = "http@0.2", reason = "aws-runtime が後方互換 API サーフェスとして旧 http 型に依存" },
+    { crate = "http-body@0.4", reason = "aws-runtime が後方互換 API サーフェスとして旧 http-body 型に依存" },
     # AWS SDK 内部の smithy バージョン断層（aws-sdk-s3 が旧 smithy に依存）
     { crate = "aws-smithy-http@0.62", reason = "aws-sdk-s3 が旧 smithy-http に依存" },
     { crate = "aws-smithy-json@0.61", reason = "aws-sdk-s3 が旧 smithy-json に依存" },
     # 暗号エコシステム（AWS SDK 経由）
     { crate = "crypto-bigint@0.4", reason = "AWS SDK (aws-sigv4 → p256 → elliptic-curve) が旧バージョンに依存" },
     # その他
-    { crate = "hashbrown@0.14", reason = "lettre → chumsky が旧バージョンに依存" },
     { crate = "hashbrown@0.15", reason = "推移的依存のバージョン差異" },
-    { crate = "socket2@0.5", reason = "推移的依存のバージョン差異" },
+    { crate = "redox_syscall@0.5", reason = "parking_lot_core が旧系に依存。Redox OS 限定の薄い shim で Linux ビルドへの機能影響なし（#1163）" },
 ]
 
 # Windows プラットフォームクレートの旧バージョンツリーを一括 skip

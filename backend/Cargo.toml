@@ -35,13 +35,29 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chro
 redis = { version = "1.0", features = ["tokio-comp", "connection-manager"] }
 
 # AWS SDK（DynamoDB 監査ログ、S3 ドキュメント管理）
+# default-features = false: デフォルトの `rustls` feature は legacy 接続系
+# （hyper 0.14 + rustls 0.21 + 脆弱な rustls-webpki 0.101）を引き込むため外す。
+# HTTP クライアントはモダン系の `default-https-client`（hyper 1.x + rustls 0.23）を使用する。
 aws-config = { version = "1", features = ["behavior-version-latest"] }
-aws-sdk-dynamodb = "1"
-aws-sdk-s3 = { version = "1", features = ["behavior-version-latest"] }
+aws-sdk-dynamodb = { version = "1", default-features = false, features = [
+    "default-https-client",
+    "rt-tokio",
+] }
+aws-sdk-s3 = { version = "1", default-features = false, features = [
+    "behavior-version-latest",
+    "sigv4a",
+    "http-1x",
+    "default-https-client",
+    "rt-tokio",
+] }
 base64 = "0.22"
 
 # メール通知
-aws-sdk-sesv2 = "1"
+aws-sdk-sesv2 = { version = "1", default-features = false, features = [
+    "sigv4a",
+    "default-https-client",
+    "rt-tokio",
+] }
 lettre = { version = "0.11", default-features = false, features = ["tokio1", "smtp-transport", "builder"] }
 tera = "1"
 
