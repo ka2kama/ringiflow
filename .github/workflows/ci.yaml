@@ -89,7 +89,7 @@ jobs:
           components: rustfmt
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -147,7 +147,7 @@ jobs:
           toolchain: 1.94.0
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -249,7 +249,7 @@ jobs:
           toolchain: 1.94.0
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -472,7 +472,7 @@ jobs:
           toolchain: 1.94.0
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -594,7 +594,7 @@ jobs:
           toolchain: 1.94.0
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Cache Cargo
         uses: actions/cache@v6
@@ -793,7 +793,7 @@ jobs:
           toolchain: 1.94.0
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.11
 
       - name: Cache rust-script
         uses: actions/cache@v6
